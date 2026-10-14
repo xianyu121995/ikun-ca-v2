@@ -1,0 +1,47 @@
+{
+  "verified_at": "2026-10-15T05:51:35.324040+08:00",
+  "baseline": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+  "branch": "codex/homepage-ui",
+  "protected_baseline_files_unchanged": 63,
+  "scope": "homepage UI candidate; prototype route and module only",
+  "source_hashes": {
+    "apps/website/app/prototypes/homepage/page.tsx": "cfd82288a21d3335212bb113d77d1bb3cee6c5baef2fffce168a9bd4302303d4",
+    "apps/website/components/homepage-ui/homepage-prototype.tsx": "cc0b42d7a59e4f01da5e323345ad5d6196dcda8b2ff11894d2df81958a5415a0",
+    "apps/website/components/homepage-ui/icons.tsx": "01724e19743420c3bb7955f1cd5cef8b23e0833b08228e79976e81fa8422aebb",
+    "apps/website/components/homepage-ui/model/demo-data.ts": "249a6f9f9316ace1f063dc5641517201572fa2773e3cbd53c4416fe05ad3fcab",
+    "apps/website/components/homepage-ui/model/demo-store.ts": "351aff1edba5c4da91539c839b0b5ff2a4bbcf6457d42e2a9abcfd37426025b0",
+    "apps/website/components/homepage-ui/model/project.ts": "8fe961664f5984741ff2bbc83cb4213e38d2b69681964e3a2cdc1a6afdee4e89",
+    "apps/website/components/homepage-ui/preview.tsx": "45db4d9e0e624283ad149ef4cd95dab8ae8b6a1a050ca73e999243c794f1d357",
+    "apps/website/components/homepage-ui/ui-port.tsx": "261aab58e4dd99194a47c6d21cf8c87e992229d5ab7cbfd93467737ef3609e77"
+  },
+  "application_network_clients": 0,
+  "business_database_created": false,
+  "runtime_dependency_changes": false,
+  "root_dependency_or_contract_changes": false,
+  "dependency_install": "pnpm install --frozen-lockfile in independent Worktree",
+  "qa_tool": "@playwright/test 1.64.0 installed only in ignored module .tools",
+  "build": "website Next 16.4.1 build passed; cpus=1; separate shared build passed",
+  "typecheck": "pnpm --filter @ikun/website typecheck passed",
+  "browser_acceptance": {
+    "passed": 10,
+    "failed": 0,
+    "duration_ms": 7679.8730000000005
+  },
+  "preview_gates": {
+    "production_with_flag": 404,
+    "disabled_flag": 404,
+    "method": "GET http://127.0.0.1:3700/prototypes/homepage against locally built next start; own Worktree only",
+    "enabled_preview": 200
+  },
+  "integration_status": [
+    "PENDING_SHARED_UI",
+    "PENDING_PROJECTS_OWNER"
+  ],
+  "not_verified": [
+    "real auth",
+    "real project API",
+    "database persistence",
+    "collectors or Watch",
+    "deployment"
+  ]
+}

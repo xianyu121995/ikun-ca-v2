@@ -1,0 +1,32 @@
+[
+  {
+    "source": "components/homepage-prototype.tsx",
+    "source_sha256": "c45b0d7b1216ee9e1f2630ff485f2f22ed2c62c371e4866cfb113fd6ba593d11",
+    "migrated_to": "apps/website/components/homepage-ui/homepage-prototype.tsx",
+    "origin": "new homepage prototype code authored in this chat; no legacy shared snapshots copied"
+  },
+  {
+    "source": "model/project.ts",
+    "source_sha256": "8fe961664f5984741ff2bbc83cb4213e38d2b69681964e3a2cdc1a6afdee4e89",
+    "migrated_to": "apps/website/components/homepage-ui/model/project.ts",
+    "origin": "new homepage prototype code authored in this chat; no legacy shared snapshots copied"
+  },
+  {
+    "source": "model/demo-data.ts",
+    "source_sha256": "249a6f9f9316ace1f063dc5641517201572fa2773e3cbd53c4416fe05ad3fcab",
+    "migrated_to": "apps/website/components/homepage-ui/model/demo-data.ts",
+    "origin": "new homepage prototype code authored in this chat; no legacy shared snapshots copied"
+  },
+  {
+    "source": "model/demo-store.ts",
+    "source_sha256": "c1fcb93e3e63f924e9d531b68c96d324ae96c5ed9090ca807a577f2d6be651f5",
+    "migrated_to": "apps/website/components/homepage-ui/model/demo-store.ts",
+    "origin": "new homepage prototype code authored in this chat; no legacy shared snapshots copied"
+  },
+  {
+    "source": "app/prototype.css",
+    "source_sha256": "2d67b724a69f25bfccf7f4053536f091e34812745b8ada819b3249e8c232cd8e",
+    "migrated_to": "apps/website/components/homepage-ui/homepage.css",
+    "origin": "new homepage prototype code authored in this chat; no legacy shared snapshots copied"
+  }
+]

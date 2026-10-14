@@ -1,0 +1,53 @@
+import { useState } from "react";
+import { createRoot } from "react-dom/client";
+import { AccountSummary, Alert, AppShell, Badge, Button, DataTable, Dialog, EmptyState, ErrorState, Icon, Input, LoginPanel, PageHeader, Panel, ScoreBadge, SearchInput, Select, Skeleton, ToastViewport, Toolbar, type NavigationLinkProps, type TableColumn, type TableSort, type ToastMessage } from "../src/index.js";
+import "../src/styles.css";
+import "./preview.css";
+
+type ExampleRow = { id: string; name: string; category: string; grade: "S" | "A" | "B"; score: number; time: string; state: string };
+const examples: ExampleRow[] = [
+  { id: "example-01", name: "Northstar", category: "Infrastructure", grade: "S", score: 94, time: "10-15 09:42", state: "持续跟踪" },
+  { id: "example-02", name: "Meridian", category: "DeFi", grade: "A", score: 86, time: "10-15 09:31", state: "待研究" },
+  { id: "example-03", name: "Orbit Labs", category: "Data", grade: "A", score: 82, time: "10-15 09:20", state: "持续跟踪" },
+  { id: "example-04", name: "Vertex", category: "Consumer", grade: "B", score: 73, time: "10-15 09:08", state: "待研究" },
+];
+function Preview() {
+  const [path, setPath] = useState("/"); const [view, setView] = useState("components");
+  const [search, setSearch] = useState(""); const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState<TableSort>({ key: "score", direction: "desc" });
+  const [dialog, setDialog] = useState(false); const [note, setNote] = useState(""); const [savedNote, setSavedNote] = useState("尚未保存");
+  const [tableState, setTableState] = useState("ready"); const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [loginError, setLoginError] = useState(""); const [pending, setPending] = useState(false);
+  function notify(title: string, tone: "success" | "danger" = "success") { setToasts(items => [...items.slice(-2), { id: crypto.randomUUID(), title, tone }]); }
+  function PreviewLink({ href, children, ...props }: NavigationLinkProps) {
+    return <a {...props} href={href} onClick={e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); if (href === "/account") setView("account"); else { setPath(href); setView("components"); } }}>{children}</a>;
+  }
+  const columns: TableColumn<ExampleRow>[] = [
+    { key: "score", header: "评分", sortable: true, width: "100px", render: row => <ScoreBadge grade={row.grade} value={row.score} /> },
+    { key: "name", header: "项目名称", sortable: true, render: row => <div className="preview-project"><span className="preview-project-icon">{row.name[0]}</span><div><strong>{row.name}</strong><small>组件示例 · {row.id}</small></div></div> },
+    { key: "category", header: "分类", render: row => <span className="ik-muted">{row.category}</span> },
+    { key: "time", header: "更新时间 · UTC+8", render: row => <span className="ik-mono ik-muted">{row.time}</span> },
+    { key: "state", header: "状态", render: row => <Badge tone={row.state === "待研究" ? "warning" : "success"}>{row.state}</Badge> },
+    { key: "action", header: "操作", align: "right", render: row => <Button variant="ghost" size="sm" onClick={() => { setNote(row.name); setDialog(true); }}>查看示例</Button> },
+  ];
+  const rows = examples.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) && (filter === "all" || r.grade === filter)).sort((a, b) => {
+    const value = sort.key === "name" ? a.name.localeCompare(b.name) : a.score - b.score;
+    return sort.direction === "asc" ? value : -value;
+  });
+  if (view === "login") return <><LoginPanel onSubmit={() => { setLoginError("认证服务未接入。本预览不会发送或保存账号和密码。"); }} error={loginError} notice={<Badge tone="warning">仅视觉预览 · 无真实认证</Badge>} footer={<Button variant="ghost" size="sm" onClick={() => setView("components")}>返回组件规范</Button>} /></>;
+  return <AppShell pathname={path} LinkComponent={PreviewLink} account={{ name: "Design review", detail: "账号展示 · 示例" }} footer={<span>UI KIT / V1<br />仅组件预览</span>}>
+    <PageHeader eyebrow="IKUN.CA / DESIGN SYSTEM" title={view === "account" ? "账号管理" : "统一视觉与公共组件"} description="深色交易终端 · 此页仅展示规范与交互，全部数据均为示例。" actions={<><Button onClick={() => setView("login")} icon={<Icon name="user" />}>登录规范</Button><Button variant="primary" onClick={() => { setNote(""); setDialog(true); }}>弹窗示例</Button></>} />
+    <div className="preview-topline"><span><span className="preview-indicator" /> DESIGN PREVIEW</span><span>组件版本 0.1.0 <span className="preview-separator">/</span> 桌面宽屏优先</span></div>
+    {view === "account" ? <div className="ik-stack"><AccountSummary name="Design review" identifier="example-user · 非真实账号" roleLabel="管理员 · 示例" statusLabel="认证未接入" statusTone="warning" actions={<Button disabled title="认证业务尚未接入">退出登录（未接入）</Button>}><div className="preview-form-grid"><Input label="显示名称" defaultValue="Design review" readOnly hint="仅展示。资料修改由认证窗口接入。" /><Input label="工作空间" defaultValue="Example workspace" readOnly /></div></AccountSummary><Panel title="安全与访问权限"><Alert tone="info" title="账号组件只负责展示">实际角色、会话撤销和权限校验由认证服务执行。</Alert><div className="preview-account-actions"><Button disabled title="需认证业务接入">修改密码（未接入）</Button><Button disabled variant="danger" title="需认证业务接入">撤销会话（未接入）</Button></div></Panel></div> : <div className="ik-stack">
+      <div className="preview-grid"><Panel title="操作与状态" description="主操作明确，风险状态同时显示文字。"><div className="ik-actions"><Button variant="primary" onClick={() => notify("示例操作已完成")}>主要操作</Button><Button onClick={() => notify("次级操作示例")}>次级操作</Button><Button variant="ghost" onClick={() => notify("辅助操作示例")}>辅助操作</Button><Button variant="danger" onClick={() => { setNote("破坏性动作仅作展示"); setDialog(true); }}>风险操作</Button></div><div className="preview-badges"><Badge tone="success">连接正常 · 示例</Badge><Badge tone="warning">待处理</Badge><Badge tone="danger">请求失败</Badge><Badge>未连接</Badge></div><div className="ik-actions"><Button pending>提交中</Button><Button disabled title="功能尚未接入">未接入</Button></div></Panel>
+      <Panel title="评分与文字" description="只展示业务给定等级，不计算分数。"><div className="preview-badges"><ScoreBadge grade="S" value={94} /><ScoreBadge grade="A" value={86} /><ScoreBadge grade="B" value={73} /><ScoreBadge grade="C" value={62} /><ScoreBadge grade="D" value={40} /><ScoreBadge /></div><div className="preview-typography"><span>项目名称 / 主要信息</span><span className="ik-muted">更新时间、来源与辅助说明</span><span className="ik-mono">0x71c…a92f · 12,845.00</span></div></Panel></div>
+      <Panel title="表格与筛选" description="原生表格 · 可排序 · 刷新保留数据 · 横向滚动" className="ik-panel--table" actions={<Badge>示例数据</Badge>}><div className="preview-table-toolbar"><Toolbar><SearchInput label="项目搜索" value={search} onValueChange={setSearch} /><Select label="评分筛选" value={filter} onChange={e => setFilter(e.target.value)}><option value="all">全部评分</option><option value="S">S 级</option><option value="A">A 级</option><option value="B">B 级</option></Select><Select label="加载状态预览" value={tableState} onChange={e => setTableState(e.target.value)}><option value="ready">已加载</option><option value="loading">首次加载</option><option value="refreshing">后台刷新</option><option value="error">刷新失败</option><option value="empty">暂无数据</option></Select></Toolbar></div><DataTable caption="组件示例项目" columns={columns} rows={tableState === "loading" || tableState === "empty" ? [] : rows} rowKey={r => r.id} sort={sort} onSortChange={setSort} loading={tableState === "loading"} refreshing={tableState === "refreshing"} {...(tableState === "error" ? { error: <ErrorState title="刷新失败，保留上次数据" requestId="ui-example-001" onRetry={() => { setTableState("ready"); notify("已切换至加载完成示例"); }} /> } : {})} empty={<EmptyState title={search || filter !== "all" ? "没有匹配结果" : "暂无数据"} description={search || filter !== "all" ? "调整筛选条件或清空搜索。" : "真实数据将在业务模块接入后展示。"} {...(search || filter !== "all" ? { action: <Button size="sm" onClick={() => { setSearch(""); setFilter("all"); }}>清空筛选</Button> } : {})} />} /></Panel>
+      <div className="preview-grid"><Panel title="表单与校验"><div className="preview-form-grid"><Input label="普通字段" placeholder="输入内容" hint="帮助信息位于字段下方。" /><Input label="校验失败" defaultValue="示例内容" error="请检查字段格式后重试。" /></div></Panel><Panel title="加载与失败提示"><div className="ik-stack"><Skeleton lines={2} label="示例区域正在加载" /><ErrorState description="服务暂时不可用，请稍后重试。" requestId="ui-example-002" onRetry={() => notify("仅演示重试交互，没有调用服务")} /></div></Panel></div>
+      <p className="preview-footnote">公共包只提供视觉与交互。监控连接、评分、认证与业务状态均由各自模块提供。弹窗示例最近保存：<span className="ik-mono">{savedNote}</span></p>
+    </div>}
+    <Dialog open={dialog} onOpenChange={setDialog} title="公共弹窗示例" description="该操作只修改当前预览内存，不连接服务或数据库。" pending={pending} footer={<><Button disabled={pending} onClick={() => setDialog(false)}>取消</Button><Button variant="primary" pending={pending} onClick={() => { setPending(true); window.setTimeout(() => { setSavedNote(note || "空备注"); setPending(false); setDialog(false); notify("示例备注已保存到预览内存"); }, 700); }}>保存示例</Button></>}><Input label="示例备注" value={note} onChange={e => setNote(e.target.value)} disabled={pending} hint="刷新浏览器后会清空。" /></Dialog>
+    <ToastViewport messages={toasts} onDismiss={id => setToasts(items => items.filter(item => item.id !== id))} />
+  </AppShell>;
+}
+const root = document.getElementById("root"); if (!root) throw new Error("UI preview root missing");
+createRoot(root).render(<Preview />);

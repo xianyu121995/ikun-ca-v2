@@ -1,0 +1,357 @@
+{
+  "checked_at": "2026-10-14T21:31:53.720941+00:00",
+  "read_only": true,
+  "production_changes": [],
+  "errors": [],
+  "hardware_model": "Mac14,3",
+  "memory_bytes": "8589934592",
+  "macos_version": "26.4.1",
+  "existing_processes": [
+    {
+      "pid": "9034",
+      "ppid": "1",
+      "rss_kib": "3504",
+      "elapsed": "04-09:04:59",
+      "executable": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+    },
+    {
+      "pid": "11542",
+      "ppid": "1",
+      "rss_kib": "3152",
+      "elapsed": "01-05:50:59",
+      "executable": "/opt/homebrew/Cellar/postgresql@17/17.11_1/bin/postgres"
+    },
+    {
+      "pid": "11543",
+      "ppid": "11542",
+      "rss_kib": "592",
+      "elapsed": "01-05:50:59",
+      "executable": "postgres: checkpointer "
+    },
+    {
+      "pid": "11544",
+      "ppid": "11542",
+      "rss_kib": "544",
+      "elapsed": "01-05:50:59",
+      "executable": "postgres: background writer "
+    },
+    {
+      "pid": "11546",
+      "ppid": "11542",
+      "rss_kib": "448",
+      "elapsed": "01-05:50:59",
+      "executable": "postgres: walwriter "
+    },
+    {
+      "pid": "11547",
+      "ppid": "11542",
+      "rss_kib": "2512",
+      "elapsed": "01-05:50:59",
+      "executable": "postgres: autovacuum launcher "
+    },
+    {
+      "pid": "11548",
+      "ppid": "11542",
+      "rss_kib": "1312",
+      "elapsed": "01-05:50:59",
+      "executable": "postgres: logical replication launcher "
+    },
+    {
+      "pid": "30449",
+      "ppid": "1",
+      "rss_kib": "3088",
+      "elapsed": "02-17:45:31",
+      "executable": "/opt/homebrew/Cellar/postgresql@17/17.11_1/bin/postgres"
+    },
+    {
+      "pid": "30450",
+      "ppid": "30449",
+      "rss_kib": "592",
+      "elapsed": "02-17:45:31",
+      "executable": "postgres: checkpointer "
+    },
+    {
+      "pid": "30451",
+      "ppid": "30449",
+      "rss_kib": "544",
+      "elapsed": "02-17:45:31",
+      "executable": "postgres: background writer "
+    },
+    {
+      "pid": "30453",
+      "ppid": "30449",
+      "rss_kib": "448",
+      "elapsed": "02-17:45:31",
+      "executable": "postgres: walwriter "
+    },
+    {
+      "pid": "30454",
+      "ppid": "30449",
+      "rss_kib": "2400",
+      "elapsed": "02-17:45:31",
+      "executable": "postgres: autovacuum launcher "
+    },
+    {
+      "pid": "30455",
+      "ppid": "30449",
+      "rss_kib": "1248",
+      "elapsed": "02-17:45:31",
+      "executable": "postgres: logical replication launcher "
+    },
+    {
+      "pid": "38618",
+      "ppid": "1",
+      "rss_kib": "8720",
+      "elapsed": "03-02:08:41",
+      "executable": "/Users/lvlei/.codex/worktrees/ikun-ca-ai-research-audit/ikun.ca/.runtime/auto-research/venv/bin/python"
+    },
+    {
+      "pid": "46545",
+      "ppid": "1",
+      "rss_kib": "14928",
+      "elapsed": "08:47:21",
+      "executable": "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace/backend/.venv/bin/python"
+    },
+    {
+      "pid": "78833",
+      "ppid": "1",
+      "rss_kib": "3184",
+      "elapsed": "01-06:47:14",
+      "executable": "/opt/homebrew/Cellar/postgresql@17/17.11_1/bin/postgres"
+    },
+    {
+      "pid": "78834",
+      "ppid": "78833",
+      "rss_kib": "544",
+      "elapsed": "01-06:47:14",
+      "executable": "postgres: checkpointer "
+    },
+    {
+      "pid": "78835",
+      "ppid": "78833",
+      "rss_kib": "544",
+      "elapsed": "01-06:47:14",
+      "executable": "postgres: background writer "
+    },
+    {
+      "pid": "78837",
+      "ppid": "78833",
+      "rss_kib": "448",
+      "elapsed": "01-06:47:14",
+      "executable": "postgres: walwriter "
+    },
+    {
+      "pid": "78838",
+      "ppid": "78833",
+      "rss_kib": "2560",
+      "elapsed": "01-06:47:14",
+      "executable": "postgres: autovacuum launcher "
+    },
+    {
+      "pid": "78839",
+      "ppid": "78833",
+      "rss_kib": "1312",
+      "elapsed": "01-06:47:14",
+      "executable": "postgres: logical replication launcher "
+    },
+    {
+      "pid": "79494",
+      "ppid": "1",
+      "rss_kib": "4688",
+      "elapsed": "20:43",
+      "executable": "/opt/homebrew/Cellar/postgresql@17/17.11_1/bin/postgres"
+    },
+    {
+      "pid": "79495",
+      "ppid": "79494",
+      "rss_kib": "1200",
+      "elapsed": "20:43",
+      "executable": "postgres: checkpointer "
+    },
+    {
+      "pid": "79496",
+      "ppid": "79494",
+      "rss_kib": "768",
+      "elapsed": "20:43",
+      "executable": "postgres: background writer "
+    },
+    {
+      "pid": "79498",
+      "ppid": "79494",
+      "rss_kib": "720",
+      "elapsed": "20:43",
+      "executable": "postgres: walwriter "
+    },
+    {
+      "pid": "79499",
+      "ppid": "79494",
+      "rss_kib": "1440",
+      "elapsed": "20:43",
+      "executable": "postgres: autovacuum launcher "
+    },
+    {
+      "pid": "79500",
+      "ppid": "79494",
+      "rss_kib": "1264",
+      "elapsed": "20:43",
+      "executable": "postgres: logical replication launcher "
+    },
+    {
+      "pid": "79502",
+      "ppid": "79489",
+      "rss_kib": "10896",
+      "elapsed": "20:43",
+      "executable": "/opt/homebrew/bin/cloudflared"
+    },
+    {
+      "pid": "79529",
+      "ppid": "79494",
+      "rss_kib": "5168",
+      "elapsed": "20:33",
+      "executable": "postgres: ikun_q87_tracking_runtime web3_workspace 127.0.0.1(50816) idle"
+    },
+    {
+      "pid": "85152",
+      "ppid": "85150",
+      "rss_kib": "222960",
+      "elapsed": "03:36",
+      "executable": "next-server (v16.4.0)"
+    },
+    {
+      "pid": "85794",
+      "ppid": "70522",
+      "rss_kib": "3792",
+      "elapsed": "02:46",
+      "executable": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+    },
+    {
+      "pid": "86087",
+      "ppid": "70522",
+      "rss_kib": "3264",
+      "elapsed": "01:49",
+      "executable": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+    },
+    {
+      "pid": "86514",
+      "ppid": "70522",
+      "rss_kib": "8336",
+      "elapsed": "00:42",
+      "executable": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+    },
+    {
+      "pid": "86680",
+      "ppid": "1",
+      "rss_kib": "2496",
+      "elapsed": "01-03:57:15",
+      "executable": "/opt/homebrew/Cellar/postgresql@17/17.11_1/bin/postgres"
+    },
+    {
+      "pid": "86681",
+      "ppid": "86680",
+      "rss_kib": "544",
+      "elapsed": "01-03:57:15",
+      "executable": "postgres: checkpointer "
+    },
+    {
+      "pid": "86682",
+      "ppid": "86680",
+      "rss_kib": "544",
+      "elapsed": "01-03:57:15",
+      "executable": "postgres: background writer "
+    },
+    {
+      "pid": "86684",
+      "ppid": "86680",
+      "rss_kib": "448",
+      "elapsed": "01-03:57:15",
+      "executable": "postgres: walwriter "
+    },
+    {
+      "pid": "86685",
+      "ppid": "86680",
+      "rss_kib": "1488",
+      "elapsed": "01-03:57:15",
+      "executable": "postgres: autovacuum launcher "
+    },
+    {
+      "pid": "86686",
+      "ppid": "86680",
+      "rss_kib": "1280",
+      "elapsed": "01-03:57:15",
+      "executable": "postgres: logical replication launcher "
+    },
+    {
+      "pid": "86858",
+      "ppid": "70522",
+      "rss_kib": "17488",
+      "elapsed": "00:00",
+      "executable": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+    },
+    {
+      "pid": "79489",
+      "ppid": "79488",
+      "rss_kib": "10128",
+      "elapsed": "20:43",
+      "executable": "python"
+    },
+    {
+      "pid": "6466",
+      "ppid": "6465",
+      "rss_kib": "10128",
+      "elapsed": "04-10:58:13",
+      "executable": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python"
+    }
+  ],
+  "existing_listeners": [
+    "python3.1 38618 lvlei    8u  IPv4 0x27e6d6d5bb11cb22      0t0  TCP 127.0.0.1:8770 (LISTEN)",
+    "postgres  79494 lvlei    5u  IPv4 0x15e55fbfe7b0c763      0t0  TCP 127.0.0.1:55432 (LISTEN)",
+    "cloudflar 79502 lvlei    9u  IPv4 0xf9c78734d4d02c41      0t0  TCP 127.0.0.1:20241 (LISTEN)",
+    "node      85152 lvlei   13u  IPv4 0xc1eec97b1ecd434b      0t0  TCP 127.0.0.1:3186 (LISTEN)"
+  ],
+  "launch_agents": [
+    {
+      "file": "/Users/lvlei/Library/LaunchAgents/ca.ikun.overload-tracking.plist",
+      "label": "ca.ikun.overload-tracking",
+      "sha256": "e7b63d23ef2aabe1e2e4390a0c11ee1380bb83d364be4fe98da0cdfeb2677f65"
+    },
+    {
+      "file": "/Users/lvlei/Library/LaunchAgents/com.lvlei.ikun-auto-research.plist",
+      "label": "com.lvlei.ikun-auto-research",
+      "sha256": "8b54f546b9b665580c947b61dcc6fb4208f6756d335ab1f0f443575e61b75efd"
+    }
+  ],
+  "repository": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2",
+  "head": null,
+  "branches": [],
+  "git_status": [
+    "?? .env.example",
+    "?? .env.production.example",
+    "?? .gitattributes",
+    "?? .githooks/",
+    "?? .gitignore",
+    "?? .node-version",
+    "?? .npmrc",
+    "?? .nvmrc",
+    "?? apps/",
+    "?? auth/",
+    "?? homepage/",
+    "?? package.json",
+    "?? packages/",
+    "?? pnpm-lock.yaml",
+    "?? pnpm-workspace.yaml",
+    "?? scripts/",
+    "?? services/",
+    "?? tests/",
+    "?? tracking/",
+    "?? tsconfig.base.json"
+  ],
+  "protected_legacy_modified_by_this_task": false,
+  "public_edge": {
+    "status": 403,
+    "https_certificate_verified": true,
+    "redirect_host": null,
+    "redirect_path": "",
+    "cloudflare_access_redirect": false,
+    "new_origin_verified": false
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "checked_at": "2026-10-14T21:39:12.725634+00:00",
+  "uncommitted_source_snapshot": true,
+  "release_acceptance": false,
+  "files": {
+    "foundation_contract": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/packages/contracts/src/index.ts",
+      "sha256": "793e20aa0f19a992452c946c188bd21f6e4b1bff7f68994d804fdde7a244a2db",
+      "matches": [
+        {
+          "line": 5,
+          "source": "export type Role = \"superadmin\" | \"user\";"
+        }
+      ]
+    },
+    "foundation_architecture": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/docs/ARCHITECTURE.md",
+      "sha256": "24bea3dd63e7c7e65ba7d2c1e86422a9ad8212787c726ba2c1541458d0a74b0a",
+      "matches": [
+        {
+          "line": 5,
+          "source": "从零建设；不继承旧版实现、ID、数据库、账号、队列或认证。单 Git 仓库、pnpm workspace、单台 Mac mini，网站与两个 worker 是三个独立 OS 进程，可独立启动/停止/升级。当前没有采集、告警、链上交互或 CRUD 业务。"
+        },
+        {
+          "line": 20,
+          "source": "箭头是目标契约；当前业务箭头未实现。网站持有项目主数据和认证存储，worker 是各自业务唯一写入者。不增加第四个服务、Redis、PostgreSQL、Docker 或消息代理；8GB 机器先保持资源可控。"
+        }
+      ]
+    },
+    "website_api": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/apps/website/app/api/v1/[...path]/route.ts",
+      "sha256": "c0e6cb267d04226995429432e213912f126472a9b747dd922c9b6bf017a4ef4f",
+      "matches": [
+        {
+          "line": 6,
+          "source": "return Response.json(apiError(\"AUTH_NOT_CONFIGURED\", \"Authentication module has not been implemented\", id), {"
+        },
+        {
+          "line": 7,
+          "source": "status: 503, headers: { \"cache-control\": \"no-store\", \"x-request-id\": id },"
+        }
+      ]
+    },
+    "homepage_schema": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/homepage/projects_service/migrations/001_projects.sql",
+      "exists": false
+    },
+    "homepage_api": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/homepage/projects_service/api.py",
+      "exists": false
+    },
+    "auth_store": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/auth/ikun_auth/store.py",
+      "sha256": "af80ca48f33881e192227c1df1847aec177a426618b47961267d51ca8fc73c32",
+      "matches": [
+        {
+          "line": 15,
+          "source": "password_hash TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('superadmin','user')),"
+        }
+      ]
+    },
+    "tracking_package": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/tracking/pyproject.toml",
+      "exists": false
+    },
+    "hunter_package": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/pyproject.toml",
+      "sha256": "9cc0b7af32172842c21e4012d4ec96ba8c7f8a32e6ee2875295bba465ef70aed",
+      "matches": []
+    }
+  }
+}

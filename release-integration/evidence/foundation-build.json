@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-10-14T21:49:36.423613+00:00",
+  "foundation_commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+  "node_version": "24.22.0",
+  "package_manager": "pnpm 10.33.1",
+  "lock_sha256": "b6d8c15890754ada75986e3edd5c0be3db182e43654175e5bf58450eb8d5f106",
+  "next_build_id": "4IzHGkWoelAXsOgTmD1VB",
+  "checks": {
+    "frozen_install": "PASS",
+    "production_build": "PASS",
+    "typecheck": "PASS",
+    "foundation_tests": {
+      "status": "PASS",
+      "passed": 5,
+      "failed": 0
+    },
+    "production_mode_smoke": "PASS"
+  },
+  "business_flow_verified": false,
+  "evidence_scope": "independent integration Worktree, idle foundation only"
+}

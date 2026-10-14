@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-10-14T21:48:22.167047+00:00",
+  "tests": 32,
+  "errors": 0,
+  "failures": 0,
+  "status": "PASS",
+  "business_flow_verified": false,
+  "source_sha256": {
+    "release-integration/scripts/launchd_drill.py": "d0b95d9200260343019c27d0d27292b3e6b6e6e2d67238a292bb35c31546a7a6",
+    "release-integration/scripts/release_ops.py": "3d494a5dee738fc9799a5317916925665dd6bc18d6480e712605ce396245ec35",
+    "release-integration/scripts/snapshot_interfaces.py": "99b1b9086ca56a7d2f99e88ec4e1388a0e092c42e888463e5aa9adb2a14fa792",
+    "release-integration/scripts/foundation_launchd_check.py": "e73c4f5fbf98ad85a71ca5f80a9f6e15c62c23585441997bcb7f6b118577f637",
+    "release-integration/scripts/prepare_config.py": "374cbcaa77d4f252f531e1c15c8070f115734e3d78253628a45abd340222a946",
+    "release-integration/scripts/audit_environment.py": "d042755ea78165b2a9d52cb628c6b2a0b22b36adbf4fe76cb6f6f9b488d71fa0"
+  }
+}

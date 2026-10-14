@@ -1,0 +1,14 @@
+# Review-only candidate. Do not load it into the existing tunnel before approval.
+tunnel: 00000000-0000-0000-0000-000000000000
+credentials-file: /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/ikun-ca-v2-deployment/production/config/tunnel.credentials.json
+originRequest:
+  connectTimeout: 10s
+  access:
+    required: true
+    teamName: REPLACE_WITH_CONFIRMED_ACCESS_TEAM
+    audTag:
+      - REPLACE_WITH_CONFIRMED_ACCESS_APPLICATION_AUD
+ingress:
+  - hostname: ikun.ca
+    service: http://127.0.0.1:4100
+  - service: http_status:404

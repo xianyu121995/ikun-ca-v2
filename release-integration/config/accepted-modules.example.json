@@ -1,0 +1,12 @@
+{
+  "repository": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2",
+  "base_ref": "main",
+  "modules": [
+    {"name": "foundation", "ref": null, "commit": null, "acceptance": "PENDING", "report_path": null, "report_sha256": null},
+    {"name": "ui", "ref": null, "commit": null, "acceptance": "PENDING", "report_path": null, "report_sha256": null},
+    {"name": "auth", "ref": null, "commit": null, "acceptance": "PENDING", "report_path": null, "report_sha256": null},
+    {"name": "hunter", "ref": null, "commit": null, "acceptance": "PENDING", "report_path": null, "report_sha256": null},
+    {"name": "tracking", "ref": null, "commit": null, "acceptance": "PENDING", "report_path": null, "report_sha256": null},
+    {"name": "homepage", "ref": null, "commit": null, "acceptance": "PENDING", "report_path": null, "report_sha256": null}
+  ]
+}

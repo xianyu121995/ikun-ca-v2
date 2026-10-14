@@ -1,0 +1,14 @@
+{
+  "run_id": "c6dca9e800a7",
+  "started_at": "2026-10-14T21:31:11.213134+00:00",
+  "fixture_only": true,
+  "business_flow_verified": false,
+  "production_services_modified": false,
+  "cleanup": {
+    "ca.ikun.v2.drill.c6dca9e800a7.web": {
+      "bootout_returncode": 0,
+      "job_absent": true
+    }
+  },
+  "finished_at": "2026-10-14T21:31:56.364218+00:00"
+}

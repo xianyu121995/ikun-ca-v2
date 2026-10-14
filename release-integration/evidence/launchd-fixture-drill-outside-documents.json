@@ -1,0 +1,76 @@
+{
+  "run_id": "8d4b647f9275",
+  "started_at": "2026-10-14T21:32:41.987982+00:00",
+  "fixture_only": true,
+  "business_flow_verified": false,
+  "production_services_modified": false,
+  "runtime_path": "/private/tmp/ikun-ca-v2-launchd-jwrn91f_",
+  "status": "PASS",
+  "three_independent_pids": true,
+  "website_restart_does_not_restart_workers": true,
+  "jobs": {
+    "web": {
+      "label": "ca.ikun.v2.drill.8d4b647f9275.web",
+      "port": 53682,
+      "initial": {
+        "fixture": true,
+        "run_id": "8d4b647f9275",
+        "role": "web",
+        "pid": 87299
+      },
+      "restarted": {
+        "fixture": true,
+        "run_id": "8d4b647f9275",
+        "role": "web",
+        "pid": 87465
+      }
+    },
+    "hunter": {
+      "label": "ca.ikun.v2.drill.8d4b647f9275.hunter",
+      "port": 53686,
+      "initial": {
+        "fixture": true,
+        "run_id": "8d4b647f9275",
+        "role": "hunter",
+        "pid": 87305
+      },
+      "restarted": {
+        "fixture": true,
+        "run_id": "8d4b647f9275",
+        "role": "hunter",
+        "pid": 87470
+      }
+    },
+    "tracking": {
+      "label": "ca.ikun.v2.drill.8d4b647f9275.tracking",
+      "port": 53689,
+      "initial": {
+        "fixture": true,
+        "run_id": "8d4b647f9275",
+        "role": "tracking",
+        "pid": 87307
+      },
+      "restarted": {
+        "fixture": true,
+        "run_id": "8d4b647f9275",
+        "role": "tracking",
+        "pid": 87476
+      }
+    }
+  },
+  "cleanup": {
+    "ca.ikun.v2.drill.8d4b647f9275.tracking": {
+      "bootout_returncode": 0,
+      "job_absent": true
+    },
+    "ca.ikun.v2.drill.8d4b647f9275.hunter": {
+      "bootout_returncode": 0,
+      "job_absent": true
+    },
+    "ca.ikun.v2.drill.8d4b647f9275.web": {
+      "bootout_returncode": 0,
+      "job_absent": true
+    }
+  },
+  "finished_at": "2026-10-14T21:32:53.881181+00:00"
+}

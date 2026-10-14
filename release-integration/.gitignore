@@ -1,0 +1,10 @@
+.runtime/
+__pycache__/
+*.pyc
+*.db
+*.db-*
+*.sqlite*
+*.secret.json
+*.approval.json
+*.local.json
+*.log

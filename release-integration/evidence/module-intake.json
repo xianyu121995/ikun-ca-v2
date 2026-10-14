@@ -1,0 +1,60 @@
+{
+  "checked_at": "2026-10-14T21:48:54.076889+00:00",
+  "base_commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+  "status": "BLOCKED",
+  "repository_blockers": [],
+  "modules": [
+    {
+      "name": "foundation",
+      "commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+      "blockers": []
+    },
+    {
+      "name": "ui",
+      "commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+      "blockers": [
+        "module not accepted",
+        "ref does not match pinned commit",
+        "missing acceptance report"
+      ]
+    },
+    {
+      "name": "auth",
+      "commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+      "blockers": [
+        "module not accepted",
+        "ref does not match pinned commit",
+        "missing acceptance report"
+      ]
+    },
+    {
+      "name": "hunter",
+      "commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+      "blockers": [
+        "module not accepted",
+        "ref does not match pinned commit",
+        "missing acceptance report"
+      ]
+    },
+    {
+      "name": "tracking",
+      "commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+      "blockers": [
+        "module not accepted",
+        "ref does not match pinned commit",
+        "missing acceptance report"
+      ]
+    },
+    {
+      "name": "homepage",
+      "commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+      "blockers": [
+        "module not accepted",
+        "ref does not match pinned commit",
+        "missing acceptance report"
+      ]
+    }
+  ],
+  "overlapping_files": {},
+  "production_approved": false
+}

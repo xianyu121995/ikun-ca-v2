@@ -1,0 +1,72 @@
+{
+  "started_at": "2026-10-14T21:50:39.946986+00:00",
+  "foundation_commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+  "node_version": "v24.22.0",
+  "node_sha256": "b468fb9c67427c9d3aec07ee1105e63020923a631a9a2a00beb71a7ba3768bfd",
+  "idle_foundation_only": true,
+  "business_flow_verified": false,
+  "production_services_modified": false,
+  "runtime_path": "/private/tmp/ikun-v2-foundation-p6ei5c9g/ikun-ca-v2-deployment",
+  "status": "PASS",
+  "checks": [
+    "three_primary_processes",
+    "four_owned_separate_database_files",
+    "each_service_recovers_without_restarting_others",
+    "foundation_sqlite_backup_restore"
+  ],
+  "initial_pids": {
+    "web": 2105,
+    "hunter": 2148,
+    "tracking": 2152
+  },
+  "databases": {
+    "hunter": {
+      "inode": 19621327,
+      "application_id": 1229652481,
+      "store_name": "hunter"
+    },
+    "tracking": {
+      "inode": 19621336,
+      "application_id": 1229652482,
+      "store_name": "tracking"
+    },
+    "projects": {
+      "inode": 19621315,
+      "application_id": 1229652483,
+      "store_name": "projects"
+    },
+    "auth": {
+      "inode": 19621319,
+      "application_id": 1229652484,
+      "store_name": "auth"
+    }
+  },
+  "recovery": {
+    "web": {
+      "old_pid": 2105,
+      "new_pid": 2436,
+      "elapsed_seconds": 16.693
+    },
+    "hunter": {
+      "old_pid": 2148,
+      "new_pid": 2472,
+      "elapsed_seconds": 4.497
+    },
+    "tracking": {
+      "old_pid": 2152,
+      "new_pid": 2484,
+      "elapsed_seconds": 0.672
+    }
+  },
+  "backup_restore_drill": {
+    "backup": "/private/tmp/ikun-v2-foundation-p6ei5c9g/ikun-ca-v2-deployment/staging/backups/20261014T215118Z-bed2dee4",
+    "restored": "/private/tmp/ikun-v2-foundation-p6ei5c9g/ikun-ca-v2-deployment/staging/restore-drills/foundation",
+    "live_data_replaced": false
+  },
+  "cleanup": {
+    "ca.ikun.v2.staging.tracking": true,
+    "ca.ikun.v2.staging.hunter": true,
+    "ca.ikun.v2.staging.web": true
+  },
+  "finished_at": "2026-10-14T21:51:19.197203+00:00"
+}

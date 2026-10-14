@@ -1,0 +1,19 @@
+{
+  "contract_version": "phase2-v1.0.0",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "source_baseline": "eed9434fb73bba6e71e2040d2db43bf2632f650a",
+  "shared_ui_baseline": "4527ba4510dcb3ea8a3d1bf932dc46367070d1d5",
+  "spec_files_sha256": {
+    "README.md": "c9a32297516da2aeffb76e50cb1d0d739ca0f2e757b5d3ba34c840b1527fc271",
+    "API.md": "ec1547e1349da1e45caea5c009499f258c34de2e387af4cbf14c81dbc7e16722",
+    "DTO.md": "6911a952c0dfe5aa452460a2b78e29cda8ca282af734be899adafd9314d7efb4",
+    "STORAGE.md": "d8231a616db6f71837322bc0e59b87bf8bbb8f9abeb8ffec9626e59dc0a74071",
+    "UI.md": "65387a74d3b9f69025a5762815db3a0c2dc03476f1d8c7db0f837631c0234366",
+    "OWNERSHIP.md": "3ffdd0f0563526ca2bea8434ed42cd30f8856beec8b3e4652ba3d0628dc9ec6e",
+    "RELEASES.md": "96c4ab144bb2c87d858fbafda0e237ae3f0cf86cdce18b65f082ef1327d440be",
+    "ownership.json": "9c343fea470bcb898be5695390c1dbba06b9aaf07685d0776173fd73a387e55b",
+    "releases.json": "2d231c6f0010e7af54d87df95df79ce31cdbeb25d0cdee84760f28be3d200777",
+    "source-freeze.json": "26c172f0de93cf60a8fbbe93c8f024e5c1fa298d9a01d88faee8c38a91f6c98c"
+  },
+  "shared_ui_binding": "pending authorized propagation; no shared implementation copied"
+}

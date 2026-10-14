@@ -1,0 +1,52 @@
+{
+  "contract_version": "phase2-v1.0.0",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "source_baseline": "eed9434fb73bba6e71e2040d2db43bf2632f650a",
+  "branch": "codex/homepage-ui",
+  "owner_paths": [
+    "apps/website/components/homepage-ui/",
+    "apps/website/features/homepage/",
+    "apps/website/app/prototypes/homepage/"
+  ],
+  "protected_files_unchanged": 63,
+  "new_changes_owner_only": true,
+  "frozen_baseline_preserved": true,
+  "shared_ui_binding": "PENDING_AUTHORIZED_PROPAGATION",
+  "live_adapter": "NOT_CONNECTED",
+  "runtime_dependency_changes": false,
+  "typecheck": "pnpm --filter @ikun/website typecheck passed",
+  "build": "Next 16.4.1 website build passed, cpus=1, serial",
+  "unit": {
+    "passed": 8,
+    "failed": 0
+  },
+  "browser": {
+    "passed": 16,
+    "failed": 0,
+    "widths": [
+      1440,
+      1920,
+      2560,
+      390
+    ],
+    "duration_ms": 18967.791
+  },
+  "page_network_clients": 0,
+  "business_database_created": false,
+  "active_source_sha256": {
+    "apps/website/components/homepage-ui/phase2-homepage.tsx": "6f00b384afe6d4d3b4e072a1863c5cc22884e95e099c0a7103d1a7bd371ca326",
+    "apps/website/components/homepage-ui/phase2-preview.tsx": "0bc6256df00542dd961f168d469a61378adb0a704f70586d20e30c18ae7a0dc9",
+    "apps/website/components/homepage-ui/ui-port.tsx": "8352696106aaeb33092d1abc75a2fe318bebaf80420ad7e8a14cd56377cfab93",
+    "apps/website/features/homepage/types.ts": "934363e6fefcd7d8c78c44e3912fdfdbf0ae736bd11bb3032d9dc46501478371",
+    "apps/website/features/homepage/view-model.ts": "93be738cb12415a693ce603021aafaa9246729feb8e92fd2372dd1d202361039",
+    "apps/website/features/homepage/demo-fixtures.ts": "538b215d82842429cc1f76c6225327502d6d6cb07cd7ee4f39f01b4a05b369d1",
+    "apps/website/app/prototypes/homepage/page.tsx": "409dd495775b93282c0530bb00e8a3546760e79ae2b4110c35a70ef7ba42cd76"
+  },
+  "not_verified": [
+    "formal @ikun/ui composition",
+    "fresh shared type/dependency propagation",
+    "real auth and Projects adapter",
+    "production or platform data",
+    "deployment"
+  ]
+}

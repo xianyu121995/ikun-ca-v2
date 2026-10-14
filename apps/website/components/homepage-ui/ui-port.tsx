@@ -1,7 +1,7 @@
 'use client';
 import {createContext,useContext,useEffect,useRef,type ComponentPropsWithRef,type ButtonHTMLAttributes,type ComponentType,type HTMLAttributes,type InputHTMLAttributes,type SelectHTMLAttributes,type TextareaHTMLAttributes} from 'react';
 
-export interface HomepageDialogProps {title:string;close:()=>void;children:React.ReactNode}
+export interface HomepageDialogProps {title:string;close:()=>void;children:React.ReactNode;pending?:boolean}
 // Adapters to the v2 shared UI are supplied by the website UI owner at integration.
 // There is intentionally no provider fallback for the real homepage.
 export interface HomepageUIComponents {
@@ -23,7 +23,7 @@ export function Badge(props:HTMLAttributes<HTMLSpanElement>){const UI=useUI();re
 export function Modal(props:HomepageDialogProps){const UI=useUI();return <UI.Dialog {...props}/>;}
 
 // Preview-only native controls, authored for this new candidate. Not a shared UI package.
-function PreviewDialog({title,close,children}:HomepageDialogProps){
+function PreviewDialog({title,close,children,pending=false}:HomepageDialogProps){
   const dialog=useRef<HTMLDialogElement>(null);
   const trigger=useRef(typeof document==='undefined'?null:document.activeElement as HTMLElement|null);
   useEffect(()=>{
@@ -32,12 +32,20 @@ function PreviewDialog({title,close,children}:HomepageDialogProps){
     element?.querySelector<HTMLElement>('[data-initial-focus]')?.focus();
     return ()=>{const target=trigger.current;requestAnimationFrame(()=>{if(target?.isConnected)target.focus();});};
   },[]);
-  return <dialog ref={dialog} className="hp-dialog" aria-label={title} onCancel={event=>{event.preventDefault();close();}}>
-    <header className="hp-dialog-heading"><div><span>HOMEPAGE UI / DEMO</span><h2>{title}</h2></div><button className="hp-close" type="button" aria-label="关闭" onClick={close}>×</button></header>{children}
+  useEffect(()=>{if(pending)dialog.current?.focus();},[pending]);
+  return <dialog ref={dialog} tabIndex={-1} className="hp-dialog" aria-label={title} aria-busy={pending||undefined} onCancel={event=>{event.preventDefault();if(!pending)close();}} onKeyDown={event=>{
+    if(event.key!=='Tab')return;
+    const controls=Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]')||[]).filter(element=>element.offsetParent!==null);
+    if(!controls.length){event.preventDefault();dialog.current?.focus();return;}
+    const first=controls[0],last=controls[controls.length-1];
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+  }}>
+    <header className="hp-dialog-heading"><div><span>HOMEPAGE UI / DEMO</span><h2>{title}</h2></div><button className="hp-close" type="button" aria-label="关闭" disabled={pending} onClick={close}>×</button></header>{children}
   </dialog>;
 }
 export const previewUI:HomepageUIComponents={
-  Button:props=><button {...props}/>,
+  Button:props=><button type="button" {...props}/>,
   Input:props=><input {...props}/>,
   Select:props=><select {...props}/>,
   Textarea:props=><textarea {...props}/>,

@@ -1,6 +1,6 @@
 import type {Metadata} from 'next';
 import {notFound} from 'next/navigation';
-import HomepagePreview from '../../../components/homepage-ui/preview';
+import HomepagePreview from '../../../components/homepage-ui/phase2-preview';
 export const dynamic='force-dynamic';
 export const metadata:Metadata={title:'ikun.ca v2 · 主页 UI 演示原型',robots:{index:false,follow:false}};
 export default function HomepagePreviewPage(){

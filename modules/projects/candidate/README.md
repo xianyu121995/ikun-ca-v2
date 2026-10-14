@@ -6,7 +6,7 @@
 
 ## 启动
 
-在本 `homepage` 目录执行（Python 3.11+）：
+在本 `candidate` 目录执行（Python 3.11+）：
 
 ```sh
 python3.11 -m venv .venv

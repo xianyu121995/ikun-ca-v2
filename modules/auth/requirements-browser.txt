@@ -1,0 +1,2 @@
+# Optional test driver only; no Python runtime service.
+playwright==1.62.0

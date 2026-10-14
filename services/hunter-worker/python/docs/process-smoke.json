@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "starts": 3,
+  "graceful_restart": true,
+  "sigkill_recovery_after_lease_expiry": true,
+  "external_io_enabled": false,
+  "provider_requests": 0,
+  "same_hunter_id_after_restart": true,
+  "process_ids": [
+    99383,
+    99466,
+    99622
+  ]
+}

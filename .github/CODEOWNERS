@@ -1,0 +1,10 @@
+# Fill with verified GitHub users/teams AFTER the private repository owner is chosen.
+# No fictitious owners: these comments do not enforce GitHub review yet.
+# *                         @ORG/architecture
+# /apps/website/             @ORG/website @ORG/architecture
+# /services/hunter-worker/   @ORG/hunter @ORG/architecture
+# /services/tracking-worker/ @ORG/tracking @ORG/architecture
+# /packages/                @ORG/architecture
+# /modules/auth/            @ORG/auth @ORG/architecture
+# /modules/projects/        @ORG/projects @ORG/architecture
+# /schemas/                 @ORG/architecture

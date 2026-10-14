@@ -1,0 +1,28 @@
+{
+  "name": "ikun-ca-v2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.1",
+  "engines": { "node": ">=24.22.0 <25", "pnpm": ">=10.33.1 <11" },
+  "scripts": {
+    "build:shared": "pnpm --filter @ikun/contracts build && pnpm --filter @ikun/runtime build",
+    "build": "pnpm build:shared && pnpm --filter @ikun/hunter-worker build && pnpm --filter @ikun/tracking-worker build && pnpm --filter @ikun/website build",
+    "typecheck": "pnpm --filter @ikun/contracts typecheck && pnpm --filter @ikun/runtime typecheck && pnpm --filter @ikun/hunter-worker typecheck && pnpm --filter @ikun/tracking-worker typecheck && pnpm --filter @ikun/website typecheck",
+    "test": "node --test tests/*.test.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "check:git": "node scripts/check-git.mjs",
+    "dev:website": "node scripts/service.mjs website dev",
+    "dev:hunter": "node scripts/service.mjs hunter dev",
+    "dev:tracking": "node scripts/service.mjs tracking dev",
+    "start:website": "node scripts/service.mjs website start",
+    "start:hunter": "node scripts/service.mjs hunter start",
+    "start:tracking": "node scripts/service.mjs tracking start",
+    "deploy:render": "node scripts/render-launchd.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

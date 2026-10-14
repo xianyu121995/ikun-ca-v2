@@ -17,11 +17,14 @@ export interface ApiSuccess<T> { data: T; request_id: string }
 export interface Page<T> { items: T[]; next_cursor: string | null }
 export interface Principal { user_id: string; tenant_id: string; role: Role }
 /** Sanitized DTO, never include individual Hunter identities or raw payloads. */
+/** @deprecated Foundation-only shape. New work uses ProjectRecordV2. */
 export interface ProjectSummary {
   project_id: ProjectId; name: string; status: "active" | "archived";
   revision: number; updated_at: string;
 }
-/** Transport envelope only. Business schemas remain the owning module's work. */
+// Phase 1 types remain identifiable; phase 2 DTOs supersede them for new work.
+export * from "./phase2.js";
+/** @deprecated Foundation-only envelope. New work uses EventEnvelopeV2. */
 export interface EventEnvelope<T> {
   schema_version: 1; event_id: string; source: "hunter" | "tracking";
   event_type: string; occurred_at: string; received_at: string;

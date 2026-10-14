@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "contract_version": "phase2-v1.0.0",
+  "snapshot_at": "2026-10-15T06:18:26.416749+08:00",
+  "foundation_commit": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+  "modules": [
+    {
+      "owner": "website",
+      "title": "全站UI设计",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/website",
+      "branch": "codex/website",
+      "commit": "4527ba4510dcb3ea8a3d1bf932dc46367070d1d5",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    },
+    {
+      "owner": "homepage-ui",
+      "title": "主页UI设计",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/homepage-ui",
+      "branch": "codex/homepage-ui",
+      "commit": "eed9434fb73bba6e71e2040d2db43bf2632f650a",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    },
+    {
+      "owner": "hunter-ui",
+      "title": "猎手监控UI设计",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-ui",
+      "branch": "codex/hunter-ui",
+      "commit": "3e0587dddc6304be0214ab41251a615d1aab20b9",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    },
+    {
+      "owner": "tracking-ui",
+      "title": "猎手项目监控UI设计",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/tracking-ui",
+      "branch": "codex/tracking-ui",
+      "commit": "d2e1093a86c2366dd4047973fad55f9271227eaa",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    },
+    {
+      "owner": "auth",
+      "title": "登录系统",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/auth",
+      "branch": "codex/auth",
+      "commit": "aa3cf65ce5c24cc293e0daec279659d2cc080c5f",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    },
+    {
+      "owner": "projects",
+      "title": "再做项目管理",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/projects",
+      "branch": "codex/projects",
+      "commit": "7f8a4610b4dcdda1f0785c2fc3c73a18ebdeb35f",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    },
+    {
+      "owner": "tracking-worker",
+      "title": "猎手项目监控跟踪",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/tracking-worker",
+      "branch": "codex/tracking-worker",
+      "commit": "9e2835cafc95cb15dc4b8178abacf0c604018536",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    },
+    {
+      "owner": "hunter-worker",
+      "title": "猎手监控",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker",
+      "branch": "codex/hunter-worker",
+      "commit": "bd69bbd0bba6fdc4f7c66191a839612dd53989d6",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    },
+    {
+      "owner": "integration",
+      "title": "集成验收",
+      "worktree": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration",
+      "branch": "codex/integration",
+      "commit": "c4845f54feb15623b20720ce83340f61c110b372",
+      "frozen": true,
+      "worktree_clean_at_snapshot": true,
+      "integration_accepted": false
+    }
+  ],
+  "known_blocks": {
+    "auth": [
+      "password form default GET P0",
+      "final 33 tests not rerun",
+      "browser smoke failed/incomplete",
+      "diff whitespace check failed"
+    ],
+    "hunter-worker": [
+      "last hardening denied by automatic approval review; not executed",
+      "real providers and app auth/receipt chain unverified"
+    ],
+    "integration": [
+      "foundation/tooling evidence only",
+      "combined business flow unverified"
+    ]
+  }
+}

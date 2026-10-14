@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "contract_version": "phase2-v1.0.0",
+  "immediately_released": ["website", "homepage-ui", "hunter-ui", "tracking-ui"],
+  "merge_authorized": false,
+  "production_authorized": false,
+  "stages": [
+    {"id": "UI0", "owners": ["website", "homepage-ui", "hunter-ui", "tracking-ui"], "state": "released", "requires": [], "purpose": "Presentation, isolated UI, callbacks, view adapters and accessibility; no live API/DB/worker implementation"},
+    {"id": "B0", "owners": ["chief"], "state": "held", "requires": ["UI0"], "purpose": "Review shared lock/build, migration compatibility and three-service supervised runtime; later explicit release only"},
+    {"id": "B1", "owners": ["auth"], "state": "held", "requires": ["B0"], "purpose": "Existing auth candidate: password-form P0, final regression, trusted principal, server gate"},
+    {"id": "B2", "owners": ["projects"], "state": "held", "requires": ["B1"], "purpose": "Existing project logic: site-owned IPC helper, central identity, canonical IDs, membership, event receipts/outbox"},
+    {"id": "B3", "owners": ["tracking-worker"], "state": "held", "requires": ["B2"], "purpose": "Existing tracking logic: service commands, subscription mapping, scope, migration and recovery"},
+    {"id": "B4", "owners": ["hunter-worker"], "state": "held", "requires": ["B3"], "purpose": "Existing hunter logic: scoped public adapter and manual monitoring event/receipt reconciliation"},
+    {"id": "C0", "owners": ["integration"], "state": "held", "requires": ["B4"], "purpose": "Combined candidate and end-to-end validation; branch merge requires separate explicit authorization"},
+    {"id": "D0", "owners": ["chief", "integration"], "state": "held", "requires": ["C0"], "purpose": "Publication candidate review; production deployment/domain switch remains user-approved only"}
+  ]
+}

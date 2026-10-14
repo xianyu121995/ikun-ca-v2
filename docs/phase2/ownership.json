@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "contract_version": "phase2-v1.0.0",
+  "rules": [
+    {"owner": "chief", "title": "项目总管", "prefixes": ["docs/", "config/", "packages/contracts/", "packages/runtime/", "scripts/", "tests/", ".github/", ".githooks/"], "files": ["AGENTS.md", "README.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tsconfig.base.json", ".gitignore", ".gitattributes", ".npmrc", ".node-version", ".nvmrc", ".env.example", ".env.production.example", "apps/website/package.json", "apps/website/tsconfig.json", "apps/website/next.config.ts", "apps/website/next-env.d.ts", "apps/website/app/layout.tsx", "apps/website/app/globals.css", "apps/website/app/page.tsx", "apps/website/proxy.ts", "apps/website/lib/stores.ts"]},
+    {"owner": "website", "title": "全站UI设计", "prefixes": ["packages/ui/"], "files": []},
+    {"owner": "homepage-ui", "title": "主页UI设计", "prefixes": ["apps/website/components/homepage-ui/", "apps/website/features/homepage/", "apps/website/app/prototypes/homepage/"], "files": []},
+    {"owner": "hunter-ui", "title": "猎手监控UI设计", "prefixes": ["apps/website/prototypes/hunter-discovery/", "apps/website/features/hunter-discovery/", "apps/website/app/prototypes/hunter/"], "files": []},
+    {"owner": "tracking-ui", "title": "猎手项目监控UI设计", "prefixes": ["apps/website/features/tracking-prototype/", "apps/website/features/tracking/", "apps/website/public/tracking-prototype/", "apps/website/app/tracking/"], "files": []},
+    {"owner": "auth", "title": "登录系统", "prefixes": ["modules/auth/", "schemas/auth/", "apps/website/app/api/v1/auth/", "apps/website/app/api/auth/session/", "apps/website/app/login/", "apps/website/app/auth/"], "files": []},
+    {"owner": "projects", "title": "再做项目管理", "prefixes": ["modules/projects/", "schemas/projects/", "apps/website/app/api/v1/projects/", "apps/website/app/internal/v1/ingest/", "apps/website/app/internal/v1/receipts/", "apps/website/app/api/v1/commands/"], "files": []},
+    {"owner": "tracking-worker", "title": "猎手项目监控跟踪", "prefixes": ["services/tracking-worker/", "schemas/tracking/", "apps/website/app/api/v1/tracking/"], "files": []},
+    {"owner": "hunter-worker", "title": "猎手监控", "prefixes": ["services/hunter-worker/", "schemas/hunter/", "apps/website/app/api/v1/hunter/"], "files": []},
+    {"owner": "integration", "title": "集成验收", "prefixes": ["release-integration/"], "files": []}
+  ],
+  "reserved_destinations": ["apps/website/app/health/", "apps/website/app/hunter/", "apps/website/app/api/v1/events/", "apps/website/app/api/v1/[...path]/", "apps/website/app/internal/v1/[...path]/", "apps/website/lib/service-gateway/"],
+  "reserved_owner": "chief",
+  "note": "Ownership never grants release. Check releases.json. Shared entry wiring is reserved; owners keep integration candidates inside their own modules. No merge/cherry-pick/rebase/push/deploy in this phase."
+}

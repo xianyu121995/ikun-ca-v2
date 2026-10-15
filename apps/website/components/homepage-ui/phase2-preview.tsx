@@ -1,7 +1,8 @@
 'use client';
 import {useRef,useState} from 'react';
 import Phase2Homepage from './phase2-homepage';
-import {HomepageUIProvider,previewUI} from './ui-port';
+import {AppShell,Select} from '@ikun/ui';
+import '@ikun/ui/styles.css';
 import {phase2Fixtures} from '../../features/homepage/demo-fixtures';
 import type {HomepageCallbacks,HomepageData,HomepageQuery,OperationResult,ProjectFieldsProjection,ProjectRecordProjection,ProjectRef} from '../../features/homepage/types';
 
@@ -43,14 +44,14 @@ export default function Phase2Preview(){
     {status:listCase==='loading'?'loading':listCase==='empty'?'empty':listCase.includes('error')?'error':'ready',
       items:['loading','empty','error'].includes(listCase)?[]:items,next_cursor:listCase==='page'?'demo-next-cursor':null,
       refreshing:listCase==='refreshing',error:listCase.includes('error')?error:null};
-  return <HomepageUIProvider components={previewUI}>
+  return <div className="hp2-preview"><AppShell pathname="/" account={mode==='demo'?{name:'演示账号',detail:`模拟 ${role}`,href:'/auth'}:undefined} footer="主页 UI 原型 · 演示数据">
     <div className="hp2-demo-controls"><strong>UI0 演示控制台 · 无真实请求</strong>
-      <label>模式<select aria-label="数据模式" value={mode} onChange={event=>{setMode(event.target.value as typeof mode);pendingApply.current=null;}}><option value="demo">demo</option><option value="live">live（未接入）</option></select></label>
-      <label>模拟权限<select aria-label="模拟权限" disabled={mode==='live'} value={role} onChange={event=>setRole(event.target.value as typeof role)}><option value="superadmin">superadmin</option><option value="user">user · 只读</option></select></label>
-      <label>列表状态<select aria-label="列表状态演示" disabled={mode==='live'} value={listCase} onChange={event=>setListCase(event.target.value)}>{['ready','loading','empty','error','refreshing','refresh-error','page'].map(value=><option key={value}>{value}</option>)}</select></label>
-      <label>回调结果<select aria-label="回调结果演示" disabled={mode==='live'} value={scenario} onChange={event=>setScenario(event.target.value)}>{['success','denied','timeout','conflict','accepted','pending','running','unknown','throw'].map(value=><option key={value}>{value}</option>)}</select></label>
+      <Select label="数据模式" value={mode} onChange={event=>{setMode(event.target.value as typeof mode);pendingApply.current=null;}}><option value="demo">demo</option><option value="live">live（未接入）</option></Select>
+      <Select label="模拟权限" disabled={mode==='live'} value={role} onChange={event=>setRole(event.target.value as typeof role)}><option value="superadmin">superadmin</option><option value="user">user · 只读</option></Select>
+      <Select label="列表状态演示" disabled={mode==='live'} value={listCase} onChange={event=>setListCase(event.target.value)}>{['ready','loading','empty','error','refreshing','refresh-error','page'].map(value=><option key={value}>{value}</option>)}</Select>
+      <Select label="回调结果演示" disabled={mode==='live'} value={scenario} onChange={event=>setScenario(event.target.value)}>{['success','denied','timeout','conflict','accepted','pending','running','unknown','throw'].map(value=><option key={value}>{value}</option>)}</Select>
       <output aria-label="操作回调次数">回调 {calls} 次</output><details><summary>查看回调参数</summary><pre data-testid="callback-log">{last}</pre><pre data-testid="query-log">{JSON.stringify(query)}</pre></details>
     </div>
     <Phase2Homepage context={mode==='demo'?{mode,role,capabilities:{can_edit_projects:role==='superadmin'}}:{mode:'live'}} data={data} callbacks={mode==='demo'?callbacks:{}}/>
-  </HomepageUIProvider>;
+  </AppShell></div>;
 }

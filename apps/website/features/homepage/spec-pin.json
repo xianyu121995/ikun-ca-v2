@@ -15,5 +15,6 @@
     "releases.json": "2d231c6f0010e7af54d87df95df79ce31cdbeb25d0cdee84760f28be3d200777",
     "source-freeze.json": "26c172f0de93cf60a8fbbe93c8f024e5c1fa298d9a01d88faee8c38a91f6c98c"
   },
-  "shared_ui_binding": "pending authorized propagation; no shared implementation copied"
+  "shared_ui_binding": "direct @ikun/ui imports; isolated compiled package; root B0 propagation remains chief-owned",
+  "shared_ui_revision": "5ce45fd4a4621cd8e5b04c4611c957aa379fec44"
 }

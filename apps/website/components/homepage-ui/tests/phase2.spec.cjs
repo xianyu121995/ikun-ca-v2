@@ -1,6 +1,6 @@
 const {test,expect}=require('../.tools/node_modules/@playwright/test');
 const path=require('node:path');
-const artifact=name=>path.join(__dirname,'../evidence/phase2',name);
+const artifact=name=>path.join(__dirname,'../evidence/shared-ui',name);
 const row=(page,name)=>page.locator('tbody tr').filter({has:page.locator('.hp2-project-name strong',{hasText:name})});
 const dialog=page=>page.getByRole('dialog');
 const add=async page=>{await page.getByRole('button',{name:'添加项目',exact:true}).click();await dialog(page).getByLabel('项目名称',{exact:true}).fill('UI0 New Project');};
@@ -16,16 +16,16 @@ test('DTO display, scoped demo labels, unknown data and required width matrix',a
   for(const width of [1440,1920,2560,390]){
     await page.setViewportSize({width,height:width===390?844:1080});
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(width);
-    expect(await page.locator('.hp2-table').evaluate(e=>getComputedStyle(e.querySelector('td')).fontSize)).toBe('13px');
-    if(width===390)expect(await page.locator('.hp2-table-scroll').evaluate(e=>e.scrollWidth>e.clientWidth)).toBe(true);
+    expect(await page.locator('.hp2-root .ik-table').evaluate(e=>getComputedStyle(e.querySelector('td')).fontSize)).toBe('13px');
+    if(width===390)expect(await page.locator('.hp2-root .ik-table-scroll').evaluate(e=>e.scrollWidth>e.clientWidth)).toBe(true);
     await page.screenshot({path:artifact(`home-${width}.png`),fullPage:true});
   }
   expect(requests.filter(url=>new URL(url).origin!=='http://127.0.0.1:3700'||new URL(url).pathname.startsWith('/api/'))).toEqual([]);expect(errors).toEqual([]);
 });
 test('search Esc/clear, D/null rating, progress, membership and opaque cursor callbacks',async({page})=>{
-  await page.keyboard.press('/');await expect(page.getByRole('textbox',{name:'搜索项目'})).toBeFocused();
-  await page.getByRole('textbox',{name:'搜索项目'}).fill('Orbit');await expect(page.locator('tbody tr')).toHaveCount(1);
-  await page.keyboard.press('Escape');await expect(page.getByRole('textbox',{name:'搜索项目'})).toHaveValue('');
+  await page.keyboard.press('/');await expect(page.getByRole('searchbox',{name:'搜索项目'})).toBeFocused();
+  await page.getByRole('searchbox',{name:'搜索项目'}).fill('Orbit');await expect(page.locator('tbody tr')).toHaveCount(1);
+  await page.keyboard.press('Escape');await expect(page.getByRole('searchbox',{name:'搜索项目'})).toHaveValue('');
   await page.getByLabel('评分筛选').selectOption('D');await expect(page.locator('tbody tr')).toHaveCount(1);
   await page.getByLabel('评分筛选').selectOption('unrated');await expect(page.locator('tbody tr')).toHaveCount(2);
   await page.getByLabel('进度筛选').selectOption('todo');await expect(page.locator('tbody tr')).toHaveCount(1);
@@ -35,12 +35,12 @@ test('search Esc/clear, D/null rating, progress, membership and opaque cursor ca
   await page.getByRole('button',{name:'下一页'}).click();await expect(page.getByTestId('callback-log')).toContainText('demo-next-cursor');
 });
 test('loading/empty/error/refresh retain old rows and filters without demo fallback',async({page})=>{
-  await page.getByLabel('列表状态演示').selectOption('loading');await expect(page.getByRole('status',{name:'正在加载项目'})).toBeVisible();await expect(page.locator('tbody tr')).toHaveCount(0);
+  await page.getByLabel('列表状态演示').selectOption('loading');await expect(page.getByRole('status').filter({hasText:'正在加载项目表格'})).toBeVisible();await expect(page.locator('tbody tr[aria-hidden=true]')).toHaveCount(5);await expect(page.locator('.hp2-project-name')).toHaveCount(0);
   await page.getByLabel('列表状态演示').selectOption('empty');await expect(page.getByRole('heading',{name:'主页还没有项目'})).toBeVisible();
   await page.getByLabel('列表状态演示').selectOption('error');await expect(page.locator('.hp2-error-row')).toContainText('UPSTREAM_UNAVAILABLE');await expect(page.locator('tbody tr')).toHaveCount(0);
-  await page.getByLabel('列表状态演示').selectOption('ready');await page.getByRole('textbox',{name:'搜索项目'}).fill('Orbit');
-  await page.getByLabel('列表状态演示').selectOption('refreshing');await expect(page.locator('tbody tr')).toHaveCount(1);await expect(page.locator('.hp2-refreshing')).toContainText('保留');
-  await page.getByLabel('列表状态演示').selectOption('refresh-error');await expect(row(page,'Orbit Layer')).toHaveCount(1);await expect(page.getByRole('textbox',{name:'搜索项目'})).toHaveValue('Orbit');
+  await page.getByLabel('列表状态演示').selectOption('ready');await page.getByRole('searchbox',{name:'搜索项目'}).fill('Orbit');
+  await page.getByLabel('列表状态演示').selectOption('refreshing');await expect(page.locator('tbody tr')).toHaveCount(1);await expect(page.locator('.ik-table-updating')).toContainText('仍可查看');
+  await page.getByLabel('列表状态演示').selectOption('refresh-error');await expect(row(page,'Orbit Layer')).toHaveCount(1);await expect(page.getByRole('searchbox',{name:'搜索项目'})).toHaveValue('Orbit');
   await page.screenshot({path:artifact('refresh-error.png'),fullPage:true});
 });
 test('create emits field-only payload with null values; data changes only after success callback',async({page})=>{
@@ -50,7 +50,7 @@ test('create emits field-only payload with null values; data changes only after 
   const payload=JSON.parse(await page.getByTestId('callback-log').textContent()).payload;
   expect(payload.rating).toBe('D');expect(payload.progress_percent).toBeNull();expect(payload.token_date).toBeNull();expect(payload.category).toBeNull();
   for(const key of ['project_id','tenant_id','discovered_at','home_membership','created_at','updated_at','role'])expect(payload).not.toHaveProperty(key);
-  expect(await row(page,'UI0 New Project').getAttribute('data-project-id')).toMatch(/^demo-created-/);
+  expect(await row(page,'UI0 New Project').locator('[data-project-id]').getAttribute('data-project-id')).toMatch(/^demo-created-/);
 });
 test('editing preserves immutable IDs/times and emits revision; dirty cancellation protects draft',async({page})=>{
   await page.getByRole('button',{name:'编辑 Orbit Layer',exact:true}).click();await expect(dialog(page)).toContainText('发现时间和服务端 ID/时间只读');
@@ -85,7 +85,7 @@ for(const scenario of ['denied','conflict'])test(`${scenario}: public callback e
 });
 test('rapid repeated submits call once, pending blocks Esc and close, focus restores on completion',async({page})=>{
   await add(page);await dialog(page).locator('form').evaluate(form=>{form.requestSubmit();form.requestSubmit();});
-  await expect(dialog(page)).toHaveAttribute('aria-busy','true');await expect(dialog(page).getByRole('button',{name:'关闭',exact:true})).toBeDisabled();
+  await expect(dialog(page)).toHaveAttribute('aria-busy','true');await expect(dialog(page).getByRole('button',{name:'关闭弹窗',exact:true})).toBeDisabled();
   await page.keyboard.press('Escape');await expect(dialog(page)).toHaveCount(1);await page.keyboard.press('Tab');
   expect(await page.evaluate(()=>document.querySelector('dialog').contains(document.activeElement))).toBe(true);
   await expect(dialog(page)).toHaveCount(0);await expect(page.getByLabel('操作回调次数')).toContainText('1');await expect(page.getByRole('button',{name:'添加项目',exact:true})).toBeFocused();
@@ -104,7 +104,39 @@ test('rejected callback hides raw exception and leaves outcome unknown',async({p
 });
 test('dialog focus wraps both ways, mobile form fits, closes with Esc and restores trigger',async({page})=>{
   await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'添加项目',exact:true}).click();await expect(dialog(page).getByLabel('项目名称')).toBeFocused();
-  const close=dialog(page).getByRole('button',{name:'关闭',exact:true});await close.focus();await page.keyboard.press('Shift+Tab');await expect(dialog(page).getByRole('button',{name:'添加项目',exact:true})).toBeFocused();
+  const close=dialog(page).getByRole('button',{name:'关闭弹窗',exact:true});await close.focus();await page.keyboard.press('Shift+Tab');await expect(dialog(page).getByRole('button',{name:'添加项目',exact:true})).toBeFocused();
   await page.keyboard.press('Tab');await expect(close).toBeFocused();await page.screenshot({path:artifact('mobile-editor.png')});
   await page.keyboard.press('Escape');await expect(dialog(page)).toHaveCount(0);await expect(page.getByRole('button',{name:'添加项目',exact:true})).toBeFocused();
+});
+
+
+test('unique public shell, table, score, controls and dialog are composed without native fallback',async({page})=>{
+  await expect(page.locator('.ik-shell')).toHaveCount(1);await expect(page.getByRole('navigation',{name:'业务导航'}).getByRole('link')).toHaveCount(3);
+  await expect(page.getByRole('link',{name:'账号管理：演示账号'})).toHaveAttribute('href','/auth');
+  await expect(page.locator('.hp2-root .ik-table')).toHaveCount(1);await expect(page.locator('.hp2-root .ik-search')).toHaveCount(1);
+  await expect(row(page,'Flux Garden').locator('.ik-score--unknown')).toHaveText('未评分');await expect(row(page,'Morrow Labs').locator('.ik-score--d')).toHaveText('D');
+  await add(page);await expect(dialog(page)).toHaveClass(/ik-dialog/);await expect(dialog(page).locator('.ik-field .ik-input')).toHaveCount(8);
+  expect(await dialog(page).locator('label label').count()).toBe(0);
+  await page.keyboard.press('Escape');await dialog(page).getByRole('button',{name:'放弃修改'}).click();
+  await row(page,'Orbit Layer').locator('.hp2-website').click();await expect(page.getByRole('status').filter({hasText:'演示官网占位地址'})).toContainText('演示官网占位地址');
+});
+test('header and select sort in both directions, announce aria-sort and leave unknown values last',async({page})=>{
+  const names=()=>page.locator('.hp2-project-name strong').allTextContents();
+  const grade=page.getByRole('columnheader',{name:'评分'});await expect(grade).toHaveAttribute('aria-sort','ascending');
+  await grade.getByRole('button').click();await expect(grade).toHaveAttribute('aria-sort','descending');expect((await names())[0]).toBe('Morrow Labs');
+  expect((await names()).slice(-2)).toEqual(['Echo Identity','Flux Garden']);
+  await page.getByLabel('当前页排序').selectOption('name:asc');const ascending=await names();await page.getByRole('columnheader',{name:'项目名称'}).getByRole('button').click();expect(await names()).toEqual([...ascending].reverse());
+  await page.getByLabel('当前页排序').selectOption('progress:asc');expect((await names())[0]).toBe('Morrow Labs');expect((await names()).at(-1)).toBe('Nexa Compute');
+  await page.getByRole('columnheader',{name:'进度',exact:true}).getByRole('button').click();expect((await names()).at(-1)).toBe('Nexa Compute');
+  await page.getByLabel('当前页排序').selectOption('discovered:asc');expect((await names()).slice(-3)).toEqual(['Nexa Compute','Ember World','Flux Garden']);await page.getByLabel('当前页排序').selectOption('discovered:desc');expect((await names()).slice(-3)).toEqual(['Nexa Compute','Ember World','Flux Garden']);
+  // Stable row identity keeps the focused project attached through a reorder.
+  const project=row(page,'Orbit Layer').locator('.hp2-project-name');await project.focus();await page.getByLabel('当前页排序').evaluate(select=>{select.value='rating:asc';select.dispatchEvent(new Event('change',{bubbles:true}));});await expect(project).toBeFocused();
+});
+test('rating and fractional progress persist only after save; estimated dates remain explicit',async({page})=>{
+  await page.getByRole('button',{name:'编辑 Orbit Layer',exact:true}).click();
+  await dialog(page).getByLabel('评分',{exact:true}).selectOption('');await dialog(page).getByLabel('进度百分比（未知留空）').fill('42.5');
+  await dialog(page).getByLabel('发币日期',{exact:true}).fill('2026-12-31');await dialog(page).getByLabel('日期状态',{exact:true}).selectOption('estimated');
+  await expect(row(page,'Orbit Layer')).toContainText('72%');await dialog(page).getByRole('button',{name:'保存修改'}).click();
+  await expect(row(page,'Orbit Layer')).toContainText('42.5%');await expect(row(page,'Orbit Layer')).toContainText('未评分');await expect(row(page,'Orbit Layer')).toContainText('预计');
+  const payload=JSON.parse(await page.getByTestId('callback-log').textContent()).payload.fields;expect(payload.rating).toBeNull();expect(payload.progress_percent).toBe(42.5);expect(payload.token_date_status).toBe('estimated');
 });

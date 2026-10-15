@@ -1,0 +1,9 @@
+{
+  "package": "@ikun/ui",
+  "version": "0.1.0",
+  "commit": "5ce45fd4a4621cd8e5b04c4611c957aa379fec44",
+  "frozen_baseline": "4527ba4510dcb3ea8a3d1bf932dc46367070d1d5",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "binding": "direct package imports; isolated compiled dependency for local QA",
+  "root_workspace_registration": "chief-owned B0 integration remains pending"
+}

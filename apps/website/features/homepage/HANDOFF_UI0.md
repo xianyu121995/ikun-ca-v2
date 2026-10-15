@@ -49,29 +49,56 @@
 
 状态转换仅用于呈现，不实现命令引擎、幂等库、ETag/CSRF/会话/重试或 RPC。领域 adapter 后续必须按冻结 API 处理 Idempotency-Key、If-Match、权限、scope、回执与 cursor；本 UI 不自造这些真实业务证据。
 
-## 公共组件与依赖门禁
+## 公共组件接入
 
-已只读核对公共 UI 冻结导出/props，基线 `4527ba4510dcb3ea8a3d1bf932dc46367070d1d5`。未复制 `@ikun/ui` 源码、未改 packages/ui、root lock 或构建顺序。
+主页现已直接 import 唯一 `@ikun/ui`：AppShell（仅预览宿主）、PageHeader、Panel、Toolbar、DataTable、SearchInput、Select、Input、Button、ScoreBadge、Dialog、Alert、ErrorState、EmptyState、Icon。公共包版本 0.1.0，UI0 commit `5ce45fd4a4621cd8e5b04c4611c957aa379fec44`，兼容冻结起点 `4527ba4510dcb3ea8a3d1bf932dc46367070d1d5`。
 
-保留本页 `ui-port.tsx` 的显式组件 Provider；预览仍注入此前本页的原生 previewUI。新行为仅补 optional Dialog pending、默认 button 类型和焦点边界。此原生预览不是正式公共 UI 接入证据。
+当前 phase2 路由不再使用 `ui-port/previewUI`。旧插槽及其原生控件仅保留在历史候选，未作为本轮接入证据。没有复制公共源码、改公共组件或根 package/lock；主页仅编写布局、字段组合与原生 textarea（公共包没有 Textarea 导出）。Input/Select 直接提供 label，无嵌套 label。
 
-待全站 UI owner/B0 获授权传播后绑定唯一 `@ikun/ui`：Button 的 pending/type、Input/Select 的 label wrapper、ScoreBadge(D/null)、DataTable columns/rowKey/状态、受控 Dialog open/onOpenChange/pending、Alert/ErrorState/Toast，以及 AppShell。Input/Select 当前 native 插槽与正式 label props 需 adapter 审阅；不要直接把正式组件塞进嵌套 label。页面不创建侧栏/第二个 AppShell；216px 壳层由全站入口提供。tokens/系统字体/13px 表格已按 UI.md 应用。
+DataTable 使用 columns/rows/稳定 rowKey；四个表头提供双向排序并同步 aria-sort，工具栏也可选择方向。rating 的 S→D / D→S、时间新旧、名称正反、百分比高低均限当前页；null 值两个方向都置末，不推算未知评分/进度。页面 CSS 仅控制自身布局/表格密度，保留公共 tokens，表格 13px。公共 AppShell 只包一次；真正主页接入时只挂 `Phase2Homepage` 内容，沿用全站 shell。
 
-## 本轮验收与命令
+`shared-dialog.tsx` 是条件卸载弹窗的薄组合层：把页面初始焦点交给公共 initialFocusRef，卸载后在触发按钮重新启用时恢复焦点；showModal、Esc、Tab trap、pending 关闭限制均使用公共 Dialog。移除默认取消焦点、未保存草稿保护、提交防重和结果核对均有浏览器回归。
 
-在 **homepage-ui Worktree 根目录** 使用 Node 24.22.0；依赖保持本 Worktree 独立冻结安装。
+本 Worktree 的根 workspace 尚未传播公共包，按 UI.md 的包内隔离验证约定，`prepare-shared-ui.mjs` 只读公共 owner 已提交、clean 的源码，逐文件核对 Git blob，再用现有 TypeScript 5.9.3 编译到 **主页目录内被忽略的 node_modules/@ikun/ui**。没有绝对路径业务 import、跨 Worktree 链接、源码 vendor、根依赖/lock 修改。`shared-ui-pin.json` 固定版本；生成回执记录输入数与全部产物 SHA256。公共 owner 目录无写入。
+
+这证明当前 Next 本地组合能运行，不等同 clean checkout 的 workspace frozen install。B0 仍需总管登记 website 对 `@ikun/ui` 的 workspace 依赖、root lock/build 顺序、全站唯一 CSS 引入，并以正式包安装替换隔离 QA 产物；页面 import 无需改写。phase2 共享 DTO import 同样等待总管传播。
+
+## 运行和验证
+
+在 **homepage-ui Worktree 根目录**，使用 Node 24.22.0 与既有独立 frozen 安装：
 
 ```sh
 export PATH="/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin:$PATH"
+# 默认读取相邻 website Worktree 的已提交公共包；也可显式传已准备的 package 目录。
+node apps/website/components/homepage-ui/prepare-shared-ui.mjs ../website/packages/ui
 pnpm --filter @ikun/website typecheck
-node --import tsx --test apps/website/features/homepage/tests/view-model.test.mjs
+node --import tsx --test --test-reporter=tap apps/website/features/homepage/tests/view-model.test.mjs
 pnpm --filter @ikun/website build
 IKUN_HOMEPAGE_UI_PREVIEW=1 pnpm start:website
-PROTOTYPE_CHROMIUM=/absolute/path/to/chromium node apps/website/components/homepage-ui/.tools/node_modules/@playwright/test/cli.js test --config apps/website/components/homepage-ui/phase2-playwright.config.cjs
 ```
 
-预览：`http://127.0.0.1:3700/prototypes/homepage`。QA 工具沿用本模块忽略的独立 .tools，不改 workspace 依赖；8GB 构建串行，cpus=1。未使用任何真实账号/口令，因此密码表单 no-JS 项不适用于此页面。
+打开 `http://127.0.0.1:3700/prototypes/homepage`。预览仍需显式环境开关且拒绝 IKUN_ENV=production；不会替换正式 `/`。停止预览用 Ctrl+C。
 
-证据在 `components/homepage-ui/evidence/phase2/`：8 项纯视图测试 TAP、16 项浏览器结果、1440/1920/2560/390px 截图、刷新失败保留、手机编辑与 owner/冻结核对。浏览器覆盖 callback payload、成功/权限拒绝/409/超时/accepted/pending/unknown、重复提交、默认只读、live 不回退、Tab 双向焦点与取消/关闭后恢复。
+浏览器 QA 使用本模块忽略的 `.tools`，不增加 workspace 依赖：
 
-尚缺：正式 @ikun/ui 绑定与其组合验收、phase2 共享类型依赖传播、可信 AuthSession、Projects live adapter、真实业务链路和部署。由总管审阅新 commit，再按批次放行；不合并或继续后端阶段。
+```sh
+# 本模块尚未安装工具时执行；依赖版本固定，且不写 package/lock。
+npm install --prefix apps/website/components/homepage-ui/.tools --no-save --package-lock=false --ignore-scripts --no-audit --no-fund @playwright/test@1.64.0
+PROTOTYPE_CHROMIUM=/absolute/path/to/chromium node apps/website/components/homepage-ui/.tools/node_modules/@playwright/test/cli.js test --config apps/website/components/homepage-ui/phase2-playwright.config.cjs
+node apps/website/features/homepage/verify-ui0.mjs
+```
+
+构建串行、cpus=1、heap=2048MB。未添加真实账号或密码字段，no-JS 密码项不适用于此页。
+
+已通过：8 项纯视图测试、19 项浏览器交互、website typecheck / Next build；1440/1920/2560/390px 无整页横向溢出、13px 表格、390px 容器内部滚动。浏览器请求记录无外部/API 请求；63 个非本窗口基线文件未变化，未创建业务数据库。
+
+最新证据为 `components/homepage-ui/evidence/shared-ui/`；之前 `evidence/phase2/` 与旧原型证据保持原样。最新验收结果在 verification.json / test-results.json / view-model-tests.tap，包含四个宽度截图、手机编辑、刷新失败保留。首轮回归发现旧测试精确标签定位不适配 required 标记，以及弹窗条件卸载晚于原生焦点回退；已分别补明确 aria-label 和卸载生命周期适配，没有绕过焦点断言。
+
+## 给主页功能窗口的接入点
+
+1. 挂载默认导出 `components/homepage-ui/phase2-homepage.tsx`，注入 `context/data/callbacks/query?`，沿用现有全站 shell；不要挂 demo preview。
+2. AuthSession 映射真实 role/capabilities；Projects adapter 提供 DTO、cursor、revision 和公开 OperationResult。服务端仍执行权限、Idempotency-Key、If-Match 与 CSRF 校验。
+3. 写回调只回传结果，UI 不改输入数据；接入方确认 succeeded 后重读/更新 props。unknown 先走 onReconcile，不重发写入；home remove/delete 保留监控关系。
+4. 本页没有数据库、真实 API/SSE、轮询、持久任务或默认 demo fallback。演示仅存在 demo-fixtures/phase2-preview；发布候选不得默认启用预览写按钮。
+
+尚未验证：根 workspace clean checkout/frozen install、可信 AuthSession 与真实 Projects adapter、跨浏览器/屏幕阅读器完整矩阵、生产部署。当前交付是可接入的主页 UI 原型，不代表业务链路或发布 READY。

@@ -1,4 +1,4 @@
-"""One wrapper for six Node query and private UDS budget contract cases."""
+"""One wrapper for seven Node query and private UDS budget contract cases."""
 
 import subprocess
 import time

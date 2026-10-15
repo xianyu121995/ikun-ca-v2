@@ -1181,7 +1181,7 @@
       "baseline_path": "modules/projects/integration/website/lib/projects.ts",
       "baseline_sha256": "013ca12ed02a8e0c476b6e20563282f583b30497c366590378b8dafebf98616c",
       "patch_path": "release-integration/night/patches/site-1.patch",
-      "patch_sha256": "7a73693ae47dba68cb7b867139de36c1f579189bbb0c08460eb2cb6b2c25d601",
+      "patch_sha256": "3900cb25a0ba53856337d8edd61c5dcd125d5547374139a9371246b535268937",
       "target_sha256": "e90866ec1bfb61afc60ec70ff8f2e4ac63e09d4a5a5549fd853bc925a59e566b"
     },
     "apps/website/components/hunter-controller.tsx": {
@@ -1189,7 +1189,7 @@
       "baseline_path": "services/hunter-worker/python/integration/website/components/hunter-controller.tsx",
       "baseline_sha256": "02be49982ffd8cfc46d9311424d0bf023ad6900bfd286aa0624bc7c744a96f4f",
       "patch_path": "release-integration/night/patches/site-2.patch",
-      "patch_sha256": "bbf0df755adcca68b0cf937f2e3e25d930c50f1721dc9b2b295a7793fa70eca9",
+      "patch_sha256": "025a29e4b2a73aac6efb0082a751b90472e371a51cc187c305911bbb3f8a47ce",
       "target_sha256": "5228526a8680f8d49ab1b6577af8a0c82cb1c9294f3b5d518dbe88fcab58f6b9"
     },
     "apps/website/app/api/v1/commands/[id]/route.ts": {
@@ -1197,14 +1197,22 @@
       "baseline_path": "apps/website/app/api/v1/commands/[id]/route.ts",
       "baseline_sha256": "bf662f536bc983af864302d4414cfcb71b7282700a67e595e8f2a710a292f70f",
       "patch_path": "release-integration/night/patches/site-3.patch",
-      "patch_sha256": "f90f70f1036ee62534181e6d4e5359206392007b308e39de9c06fb73ddcbb5f0",
+      "patch_sha256": "f9b6686c2d22311b613315eb292c0f2b728119ed956c6136c81331d45101b005",
       "target_sha256": "e4d9684591e39e5a9804cf4183ee5d0c27e1f3f2f80651bdd0ee43034ddcbb2a"
+    },
+    "apps/website/features/hunter-discovery/v3/App.tsx": {
+      "baseline_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "baseline_path": "apps/website/features/hunter-discovery/v3/App.tsx",
+      "baseline_sha256": "e9178e9eaf41496d25a65ac072a7b49299abb62ef05014a236c5b263b49bf1da",
+      "patch_path": "release-integration/night/patches/site-4.patch",
+      "patch_sha256": "8843b6317f3bbad80f5ad6bbd70519e21864a28432873ccb511615bbdc0604b2",
+      "target_sha256": "7ae6aecefcf2807bf3b5a8d1a1792c57421c43a55f932a6daec3d5237045ed5d"
     },
     "apps/website/app/api/v1/hunter/events/route.ts": {
       "baseline_commit": null,
       "baseline_path": null,
       "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "patch_path": "release-integration/night/patches/site-4.patch",
+      "patch_path": "release-integration/night/patches/site-5.patch",
       "patch_sha256": "31bbf8b387c5f5743615b25bece044274af209b2837e38280c83378a79336fe4",
       "target_sha256": "99ffce22a5d77609fbe617ea0d766ac9732e61aefc1701544328d1e8052fbc87"
     },
@@ -1212,7 +1220,7 @@
       "baseline_commit": null,
       "baseline_path": null,
       "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "patch_path": "release-integration/night/patches/site-5.patch",
+      "patch_path": "release-integration/night/patches/site-6.patch",
       "patch_sha256": "2183413bd7a9aebe748469c4040e494bcf2554b58091d0d15569a0712a2c887f",
       "target_sha256": "fbfc3490c675ca63fb59ebb1d77ad9e327d946759dbb32bc02539c8236d8f39e"
     },
@@ -1220,7 +1228,7 @@
       "baseline_commit": null,
       "baseline_path": null,
       "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "patch_path": "release-integration/night/patches/site-6.patch",
+      "patch_path": "release-integration/night/patches/site-7.patch",
       "patch_sha256": "1eeead7a3953600103df1ae5c26ef05d7308b1338344ca2039b24f5241c2aec3",
       "target_sha256": "13e9b0068abf87c669cd422f20b1c6c2c1aff800261c18ca8f22cfa5a5d3b808"
     },
@@ -1228,7 +1236,7 @@
       "baseline_commit": null,
       "baseline_path": null,
       "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "patch_path": "release-integration/night/patches/site-7.patch",
+      "patch_path": "release-integration/night/patches/site-8.patch",
       "patch_sha256": "32dc73b022f5656574b84145f753dd8c67fefe893c0e19cb000df18e864301d0",
       "target_sha256": "009eae79942edd12c3136ba91fb0e29a15f877e4b94a77a45ceeda5db2889b08"
     },
@@ -1236,10 +1244,11 @@
       "baseline_commit": null,
       "baseline_path": null,
       "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "patch_path": "release-integration/night/patches/site-8.patch",
+      "patch_path": "release-integration/night/patches/site-9.patch",
       "patch_sha256": "411a66256373d96d93cef9b3c6168b1144fa962d730d3cb45562e305a38de909",
       "target_sha256": "e1a6836a80bd97a2f3ada1f1aa4c15318fa9539306fb71742c63a4c4a0e205c3"
     }
   },
+  "site_patch_format": "unified-zero-context; apply with git apply --unidiff-zero",
   "original_immutable_and_homepage_checks_remain_required": true
 }

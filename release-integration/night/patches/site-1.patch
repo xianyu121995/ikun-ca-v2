@@ -1,10 +1,4 @@
 --- a/apps/website/lib/projects.ts
 +++ b/apps/website/lib/projects.ts
-@@ -6,6 +6,7 @@
- 
- const uuid='[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
- const readPaths=[/^\/api\/v1\/projects\/(?:home-summary|milestones)$/,new RegExp('^/api/v1/projects/operations/'+uuid+'$')];
+@@ -8,0 +9 @@
 +readPaths.push(/^\/api\/v1\/hunter\/events$/, /^\/api\/v1\/tracking\/events$/);
- const globalState=globalThis as typeof globalThis & {ikunAuth?:AuthHttp;ikunProjectsPolicy?:boolean};
- /** Reviewed additive route admission on the very same B1 store/singleton. */
- export function projectsAuth(){

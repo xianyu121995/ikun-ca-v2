@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 const runtime='release-integration/.runtime/night-b4';mkdirSync(runtime,{recursive:true,mode:0o700});
 const log=openSync(runtime+'/build.log','a',0o600),results=[];
 try{
- const commands=process.argv.includes('--site-only')?
+ const commands=process.argv.includes('--site-ui')?[['--filter','@ikun/website','build'],['--filter','@ikun/website','typecheck']]:process.argv.includes('--site-only')?
   [['--filter','@ikun/website','build'],['--filter','@ikun/website','typecheck'],['exec','node','--import','./release-integration/scripts/permission-fixture.mjs','--test','--test-name-pattern','termination during IPC|private IPC has|modified entry|caller argument|private Projects child','tests/b0-launch.test.mjs','tests/b0-managed.test.mjs']]:
   [['install','--frozen-lockfile'],['build'],['--filter','@ikun/hunter-worker','build'],['typecheck'],['exec','node','release-integration/scripts/c0_regression.mjs']];
  for(const args of commands){

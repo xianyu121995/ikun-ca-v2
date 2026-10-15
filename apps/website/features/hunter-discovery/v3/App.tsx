@@ -5,6 +5,7 @@ import '@ikun/ui/styles.css';
 import './v3.css';
 
 import type {LiveBinding} from '../../../components/hunter-controller';
+import {WorkspaceLink} from '../../../components/auth/forms';
 
 type Mode='normal'|'loading'|'error'|'empty';
 type Action='add'|'enable'|'disable'|'remove';
@@ -50,7 +51,7 @@ export default function App({live}:{live?:LiveBinding}={}){
  const total=live?(live.counts?.total??'—'):Object.keys(hunters).length,active=live?(live.counts?.enabled??'—'):Object.values(hunters).filter(Boolean).length;
  const modalKind=modal?.kind;
  const modalTitle=modalKind==='manager'?'猎手管理':modalKind==='states'?'页面状态测试':modalKind==='join'?'加入猎手项目监控':modalKind==='discard'?'放弃未保存的修改？':modal?.kind==='hunter-confirm'?(modal.action==='remove'?'移除指定猎手':'停用指定猎手'):'';
- return <div className="hunter-v3"><AppShell pathname="/hunter" LinkComponent={Link} footer={<><div className="nav-hint">猎手关注发现 → 项目研究 → 人工加入持续监控</div><div className="side-bottom"><strong>{live?'Hunter 本地候选':<><span className="live-dot"/>UI 原型模式</>}</strong><p>{live?'未连接真实来源':'仅演示交互'}<br/>{live?'名单与原始事件保密':'不连接真实 API / 数据库'}</p></div></>}>
+ return <div className="hunter-v3"><AppShell pathname="/hunter" LinkComponent={live?WorkspaceLink:Link} footer={<><div className="nav-hint">猎手关注发现 → 项目研究 → 人工加入持续监控</div><div className="side-bottom"><strong>{live?'Hunter 本地候选':<><span className="live-dot"/>UI 原型模式</>}</strong><p>{live?'未连接真实来源':'仅演示交互'}<br/>{live?'名单与原始事件保密':'不连接真实 API / 数据库'}</p></div></>}>
  <div className="main"><section className="discovery" aria-label="项目发现"><header className="top"><div className="crumb"><div>控制台 &nbsp;/&nbsp; <b>HunterRadar 猎手监控</b></div><Badge tone="warning" className="prototype-chip">{live?(live.fixture?'本地验收夹具 · 未连接真实来源':'未连接真实来源'):'● 演示数据 · 非真实监控'}</Badge></div>
  <div className="header-row"><div><h1 className="page-title">项目发现 <span>/ Discovery Feed</span></h1><p className="subtitle">72 小时内至少 2 位不同猎手关注同一账号，进入待研究列表</p></div><div className="title-buttons">{!live&&<Button onClick={()=>openModal({kind:'states'})}>◫&nbsp; 测试页面状态</Button>}<Button className="soft" disabled={!writable||pending} onClick={()=>openModal({kind:'manager'})}>⚙&nbsp; 猎手管理</Button></div></div>
  <div className="kpis">{[[live?'本页发现':'累计发现',projects.length,'◇',''],['待研究',projects.filter(p=>p.status==='pending').length,'⌕','yellow'],['已评分',projects.filter(p=>p.grade!==null).length,'★','blue'],[live?'待核实请求':'已加入监控',live?live.blockedIds.size:projects.filter(p=>p.status==='joined').length,'◉','teal']].map(([label,value,symbol,color])=><div className="kpi" key={label}><div className="kpi-top">{label}<span className="kpi-sig">{symbol}</span></div><strong className={String(color)}>{String(value).padStart(2,'0')}</strong></div>)}</div></header>

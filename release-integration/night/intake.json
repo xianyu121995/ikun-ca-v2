@@ -143,9 +143,10 @@
     "file_manifest_path": "release-integration/night/wiring-files.json",
     "source_and_receiving_patch_hashes_required_before_build": true,
     "receiving_patch_sha256": {
-      "apps/website/lib/projects.ts": "7a73693ae47dba68cb7b867139de36c1f579189bbb0c08460eb2cb6b2c25d601",
-      "apps/website/components/hunter-controller.tsx": "bbf0df755adcca68b0cf937f2e3e25d930c50f1721dc9b2b295a7793fa70eca9",
-      "apps/website/app/api/v1/commands/[id]/route.ts": "f90f70f1036ee62534181e6d4e5359206392007b308e39de9c06fb73ddcbb5f0",
+      "apps/website/lib/projects.ts": "3900cb25a0ba53856337d8edd61c5dcd125d5547374139a9371246b535268937",
+      "apps/website/components/hunter-controller.tsx": "025a29e4b2a73aac6efb0082a751b90472e371a51cc187c305911bbb3f8a47ce",
+      "apps/website/app/api/v1/commands/[id]/route.ts": "f9b6686c2d22311b613315eb292c0f2b728119ed956c6136c81331d45101b005",
+      "apps/website/features/hunter-discovery/v3/App.tsx": "8843b6317f3bbad80f5ad6bbd70519e21864a28432873ccb511615bbdc0604b2",
       "apps/website/app/api/v1/hunter/events/route.ts": "31bbf8b387c5f5743615b25bece044274af209b2837e38280c83378a79336fe4",
       "apps/website/app/api/v1/tracking/events/route.ts": "2183413bd7a9aebe748469c4040e494bcf2554b58091d0d15569a0712a2c887f",
       "apps/website/lib/service-gateway/commands.ts": "1eeead7a3953600103df1ae5c26ef05d7308b1338344ca2039b24f5241c2aec3",
@@ -153,6 +154,8 @@
       "apps/website/instrumentation.ts": "411a66256373d96d93cef9b3c6168b1144fa962d730d3cb45562e305a38de909"
     },
     "implemented_or_received": true,
-    "does_not_accept_worker_core_or_deployment": true
+    "does_not_accept_worker_core_or_deployment": true,
+    "user_required_tracking_navigation_wording": "reuse existing WorkspaceLink: 猎手项目追踪",
+    "gateway_review_commit": "98fc94c410c4f1a806c9c7b11f914802aaad50ae"
   }
 }

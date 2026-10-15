@@ -1,9 +1,8 @@
 --- a/apps/website/app/api/v1/commands/[id]/route.ts
 +++ b/apps/website/app/api/v1/commands/[id]/route.ts
-@@ -1,4 +1,4 @@
+@@ -1 +1 @@
 -import {projectsRoute} from '../../../../../lib/projects';
 +import {commandGateway} from '../../../../../lib/service-gateway/commands';
- export const runtime='nodejs';
- export const dynamic='force-dynamic';
+@@ -4 +4 @@
 -export const GET=projectsRoute;
 +export const GET=commandGateway;

@@ -1,0 +1,182 @@
+{
+  "state": "PASS_B4_LOCAL_NEXT_AND_HUNTER_ONLY",
+  "source_head": "7d8fd6efa2f97db7a5a57f5f2f5162ffc432a119",
+  "scratch": "/private/tmp/ikun-b4-site-ocqp7w08",
+  "checks": [
+    {
+      "check": "worker_external_collection_off",
+      "result": "PASS"
+    },
+    {
+      "check": "website_and_hunter_independent_processes",
+      "result": "PASS"
+    },
+    {
+      "check": "real_auth_login_c0_admin",
+      "result": "PASS"
+    },
+    {
+      "check": "real_first_password_change_c0_admin",
+      "result": "PASS"
+    },
+    {
+      "check": "real_auth_login_c0_user",
+      "result": "PASS"
+    },
+    {
+      "check": "real_first_password_change_c0_user",
+      "result": "PASS"
+    },
+    {
+      "check": "anonymous_rejected_/api/v1/hunter/signals",
+      "result": "PASS"
+    },
+    {
+      "check": "anonymous_rejected_/api/v1/hunter/events",
+      "result": "PASS"
+    },
+    {
+      "check": "anonymous_rejected_/api/v1/events/stream",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_unreceived_not_auth_403_or_substituted_stream",
+      "result": "PASS"
+    },
+    {
+      "check": "hunter_rejects_tracking_cursor",
+      "result": "PASS"
+    },
+    {
+      "check": "projects_rejects_hunter_cursor",
+      "result": "PASS"
+    },
+    {
+      "check": "synthetic_discovery_public_DTO",
+      "result": "PASS"
+    },
+    {
+      "check": "ordinary_DTO_no_individual_hunter_identity",
+      "result": "PASS"
+    },
+    {
+      "check": "user_write_rejected_POST",
+      "result": "PASS"
+    },
+    {
+      "check": "user_write_rejected_PUT",
+      "result": "PASS"
+    },
+    {
+      "check": "user_write_rejected_PATCH",
+      "result": "PASS"
+    },
+    {
+      "check": "user_write_rejected_DELETE",
+      "result": "PASS"
+    },
+    {
+      "check": "hunter_management_admin_only",
+      "result": "PASS"
+    },
+    {
+      "check": "native_hunter_cursor_preserved",
+      "result": "PASS"
+    },
+    {
+      "check": "original_projects_stream_preserved",
+      "result": "PASS"
+    },
+    {
+      "check": "manual_confirmation_durable_not_running",
+      "result": "PASS"
+    },
+    {
+      "check": "same_idempotency_original_command",
+      "result": "PASS"
+    },
+    {
+      "check": "hunter_loopback_delivery_Projects_IPC_canonical_hidden",
+      "result": "PASS"
+    },
+    {
+      "check": "canonical_known_tracking_unreceived_honest_503",
+      "result": "PASS"
+    },
+    {
+      "check": "no_unreceived_tracking_database_or_implicit_init",
+      "result": "PASS"
+    },
+    {
+      "check": "homepage_add_is_separate_explicit_action",
+      "result": "PASS"
+    },
+    {
+      "check": "homepage_public_project_visible",
+      "result": "PASS"
+    },
+    {
+      "check": "homepage_remove_only",
+      "result": "PASS"
+    },
+    {
+      "check": "Projects_remove_does_not_change_Hunter_discovery",
+      "result": "PASS"
+    },
+    {
+      "check": "live_truthful_source_admin_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "layout_no_page_overflow_admin_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "live_truthful_source_admin_390",
+      "result": "PASS"
+    },
+    {
+      "check": "layout_no_page_overflow_admin_390",
+      "result": "PASS"
+    },
+    {
+      "check": "live_truthful_source_user_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "layout_no_page_overflow_user_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "live_truthful_source_user_390",
+      "result": "PASS"
+    },
+    {
+      "check": "layout_no_page_overflow_user_390",
+      "result": "PASS"
+    },
+    {
+      "check": "live_user_SSE_started_before_revocation",
+      "result": "PASS"
+    },
+    {
+      "check": "disabled_user_API_revoked",
+      "result": "PASS"
+    },
+    {
+      "check": "quiet_module_SSE_revoked_without_new_event",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_unaffected_by_synthetic_user_disable",
+      "result": "PASS"
+    }
+  ],
+  "real_provider_calls": 0,
+  "Tracking_full_chain": "NOT_RECEIVED_NOT_CLAIMED",
+  "command_id": "cmd_ce55a63a-7d17-4ece-8675-b18c9a4fc629",
+  "project_id": "prj_8482cfd5-da19-4e4f-998f-39cc71281db5",
+  "build_id": "h54nVd6ExsdavQ3VJlvEa",
+  "scope": "actual isolated production Next and Hunter; no Tracking core received",
+  "caption_only_delta_added_after_run": "reuse existing WorkspaceLink; exact reversal hash checked; public render pending"
+}

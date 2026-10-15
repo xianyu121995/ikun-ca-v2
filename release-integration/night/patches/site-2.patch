@@ -1,9 +1,6 @@
 --- a/apps/website/components/hunter-controller.tsx
 +++ b/apps/website/components/hunter-controller.tsx
-@@ -40,6 +40,28 @@
-   finally{if(version===generation.current){setLoading(false);setRefreshing(false);}}
-  }
-  useEffect(()=>{void load(cursor,records.length===0);return()=>active.current?.abort();},[cursor,query]);
+@@ -42,0 +43,22 @@
 + useEffect(()=>{
 +  if(revoked)return;
 +  const source=new EventSource('/api/v1/hunter/events'),abort=new AbortController();
@@ -26,6 +23,3 @@
 +  };
 +  return()=>{closed=true;source.close();abort.abort();clearTimeout(timer);};
 + },[cursor,query,revoked,session.role]);
-  const manageable=!revoked&&session.role==='superadmin'&&!session.must_change_password&&session.capabilities.can_manage_hunter;
-  async function save(project:Project):Promise<Outcome>{
-   if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};

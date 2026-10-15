@@ -47,7 +47,8 @@ def verify():
     permitted = {'apps/website/lib/projects.ts', 'apps/website/components/hunter-controller.tsx',
                  'apps/website/app/api/v1/commands/[id]/route.ts', 'apps/website/app/api/v1/hunter/events/route.ts',
                  'apps/website/app/api/v1/tracking/events/route.ts', 'apps/website/instrumentation.ts',
-                 'apps/website/lib/service-gateway/commands.ts', 'apps/website/lib/service-gateway/relay.ts'}
+                 'apps/website/lib/service-gateway/commands.ts', 'apps/website/lib/service-gateway/relay.ts',
+                 'apps/website/features/hunter-discovery/v3/App.tsx'}
     assert set(patches) == permitted
     for target, row in patches.items():
         assert digest((ROOT / row['patch_path']).read_bytes()) == row['patch_sha256']
@@ -63,4 +64,9 @@ def verify():
         expected_hash = patches[target]['target_sha256'] if target in patches else row.get('reviewed_patch_output_sha256', row['source_sha256'])
         assert digest((ROOT / target).read_bytes()) == expected_hash, target
         allowed.add(target)
+    # User explicitly required the existing tracking navigation wording before deployment.
+    # Reuse the already received WorkspaceLink; reverse only these two receiving lines.
+    app = (ROOT / 'apps/website/features/hunter-discovery/v3/App.tsx').read_bytes()
+    before_caption = app.replace(b"import {WorkspaceLink} from '../../../components/auth/forms';\n", b'', 1).replace(b'LinkComponent={live?WorkspaceLink:Link}', b'LinkComponent={Link}', 1)
+    assert digest(before_caption) == freeze['patched_ui_output_sha256']['apps/website/features/hunter-discovery/v3/App.tsx']
     return overrides, allowed

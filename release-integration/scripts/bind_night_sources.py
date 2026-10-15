@@ -32,6 +32,7 @@ def main():
         'apps/website/lib/projects.ts': (C03, 'modules/projects/integration/website/lib/projects.ts'),
         'apps/website/components/hunter-controller.tsx': (B4, 'services/hunter-worker/python/integration/website/components/hunter-controller.tsx'),
         'apps/website/app/api/v1/commands/[id]/route.ts': (BASE, 'apps/website/app/api/v1/commands/[id]/route.ts'),
+        'apps/website/features/hunter-discovery/v3/App.tsx': (UI, 'apps/website/features/hunter-discovery/v3/App.tsx'),
     }
     for path in ('apps/website/app/api/v1/hunter/events/route.ts', 'apps/website/app/api/v1/tracking/events/route.ts',
                  'apps/website/lib/service-gateway/commands.ts', 'apps/website/lib/service-gateway/relay.ts', 'apps/website/instrumentation.ts'):
@@ -41,7 +42,7 @@ def main():
     for index, (path, (commit, source)) in enumerate(candidates.items()):
         before = at(commit, source) if commit else b''
         after = (ROOT / path).read_bytes()
-        patch = ''.join(difflib.unified_diff(before.decode().splitlines(True), after.decode().splitlines(True),
+        patch = ''.join(difflib.unified_diff(before.decode().splitlines(True), after.decode().splitlines(True), n=0,
                                            fromfile='a/' + path if commit else '/dev/null', tofile='b/' + path)).encode()
         patch_path = directory / ('site-' + str(index + 1) + '.patch')
         patch_path.write_bytes(patch)
@@ -53,6 +54,7 @@ def main():
     result = {'source_commit': B4, 'control_commit': CONTROL, 'wiring_control_commit': WIRING,
               'projects_commit': C03, 'ui_commit': UI, 'frozen_domain_inputs': inputs,
               'received_website_inputs': records, 'site_patches': patches,
+              'site_patch_format': 'unified-zero-context; apply with git apply --unidiff-zero',
               'original_immutable_and_homepage_checks_remain_required': True}
     (ROOT / 'release-integration/night/source-binding.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps({'frozen_domain_paths': len(inputs), 'website_inputs': len(records), 'site_patches': len(patches)}))

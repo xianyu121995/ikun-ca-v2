@@ -1,0 +1,162 @@
+{
+  "state": "READ_ONLY_WIRING_REVIEW_PREPARATION_ONLY",
+  "at": "2026-10-16T02:12:23.212092+08:00",
+  "base_commit": "f7933f0d64f83f02f4274ea434e8a919f482b4c6",
+  "authority_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "direction_authorized_by_chief_message": true,
+  "protocol_delta_control_commit": null,
+  "core_freeze_required_before_implementation": true,
+  "phase2_existing_global_SSE_semantics_preserved": true,
+  "routes": [
+    {
+      "path": "/api/v1/events/stream",
+      "handler": "projectEvents",
+      "native_cursor": "numeric",
+      "operation": "preserve"
+    },
+    {
+      "path": "/api/v1/hunter/events",
+      "handler": "hunterEventsRoute",
+      "native_cursor": "hunter:N",
+      "operation": "versioned_additive_readonly"
+    },
+    {
+      "path": "/api/v1/tracking/events",
+      "handler": "trackingEventsRoute",
+      "native_cursor": "evt_ID",
+      "operation": "versioned_additive_readonly"
+    }
+  ],
+  "composite_cursor_or_new_bus_database": false,
+  "specific_conflicts": [
+    "Both module preview global SSE mounts conflict with existing Projects stream",
+    "B1 exact readonly policy does not admit the two new routes before Proxy and direct handlers",
+    "Current Projects-only and Tracking fallback command mounts omit required three-domain resolution",
+    "Production website launcher has no relayOnce caller",
+    "Unfrozen Hunter controller has no EventSource binding to rename"
+  ],
+  "original_command_id_required": true,
+  "accepted_never_implies_running": true,
+  "relay_mechanism": "existing relayOnce / outbox_claim / original-command reconcile / outbox_result / existing inbox",
+  "stable_reference_commits": {
+    "integration": "f7933f0d64f83f02f4274ea434e8a919f482b4c6",
+    "tracking_inspected_committed_candidate_not_accepted_core": "d430c302e853bacd0c7424381dac36910b709a8c",
+    "hunter_protocol_not_accepted_core": "b16fb36a8b8269350319c02a60faa6ea2708d95a",
+    "accepted_C03_dependency_only": "aa51a640a159e4c8f6cdd841a25f4279e73075ba"
+  },
+  "unfrozen_worktree_inspections": [
+    {
+      "worktree": "hunter-worker",
+      "path": "services/hunter-worker/python/integration/website/lib/hunter.ts",
+      "sha256": "151165438072d62a55e4f647e7910977344783c7e90daeee4d733670edc17bda",
+      "state": "UNFROZEN_INSPECTION_ONLY_NOT_ACCEPTED_INPUT"
+    },
+    {
+      "worktree": "hunter-worker",
+      "path": "services/hunter-worker/python/integration/website/components/hunter-controller.tsx",
+      "sha256": "02be49982ffd8cfc46d9311424d0bf023ad6900bfd286aa0624bc7c744a96f4f",
+      "state": "UNFROZEN_INSPECTION_ONLY_NOT_ACCEPTED_INPUT"
+    },
+    {
+      "worktree": "hunter-worker",
+      "path": "services/hunter-worker/python/integration/prepare-preview.py",
+      "sha256": "0e03925daaa40b16e21ce98f50af0425f53708a22c82435932bcfdb852730bd7",
+      "state": "UNFROZEN_INSPECTION_ONLY_NOT_ACCEPTED_INPUT"
+    },
+    {
+      "worktree": "tracking-worker",
+      "path": "services/tracking-worker/python/integration/website/lib/tracking.ts",
+      "sha256": "9df448823ce652e061f041821641ddfeaf4660ed9b8aa8d2943c0a53c542fa4c",
+      "state": "UNFROZEN_INSPECTION_ONLY_NOT_ACCEPTED_INPUT"
+    },
+    {
+      "worktree": "tracking-worker",
+      "path": "services/tracking-worker/python/integration/website/components/tracking-live.tsx",
+      "sha256": "a447873b0b2210a36f39f06c0a78eb4d71fda38cf00b22d398d434ed5dc94d05",
+      "state": "UNFROZEN_INSPECTION_ONLY_NOT_ACCEPTED_INPUT"
+    },
+    {
+      "worktree": "tracking-worker",
+      "path": "services/tracking-worker/python/integration/website/app/api/v1/commands/[id]/route.ts",
+      "sha256": "322bf4df2b4d0a96dab1652347cf1f738f2af6d3dbe69fd146aba3d4f769823f",
+      "state": "UNFROZEN_INSPECTION_ONLY_NOT_ACCEPTED_INPUT"
+    },
+    {
+      "worktree": "tracking-worker",
+      "path": "services/tracking-worker/python/integration/website/app/api/v1/events/stream/route.ts",
+      "sha256": "ca46f8d93cdbd20f03e9de6359e21acbc56898a9220f84d7e932423a2ac60452",
+      "state": "UNFROZEN_INSPECTION_ONLY_NOT_ACCEPTED_INPUT"
+    }
+  ],
+  "planned_future_files_not_modified": [
+    {
+      "path": "apps/website/app/api/v1/hunter/events/route.ts",
+      "change": "new_thin_readonly_delegate"
+    },
+    {
+      "path": "apps/website/app/api/v1/tracking/events/route.ts",
+      "change": "new_thin_readonly_delegate"
+    },
+    {
+      "path": "apps/website/lib/projects.ts",
+      "change": "receive_C03_then_explicit_two_exact_read_rule_delta"
+    },
+    {
+      "path": "apps/website/lib/hunter.ts",
+      "change": "receive_only_final_accepted_handler"
+    },
+    {
+      "path": "apps/website/lib/tracking.ts",
+      "change": "receive_only_final_accepted_handler"
+    },
+    {
+      "path": "apps/website/components/tracking-live.tsx",
+      "change": "module_EventSource_URL_delta_after_final_freeze"
+    },
+    {
+      "path": "apps/website/components/hunter-controller.tsx",
+      "change": "pending_owner_frozen_SSE_binding_not_currently_URL_only"
+    },
+    {
+      "path": "apps/website/app/api/v1/commands/[id]/route.ts",
+      "change": "ownership_aware_original_command_gateway_composition"
+    },
+    {
+      "path": "scripts/start-c0-lite.mjs",
+      "change": "candidate_existing_website_lifecycle_relayOnce_caller",
+      "exact_entry_pending_chief_record": true
+    },
+    {
+      "path": "release-integration/night/",
+      "change": "reviewed_hashes_scope_and_acceptance_records"
+    },
+    {
+      "path": "release-integration/scripts/",
+      "change": "approved_receiving_build_mapping_only"
+    },
+    {
+      "path": "release-integration/tests/",
+      "change": "future_module_SSE_command_and_relay_integration_checks"
+    }
+  ],
+  "do_not_receive_global_preview_mounts": [
+    "services/tracking-worker/python/integration/website/app/api/v1/events/stream/route.ts",
+    "services/tracking-worker/python/integration/website/app/api/v1/commands/[id]/route.ts",
+    "Hunter prepare-preview generated global stream and command mounts"
+  ],
+  "preserve_current_files_or_mechanisms": [
+    "apps/website/app/api/v1/events/stream/route.ts",
+    "apps/website/lib/project-events.ts",
+    "apps/website/lib/outbox-relay.ts",
+    "modules/auth/src/",
+    "schemas/",
+    "apps/website/lib/stores.ts"
+  ],
+  "functional_tests_run": false,
+  "built": false,
+  "worker_merged": false,
+  "deployed": false,
+  "live_database_accessed": false,
+  "actual_jobs_changed": false,
+  "real_provider_calls": 0
+}

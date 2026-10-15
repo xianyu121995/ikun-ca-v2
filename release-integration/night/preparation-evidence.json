@@ -1,0 +1,41 @@
+{
+  "status": "PASS_PREPARATION_ONLY",
+  "at": "2026-10-16T01:34:45.323053+08:00",
+  "authority_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "unit_tests": 19,
+  "unit_failed": 0,
+  "unit_command": "python3.11 -m unittest discover -s release-integration/tests -p test_night_worker_ops.py -v",
+  "unit_stdout_retained_in_task_tool_output": true,
+  "unit_scope": "synthetic temp files/SQLite and mocked launchctl only",
+  "cli_checks": [
+    {
+      "worker": "hunter",
+      "render_exit": 0,
+      "plist_lint_exit": 0,
+      "pending_check_exit": 2,
+      "pending_start_blocked": true,
+      "installed": false,
+      "started": false
+    },
+    {
+      "worker": "tracking",
+      "render_exit": 0,
+      "plist_lint_exit": 0,
+      "pending_check_exit": 2,
+      "pending_start_blocked": true,
+      "installed": false,
+      "started": false
+    }
+  ],
+  "source_sha256": {
+    "release-integration/scripts/night_worker_ops.py": "30a7285a29d89fc0354fd875e5d54095573e5c5805b289c2f809f4f7e67a0eaa",
+    "release-integration/tests/test_night_worker_ops.py": "e638c460ba0f69b3ccaa7edb1992968a03ed0563c5cd995e0ad1946e0776c3e1"
+  },
+  "existing_intake_immutable_sources": 77,
+  "existing_intake_homepage_sources": 8,
+  "actual_job_install_start_migration": false,
+  "live_database_accessed": false,
+  "real_provider_calls": 0,
+  "running_test_site_changed": false,
+  "pending_runtime": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/night-prep/1792085685017281000"
+}

@@ -1,0 +1,34 @@
+{
+  "record_version": 1,
+  "authority_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "baseline_running_commit": "c1fe12d32ec6f23dbc97f712dab565b7c0c7855f",
+  "target": "https://v2.ikun.ca",
+  "main_must_remain": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+  "workers": {
+    "hunter": {
+      "state": "WAITING_ACCEPTED_FREEZE",
+      "protocol_commit": "b16fb36a8b8269350319c02a60faa6ea2708d95a",
+      "accepted_source_commit": null,
+      "accepted_control_commit": null,
+      "source_sha256": {},
+      "label": "ca.ikun.v2.c0lite.hunter",
+      "host": "127.0.0.1",
+      "port_candidate": 4011,
+      "database": "DATA_ROOT/hunter/hunter.db"
+    },
+    "tracking": {
+      "state": "WAITING_ACCEPTED_FREEZE",
+      "protocol_commit": "4e0b293901c72df0c28180eb849a2d67d8c9c4c9",
+      "accepted_source_commit": null,
+      "accepted_control_commit": null,
+      "source_sha256": {},
+      "label": "ca.ikun.v2.c0lite.tracking",
+      "host": "127.0.0.1",
+      "port_candidate": 4012,
+      "database": "DATA_ROOT/tracking/tracking.db"
+    }
+  },
+  "real_sources_enabled": false,
+  "truthful_banner": "未连接真实来源",
+  "jobs_installed": false
+}

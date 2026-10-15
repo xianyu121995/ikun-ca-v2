@@ -118,7 +118,7 @@ def main():
         init_env={**values,'HOME':str(Path.home()),'PATH':'/usr/bin:/bin','PYTHONNOUSERSITE':'1','PYTHONDONTWRITEBYTECODE':'1'}
         entry=release/'services/tracking-worker/python/entry.py'
         for operation in ('init','migrate'): run([venv/'bin/python',entry,operation,'--config',cfg_path],env=init_env)
-        preflight=json.loads(run([venv/'bin/python',release/delta['path'],'--release-root',release,'--job-cwd',job_cwd,'--config',cfg_path,'--venv-root',venv],env=init_env))
+        preflight=json.loads(run([venv/'bin/python','-I','-B',release/delta['path'],'--release-root',release,'--job-cwd',job_cwd,'--config',cfg_path,'--venv-root',venv],env=init_env))
         assert preflight['passed'] is True and preflight['provider_calls']==0
         report['preflight']=preflight
         manifest=json.loads((ROOT/'services/tracking-worker/python/NIGHT-SOURCE-MANIFEST.json').read_text())

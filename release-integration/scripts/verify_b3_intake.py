@@ -5,6 +5,12 @@ import difflib
 import subprocess
 from receive_b3 import ROOT, B3, DELIVERY, CONTROL, UI, PREFIX, EXCLUDED, at, sha, transform
 
+PREFLIGHT_COMMIT = 'f67ba31dd034b3cd590ec7740c998b111d337ffa'
+PREFLIGHT_CONTROL = 'f2f492dec3266e3204cffce1ede571f36d04bd5f'
+PREFLIGHT_PATH = 'services/tracking-worker/python/integration/preflight-release.py'
+PREFLIGHT_SHA = 'cab67b5db35fdfc8a5496c731ecde08a49c66d3b51bc8305d670388cbd342659'
+PREFLIGHT_ADDED = ('services/tracking-worker/python/tests/test_preflight.py', 'services/tracking-worker/python/PREFLIGHT-VENV-HANDOFF.md')
+
 
 def verify():
     freeze = json.loads(at(CONTROL, 'docs/progress/b3-freeze.json'))
@@ -17,10 +23,20 @@ def verify():
     subprocess.run(['git', 'merge-base', '--is-ancestor', DELIVERY, 'HEAD'], cwd=ROOT, check=True)
     paths = subprocess.check_output(['git', 'ls-tree', '-r', '--name-only', DELIVERY, 'services/tracking-worker/', 'schemas/tracking/'], cwd=ROOT, text=True).splitlines()
     allowed = set(paths)
+    subprocess.run(['git', 'merge-base', '--is-ancestor', PREFLIGHT_COMMIT, 'HEAD'], cwd=ROOT, check=True)
+    changed = subprocess.check_output(['git','diff','--name-only',PREFLIGHT_COMMIT+'^',PREFLIGHT_COMMIT],cwd=ROOT,text=True).splitlines()
+    assert set(changed) == {PREFLIGHT_PATH, *PREFLIGHT_ADDED}
+    assert PREFLIGHT_SHA in at(PREFLIGHT_CONTROL,'docs/progress/B3-PREFLIGHT-REVIEW.md').decode()
+    assert sha(at(PREFLIGHT_COMMIT,PREFLIGHT_PATH)) == PREFLIGHT_SHA
     for path in paths:
-        assert (ROOT / path).read_bytes() == at(DELIVERY, path), path
+        expected = at(PREFLIGHT_COMMIT,path) if path == PREFLIGHT_PATH else at(DELIVERY,path)
+        assert (ROOT / path).read_bytes() == expected, path
     for path, expected in manifest['source_inputs'].items():
-        assert sha(at(B3, path)) == expected == sha((ROOT / path).read_bytes()), path
+        assert sha(at(B3, path)) == expected, path
+        assert sha((ROOT / path).read_bytes()) == (PREFLIGHT_SHA if path == PREFLIGHT_PATH else expected), path
+    for path in PREFLIGHT_ADDED:
+        assert (ROOT/path).read_bytes() == at(PREFLIGHT_COMMIT,path)
+        allowed.add(path)
     mappings = {row['formal_target']: row for row in manifest['source_mapping'] if row['source'].startswith(PREFIX) and row['source'] != EXCLUDED}
     ui_paths = subprocess.check_output(['git', 'ls-tree', '-r', '--name-only', UI, 'apps/website/features/tracking/'], cwd=ROOT, text=True).splitlines()
     assert set(receipt['files']) == set(mappings) | set(ui_paths)

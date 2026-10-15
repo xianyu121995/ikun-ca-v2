@@ -1,0 +1,22 @@
+{
+  "accepted_frozen": true,
+  "source_commit": "f67ba31dd034b3cd590ec7740c998b111d337ffa",
+  "control_commit": "f2f492dec3266e3204cffce1ede571f36d04bd5f",
+  "path": "services/tracking-worker/python/integration/preflight-release.py",
+  "sha256": "cab67b5db35fdfc8a5496c731ecde08a49c66d3b51bc8305d670388cbd342659",
+  "core_source_commit_unchanged": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+  "original_62_source_hashes_retained": true,
+  "runtime_override_count": 1,
+  "additional_test_and_doc": [
+    {
+      "path": "services/tracking-worker/python/tests/test_preflight.py",
+      "sha256": "8b891a33588155bcfab93faea2fecc24214b3ba8feb9678ebd651dc3e8a6410e"
+    },
+    {
+      "path": "services/tracking-worker/python/PREFLIGHT-VENV-HANDOFF.md",
+      "sha256": "8b39e30cb04943506fdf8c76a6521646bf81315e70d64ebe56f239a2975f76f0"
+    }
+  ],
+  "chief_independent_targeted_tests": 36,
+  "owner_same_suite_not_added": true
+}

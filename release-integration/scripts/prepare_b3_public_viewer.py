@@ -41,7 +41,10 @@ try{const row=store.list().find(x=>x.username===payload.username);if(!row||row.r
     result=subprocess.run([str(TARGET/'toolchains/node24/bin/node'),'--input-type=module','-e',code,str(TARGET/'releases'/args.expected_sha)],
                           input=json.dumps({'username':args.username,'initial':initial,'final':final}),env=env,capture_output=True,text=True,timeout=20)
     initial=final=''
-    if result.returncode:raise RuntimeError('VIEWER_ACTIVATION_FAILED_DISABLE_THIS_VIEWER')
+    if result.returncode:
+        cleanup=pexpect.spawn(sys.executable,[str(ROOT/'release-integration/scripts/c0_auth.py'),'disable','--username',args.username],encoding='utf-8',echo=False,timeout=30)
+        cleanup.expect(pexpect.EOF);cleanup.close()
+        raise RuntimeError('VIEWER_ACTIVATION_FAILED_DISABLED' if cleanup.exitstatus==0 else 'VIEWER_ACTIVATION_FAILED_DISABLE_REQUIRED')
     safe=json.loads(result.stdout);assert safe['role']=='user' and not safe['must_change_password']
     path=ROOT/'release-integration/.runtime/night-b3/public-temp-cycle.json'
     path.write_text(json.dumps(safe,indent=2)+'\n');path.chmod(0o600)

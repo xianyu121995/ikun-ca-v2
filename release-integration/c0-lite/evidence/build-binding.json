@@ -1,6 +1,6 @@
 {
   "control_commit": "c30cc51f64e95c40a6ccd83b1fbed458090ef3be",
-  "tested_merge_head": "0440632e6f533755dca7af97186057b31779f4e9",
+  "tested_merge_head": "93c60b9f09ae34f4bfc7ba38e192e87565e07e8b",
   "approved_password10_delta": {
     "status": "PASS",
     "review_commit": "1d56ef2f003c531574e41fe079c70510ac6ed437",
@@ -330,7 +330,7 @@
     "services/hunter-worker/python/requirements-lock.txt": "b88b719169f16814ef81609f8507ce17d77b7a96c2af55a42b8098d562b10ffb",
     "services/hunter-worker/src/main.ts": "14f2bb69b1c288b465bffd2971f59cf0abedea3880c997fa505de726ab878327",
     "services/tracking-worker/python/entry.py": "f936a4b18add4568356539f5499c482900f81286910ec3e6180633a4961082e6",
-    "services/tracking-worker/python/integration/preflight-release.py": "b8e1e9610c4a8f70b1fa722f033e004aa4d7545abbce393d6f87d612d0105cb5",
+    "services/tracking-worker/python/integration/preflight-release.py": "cab67b5db35fdfc8a5496c731ecde08a49c66d3b51bc8305d670388cbd342659",
     "services/tracking-worker/python/requirements.lock.txt": "89cb0cca8c57c2e4a12d9947a9c6e5924ce10aefa163554640cf74f09c6e3287",
     "services/tracking-worker/python/tracking/__init__.py": "a8dde1cbde68d7c3926374666b24588c92609ac9c88d0e567e1555652c717bf1",
     "services/tracking-worker/python/tracking/api.py": "0c685f4bdd9d84fe9d67b06af3db7257413ad37dc99f77dc0e02fef47ad922d1",

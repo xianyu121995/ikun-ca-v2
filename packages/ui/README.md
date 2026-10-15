@@ -2,6 +2,8 @@
 
 ikun.ca 公共视觉组件候选。设计与交互规范见 [DESIGN.md](./DESIGN.md)，集成边界与验证证据见 [HANDOFF.md](./HANDOFF.md)。组件不发请求、不访问数据库、不实现监控或认证。
 
+第二阶段 UI0 以 [UI0-HANDOFF.md](./UI0-HANDOFF.md) 和 [UI0-VALIDATION.json](./UI0-VALIDATION.json) 为本轮交付入口；旧 HANDOFF 保留第一轮记录。遵循 `phase2-v1.0.0`，冻结基线 `4527ba4` 保留，没有合并规范分支。
+
 ## 在当前候选 Worktree 运行
 
 基础锁文件尚未登记新 UI 包。先安装基础依赖，再只安装包内开发依赖；不会修改根 lockfile，也不创建第二个 Git 仓库。版本均已固定，与基础版本一致；esbuild 已存在于基础锁文件的 tsx 传递依赖中，此包将其作为预览工具直接声明。
@@ -53,14 +55,14 @@ export function WorkspaceFrame({ children }: { children: React.ReactNode }) {
 | --- | --- |
 | AppShell | pathname、children、account、footer、LinkComponent；固定三入口、底部账号、skip link |
 | PageHeader / Panel / Toolbar | 标题、说明、actions / children；统一页面层级与筛选布局 |
-| Button | variant primary/secondary/ghost/danger；pending 防重、size sm/md、原生按钮属性；默认 type=button |
+| Button | variant primary/secondary/ghost/danger；pending 防重、size sm/md、原生按钮属性；默认 type=button；新增 readOnly/disabledReason/operationState/mode/canExecute |
 | Input / Select | 必须 label；hint / error 自动关联；原生 value/onChange/required/disabled |
 | SearchInput | label、value、onValueChange；Esc 与清除按钮回传空字符串，不实现 debounce |
 | Badge | tone neutral/success/info/warning/danger；文字由业务提供 |
 | ScoreBadge | grade S/A/B/C/D/null，value 0–100/null；不推算等级 |
 | DataTable&lt;Row&gt; | caption、columns、rows、rowKey；sort/onSortChange，loading/refreshing，empty/error；minWidth 默认 760 |
-| Dialog | open/onOpenChange、title、description、footer、pending；closeOnBackdrop 默认 false；initialFocusRef 可指定焦点 |
-| Alert / ErrorState | title、说明、requestId；ErrorState 的 onRetry 只触发调用方回调 |
+| Dialog | open/onOpenChange、title、description、footer、pending；closeOnBackdrop 默认 false；initialFocusRef 可指定焦点；destructive 配合 data-dialog-cancel 默认聚焦取消 |
+| Alert / ErrorState | title、说明、公开 code、requestId；ErrorState 的 onRetry 只触发调用方回调 |
 | Skeleton / EmptyState | label / title、description、action；加载与空状态独立 |
 | ToastViewport | messages、onDismiss；success/info/neutral 5 秒关闭；warning/danger 保留；业务应限制数量 |
 | LoginPanel | 必须 onSubmit；pending/error/notice/footer/disabled；字段名 username/password |
@@ -68,8 +70,14 @@ export function WorkspaceFrame({ children }: { children: React.ReactNode }) {
 
 DataTable 的 sortable 仅在提供 onSortChange 时启用。调用方提供稳定且唯一的 rowKey；金额使用字符串并由业务格式化，避免浮点损失。地址与数字使用 `ik-mono`。表格详情用独立链接/按钮，不以整行点击替代键盘入口。DataTable 没有虚拟滚动；遵循接口单页最多 100 条，额外分页由业务持有 cursor。
 
-LoginPanel 的 onSubmit 得到阻止默认提交的 FormEvent。调用方可立即读取 FormData 并调用同源认证 API；业务负责 pending、错误、timeout、AbortController 和服务端校验。组件不读取、持久化或记录密码。禁止把事件对象异步保存为任务数据。
+LoginPanel 的表单固定 `method="post" action="/api/v1/auth/login"`，没有可覆盖 action 的 props。onSubmit 得到阻止默认提交的 FormEvent。调用方可立即读取 FormData 并调用同源认证 API；业务负责 pending、错误、timeout、AbortController 和服务端校验。组件不读取、持久化或记录密码。脚本未加载时使用原生同源 POST；认证 owner 必须安全拒绝不支持的表单编码。本包只提供拒绝测试夹具，不实现 Auth。禁止把事件对象异步保存为任务数据。
 
-Dialog 使用受控 open；父层 onOpenChange 处理未保存修改。破坏性操作把 initialFocusRef 指向取消按钮并提供明确对象名称。pending 为 true 时阻止 Esc、关闭按钮及背景关闭。不要使用 form method=dialog 绕过受控关闭逻辑，不嵌套模态弹窗。
+Dialog 使用受控 open；父层 onOpenChange 处理未保存修改。破坏性操作传 destructive，取消按钮标记 data-dialog-cancel；或用 initialFocusRef 指向取消按钮。缺少专用标记时原生初始焦点仍落在安全的关闭按钮。pending 时阻止 Esc、关闭按钮、背景关闭及子表单提交，并把焦点放在弹窗本身；父层仍须禁用自己的写入/关闭回调。原生 form method=dialog（包括 submitter 的 formmethod 覆盖）不会绕过受控关闭逻辑。不嵌套模态弹窗。
+
+Button 的 readOnly 仅控制此操作，保留页面其他读取、搜索和取消能力。operationState 为 pending/running 时禁用，unknown 时显示“结果待核实，请先核对回执”并阻止写入；不会自动重试。mode=live 的业务写按钮只有 canExecute=true 才可操作，缺省拒绝。未传新参数时保留既有原生 Button 行为。role/capability 来自领域的可信 session；这些 props 只控制显示，不能作为服务端授权。disabledReason 在被禁用且非 pending 时显示并通过 aria-describedby 关联；原有 disabled/title 仍保留。
+
+账号链接默认改为 `/auth`（第二阶段规范要求），登录 `/login`；三个业务入口仍是 `/`、`/hunter`、`/tracking`。既有 account.href 显式覆盖能力保留，集成时统一使用规范路径。
+
+无脚本安全回归（先 build）：`pnpm --dir packages/ui test:no-js`。浏览器夹具：`pnpm --dir packages/ui preview:no-js -- --port 3251`。它不加载脚本并用 CSP 禁用脚本，固定同源 POST 后可见地返回 415；只计数字节数与脱敏请求元信息，不保存/回显凭据。该夹具只供虚构凭据测试，不属于三个生产服务或 Auth 实现。
 
 CSS 类全部置于 `.ik-theme` 下。独立组合组件需包裹 `<div className="ik-theme">`；AppShell、LoginPanel、Dialog 和 ToastViewport 自带 theme。公开辅助类：ik-stack、ik-actions、ik-mono、ik-muted、ik-hint、ik-panel--table。在业务类中引用 `var(--ik-*)`，不重新定义全站配色。

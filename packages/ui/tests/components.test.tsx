@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRef } from "react";
+import * as publicUi from "../src/index.js";
 import { Alert, AppShell, BUSINESS_NAVIGATION, Button, DataTable, Dialog, Input, LoginPanel, ScoreBadge, SearchInput, isNavigationActive } from "../src/index.js";
 
 test("business navigation has exactly three entries and matches complete path segments", () => {
@@ -14,13 +15,35 @@ test("business navigation has exactly three entries and matches complete path se
   const html = renderToStaticMarkup(<AppShell pathname="/tracking/abc" account={{ name: "示例" }}>内容</AppShell>);
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
   assert.match(html, /aria-label="猎手项目监控"/);
-  assert.match(html, /href="\/account"/);
+  assert.match(html, /href="\/auth"/);
 });
 
 test("pending button prevents duplicate submission and retains its label", () => {
   const html = renderToStaticMarkup(<Button type="submit" pending>保存</Button>);
   assert.match(html, /disabled=""/); assert.match(html, /aria-busy="true"/); assert.match(html, /保存/);
   assert.match(renderToStaticMarkup(<Button>操作</Button>), /type="button"/);
+});
+
+test("read-only, unknown and default-denied live actions show accessible reasons", () => {
+  for (const [props, reason] of [[{ readOnly: true }, "当前账号只读"], [{ operationState: "unknown" as const }, "结果待核实，请先核对回执"], [{ mode: "live" as const }, "当前操作权限未确认"]] as const) {
+    const html = renderToStaticMarkup(<Button {...props} onClick={() => {}}>写入操作</Button>);
+    assert.match(html, /disabled=""/); assert.match(html, /aria-describedby=/); assert.ok(html.includes(reason));
+  }
+  assert.doesNotMatch(renderToStaticMarkup(<Button mode="live" canExecute onClick={() => {}}>已确认能力</Button>), /disabled=""/);
+  assert.match(renderToStaticMarkup(<Button disabled disabledReason="尚未接入">操作</Button>), /尚未接入/);
+});
+
+test("unknown supersedes a stale pending flag, while running prevents duplicate writes", () => {
+  assert.doesNotMatch(renderToStaticMarkup(<Button pending operationState="unknown">操作</Button>), /aria-busy="true"/);
+  assert.match(renderToStaticMarkup(<Button operationState="unknown" disabledReason="额外说明">操作</Button>), /结果待核实，请先核对回执；额外说明/);
+  const running = renderToStaticMarkup(<Button operationState="running">执行中</Button>);
+  assert.match(running, /aria-busy="true"/); assert.match(running, /disabled=""/);
+});
+
+test("all frozen public components remain exported", () => {
+  for (const name of ["Icon", "Button", "Input", "Select", "SearchInput", "Badge", "ScoreBadge", "Panel", "PageHeader", "Toolbar", "AppShell", "DataTable", "Dialog", "Alert", "EmptyState", "ErrorState", "Skeleton", "ToastViewport", "LoginPanel", "AccountSummary"]) {
+    assert.equal(typeof publicUi[name as keyof typeof publicUi], "function", name);
+  }
 });
 
 test("fields preserve native labels and link hints and errors", () => {
@@ -66,6 +89,8 @@ test("login supports autofill and disables submit when authentication is unavail
   assert.match(html, /autoComplete="username"/); assert.match(html, /autoComplete="current-password"/);
   assert.match(html, /type="password"/); assert.match(html, /aria-controls=/);
   assert.match(html, /role="alert"/); assert.match(html, /type="submit" disabled=""/);
+  const form = html.match(/<form\b[^>]*>/)?.[0]; assert.ok(form);
+  assert.match(form, /method="post"/); assert.match(form, /action="\/api\/v1\/auth\/login"/);
 });
 
 test("dialog is labelled and errors support request IDs without requiring backend details", () => {
@@ -73,11 +98,13 @@ test("dialog is labelled and errors support request IDs without requiring backen
   const html = renderToStaticMarkup(<Dialog open={false} onOpenChange={() => {}} initialFocusRef={cancelRef} title="确认操作" description="说明" footer={<Button ref={cancelRef}>取消</Button>}>内容</Dialog>);
   assert.match(html, /<dialog/); assert.match(html, /aria-modal="true"/); assert.match(html, /aria-labelledby=/); assert.match(html, /aria-describedby=/);
   assert.match(renderToStaticMarkup(<Alert tone="danger" title="失败" requestId="request-123" />), /请求编号：request-123/);
+  assert.match(renderToStaticMarkup(<Alert tone="danger" title="无权限" code="FORBIDDEN" />), /错误代码：FORBIDDEN/);
 });
 
 test("dark theme text and form boundaries meet contrast targets", () => {
   const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
   function token(name: string) { const result = css.match(new RegExp(`--ik-${name}: (#[0-9a-f]{6})`)); assert.ok(result?.[1]); return result[1]; }
+  for (const [name, value] of Object.entries({ bg: "#0b0e12", panel: "#111820", border: "#293544", text: "#e8eef5", secondary: "#a6b4c5", accent: "#8ce4c2", danger: "#ff9caa" })) assert.equal(token(name), value, `frozen ${name}`);
   function luminance(hex: string) {
     const [r = 0, g = 0, b = 0] = [1, 3, 5].map(i => { const v = parseInt(hex.slice(i, i + 2), 16) / 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
     return .2126 * r + .7152 * g + .0722 * b;

@@ -40,6 +40,7 @@
 .ik-theme .ik-button--danger { color: var(--ik-danger); background: var(--ik-danger-bg); border-color: var(--ik-danger); }
 .ik-theme .ik-button--danger:hover:enabled { background: #4a2837; }
 .ik-theme .ik-button--sm { min-height: 28px; padding: 0 9px; font-size: 12px; }
+.ik-theme .ik-button-with-reason { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: 100%; }
 .ik-theme .ik-field { display: grid; gap: 6px; min-width: 0; }
 .ik-theme .ik-label { color: var(--ik-secondary); font-size: 12px; font-weight: 500; }
 .ik-theme .ik-input { width: 100%; min-height: 36px; padding: 7px 10px; border: 1px solid var(--ik-control-border); border-radius: var(--ik-control-radius); color: var(--ik-text); background: var(--ik-bg); }

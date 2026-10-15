@@ -15,7 +15,7 @@ export function LoginPanel({ onSubmit, pending = false, error, notice, footer, d
     <a href="/" className="ik-brand ik-auth-brand"><span className="ik-brand-mark" aria-hidden="true">ik</span><span className="ik-brand-text">ikun<span>.ca</span><small>WEB3 TERMINAL</small></span></a>
     <Panel><p className="ik-eyebrow">安全访问</p><h1>登录工作空间</h1><p className="ik-login-intro">查看项目，跟进信号，管理你的工作空间。</p>
       {notice && <div className="ik-login-notice">{notice}</div>}
-      <form className="ik-form" onSubmit={e => { e.preventDefault(); if (!pending && !disabled) onSubmit(e); }} aria-busy={pending}>
+      <form className="ik-form" method="post" action="/api/v1/auth/login" onSubmit={e => { e.preventDefault(); if (!pending && !disabled) onSubmit(e); }} aria-busy={pending}>
         <Input label="账号" name="username" required autoComplete="username" autoCapitalize="none" spellCheck={false} disabled={pending || disabled} placeholder="输入账号" />
         <div className="ik-password-field"><Input id={passwordId} label="密码" name="password" type={visible ? "text" : "password"} required autoComplete="current-password" disabled={pending || disabled} /><button type="button" className="ik-password-toggle" aria-label={visible ? "隐藏密码" : "显示密码"} aria-pressed={visible} aria-controls={passwordId} disabled={pending || disabled} onClick={() => setVisible(!visible)}><Icon name="eye" /></button></div>
         {error && <Alert tone="danger" title="登录未完成">{error}</Alert>}

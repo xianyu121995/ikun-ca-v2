@@ -4,7 +4,7 @@ import type { AnchorHTMLAttributes, ComponentType, ReactNode } from "react";
 import { Icon, type IconName } from "./icons.js";
 import { cx } from "./primitives.js";
 
-// Presentation routes proposed for integration; these do not create business pages.
+// Phase-two presentation routes; these do not create business pages.
 export const BUSINESS_NAVIGATION: ReadonlyArray<{ href: string; label: string; icon: IconName }> = [
   { href: "/", label: "主页", icon: "home" },
   { href: "/hunter", label: "猎手监控", icon: "radar" },
@@ -30,7 +30,7 @@ export function AppShell({ pathname, children, account, footer, LinkComponent = 
       <LinkComponent href="/" className="ik-brand" aria-label="ikun.ca 主页"><span className="ik-brand-mark" aria-hidden="true">ik</span><span className="ik-brand-text">ikun<span>.ca</span><small>WEB3 TERMINAL</small></span></LinkComponent>
       <div className="ik-nav-label">工作空间</div>
       <nav className="ik-nav" aria-label="业务导航">{BUSINESS_NAVIGATION.map(item => <LinkComponent key={item.href} href={item.href} className={cx("ik-nav-link", isNavigationActive(pathname, item.href) && "is-active")} aria-current={isNavigationActive(pathname, item.href) ? "page" : undefined} aria-label={item.label} title={item.label}><Icon name={item.icon} /><span>{item.label}</span><Icon className="ik-nav-arrow" name="chevron" /></LinkComponent>)}</nav>
-      <div className="ik-sidebar-bottom">{footer && <div className="ik-sidebar-footer">{footer}</div>}{account && <LinkComponent href={account.href ?? "/account"} className="ik-account-link" aria-label={`账号管理：${account.name}`} title={`账号管理：${account.name}`}><span className="ik-avatar" aria-hidden="true">{Array.from(account.name)[0]?.toUpperCase() ?? "?"}</span><span className="ik-account-text"><strong>{account.name}</strong><small>{account.detail ?? "账号管理"}</small></span><Icon name="chevron" /></LinkComponent>}</div>
+      <div className="ik-sidebar-bottom">{footer && <div className="ik-sidebar-footer">{footer}</div>}{account && <LinkComponent href={account.href ?? "/auth"} className="ik-account-link" aria-label={`账号管理：${account.name}`} title={`账号管理：${account.name}`}><span className="ik-avatar" aria-hidden="true">{Array.from(account.name)[0]?.toUpperCase() ?? "?"}</span><span className="ik-account-text"><strong>{account.name}</strong><small>{account.detail ?? "账号管理"}</small></span><Icon name="chevron" /></LinkComponent>}</div>
     </aside>
     <main className="ik-main" id="ik-main" tabIndex={-1}>{children}</main>
   </div>;

@@ -13,7 +13,9 @@
     "build": "tsc -p tsconfig.json && node scripts/copy-styles.mjs",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "test": "TSX_TSCONFIG_PATH=./tsconfig.check.json node --import tsx --test tests/*.test.tsx",
-    "preview": "node scripts/preview.mjs"
+    "preview": "node scripts/preview.mjs",
+    "preview:no-js": "node scripts/no-js-fixture.mjs",
+    "test:no-js": "node --test tests/no-js-form.test.mjs"
   },
   "peerDependencies": { "react": "^19.3.1", "react-dom": "^19.3.1" },
   "devDependencies": {

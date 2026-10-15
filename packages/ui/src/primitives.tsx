@@ -5,17 +5,29 @@ import { Icon } from "./icons.js";
 
 export function cx(...values: (string | false | null | undefined)[]): string { return values.filter(Boolean).join(" "); }
 export type Tone = "neutral" | "success" | "info" | "warning" | "danger";
+export type UiOperationState = "idle" | "pending" | "running" | "succeeded" | "failed" | "unknown";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, RefAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md";
   pending?: boolean;
   icon?: ReactNode;
+  readOnly?: boolean;
+  disabledReason?: string;
+  operationState?: UiOperationState;
+  mode?: "demo" | "live";
+  canExecute?: boolean;
 }
-export function Button({ variant = "secondary", size = "md", pending = false, icon, disabled, children, className, type = "button", ...props }: ButtonProps) {
-  return <button {...props} type={type} disabled={disabled || pending} aria-busy={pending || undefined} className={cx("ik-button", `ik-button--${variant}`, `ik-button--${size}`, className)}>
-    {pending ? <span className="ik-spinner" aria-hidden="true" /> : icon}{children}
+export function Button({ variant = "secondary", size = "md", pending = false, icon, disabled, children, className, type = "button", readOnly = false, disabledReason, operationState, mode, canExecute, "aria-describedby": describedBy, ...props }: ButtonProps) {
+  const reasonId = useId(); const unknown = operationState === "unknown";
+  const busy = !unknown && (pending || operationState === "pending" || operationState === "running");
+  const capabilityDenied = mode === "live" && canExecute !== true;
+  const blocked = Boolean(disabled || busy || readOnly || unknown || capabilityDenied);
+  const reason = blocked && !busy ? (unknown ? `结果待核实，请先核对回执${disabledReason ? `；${disabledReason}` : ""}` : disabledReason || (readOnly ? "当前账号只读" : capabilityDenied ? "当前操作权限未确认" : undefined)) : undefined;
+  const button = <button {...props} type={type} disabled={blocked} aria-busy={busy || undefined} aria-describedby={[describedBy, reason ? reasonId : ""].filter(Boolean).join(" ") || undefined} className={cx("ik-button", `ik-button--${variant}`, `ik-button--${size}`, className)}>
+    {busy ? <span className="ik-spinner" aria-hidden="true" /> : icon}{children}
   </button>;
+  return reason ? <span className="ik-button-with-reason">{button}<span className="ik-hint" id={reasonId}>{reason}</span></span> : button;
 }
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement>, RefAttributes<HTMLInputElement> { label: string; hint?: string; error?: string }

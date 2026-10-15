@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { AccountSummary, Alert, AppShell, Badge, Button, DataTable, Dialog, EmptyState, ErrorState, Icon, Input, LoginPanel, PageHeader, Panel, ScoreBadge, SearchInput, Select, Skeleton, ToastViewport, Toolbar, type NavigationLinkProps, type TableColumn, type TableSort, type ToastMessage } from "../src/index.js";
+import { AccountSummary, Alert, AppShell, Badge, Button, DataTable, Dialog, EmptyState, ErrorState, Icon, Input, LoginPanel, PageHeader, Panel, ScoreBadge, SearchInput, Select, Skeleton, ToastViewport, Toolbar, type NavigationLinkProps, type TableColumn, type TableSort, type ToastMessage, type UiOperationState } from "../src/index.js";
 import "../src/styles.css";
 import "./preview.css";
 
@@ -18,9 +18,10 @@ function Preview() {
   const [dialog, setDialog] = useState(false); const [note, setNote] = useState(""); const [savedNote, setSavedNote] = useState("尚未保存");
   const [tableState, setTableState] = useState("ready"); const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [loginError, setLoginError] = useState(""); const [pending, setPending] = useState(false);
+  const [role, setRole] = useState("superadmin"); const [operationState, setOperationState] = useState<UiOperationState>("idle"); const [callbackCount, setCallbackCount] = useState(0); const [nativeCloseAttempts, setNativeCloseAttempts] = useState(0);
   function notify(title: string, tone: "success" | "danger" = "success") { setToasts(items => [...items.slice(-2), { id: crypto.randomUUID(), title, tone }]); }
   function PreviewLink({ href, children, ...props }: NavigationLinkProps) {
-    return <a {...props} href={href} onClick={e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); if (href === "/account") setView("account"); else { setPath(href); setView("components"); } }}>{children}</a>;
+    return <a {...props} href={href} onClick={e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); if (href === "/auth") setView("account"); else { setPath(href); setView("components"); } }}>{children}</a>;
   }
   const columns: TableColumn<ExampleRow>[] = [
     { key: "score", header: "评分", sortable: true, width: "100px", render: row => <ScoreBadge grade={row.grade} value={row.score} /> },
@@ -45,7 +46,8 @@ function Preview() {
       <div className="preview-grid"><Panel title="表单与校验"><div className="preview-form-grid"><Input label="普通字段" placeholder="输入内容" hint="帮助信息位于字段下方。" /><Input label="校验失败" defaultValue="示例内容" error="请检查字段格式后重试。" /></div></Panel><Panel title="加载与失败提示"><div className="ik-stack"><Skeleton lines={2} label="示例区域正在加载" /><ErrorState description="服务暂时不可用，请稍后重试。" requestId="ui-example-002" onRetry={() => notify("仅演示重试交互，没有调用服务")} /></div></Panel></div>
       <p className="preview-footnote">公共包只提供视觉与交互。监控连接、评分、认证与业务状态均由各自模块提供。弹窗示例最近保存：<span className="ik-mono">{savedNote}</span></p>
     </div>}
-    <Dialog open={dialog} onOpenChange={setDialog} title="公共弹窗示例" description="该操作只修改当前预览内存，不连接服务或数据库。" pending={pending} footer={<><Button disabled={pending} onClick={() => setDialog(false)}>取消</Button><Button variant="primary" pending={pending} onClick={() => { setPending(true); window.setTimeout(() => { setSavedNote(note || "空备注"); setPending(false); setDialog(false); notify("示例备注已保存到预览内存"); }, 700); }}>保存示例</Button></>}><Input label="示例备注" value={note} onChange={e => setNote(e.target.value)} disabled={pending} hint="刷新浏览器后会清空。" /></Dialog>
+    {view === "components" && <Panel title="UI0 操作与权限展示" description="全部为展示演示；不会创建 AuthSession、请求 API 或写入业务。"><div className="ik-stack"><Toolbar><Select label="权限展示模式" value={role} onChange={e => setRole(e.target.value)}><option value="superadmin">superadmin · 演示</option><option value="user">user · 只读演示</option></Select><Select label="操作状态预览" value={operationState} onChange={e => setOperationState(e.target.value as UiOperationState)}><option value="idle">可操作</option><option value="pending">等待中</option><option value="running">执行中</option><option value="unknown">结果待核实</option><option value="failed">失败</option><option value="succeeded">成功 · 演示</option></Select></Toolbar><div className="ik-actions"><Button readOnly={role === "user"} operationState={operationState} onClick={() => { setCallbackCount(n => n + 1); setOperationState("succeeded"); }}>演示写入回调</Button><Button mode="live" onClick={() => setCallbackCount(n => n + 1)}>未确认 live 能力</Button><Button onClick={() => setOperationState("idle")}>重置状态演示</Button></div><p className="ik-hint">回调触发次数：<span data-testid="callback-count">{callbackCount}</span></p>{operationState === "unknown" && <Alert tone="warning" title="结果待核实">先由业务核对回执，再决定是否允许写入；公共包不重试。</Alert>}{operationState === "failed" && <ErrorState code="VERSION_CONFLICT" requestId="ui0-demo-conflict" description="版本冲突演示：保留编辑，先读取最新版本。" />}</div></Panel>}
+    <Dialog open={dialog} onOpenChange={setDialog} title="公共弹窗示例" description="该操作只修改当前预览内存，不连接服务或数据库。" destructive pending={pending} footer={<><Button data-dialog-cancel disabled={pending} onClick={() => setDialog(false)}>取消</Button><Button variant="primary" pending={pending} onClick={() => { setPending(true); window.setTimeout(() => { setSavedNote(note || "空备注"); setPending(false); setDialog(false); notify("示例备注已保存到预览内存"); }, 700); }}>保存示例</Button></>}><div className="ik-stack"><Input label="示例备注" value={note} onChange={e => setNote(e.target.value)} disabled={pending} hint="刷新浏览器后会清空。" /><Button onClick={() => setPending(value => !value)}>切换 pending 测试</Button><form method="dialog" onSubmit={() => setNativeCloseAttempts(n => n + 1)}><Button type="submit">原生关闭尝试（测试）</Button></form><p className="ik-hint">原生提交回调次数：{nativeCloseAttempts} · 受控关闭约束生效</p></div></Dialog>
     <ToastViewport messages={toasts} onDismiss={id => setToasts(items => items.filter(item => item.id !== id))} />
   </AppShell>;
 }

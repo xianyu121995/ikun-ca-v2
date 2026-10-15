@@ -6,7 +6,7 @@
 <string>/ABS_NODE/bin/node</string>
 <string>/ABS_RELEASE/scripts/service.mjs</string><string>tracking</string><string>start</string>
 </array>
-<key>WorkingDirectory</key><string>/ABS_RELEASE</string>
+<key>WorkingDirectory</key><string>/ABS_PRIVATE_JOB_CWD</string>
 <key>EnvironmentVariables</key><dict>
 <key>IKUN_TRACKING_CONFIG</key><string>/ABS_CONFIG/tracking.json</string>
 <key>IKUN_TRACKING_PYTHON</key><string>/ABS_RELEASE/services/tracking-worker/python/.venv/bin/python</string>

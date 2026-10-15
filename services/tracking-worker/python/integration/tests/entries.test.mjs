@@ -21,7 +21,7 @@ const fields={name:'B3 canonical',rating:'A',description:'',website_url:null,not
 const origin='http://127.0.0.1:3490';
 function req(path,method='GET',session,body,headers={}){return new Request(origin+path,{method,headers:{host:new URL(origin).host,origin,'content-type':'application/json','idempotency-key':randomUUID(),...(session?{cookie:session.cookie,'x-csrf-token':session.csrf}:{}),...headers},...(body!==undefined?{body:JSON.stringify(body)}:{})});}
 async function session(name){const response=await auth.handle(req('/api/v1/auth/login','POST',null,{username:name,password:name==='forced'?initial:password}));assert.equal(response.status,200);return {cookie:response.headers.get('set-cookie').split(';')[0],csrf:(await response.json()).data.csrf_token};}
-async function createProject(admin,name='B3 canonical'){const response=await projects.projectsRoute(req('/api/v1/projects','POST',admin,{...fields,name}));assert.equal(response.status,201);return (await response.json()).data;}
+async function createProject(admin,name='B3 canonical',patch={}){const response=await projects.projectsRoute(req('/api/v1/projects','POST',admin,{...fields,name,...patch}));assert.equal(response.status,201,JSON.stringify(await response.clone().json()));return (await response.json()).data;}
 async function createSub(admin,project,handle='project1'){return route.POST(req('/api/v1/tracking/subscriptions','POST',admin,{project_id:project.project_id,name:project.name,x_handle:handle,x_user_id:null,notes:'subscription note first',confirmed:true}));}
 async function until(fn){for(let i=0;i<120;i++){try{const value=await fn();if(value)return value;}catch{}await new Promise(r=>setTimeout(r,50));}throw Error('LOCAL_CONDITION_TIMEOUT');}
 async function internal(path,options={}){return fetch(endpoint+'/internal/v1/'+path,{...options,headers:{authorization:'Bearer '+token,'content-type':'application/json',...options.headers}});}
@@ -35,7 +35,7 @@ before(async()=>{
  for(const name of ['admin','user']){const login=await local.login(name,initial);await local.changePassword(login.actor,initial,password);}
  const projectsEntry=join(preview,'modules/projects/integration/ipc-entry.py');
  execFileSync(python,[projectsEntry,'--migrate','--database',join(dataRoot,'projects/projects.db')]);
- manager=new ManagedProjectsIpc({executable:python,args:[projectsEntry],cwd:join(preview,'modules/projects/candidate'),entry_path:projectsEntry,entry_sha256:createHash('sha256').update(readFileSync(projectsEntry)).digest('hex'),build_sha:'d0fdefab2aa230ebb8df856aed306d0184d362e2'},dataRoot);
+ manager=new ManagedProjectsIpc({executable:python,args:[projectsEntry],cwd:join(preview,'modules/projects/candidate'),entry_path:projectsEntry,entry_sha256:createHash('sha256').update(readFileSync(projectsEntry)).digest('hex'),build_sha:JSON.parse(readFileSync(join(moduleRoot,'.b3/frozen-inputs-verified.json'))).pins.projects},dataRoot);
  await manager.start(15000);Object.assign(process.env,{IKUN_PROJECTS_IPC_SOCKET:manager.identity.socketPath,IKUN_PROJECTS_IPC_TOKEN:manager.identity.token,IKUN_PROJECTS_BUILD_SHA:manager.identity.buildSha});
  const reserve=createServer();await new Promise(r=>reserve.listen(0,'127.0.0.1',r));const port=reserve.address().port;await new Promise(r=>reserve.close(r));endpoint='http://127.0.0.1:'+port;
  const cfg=join(dataRoot,'tracking.json');writeFileSync(cfg,JSON.stringify({db_path:join(dataRoot,'tracking/tracking.db'),remote_enabled:true,dedicated_account:true,port,reconcile_seconds:.1,backfill_seconds:.2,request_interval:0,heartbeat_seconds:.1,heartbeat_timeout:.5}));
@@ -138,4 +138,26 @@ test('Concurrent refresh waits for a fresh snapshot, coalesces bursts, and recov
  const first=refresh();await tick();version=2;const second=refresh();for(let i=0;i<20;i++)assert.equal(refresh(),second);assert.equal(seen.length,1);
  releases.shift()();await first;await tick();assert.deepEqual(seen,[1,2]);version=3;const third=refresh();releases.shift()();await second;await tick();assert.deepEqual(seen,[1,2,3]);releases.shift()();await third;assert.equal(maximum,1);
  let attempts=0;const failing=coalescedRefresh(async()=>{if(++attempts===1)throw Error('synthetic read failure');});const rejected=failing();const recovered=failing();await assert.rejects(rejected);await recovered;assert.equal(attempts,2);
+});
+
+test('Actual B1 + frozen B2 UDS rating catalog + Tracking profile globally filter, count and invalidate pages',async()=>{
+ const admin=await session('admin'),projectsList=[],subs=[];
+ for(let index=0;index<8;index++){
+  const project=await createProject(admin,'C03 fixture '+index,{rating:['S','A','B','S','A','B','C',null][index]});projectsList.push(project);
+  const accepted=await createSub(admin,project,'c03fixture'+index);assert.equal(accepted.status,202);const value=(await accepted.json()).data;subs.push(value.subscription_id);
+  await until(async()=>(await state(value.subscription_id)).observed_state==='running');
+  const content={id:String(10000+index),text:'C03 正文 '+index,createdAt:new Date().toISOString(),userScreenName:'c03fixture'+index,isReply:false,isQuote:index===3};
+  assert.equal((await fixture('emit',{username:'c03fixture'+index,content})).status,200);
+ }
+ const path='/api/v1/tracking/latest?profile=published-v1&q=C03%20fixture&limit=2';
+ let response;await until(async()=>{response=await route.GET(req(path,'GET',admin));if(!response.ok)return false;const d=await response.clone().json();return d.data.matched_total===6;});
+ let result=(await response.json()).data;assert.equal(result.matched_total,6);assert.deepEqual(result.activity_counts_by_rating,{S:2,A:2,B:2});assert.equal(result.excluded.C,1);assert.equal(result.excluded.unrated,1);
+ const all=[...result.items],firstCursor=result.next_cursor;while(result.next_cursor){const next=await route.GET(req(path.replace('limit=2','limit=1')+'&cursor='+encodeURIComponent(result.next_cursor),'GET',admin));assert.equal(next.status,200);result=(await next.json()).data;all.push(...result.items);}
+ assert.equal(new Set(all.map(item=>item.activity_id)).size,6);assert.ok(all.some(item=>item.tweet_kind==='quote'));assert.ok(all.every(item=>item.notes==='subscription note first'));
+ const first=await route.GET(req(path+'&ratings=S','GET',admin));const onlyS=(await first.json()).data;assert.equal(onlyS.matched_total,2);assert.ok(onlyS.items.every(item=>item.rating==='S'));
+ assert.equal((await route.GET(req(path+'&q=different&cursor='+encodeURIComponent(firstCursor),'GET',admin))).status,422);
+ const project=projectsList[0];const updated=await projects.projectsRoute(req('/api/v1/projects/'+project.project_id,'PATCH',admin,{rating:'B'},{'if-match':`"rev-${project.revision}"`}));assert.equal(updated.status,200);
+ const stale=await route.GET(req(path+'&cursor='+encodeURIComponent(firstCursor),'GET',admin));assert.equal(stale.status,409);
+ const current=await route.GET(req(path,'GET',admin));assert.equal(current.status,200);assert.deepEqual((await current.json()).data.activity_counts_by_rating,{S:1,A:2,B:3});
+ await local.create('feedreader',initial);const login=await local.login('feedreader',initial);await local.changePassword(login.actor,initial,password);const user=await session('feedreader');assert.equal((await route.GET(req(path,'GET',user))).status,200);
 });

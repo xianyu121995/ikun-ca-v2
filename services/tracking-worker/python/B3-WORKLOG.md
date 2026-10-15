@@ -52,3 +52,9 @@ B2 ingest/tracking=501，不改Projects、不伪造receipt，观察outbox保留p
 ## 当前资源约束 · 用户最新转达
 
 上级总管Claude明确要求仍暂停完整构建和Chrome，集成窗口正在生产构建和部署。当前只整理代码与证据、跑必要轻量检查；等待项目总管或Claude通知解除后再做最终构建和浏览器验收。本轮只更新交接文档、核对既有证据与源码哈希，没有启动完整构建或Chrome。
+
+## 夜间自主实施 · 获准继续
+
+579a57f夜间批准及967f309认证依赖、0e2c86f C03冻结审查取代暂停。固定Auth f097与Projects aa51；先真实Next6种303/401、5种SSE撤销通过，再实现v4协议。R1/R2/R3按总管独立复现直接修复；旧失败（含TOCTOU 121/122）全保留。侧车改一次lstat；永久账本/过期回拨/分批清理/新路径恢复均有回归。本轮最终轻量127通过，2 wrapper内14 Node不额外累加。整个最终重任务批次仍使用原唯一heavy lock。
+
+接线增量8b84ee97a94bae28e98b550b2721991f30088486由集成在core freeze后保留Projects全局SSE并加Tracking专用alias；本窗口按原候选路径验收，不重复改UI或做语音。当前交接以NIGHT-HANDOFF/NIGHT-EVIDENCE为准。

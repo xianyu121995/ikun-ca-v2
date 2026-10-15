@@ -105,6 +105,8 @@ def tweet(username="project1", tweet_id="12345", at=None, **extra):
         "text": "真实协议测试推文",
         "createdAt": at or time.time(),
         "userScreenName": username,
+        "isReply": False,
+        "isQuote": False,
         **extra,
     }
 

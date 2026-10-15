@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { requireIdentity, requireSuperadmin, withAuth } from '../../../modules/auth/dist/src/server.js';
 import { ipc, requestId, failure } from './projects';
+import { publishedFeed } from './published-feed';
 const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 export function commandId(actor: string, route: string, key: string) { const bytes = createHash('sha256').update(JSON.stringify([actor, 'ikun-main', route, key])).digest().subarray(0, 16); bytes[6] = (bytes[6]! & 15) | 64; bytes[8] = (bytes[8]! & 63) | 128; const h = bytes.toString('hex'); return 'cmd_' + [h.slice(0, 8), h.slice(8, 12), h.slice(12, 16), h.slice(16, 20), h.slice(20)].join('-'); }
 export async function trackingService(path: string, id: string, options: RequestInit = {}) {
@@ -70,10 +71,12 @@ export async function trackingRoute(original: Request) {
         const method = request.method, read = ['GET', 'HEAD'].includes(method), principal = read ? requireIdentity(request) : requireSuperadmin(request);
         const url = new URL(request.url), suffix = url.pathname.slice('/api/v1/tracking'.length);
         if (read) {
+            if (suffix === '/latest' && url.searchParams.has('profile'))
+                return publishedFeed(request, principal, id, trackingService);
             if (!new RegExp('^/(?:subscriptions(?:/sub_' + uuid + ')?|latest|activities)$').test(suffix))
                 return failure(id, 404, 'NOT_FOUND', '路径不存在');
             const out = await trackingService(suffix.slice(1) + url.search, id, { signal: request.signal, headers: request.headers.has('last-event-id') ? { 'last-event-id': request.headers.get('last-event-id')! } : {} });
-            return new Response(out.body, { status: out.status, headers: { 'content-type': out.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store', 'x-request-id': id, ...(out.headers.get('etag') ? { etag: out.headers.get('etag')! } : {}) } });
+            return new Response(out.body, { status: out.status, headers: { 'content-type': out.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store', 'x-request-id': id, ...(out.headers.get('etag') ? { etag: out.headers.get('etag')! } : {}), ...(out.headers.get('retry-after') ? {'retry-after':out.headers.get('retry-after')!} : {}) } });
         }
         if (url.search)
             return failure(id, 422, 'VALIDATION_ERROR', '写入不接受查询字段');

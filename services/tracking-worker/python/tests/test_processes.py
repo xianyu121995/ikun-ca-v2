@@ -156,3 +156,80 @@ async def test_website_shutdown_restart_and_worker_crash_recovery(tmp_path, cfg,
             await stop(process)
         server.shutdown()
         server.server_close()
+
+
+async def test_standalone_absolute_entry_from_private_cwd_ignores_development_imports(tmp_path):
+    import shutil
+
+    module = Path(__file__).resolve().parents[1]
+    release = tmp_path / "standalone-release"
+    released_module = release / "services/tracking-worker/python"
+    released_module.mkdir(parents=True)
+    shutil.copytree(
+        module / "tracking", released_module / "tracking", ignore=shutil.ignore_patterns("__pycache__")
+    )
+    shutil.copyfile(module / "entry.py", released_module / "entry.py")
+    shutil.copytree(module.parents[2] / "schemas/tracking", release / "schemas/tracking")
+    job = tmp_path / "private-job"
+    job.mkdir(mode=0o700)
+    data = tmp_path / "standalone-data"
+    config = job / "tracking.json"
+    port = free_port()
+    config.write_text(
+        json.dumps(
+            {
+                "db_path": str(data / "tracking/tracking.db"),
+                "port": port,
+                "remote_enabled": False,
+                "dedicated_account": False,
+            }
+        )
+    )
+    config.chmod(0o600)
+    env = {
+        "PATH": os.environ["PATH"],
+        "DATA_ROOT": str(data),
+        "TRACKING_API_TOKEN": "standalone-release-direction-xxxxxxxxxxxx",
+        "PYTHONPATH": "/nonexistent-development-import",
+        "IKUN_TRACKING_EXTERNAL_IO_DISABLED": "1",
+    }
+    init = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-I",
+        str(released_module / "entry.py"),
+        "init",
+        "--config",
+        str(config),
+        cwd=job,
+        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await init.communicate()
+    assert init.returncode == 0, stderr.decode()
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-I",
+        str(released_module / "entry.py"),
+        "serve",
+        "--config",
+        str(config),
+        cwd=job,
+        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    async def ready():
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"http://127.0.0.1:{port}/health/ready")
+            return response.json()["data"] if response.is_success else False
+
+    try:
+        health = await until(ready)
+        assert health["external_collection_enabled"] is False and health["source_state"] == "unconfigured"
+        assert not list(job.glob(".env*"))
+    finally:
+        process.terminate()
+        await asyncio.wait_for(process.communicate(), 10)
+    assert process.returncode == 0

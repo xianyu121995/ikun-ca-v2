@@ -40,7 +40,7 @@ def test_foundation_upgrade_preserves_metadata(tmp_path, columns):
     migrate(path)
     with sqlite3.connect(path) as db:
         assert db.execute("SELECT applied_at FROM _schema_migrations WHERE version=1").fetchone()[0] == "old"
-        assert db.execute("SELECT COUNT(*) FROM _migration_checksums").fetchone()[0] == 3
+        assert db.execute("SELECT COUNT(*) FROM _migration_checksums").fetchone()[0] == 4
     inspect(path)
 
 
@@ -74,13 +74,22 @@ def test_actual_candidate_upgrade_restart_backup_new_path(tmp_path):
     migrate(path)
     first = Store(path)
     sid = first.projects()[0]["subscription_id"]
-    assert sid.startswith("sub_") and first.activities()[0]["text"] == "old text"
+    assert sid.startswith("sub_") and first.activities() == []
+    with first.connect() as db:
+        assert db.execute("SELECT text FROM tweets").fetchone()[0] == "old text"
     assert Store(path).projects()[0]["subscription_id"] == sid
     target = tmp_path / "restored/tracking/tracking.db"
     target.parent.mkdir(parents=True)
     with sqlite3.connect(path) as src, sqlite3.connect(target) as dst:
         src.backup(dst)
-    assert Store(target).projects()[0]["subscription_id"] == sid
+    with pytest.raises(ValueError, match="explicit verified restore"):
+        Store(target)
+    from tracking.retention import backup_database, restore
+
+    directory, manifest = backup_database(path)
+    checked = tmp_path / "verified/tracking/tracking.db"
+    restore(directory, checked, path, expected_watermark=manifest["ledger_high_water"])
+    assert Store(checked).projects()[0]["subscription_id"] == sid
     with first.connect() as db:
         assert db.execute("SELECT COUNT(*) FROM receipts").fetchone()[0] == 1
 
@@ -200,3 +209,36 @@ def test_runtime_database_changes_are_rejected_without_creation_or_write(tmp_pat
         assert not path.exists()
     else:
         assert (protected if mode == "sidecar" else path).read_bytes() == before
+
+
+def test_sidecar_disappearance_uses_one_lstat_and_preserves_runtime_boundary(tmp_path, monkeypatch):
+    path = tmp_path / "tracking/tracking.db"
+    migrate(path)
+    original = Path.lstat
+    calls = {}
+
+    def disappearing(candidate, *args, **kwargs):
+        if str(candidate).endswith(("-wal", "-shm")):
+            calls[str(candidate)] = calls.get(str(candidate), 0) + 1
+            raise FileNotFoundError(str(candidate))
+        return original(candidate, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "lstat", disappearing)
+    from tracking.migration import safe_path
+
+    assert safe_path(path) == path
+    assert set(calls.values()) == {1}
+    with Store(path).connect() as db:
+        assert db.execute("SELECT store_name FROM _store_identity").fetchone()[0] == "tracking"
+
+
+def test_non_regular_sidecar_is_rejected_without_opening_it(tmp_path):
+    import os
+
+    path = tmp_path / "tracking/tracking.db"
+    migrate(path)
+    fifo = Path(str(path) + "-wal")
+    fifo.unlink(missing_ok=True)  # Private, stopped fixture only; arrange an invalid sidecar.
+    os.mkfifo(fifo, 0o600)
+    with pytest.raises(ValueError, match="alias rejected"):
+        Store(path)

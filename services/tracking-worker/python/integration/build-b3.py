@@ -37,6 +37,7 @@ def source_inputs():
         "requirements.lock.txt",
         "pyproject.toml",
         "deploy/ca.ikun.v2.tracking.plist.example",
+        "entry.py",
     ):
         file = MODULE / name
         inputs[str(file.relative_to(a.ROOT))] = hashlib.sha256(file.read_bytes()).hexdigest()

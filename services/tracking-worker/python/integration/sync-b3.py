@@ -27,6 +27,7 @@ def main():
     shutil.copyfile(
         a.ROOT / "services/tracking-worker/src/main.ts", P / "services/tracking-worker/src/main.ts"
     )
+    shutil.copyfile(a.MODULE / "entry.py", P / "services/tracking-worker/python/entry.py")
     shutil.copytree(HERE / "website", P / "apps/website", dirs_exist_ok=True)
     source = "apps/website/features/tracking/final/tracking-page.tsx"
     old = original(source)
@@ -146,6 +147,49 @@ def main():
     edit(
         "<span>仅确认当前演示账号。</span>",
         '<span>{mode === "live" ? "此操作只影响当前订阅。" : "仅确认当前演示账号。"}</span>',
+    )
+    # Approved C01/C03 server projection; the frozen visual hierarchy and CSS stay unchanged.
+    s = s.replace(
+        "pagination:ReactNode}",
+        "pagination:ReactNode;server?:{filters:Filters;onFiltersChange:(next:Filters)=>void;matchedTotal:number|null;subscriptionCounts:{S:number;A:number;B:number}|null}}",
+    )
+    edit(
+        "[filters, setFilters] = useState<Filters>(emptyFilters)",
+        "[localFilters, setFilters] = useState<Filters>(emptyFilters)",
+    )
+    edit("  const manageable =", "  const filters=live?.server?.filters??localFilters;\n  const manageable =")
+    edit(
+        'const filtered = selectPosts(accounts, posts, filters, now ?? 0, mode === "live" ? "received" : "occurred"), pagination = paginate(filtered, page), stats = statsFor(accounts, posts, now ?? 0);',
+        "const filtered = live?.server ? posts : selectPosts(accounts, posts, filters, now ?? 0), pagination = live?.server ? {...paginate([],1),items:posts} : paginate(filtered,page), stats = live?.server ? {today:live.server.matchedTotal??0,...(live.server.subscriptionCounts??{S:0,A:0,B:0})} : statsFor(accounts,posts,now??0);",
+    )
+    edit(
+        "const reset = () => { setFilters(emptyFilters); setPage(1); };",
+        "const reset = () => { if(live?.server)live.server.onFiltersChange(emptyFilters);else setFilters(emptyFilters); setPage(1); };",
+    )
+    edit(
+        "setFilters(old => ({ ...old, ...patch })); setPage(1);",
+        "if(live?.server)live.server.onFiltersChange({...filters,...patch});else setFilters(old => ({ ...old, ...patch })); setPage(1);",
+    )
+    edit('"本地 API 候选"', '"未连接真实来源"')
+    edit('"本地服务 · 远端按核验状态显示"', '"未连接真实来源"')
+    edit('"本页今日动态"', '"匹配新推文"')
+    edit(
+        'loading || mode === "live" && posts.some(post=>post.published_at===null)',
+        "loading || !!live?.server && live.server.matchedTotal===null",
+    )
+    edit(
+        'loading ? "—" : stats[grade]',
+        'loading || !!live?.server && live.server.subscriptionCounts===null ? "—" : stats[grade]',
+    )
+    edit('grade === "all" ? "全部"', 'grade === "all" ? (live?.server ? "S/A/B" : "全部")')
+    edit("匹配 {filtered.length} 条", "匹配 {live?.server?.matchedTotal??filtered.length} 条")
+    edit('mode === "demo" ? "演示" : "已加载"', 'mode === "demo" ? "演示" : "全量匹配"')
+    edit('"按接收时间排序 · 发布时间排序待协议裁定"', '"按发布时间排序 · 未知时回退接收时间"')
+    edit('"仅筛选本页已加载记录 · 非 S/A/B 记录保留在管理"', '"服务端全量筛选与计数 · 非 S/A/B 排除信息流"')
+    edit("真实服务尚未接入，当前没有已授权的推文数据。", "未连接真实来源；当前没有符合条件的已授权推文。")
+    edit(
+        "{relativeTime(post.published_at, now ?? 0)}　·　{displayTime(post.published_at)}",
+        '{relativeTime(post.published_at??post.received_at??null, now ?? 0)}　·　{displayTime(post.published_at??post.received_at??null)}{!post.published_at && mode === "live" ? "（接收时间回退）" : ""}',
     )
     (P / source).write_text(s)
     model = "apps/website/features/tracking/final/model.ts"

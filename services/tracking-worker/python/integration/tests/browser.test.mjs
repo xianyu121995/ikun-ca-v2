@@ -24,32 +24,32 @@ const steps=[],errors=[],network=[],blockers=[];
 async function until(fn,seconds=12){const end=Date.now()+seconds*1000;while(Date.now()<end){try{const result=await fn();if(result)return result;}catch{}await new Promise(r=>setTimeout(r,100));}throw Error('LOCAL_CONDITION_TIMEOUT');}
 async function control(body){const r=await fetch(tracking+'/fixture/control',{method:'POST',headers:{'content-type':'application/json','x-fixture-token':fixtureToken},body:JSON.stringify(body)});assert.equal(r.status,200);}
 async function internal(path){return(await(await fetch(tracking+'/internal/v1/'+path,{headers:{authorization:'Bearer '+token}})).json()).data;}
-async function emit(username,id,text,createdAt){const r=await fetch(tracking+'/fixture/emit',{method:'POST',headers:{'content-type':'application/json','x-fixture-token':fixtureToken},body:JSON.stringify({username,content:{id,text,createdAt,userScreenName:username}})});assert.equal(r.status,200);}
+async function emit(username,id,text,createdAt){const r=await fetch(tracking+'/fixture/emit',{method:'POST',headers:{'content-type':'application/json','x-fixture-token':fixtureToken},body:JSON.stringify({username,content:{id,text,createdAt,userScreenName:username,isReply:false,isQuote:false}})});assert.equal(r.status,200);}
+async function emitRaw(username,content,event_type='NEW_TWEET'){const r=await fetch(tracking+'/fixture/emit',{method:'POST',headers:{'content-type':'application/json','x-fixture-token':fixtureToken},body:JSON.stringify({username,content,event_type})});assert.equal(r.status,200);}
 async function startWebsite(){website=spawnManaged(process.execPath,[join(preview,'apps/website/node_modules/next/dist/bin/next'),'start','--hostname','127.0.0.1','--port',String(sitePort)],{cwd:join(preview,'apps/website'),env:siteEnv,inheritOutput:true,graceMs:3000});await until(async()=>(await fetch(origin+'/login')).ok);}
 async function deniedPage(page,response,width,phase){
- if(new URL(page.url()).pathname==='/login'){assert.equal(response.status(),200);return true;}
- const value=await response.json();assert.equal(response.status(),500);assert.equal(value.error?.code,'INTERNAL_ERROR');assert.equal(value.data,undefined);assert.equal(await page.locator('[data-mode="live"]').count(),0);
- blockers.push({code:'AUTH_NEXT_BUNDLE_REJECTION_500',width,phase,status:500,error_code:value.error.code,request_id:value.request_id});await page.screenshot({path:join(logs,'auth-blocked-'+phase+'-'+width+'.png'),fullPage:true});return false;
+ assert.equal(new URL(page.url()).pathname,'/login',phase+' must redirect to login');assert.equal(response.status(),200);return true;
 }
+
 try{
  accounts=new LocalAccounts(config({dataRoot,origin,secure:false}),true);await accounts.bootstrap('admin',initial);await accounts.create('user',initial);
  for(const name of ['admin','user']){const login=await accounts.login(name,initial);await accounts.changePassword(login.actor,initial,password);}
  const entry=join(preview,'modules/projects/integration/ipc-entry.py');
  execFileSync(python,[entry,'--migrate','--database',join(dataRoot,'projects/projects.db')]);
- manager=new ManagedProjectsIpc({executable:python,args:[entry],cwd:join(preview,'modules/projects/candidate'),entry_path:entry,entry_sha256:createHash('sha256').update(readFileSync(entry)).digest('hex'),build_sha:'d0fdefab2aa230ebb8df856aed306d0184d362e2'},dataRoot);
+ manager=new ManagedProjectsIpc({executable:python,args:[entry],cwd:join(preview,'modules/projects/candidate'),entry_path:entry,entry_sha256:createHash('sha256').update(readFileSync(entry)).digest('hex'),build_sha:JSON.parse(readFileSync(join(moduleRoot,'.b3/frozen-inputs-verified.json'))).pins.projects},dataRoot);
  await manager.start(15000);
  const cfg=join(dataRoot,'tracking.json');writeFileSync(cfg,JSON.stringify({db_path:join(dataRoot,'tracking/tracking.db'),port:trackingPort,remote_enabled:true,dedicated_account:true,reconcile_seconds:.1,backfill_seconds:.2,request_interval:0,heartbeat_seconds:.1,heartbeat_timeout:.5}));
  execFileSync(python,['-m','tracking.cli','init','--config',cfg],{cwd:moduleRoot,env:{...process.env,DATA_ROOT:dataRoot}});
  engine=spawnManaged(python,[join(moduleRoot,'integration/tests/fixture-tracking.py'),cfg,fixtureToken],{cwd:moduleRoot,env:{PATH:process.env.PATH,TRACKING_API_TOKEN:token,IKUN_TRACKING_6551_TOKEN:'synthetic-browser-provider-token'},inheritOutput:true,graceMs:3000});
  await until(async()=>(await fetch(tracking+'/health/ready')).ok);
- siteEnv={PATH:process.env.PATH,NODE_ENV:'production',NEXT_TELEMETRY_DISABLED:'1',DATA_ROOT:dataRoot,IKUN_AUTH_ORIGIN:origin,IKUN_AUTH_DEV:'1',TRACKING_API_TOKEN:token,TRACKING_API_URL:tracking,IKUN_PROJECTS_IPC_SOCKET:manager.identity.socketPath,IKUN_PROJECTS_IPC_TOKEN:manager.identity.token,IKUN_PROJECTS_BUILD_SHA:manager.identity.buildSha};
+ siteEnv={PATH:process.env.PATH,NODE_ENV:'production',NEXT_TELEMETRY_DISABLED:'1',IKUN_TRACKING_FIXTURE:'1',DATA_ROOT:dataRoot,IKUN_AUTH_ORIGIN:origin,IKUN_AUTH_DEV:'1',TRACKING_API_TOKEN:token,TRACKING_API_URL:tracking,IKUN_PROJECTS_IPC_SOCKET:manager.identity.socketPath,IKUN_PROJECTS_IPC_TOKEN:manager.identity.token,IKUN_PROJECTS_BUILD_SHA:manager.identity.buildSha};
  await startWebsite();
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
  for(const width of [1440,390]){
   const context=await browser.newContext({viewport:{width,height:960}});const page=await context.newPage();currentPage=page;
   context.on('page',popup=>popup.on('pageerror',e=>errors.push(e.message)));
   page.on('pageerror',e=>errors.push(e.message));
-  page.on('response',r=>{const url=new URL(r.url());if(url.pathname.startsWith('/api/v1/tracking')||url.pathname==='/api/v1/events/stream')network.push({path:url.pathname,method:r.request().method(),status:r.status()});});
+  page.on('response',r=>{const url=new URL(r.url());if(url.pathname.startsWith('/api/v1/tracking')||url.pathname==='/api/v1/events/stream')network.push({path:url.pathname,query:url.search,method:r.request().method(),status:r.status()});});
   await context.route('https://x.com/**',r=>r.fulfill({status:200,body:'Synthetic original-link navigation; no external request'}));
   const anonymous=await page.goto(origin+'/tracking');const redirected=await deniedPage(page,anonymous,width,'anonymous');steps.push({width,step:redirected?'anonymous-page-denied':'anonymous-page-fails-closed-BLOCKED-500'});if(!redirected)await page.goto(origin+'/login?next=/tracking');
   await page.locator('input[name="username"]').fill('admin');await page.locator('input[name="password"]').fill(password);await page.getByRole('button',{name:'登录',exact:true}).click();await page.waitForURL('**/tracking');
@@ -73,7 +73,7 @@ try{
   // Close management by its cancel-safe close control before examining the live feed.
   await page.keyboard.press('Escape');
   {
-   await emit(handle,'101','本地推文正文',new Date().toISOString());await emit(handle,'101','本地推文正文',new Date().toISOString());
+   await emit(handle,String(width)+'101','本地推文正文',new Date().toISOString());await emit(handle,String(width)+'101','本地推文正文',new Date().toISOString());
    await page.getByText('本地推文正文',{exact:true}).first().waitFor();
    assert.equal(await page.locator('article[data-post]').count(),1);
    const article=page.locator('article[data-post]').first();assert.equal(await article.getByText('真实订阅备注 '+width,{exact:true}).count(),1);
@@ -82,7 +82,22 @@ try{
    await page.reload();await page.getByText('本地推文正文',{exact:true}).first().waitFor();assert.equal(await page.locator('article[data-post]').count(),1);
    const popup=page.waitForEvent('popup');await page.getByRole('button',{name:/查看 .* 原文/}).first().click();const original=await popup;await original.waitForLoadState();assert.ok(original.url().startsWith('https://x.com/'));await original.close();steps.push({width,step:'dedup-refresh-notes-first-unknown-fields-safe-original-link'});
   }
-  if(width===1440){await website.stop();website=undefined;assert.equal((await internal('status')).alive,true);await emit(handle,'102','网站退出后继续入库',new Date().toISOString());await until(async()=>(await internal('latest')).items.some(item=>item.text==='网站退出后继续入库'));await startWebsite();await page.reload();await page.getByText('网站退出后继续入库',{exact:true}).waitFor();assert.equal(await page.locator('article[data-post]').count(),2);steps.push({width,step:'real-next-stop-engine-continues-restart-recovers-feed'});}
+  if(width===1440){await website.stop();website=undefined;assert.equal((await internal('status')).alive,true);await emit(handle,String(width)+'102','网站退出后继续入库',new Date().toISOString());await until(async()=>(await internal('latest')).items.some(item=>item.text==='网站退出后继续入库'));await startWebsite();await page.reload();await page.getByText('网站退出后继续入库',{exact:true}).waitFor();assert.equal(await page.locator('article[data-post]').count(),2);steps.push({width,step:'real-next-stop-engine-continues-restart-recovers-feed'});}
+  // Approved D1/C01/C03/C05: actual same-origin BFF + frozen Projects UDS + Tracking storage.
+  for(const [index,target] of ['自己','其他追踪者','未追踪者'].entries())await emitRaw(handle,{id:String(width)+'2'+index,text:'引用'+target,createdAt:new Date().toISOString(),userScreenName:handle,isReply:false,isQuote:true,quotedStatus:{userScreenName:target}},'NEW_TWEET_QUOTE');
+  await emitRaw(handle,{id:String(width)+'300',text:'未知类型不可见',createdAt:new Date().toISOString(),userScreenName:handle});
+  await emitRaw(handle,{id:String(width)+'301',text:'回复不可见',createdAt:new Date().toISOString(),userScreenName:handle,isReply:true,isQuote:false});
+  await emitRaw(handle,{id:String(width)+'302',text:'接收回退推文',userScreenName:handle,isReply:false,isQuote:false});
+  for(let index=0;index<3;index++)await emit(handle,String(width)+'4'+index,'分页推文'+index,new Date().toISOString());
+  const profile='/api/v1/tracking/latest?profile=published-v1&limit=100';
+  const full=await until(async()=>{const r=await context.request.get(origin+profile);assert.equal(r.status(),200);const d=(await r.json()).data;return d.items.some(item=>item.text==='分页推文2')?d:false;});
+  assert.equal(full.items.filter(item=>item.tweet_kind==='quote').length,3);assert.equal(full.excluded.unknown_type,1);assert.equal(full.excluded.reply,1);assert.ok(full.items.every(item=>item.rating==='A'));assert.equal(full.items.filter(item=>item.text==='本地推文正文').length,1);assert.ok(full.items.some(item=>item.occurred_at===null&&item.sort_basis==='received_at'));
+  await page.getByRole('button',{name:'刷新',exact:true}).click();await page.getByText('接收回退推文',{exact:true}).waitFor();assert.equal(await page.locator('article[data-post]').count(),6);
+  const pageOne=await page.locator('article[data-post]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('data-post')));
+  await page.getByRole('button',{name:'下一页',exact:true}).click();await page.getByText(/服务端发布时间排序 · 第 2 页/).waitFor();const pageTwo=await page.locator('article[data-post]').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('data-post')));assert.ok(pageTwo.length>0&&pageTwo.every(id=>!pageOne.includes(id)));
+  await page.getByRole('button',{name:'S 级',exact:true}).click();await page.getByText('暂无符合条件的推文',{exact:true}).waitFor();assert.equal(await page.locator('article[data-post]').count(),0);
+  await page.getByRole('button',{name:'S/A/B',exact:true}).click();await page.getByRole('textbox',{name:'搜索推文',exact:true}).fill('引用未追踪者');await page.getByText('引用未追踪者',{exact:true}).waitFor();await until(async()=>await page.locator('article[data-post]').count()===1);
+  await page.getByRole('button',{name:'重置筛选',exact:true}).click();await page.getByText('接收回退推文',{exact:true}).waitFor();assert.ok((await page.locator('main').innerText()).includes('接收时间回退'));assert.ok((await page.locator('main').innerText()).includes('未连接真实来源'));assert.ok((await page.locator('main').innerText()).includes('本地验收夹具'));steps.push({width,step:'published-profile-quotes-all-authors-server-SAB-search-counts-pagination-fallback'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.screenshot({path:join(logs,'tracking-'+width+'.png'),fullPage:true});
   const meta=await context.request.get(origin+'/api/v1/projects/'+project.project_id);assert.deepEqual((await meta.json()).data,project);
@@ -90,12 +105,12 @@ try{
   await context.close();
   const userContext=await browser.newContext({viewport:{width,height:960}});const userPage=await userContext.newPage();currentPage=userPage;userPage.on('pageerror',e=>errors.push(e.message));await userPage.goto(origin+'/login?next=/tracking');await userPage.locator('input[name="username"]').fill('user');await userPage.locator('input[name="password"]').fill(password);await userPage.getByRole('button',{name:'登录',exact:true}).click();await userPage.waitForURL('**/tracking');await userPage.waitForSelector('[data-mode="live"]');await userPage.getByRole('button',{name:/监控账号总数/}).click();assert.equal(await userPage.getByRole('button',{name:'＋ 添加监控账号',exact:true}).count(),0);
   const userMe=await(await userContext.request.get(origin+'/api/v1/auth/me')).json();const denied=await userContext.request.post(origin+'/api/v1/tracking/subscriptions',{headers:{origin,'x-csrf-token':userMe.data.csrf_token,'idempotency-key':randomUUID(),'x-role':'superadmin'},data:{project_id:project.project_id,name:'forged',x_handle:'forged',x_user_id:null,notes:'',confirmed:true}});assert.equal(denied.status(),403);
-  accounts.setEnabled('user',false);const disabledPage=await userPage.reload();const revokedRedirect=await deniedPage(userPage,disabledPage,width,'disabled');const disabledApi=await userContext.request.get(origin+'/api/v1/tracking/subscriptions');const disabledValue=await disabledApi.json();if(disabledApi.status()!==401){assert.equal(disabledApi.status(),500);assert.equal(disabledValue.error?.code,'INTERNAL_ERROR');assert.equal(disabledValue.data,undefined);blockers.push({code:'AUTH_NEXT_BUNDLE_REJECTION_500',width,phase:'disabled-api',status:500,error_code:disabledValue.error.code,request_id:disabledValue.request_id});}accounts.setEnabled('user',true);steps.push({width,step:revokedRedirect?'user-readonly-server-denied-revoked-cookie':'user-readonly-write-denied-revoked-cookie-fails-closed-BLOCKED-500'});await userContext.close();
+  accounts.setEnabled('user',false);const disabledPage=await userPage.reload();const revokedRedirect=await deniedPage(userPage,disabledPage,width,'disabled');const disabledApi=await userContext.request.get(origin+'/api/v1/tracking/subscriptions');const disabledValue=await disabledApi.json();assert.equal(disabledApi.status(),401);assert.equal(disabledValue.error?.code,'UNAUTHENTICATED');assert.equal(disabledValue.data,undefined);accounts.setEnabled('user',true);steps.push({width,step:revokedRedirect?'user-readonly-server-denied-revoked-cookie':'user-readonly-write-denied-revoked-cookie-fails-closed-BLOCKED-500'});await userContext.close();
  }
  assert.deepEqual(errors,[]);
  const build=JSON.parse(readFileSync(join(moduleRoot,'artifacts/b3/build-inputs.json')));
  const hashes=Object.fromEntries([1440,390].map(width=>['tracking-'+width+'.png',createHash('sha256').update(readFileSync(join(logs,'tracking-'+width+'.png'))).digest('hex')]));
- const receipt={passed:blockers.length===0,completed:true,tracking_flow_passed:true,authorization_full_passed:blockers.length===0,blockers,viewports:[1440,390],steps,network,page_errors:errors,build_id:build.next_build_id,source_set_sha256:build.source_set_sha256,screenshots:hashes,real_provider_calls:0,product_blocked:['C-01','C-03','C-05']};
+ const receipt={passed:blockers.length===0,completed:true,tracking_flow_passed:true,authorization_full_passed:blockers.length===0,blockers,viewports:[1440,390],steps,network,page_errors:errors,build_id:build.next_build_id,source_set_sha256:build.source_set_sha256,screenshots:hashes,real_provider_calls:0,product_blocked:[]};
  writeFileSync(join(logs,'receipt.json'),JSON.stringify(receipt,null,2));writeFileSync(join(moduleRoot,'artifacts/b3/browser-receipt-path.txt'),logs);console.log((blockers.length?'B3_BROWSER_PARTIAL ':'B3_BROWSER_PASS ')+logs);if(blockers.length)process.exitCode=2;
 }catch(error){writeFileSync(join(logs,'failure.txt'),String(error.stack||error));writeFileSync(join(logs,'failure-state.json'),JSON.stringify({steps,errors,network,blockers,url:currentPage?.url()},null,2));if(currentPage&&!currentPage.isClosed()){await currentPage.screenshot({path:join(logs,'failure.png'),fullPage:true}).catch(()=>{});writeFileSync(join(logs,'failure.html'),await currentPage.content().catch(()=>''));}throw error;}
 finally{if(browser)await browser.close();await website?.stop();await engine?.stop();await manager?.stop();accounts?.close();}

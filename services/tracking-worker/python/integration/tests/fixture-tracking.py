@@ -73,7 +73,11 @@ async def main():
             vendor.tweets.append(content)
             packet = {
                 "method": "twitter.event",
-                "params": {"twAccount": username, "eventType": "NEW_TWEET", "content": content},
+                "params": {
+                    "twAccount": username,
+                    "eventType": body.get("event_type", "NEW_TWEET"),
+                    "content": content,
+                },
             }
             for ws in list(peers):
                 await ws.send(json.dumps(packet))

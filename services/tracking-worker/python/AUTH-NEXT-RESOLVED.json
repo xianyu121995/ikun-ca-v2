@@ -1,0 +1,19 @@
+{
+  "status": "PASS_ACTUAL_PRODUCTION_NEXT",
+  "review_commit": "967f3098e84de7e299d970019d56b571ac63de94",
+  "projects_commit": "cc95dc27852d056457ca0582cff64a88c0eab1d4",
+  "auth_commit": "f097bd4722155d5e689b8894956391ed7e5f2fa7",
+  "auth_cases": 6,
+  "quiet_sse_cases": 5,
+  "source_set_sha256": "7d395c0e5a1b464735e0ee2765f3e99200539db75ff15431bfb37b3ac3b31f41",
+  "preview_source_set_sha256": "4ca006d794ec38410cffcdfcdb8035d4eb4a1ec935a63a7130e703a41c63d8f9",
+  "build_id": "OyPtwap0Jjwfk_uhaBYyl",
+  "receipt": {
+    "path": "artifacts/b3/auth-next-1792085563782/receipt.json",
+    "sha256": "727465b3e335313d598b8aa69f1e714bc0878f00aea5fd94e669578fe3fbf48b"
+  },
+  "heavy_lock_receipt": "tracking-worker-5cebc055-bef7-4957-98a1-5fbc3987efe7.json",
+  "real_provider_calls": 0,
+  "earlier_failures_preserved": true,
+  "later_runtime_changes_require_final_revalidation": true
+}

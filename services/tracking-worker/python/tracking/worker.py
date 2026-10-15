@@ -122,7 +122,10 @@ class Worker:
         try:
             items = await self.remote.tweets(row["handle"])
             self.ensure_owner()
-            tweets = [normalize(item, row["handle"], require_author=True) for item in items]
+            tweets = [
+                normalize(item, row["handle"], require_author=True, event_type="REST_USER_TWEETS_NO_RETWEETS")
+                for item in items
+            ]
             valid = [tweet for tweet in tweets if tweet]
             coverage = "bounded_latest_100"
             if len(items) >= 100 and (not valid or min(x["created_at"] for x in valid) > boundary):
@@ -274,12 +277,37 @@ class Worker:
             self.ensure_owner()
             await self.pause(2)
 
+    async def retention(self):
+        from .retention import backup_database, cleanup
+
+        while not self.stop.is_set():
+            self.ensure_owner()
+            self.store.check_retention_clock()
+            result = await asyncio.to_thread(
+                cleanup,
+                self.store,
+                owner=self.worker_id,
+                backup=lambda path, **kw: backup_database(path, cancel=self.stop.is_set, **kw),
+            )
+            delay = 300
+            if result["state"] in ("blocked_backup", "clock_anomaly"):
+                logging.getLogger(__name__).warning("tracking_retention_%s", result["state"])
+            if result["state"] == "blocked_backup":
+                with self.store.connect() as db:
+                    retry = db.execute(
+                        "SELECT retry_at_ms FROM retention_jobs ORDER BY created_at_ms DESC LIMIT 1"
+                    ).fetchone()
+                    if retry:
+                        delay = min(300, max(1, retry[0] / 1000 - time.time()))
+            await self.pause(delay)
+
     async def run(self):
         self.acquire()
         tasks = [
             asyncio.create_task(self.ticks()),
             asyncio.create_task(self.streams()),
             asyncio.create_task(self.pulse()),
+            asyncio.create_task(self.retention()),
             asyncio.create_task(self.stop.wait()),
         ]
         try:

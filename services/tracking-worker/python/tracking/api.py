@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.exceptions import HTTPException
 
-from . import commands
+from . import commands, feed
 from .config import Config
 from .migration import inspect
 from .protocol import UUID4, Command, DomainError, Principal, canonical
@@ -101,13 +101,14 @@ def create_app(cfg: Config, store: Store | None = None):
         )
         return JSONResponse(
             {
-                "error": {"code": code, "message": message, "retryable": code == "DB_UNAVAILABLE"},
+                "error": {"code": code, "message": message, "retryable": status in (429, 503)},
                 "request_id": request.state.request_id,
             },
             status_code=status,
+            headers={"Retry-After": "1"} if status == 429 else {},
         )
 
-    async def body(request):
+    async def body(request, *, maximum=65536):
         if request.headers.get("content-type", "").split(";")[0] != "application/json":
             raise DomainError(415, "VALIDATION_ERROR", "JSON required")
         data = bytearray()
@@ -115,7 +116,7 @@ def create_app(cfg: Config, store: Store | None = None):
             async with asyncio.timeout(5):
                 async for chunk in request.stream():
                     data.extend(chunk)
-                    if len(data) > 65536:
+                    if len(data) > maximum:
                         raise DomainError(413, "VALIDATION_ERROR", "request too large")
             value = json.loads(data)
             if not isinstance(value, dict):
@@ -145,7 +146,29 @@ def create_app(cfg: Config, store: Store | None = None):
     @app.get("/health/ready")
     def ready(request: Request):
         inspect(cfg.db_path)
-        return reply(request, {"service": "tracking", "status": "ready"})
+        return reply(
+            request,
+            {
+                "service": "tracking",
+                "status": "ready",
+                "schema_version": 4,
+                "external_collection_enabled": cfg.remote_enabled,
+                "source_state": "unconfigured" if not cfg.remote_enabled else "not_verified",
+            },
+        )
+
+    @app.post("/internal/v1/feed/{operation}", dependencies=[Depends(service)])
+    async def published_feed(operation: str, request: Request):
+        handlers = {
+            "bases": (feed.BasisRequest, feed.basis),
+            "snapshots": (feed.SnapshotRequest, feed.snapshot),
+            "pages": (feed.PageRequest, feed.page),
+        }
+        if operation not in handlers:
+            raise DomainError(404, "NOT_FOUND", "feed path not found")
+        model, handler = handlers[operation]
+        value = model.model_validate(await body(request, maximum=2 * 1024 * 1024))
+        return reply(request, handler(store, value))
 
     @app.post("/internal/v1/commands", dependencies=[Depends(service)])
     async def accept(request: Request):
@@ -255,10 +278,32 @@ def create_app(cfg: Config, store: Store | None = None):
     @app.get("/internal/v1/status", dependencies=[Depends(service)])
     def status(request: Request):
         runtime = store.runtime()
+        with store.connect() as db:
+            meta = dict(
+                db.execute(
+                    "SELECT semantic_revision,clock_anomaly FROM feed_meta WHERE singleton=1"
+                ).fetchone()
+            )
+            high_water = db.execute("SELECT COALESCE(MAX(first_seq),0) FROM tweet_ledger").fetchone()[0]
+            job = db.execute(
+                "SELECT state FROM retention_jobs ORDER BY created_at_ms DESC LIMIT 1"
+            ).fetchone()
         return reply(
             request,
             {
                 "service": "tracking",
+                "schema_version": 4,
+                "policy_version": feed.POLICY,
+                "published_profile": feed.PROFILE,
+                "semantic_revision": meta["semantic_revision"],
+                "ledger_high_water": high_water,
+                "retention_state": "clock_anomaly"
+                if meta["clock_anomaly"]
+                else job[0]
+                if job
+                else "scheduled",
+                "external_collection_enabled": cfg.remote_enabled,
+                "source_state": "unconfigured" if not cfg.remote_enabled else "not_verified",
                 "alive": bool(runtime["heartbeat"] and time.time() - runtime["heartbeat"] < 10),
                 "connection": runtime["connection"]
                 if runtime["heartbeat"] and time.time() - runtime["heartbeat"] < 10
@@ -272,28 +317,44 @@ def create_app(cfg: Config, store: Store | None = None):
         after = 0
         if previous:
             with store.connect() as db:
-                old = db.execute("SELECT seq FROM changes WHERE event_id=?", (previous,)).fetchone()
+                from .retention import retention_now
+
+                now = retention_now(db)
+                old = db.execute(
+                    "SELECT seq FROM changes WHERE event_id=? AND (json_extract(data,'$.tweet_id') IS NULL OR EXISTS(SELECT 1 FROM tweet_ledger l WHERE l.tweet_id=json_extract(changes.data,'$.tweet_id') AND l.expires_at_ms>? AND l.state!='expired'))",
+                    (previous, now),
+                ).fetchone()
                 if old is None:
                     raise DomainError(422, "VALIDATION_ERROR", "unknown event cursor")
                 after = old[0]
+
+        with store.connect() as db:
+            live_after = db.execute("SELECT COALESCE(MAX(seq),0) FROM changes").fetchone()[0]
 
         async def frames():
             nonlocal after
             heartbeat = 0
             while not await request.is_disconnected():
                 with store.connect() as db:
+                    from .retention import retention_now
+
+                    now = retention_now(db)
                     rows = db.execute(
-                        "SELECT * FROM changes WHERE seq>? ORDER BY seq LIMIT 100", (after,)
+                        "SELECT * FROM changes WHERE seq>? AND (json_extract(data,'$.tweet_id') IS NULL OR EXISTS(SELECT 1 FROM tweet_ledger l WHERE l.tweet_id=json_extract(changes.data,'$.tweet_id') AND l.expires_at_ms>? AND l.state!='expired')) ORDER BY seq LIMIT 100",
+                        (after, now),
                     ).fetchall()
                 for row in rows:
                     after = row["seq"]
+                    data = json.loads(row["data"])
+                    if row["event_type"].startswith("tracking.feed.activity.") and row["seq"] <= live_after:
+                        data = {**data, "replay": True, "is_live_new": False}
                     yield (
                         "id: "
                         + row["event_id"]
                         + "\nevent: "
                         + row["event_type"]
                         + "\ndata: "
-                        + canonical({"data": json.loads(row["data"]), "request_id": request.state.request_id})
+                        + canonical({"data": data, "request_id": request.state.request_id})
                         + "\n\n"
                     )
                 if time.monotonic() - heartbeat >= 15:

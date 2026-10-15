@@ -3,7 +3,9 @@
 import hashlib
 import os
 import re
+import secrets
 import sqlite3
+import stat
 import time
 import uuid
 from pathlib import Path
@@ -34,7 +36,12 @@ def ledger(db):
         {"version", "name", "applied_at", "checksum"},
     ):
         raise ValueError("unsupported ledger")
-    names = {1: {"foundation"}, 2: {"tracking_v2", "tracking_new_tweet_v1"}, 3: {"tracking_v3"}}
+    names = {
+        1: {"foundation"},
+        2: {"tracking_v2", "tracking_new_tweet_v1"},
+        3: {"tracking_v3"},
+        4: {"tracking_v4"},
+    }
     rows = db.execute("SELECT version,name FROM _schema_migrations").fetchall()
     for version, name in rows:
         if version not in names:
@@ -44,7 +51,7 @@ def ledger(db):
     return {r[0] for r in rows}, columns
 
 
-def structure(db):
+def structure(db, *, version=4, allow_recovery=False):
     for table, required in REQUIRED_COLUMNS.items():
         columns = {r[1] for r in db.execute(f"PRAGMA table_info({table})")}
         if not set(required.split()) <= columns:
@@ -62,6 +69,29 @@ def structure(db):
         }
         if not required <= unique:
             raise ValueError("tracking schema uniqueness mismatch")
+    if version >= 4:
+        for table, required in {
+            "tweets": "tweet_kind author_verified type_evidence_version expires_at_ms",
+            "tweet_ledger": "first_seq tweet_id expires_at_ms first_received_at_ms origin_subscription_id state",
+            "tracking_outbox": "original_hash original_receipt_hash",
+            "feed_meta": "singleton semantic_revision cursor_key snapshot_epoch database_path last_retention_now_ms clock_anomaly recovery_ready",
+            "feed_bases": "basis_id actor_hash query_hash query_json semantic_revision snapshot_epoch as_of_ms expires_at_ms prepared_until_ms candidate_ids subscription_ids project_ids",
+            "feed_snapshots": "snapshot_id actor_hash query_hash semantic_revision snapshot_epoch as_of_ms expires_at_ms catalog_version ordered_ids ratings_json counts_json",
+            "retention_jobs": "job_id state created_at_ms updated_at_ms high_water backup_path backup_sha256 error retry_at_ms attempts deleted_count",
+        }.items():
+            if not set(required.split()) <= {r[1] for r in db.execute(f"PRAGMA table_info({table})")}:
+                raise ValueError("tracking feed schema structure mismatch")
+        meta = db.execute(
+            "SELECT cursor_key,snapshot_epoch,recovery_ready FROM feed_meta WHERE singleton=1"
+        ).fetchone()
+        if (
+            not meta
+            or not isinstance(meta[0], bytes)
+            or len(meta[0]) != 32
+            or not meta[1]
+            or meta[2] not in ((0, 1) if allow_recovery else (1,))
+        ):
+            raise ValueError("tracking feed recovery or key invalid")
 
 
 def safe_path(path, *, create=False):
@@ -70,7 +100,12 @@ def safe_path(path, *, create=False):
         raise ValueError("only nonaliased tracking.db is allowed")
     for suffix in ("", "-wal", "-shm"):
         p = Path(str(path) + suffix)
-        if p.is_symlink() or (p.exists() and p.stat().st_nlink != 1):
+        try:
+            metadata = p.lstat()
+        except FileNotFoundError:
+            # SQLite can unlink WAL/SHM between concurrent connections.
+            continue
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
             raise ValueError("database path alias rejected")
     if create:
         path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -82,11 +117,16 @@ def safe_path(path, *, create=False):
 def hashes():
     return {
         v: hashlib.sha256((SCHEMAS / name).read_bytes()).hexdigest()
-        for v, name in [(1, "001_foundation.sql"), (2, "002_tracking.sql"), (3, "003_commands.sql")]
+        for v, name in [
+            (1, "001_foundation.sql"),
+            (2, "002_tracking.sql"),
+            (3, "003_commands.sql"),
+            (4, "004_feed_retention.sql"),
+        ]
     }
 
 
-def inspect(path, *, maximum=3):
+def inspect(path, *, maximum=4, allow_recovery=False):
     path = safe_path(path)
     db = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=5)
     try:
@@ -101,9 +141,9 @@ def inspect(path, *, maximum=3):
             or db.execute("PRAGMA user_version").fetchone()[0] > maximum
         ):
             raise ValueError("unsupported future schema")
-        if maximum == 3 and set(versions) != {1, 2, 3}:
+        if maximum in (3, 4) and set(versions) != set(range(1, maximum + 1)):
             raise ValueError("explicit tracking migrate required")
-        if maximum == 3 and db.execute("PRAGMA user_version").fetchone()[0] != 3:
+        if maximum in (3, 4) and db.execute("PRAGMA user_version").fetchone()[0] != maximum:
             raise ValueError("tracking schema version mismatch")
         expected = hashes()
         for version, digest in db.execute("SELECT version,sha256 FROM _migration_checksums"):
@@ -114,8 +154,12 @@ def inspect(path, *, maximum=3):
                 raise ValueError("tracking migration checksum mismatch")
         if set(r[0] for r in db.execute("SELECT version FROM _migration_checksums")) != set(versions):
             raise ValueError("missing migration checksum")
-        if maximum == 3:
-            structure(db)
+        if maximum in (3, 4):
+            structure(db, version=maximum, allow_recovery=allow_recovery)
+        if maximum == 4 and db.execute("SELECT database_path FROM feed_meta WHERE singleton=1").fetchone()[
+            0
+        ] != str(path):
+            raise ValueError("new path requires explicit verified restore")
     finally:
         db.close()
 
@@ -132,7 +176,7 @@ def migrate(path, *, fault=None):
             raise ValueError("foreign database rejected")
         if marker == APP_ID and not {"_store_identity", "_schema_migrations"} <= tables:
             raise ValueError("tracking schema structure mismatch")
-        if db.execute("PRAGMA user_version").fetchone()[0] > 3:
+        if db.execute("PRAGMA user_version").fetchone()[0] > 4:
             raise ValueError("unsupported future schema")
         if "_store_identity" in tables:
             row = db.execute("SELECT store_name FROM _store_identity WHERE singleton=1").fetchone()
@@ -140,7 +184,7 @@ def migrate(path, *, fault=None):
                 raise ValueError("store owner mismatch")
         if "_schema_migrations" in tables:
             versions, columns = ledger(db)
-            if versions not in ({1}, {2}, {1, 2}, {1, 2, 3}):
+            if versions not in ({1}, {2}, {1, 2}, {1, 2, 3}, {1, 2, 3, 4}):
                 raise ValueError("tracking migration history mismatch")
             if "checksum" in columns:
                 legacy = db.execute("SELECT checksum FROM _schema_migrations WHERE version=2").fetchone()
@@ -172,9 +216,14 @@ def migrate(path, *, fault=None):
         for name in ("sessions", "login_limits"):
             if name in tables and db.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]:
                 raise ValueError("legacy human identity retirement requires explicit review")
-        if 3 in versions:
+        if 4 in versions:
             inspect(path)
             return
+        if 3 in versions:
+            inspect(path, maximum=3)
+            from .retention import backup_database
+
+            backup_database(path, job_id="migration_" + str(uuid.uuid4()))
         if 2 in versions:
             for project_id, generation in db.execute("SELECT project_id,generation FROM projects"):
                 if (
@@ -186,13 +235,23 @@ def migrate(path, *, fault=None):
         db.execute("PRAGMA journal_mode=WAL")
         db.execute("PRAGMA foreign_keys=ON")
         db.execute("BEGIN IMMEDIATE")
-        for version, name in [(1, "001_foundation.sql"), (2, "002_tracking.sql"), (3, "003_commands.sql")]:
+        for version, name in [
+            (1, "001_foundation.sql"),
+            (2, "002_tracking.sql"),
+            (3, "003_commands.sql"),
+            (4, "004_feed_retention.sql"),
+        ]:
             if version not in versions:
                 # executescript would implicitly commit. Execute complete statements in this one transaction.
                 sql = (SCHEMAS / name).read_text()
-                for statement in sql.split(";"):
-                    if statement.strip():
+                statement = ""
+                for line in sql.splitlines(True):
+                    statement += line
+                    if sqlite3.complete_statement(statement):
                         db.execute(statement)
+                        statement = ""
+                if statement.strip():
+                    raise ValueError("incomplete migration statement")
                 if version == 1:
                     db.execute(
                         "INSERT OR IGNORE INTO _store_identity(singleton,store_name) VALUES(1,'tracking')"
@@ -231,6 +290,27 @@ def migrate(path, *, fault=None):
                                 row["generation"],
                             ),
                         )
+                if version == 4:
+                    from .retention import TTL_MS, wall_ms
+
+                    now = wall_ms()
+                    db.execute(
+                        "INSERT INTO feed_meta(singleton,cursor_key,snapshot_epoch,database_path,last_retention_now_ms) VALUES(1,?,?,?,?)",
+                        (secrets.token_bytes(32), str(uuid.uuid4()), str(path), now),
+                    )
+                    for row in db.execute(
+                        "SELECT tweet_id,MIN(received_at) AS received,MIN(CASE WHEN created_at<=received_at THEN created_at END) AS published,MIN(subscription_id) AS subscription_id FROM (SELECT tweet_id,received_at,created_at,subscription_id,seq FROM tweets UNION ALL SELECT t.tweet_id,t.received_at,t.created_at,p.subscription_id,t.seq FROM tweets_legacy t JOIN projects p USING(project_id)) GROUP BY tweet_id ORDER BY MIN(seq)"
+                    ).fetchall():
+                        received = int(row["received"] * 1000)
+                        origin = min(received, int(row["published"] * 1000)) if row["published"] else received
+                        expiry = origin + TTL_MS
+                        db.execute(
+                            "INSERT INTO tweet_ledger(tweet_id,expires_at_ms,first_received_at_ms,origin_subscription_id,state) VALUES(?,?,?,?,'unknown')",
+                            (row["tweet_id"], expiry, received, row["subscription_id"]),
+                        )
+                        db.execute(
+                            "UPDATE tweets SET expires_at_ms=? WHERE tweet_id=?", (expiry, row["tweet_id"])
+                        )
                 db.execute(
                     "INSERT INTO _schema_migrations(version,name,applied_at) VALUES(?,?,?)",
                     (
@@ -257,7 +337,7 @@ def migrate(path, *, fault=None):
             if fault == version:
                 raise RuntimeError("injected migration failure")
         db.execute(f"PRAGMA application_id={APP_ID}")
-        db.execute("PRAGMA user_version=3")
+        db.execute("PRAGMA user_version=4")
         db.execute("COMMIT")
         os.chmod(path, 0o600)
         os.chmod(path.parent, 0o700)

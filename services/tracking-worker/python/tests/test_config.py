@@ -55,3 +55,20 @@ def test_secret_file_permissions_relative_paths_and_retired_config(tmp_path):
         path.write_text(json.dumps(raw))
         with pytest.raises(ValueError):
             Config.load(str(path))
+
+
+def test_admitted_release_external_io_lock_cannot_be_overridden(tmp_path, monkeypatch):
+    import json
+
+    from tracking.config import Config
+
+    monkeypatch.setenv("IKUN_TRACKING_EXTERNAL_IO_DISABLED", "1")
+    path = tmp_path / "tracking.json"
+    for changes in (
+        {"remote_enabled": True},
+        {"dedicated_account": True},
+        {"token_file": "forbidden-provider-file"},
+    ):
+        path.write_text(json.dumps({"db_path": str(tmp_path / "tracking/tracking.db"), **changes}))
+        with __import__("pytest").raises(ValueError, match="external collection disabled"):
+            Config.load(str(path))

@@ -105,6 +105,9 @@ def page(store, kind, query):
         if field in query and not re.fullmatch(prefix + UUID4, query[field]):
             raise DomainError(422, "VALIDATION_ERROR", "invalid resource filter")
     with store.connect() as db:
+        from .retention import retention_now
+
+        now = retention_now(db)
         if kind == "subscriptions":
             if query.get("include_removed", "false") not in ("true", "false"):
                 raise DomainError(422, "VALIDATION_ERROR", "invalid include_removed")
@@ -128,8 +131,8 @@ def page(store, kind, query):
             items = [subscription(store, r, db=db) for r in rows[:limit]]
         else:
             descending = kind == "latest"
-            clauses = []
-            args = []
+            clauses = ["t.expires_at_ms>?", "t.tweet_kind IN ('original','quote')", "t.author_verified=1"]
+            args = [now]
             for field in ("project_id", "subscription_id"):
                 if field in query:
                     clauses.append("t." + field + "=?")

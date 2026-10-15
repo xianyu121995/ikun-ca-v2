@@ -63,6 +63,10 @@ class Config:
                 raw[name] = str(candidate if candidate.is_absolute() else p.parent / candidate)
         raw["db_path"] = Path(raw.get("db_path", p.parent / "data/tracking/tracking.db"))
         cfg = cls(**raw)
+        if os.environ.get("IKUN_TRACKING_EXTERNAL_IO_DISABLED") == "1" and (
+            cfg.remote_enabled or cfg.dedicated_account or cfg.token_file
+        ):
+            raise ValueError("this release requires external collection disabled")
         if cfg.auth_session_url or cfg.admin_token_file or cfg.read_token_file:
             raise ValueError("legacy human authentication configuration is retired; use website B1")
         if type(cfg.max_watch_slots) is not int or not 1 <= cfg.max_watch_slots <= 600:

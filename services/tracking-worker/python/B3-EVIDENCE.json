@@ -407,5 +407,7 @@
   "current_lightweight_verification": {
     "path": "artifacts/b3/current-evidence-integrity.json",
     "sha256": "e8dd6a0cb2d333740c452129e77cceb2dd96602f9859384f78bc7e4e3cd70a13"
-  }
+  },
+  "record_is_historical": true,
+  "superseded_by": "NIGHT-EVIDENCE.json"
 }

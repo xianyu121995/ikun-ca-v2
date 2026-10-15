@@ -18,7 +18,7 @@ function tree(pid){const rows=execFileSync('ps',['-axo','pid=,ppid=,stat='],{enc
 function alive(pid){try{return !/Z/.test(execFileSync('ps',['-o','stat=','-p',String(pid)],{encoding:'utf8'}).trim());}catch{return false;}}
 async function start(){child=spawn(process.execPath,(process.argv.includes('--source')?[join(root,'services/tracking-worker/src/main.ts')]:[join(root,'scripts/service.mjs'),'tracking','start']),{cwd:root,env,stdio:'ignore'});children.push(child);await until(async()=>(await fetch(`http://127.0.0.1:${port}/health/ready`)).ok);}
 try{
- await start();let state=await(await fetch(`http://127.0.0.1:${port}/internal/v1/status`,{headers:{authorization:'Bearer '+env.TRACKING_API_TOKEN}})).json();assert.equal(state.data.alive,true);
+ await start();let state=await(await fetch(`http://127.0.0.1:${port}/internal/v1/status`,{headers:{authorization:'Bearer '+env.TRACKING_API_TOKEN}})).json();assert.equal(state.data.alive,true);assert.equal(state.data.external_collection_enabled,false);assert.equal(state.data.source_state,"unconfigured");
  child.kill('SIGTERM');assert.equal(await new Promise(r=>child.once('exit',r)),0);
  await start();const pids=tree(child.pid);assert.ok(pids.length>=(process.argv.includes('--source')?3:4));child.kill('SIGKILL');await new Promise(r=>child.once('exit',r));await until(()=>pids.every(pid=>!alive(pid)),15);
  await start();child.kill('SIGTERM');assert.equal(await new Promise(r=>child.once('exit',r)),0);

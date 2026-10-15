@@ -28,6 +28,8 @@ def bind():
                 expected[str(source.relative_to(a.ROOT))] = source.read_bytes()
     main = "services/tracking-worker/src/main.ts"
     expected[main] = (a.ROOT / main).read_bytes()
+    entry = "services/tracking-worker/python/entry.py"
+    expected[entry] = (a.ROOT / entry).read_bytes()
     for source in (HERE / "website").rglob("*"):
         if source.is_file():
             expected["apps/website/" + str(source.relative_to(HERE / "website"))] = source.read_bytes()

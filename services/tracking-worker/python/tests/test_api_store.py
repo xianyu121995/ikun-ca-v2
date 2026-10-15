@@ -366,7 +366,6 @@ async def test_crash_after_remote_apply_reconciles_without_second_add(client, wo
 
 
 def test_retention_and_new_path_backup_preserve_pending_inbox(client, store, tmp_path):
-    import sqlite3
 
     from tracking.store import Store
 
@@ -375,17 +374,19 @@ def test_retention_and_new_path_backup_preserve_pending_inbox(client, store, tmp
     with store.connect() as db:
         db.execute("UPDATE commands SET created_at=?", (time.time() - 8 * 86400,))
     target = tmp_path / "restored/tracking/tracking.db"
-    target.parent.mkdir(parents=True)
-    with sqlite3.connect(store.path) as src, sqlite3.connect(target) as dst:
-        src.backup(dst)
+    from tracking.retention import backup_database, restore
+
+    directory, _ = backup_database(store.path)
+    restore(directory, target, store.path, expected_watermark=0)
     restored = Store(target)
     assert query(restored, body["command_id"], "restored")["subscription_id"] == receipt["subscription_id"]
     assert query(restored, body["command_id"], "restored")["state"] == "accepted"
 
 
-async def test_same_generation_cross_source_completion_and_cross_generation_blocked(client, worker, store):
+async def test_legacy_generation_ids_and_order_preserved_with_structured_input(client, worker, store):
     from conftest import event, tweet
 
+    from tracking.events import normalize
     from tracking.views import page
 
     body = envelope()
@@ -396,19 +397,39 @@ async def test_same_generation_cross_source_completion_and_cross_generation_bloc
     assert worker.ingest(event(t))
     row = store.get(PID)
     assert store.insert_tweet(
-        row, {"tweet_id": "101", "created_at": t["createdAt"], "text": "completed"}, "rest_recovery"
+        row, normalize({**t, "text": "completed"}, row["handle"], require_author=True), "rest_recovery"
     )
     assert len(store.activities()) == 1
     # Published and received order are intentionally opposite. Frozen latest remains received descending.
     newer = tweet(tweet_id="102", at=base + (t["createdAt"] - base) * 0.25)
     worker.ingest(event(newer))
-    worker.ingest(event({"id": "103", "text": "unknown time"}))
+    worker.ingest(
+        event(
+            {
+                "id": "103",
+                "text": "unknown time",
+                "userScreenName": "project1",
+                "isReply": False,
+                "isQuote": False,
+            }
+        )
+    )
     first = page(store, "latest", {"limit": "1"})
     assert first["items"][0]["tweet_id"] == "103" and first["items"][0]["occurred_at"] is None
     second = page(store, "latest", {"limit": "1", "cursor": first["next_cursor"]})
     assert second["items"][0]["tweet_id"] == "102"
     assert page(store, "activities", {})["items"][0]["text"] == "completed"
-    assert worker.ingest(event({"id": "104", "text": "cross-generation"}))
+    assert worker.ingest(
+        event(
+            {
+                "id": "104",
+                "text": "cross-generation",
+                "userScreenName": "project1",
+                "isReply": False,
+                "isQuote": False,
+            }
+        )
+    )
     row = store.get(PID)
     submit(
         client,
@@ -425,8 +446,18 @@ async def test_same_generation_cross_source_completion_and_cross_generation_bloc
         ),
     )
     await worker.reconcile()
-    assert worker.ingest(event({"id": "104", "text": "cross-generation"}))
+    assert worker.ingest(
+        event(
+            {
+                "id": "104",
+                "text": "cross-generation",
+                "userScreenName": "project1",
+                "isReply": False,
+                "isQuote": False,
+            }
+        )
+    )
     observations = [r for r in store.activities() if r["tweet_id"] == "104"]
     assert len(observations) == 2 and observations[0]["activity_id"] != observations[1]["activity_id"]
-    # Product cross-generation public folding is C-05 BLOCKED; never pretend this is one public item.
+    # Legacy generation observations remain distinct; published-v1 folding is tested separately.
     assert len(page(store, "latest", {})["items"]) == 5

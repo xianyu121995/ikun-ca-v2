@@ -33,8 +33,12 @@ else {
         if (process.env[key] !== undefined)
             env[key] = process.env[key];
     }
-    const managed = runtime.spawnManaged(python, ["-m", "tracking.cli", "serve", "--config", config], {
-        cwd: folder, env, inheritOutput: true, graceMs: 10000,
+    // This release is explicitly admitted with external collection closed.
+    env.IKUN_TRACKING_EXTERNAL_IO_DISABLED = "1";
+    const entry = resolve(folder, "entry.py");
+    if (!existsSync(entry)) throw new Error("TRACKING_RELEASE_ENTRY_MISSING");
+    const managed = runtime.spawnManaged(python, [entry, "serve", "--config", config], {
+        cwd: dirname(config), env, inheritOutput: true, graceMs: 10000,
     });
     const child = managed.child;
     child.once("error", () => {

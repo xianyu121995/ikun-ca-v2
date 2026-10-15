@@ -260,7 +260,7 @@ async def test_backfill_dedup_filters_and_gap_reporting(worker, store, vendor):
     assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["coverage"] == "possible_gap"
 
 
-@pytest.mark.parametrize("kind", ["NEW_FOLLOWER", "NEW_TWEET_REPLY", "NEW_RETWEET", "NEW_TWEET_QUOTE"])
+@pytest.mark.parametrize("kind", ["NEW_FOLLOWER", "NEW_TWEET_REPLY", "NEW_RETWEET"])
 async def test_only_new_tweet(worker, store, kind):
     add(store)
     await worker.reconcile()
@@ -278,7 +278,17 @@ async def test_ingestion_filters_restart_dedup_and_empty_body_completion(worker,
     assert len(store.activities()) == 1 and store.activities()[0]["text"] == "正文补全"
     assert not worker.ingest(event(tweet("foreign")))
     assert not worker.ingest(event(tweet(at=time.time() - 86400, tweet_id="999")))
-    assert worker.ingest(event({"id": "998", "text": "missing timestamp"}))
+    assert worker.ingest(
+        event(
+            {
+                "id": "998",
+                "text": "missing timestamp",
+                "userScreenName": "project1",
+                "isReply": False,
+                "isQuote": False,
+            }
+        )
+    )
     assert store.activities()[-1]["created_at"] is None
     row = store.get("prj_550e8400-e29b-41d4-a716-446655440001")
     store.mutate(

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "state": "candidate_for_chief_review",
+  "base_commit": "486294ac3255b08fdb13a307ee15f96c571020d9",
+  "release_commit": "d0af2804ed1ad70d3dd66e930582831bbd6b5e96",
+  "local_voice_amendment": "8fe35943d026c3d030c2dd42b2f889abe27f2422",
+  "b3_source": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+  "files_sha256": {
+    "packages/ui/src/index.ts": "ec91d032bce4ad539a083711f5faacc1c26a77f87773c1b147b841a3baf1eb81",
+    "packages/ui/src/voice/HANDOFF.md": "49547842d0d099cbe431826cd364ffd33633bbc0886ff148bcfd5c970941479a",
+    "packages/ui/src/voice/README.md": "23e774eca9d927e8793d691ffae3a27f468ae4f99d7818c1724afc749e9bd269",
+    "packages/ui/src/voice/browser.ts": "850a9263a770a630c808a0d2ae3b275ee75ce1646dc0729c519bb3699028f30f",
+    "packages/ui/src/voice/controller.ts": "787e13d732d041bc0dee25a33beddda0efda558296350980ba047d2d15fdea0c",
+    "packages/ui/src/voice/controls.tsx": "4cf6a7a6adae72d314ff2976009919046ad1f78ecc08adb43db37f9d20e62c85",
+    "packages/ui/src/voice/harness/main.mjs": "c81004ec4fd4ac03983032967dedde26d9fe1f64efacd41aef980090f015769b",
+    "packages/ui/src/voice/harness/serve.mjs": "8fbee1342debc45ecbc14f276bac0710b75c1866ab0f6122cef2b34934666055",
+    "packages/ui/src/voice/index.ts": "a17387806b176192ce6c45cb716bafb6f19a65c70502169161185ef20d6f5a83",
+    "packages/ui/src/voice/preferences.ts": "f49235cf90081d4d1198db3526f89393293422ed827e221148b04f6e8cc68e42",
+    "packages/ui/src/voice/tests/compiled-smoke.mjs": "c1b8633815bc09c835ea34059432473630f8e67e2ccd990a5e25658b8882a1ac",
+    "packages/ui/src/voice/tests/helpers.mjs": "438b3580004791aea448199a56a7550f588cd5a2d51a4eb985b8ff2ef051fb5a",
+    "packages/ui/src/voice/tests/voice.test.mjs": "d8ac99c9f77744a412c5cee1e5781bdcf9c90a5606f6683d1a111425fa908ef3",
+    "packages/ui/src/voice/types.ts": "a29bc103db30f16dccfa64b4d4caaa78578787299462f9e726ffda4143930aa6",
+    "packages/ui/src/voice/validation.ts": "d976cc112bba57b5b104aa7080f82cf45ab3748fd25230b2b7246df7800dd196"
+  },
+  "self_hash": "excluded to avoid recursion; final Git commit binds this file",
+  "evidence_validation_sha256": "2935cd8e0483f92b60bb90a02441d630e9e5df8850dbf08be5ac31b14431c5dd"
+}

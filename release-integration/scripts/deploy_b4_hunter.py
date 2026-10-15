@@ -98,7 +98,8 @@ def main():
     binding = json.loads((ROOT / 'release-integration/c0-lite/evidence/build-binding.json').read_text())
     for path, expected in {**binding['sources'], **binding['compiled']}.items():
         assert digest(ROOT / path) == expected, path
-    assert not job_pid(LABEL)
+    absent = subprocess.run(['/bin/launchctl', 'print', 'gui/' + str(os.getuid()) + '/' + LABEL], capture_output=True, text=True)
+    assert absent.returncode != 0 and 'Could not find service' in absent.stderr and LABEL in absent.stderr, 'EXACT_NEW_JOB_ABSENCE_REQUIRED'
     plist = Path.home() / 'Library/LaunchAgents' / (LABEL + '.plist')
     assert not plist.exists() and not plist.is_symlink()
     assert not (TARGET / 'data/hunter/hunter.db').exists(), 'ONLY_EXPLICIT_NEW_HUNTER_DATABASE'

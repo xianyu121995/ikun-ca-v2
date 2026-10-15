@@ -163,7 +163,7 @@ def main():
         status = admin.get('/api/v1/commands/' + command)
         check(status.status_code == 503 and status.json()['error']['code'] == 'AUTH_NOT_CONFIGURED', 'canonical_known_tracking_unreceived_honest_503')
         check(not (data / 'tracking/tracking.db').exists(), 'no_unreceived_tracking_database_or_implicit_init')
-        project_headers = {'Origin': origin, 'X-CSRF-Token': admin_me['csrf_token'], 'Idempotency-Key': str(uuid.uuid4()),
+        project_headers = {'Origin': origin, 'Content-Type': 'application/json', 'X-CSRF-Token': admin_me['csrf_token'], 'Idempotency-Key': str(uuid.uuid4()),
                            'If-Match': '"rev-' + str(project['revision']) + '"'}
         added = admin.post('/api/v1/projects/' + project['project_id'] + '/home-membership', json={'action': 'add'}, headers=project_headers)
         check(added.status_code == 200, 'homepage_add_is_separate_explicit_action')

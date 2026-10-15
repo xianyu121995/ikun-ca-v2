@@ -89,5 +89,18 @@
       "final_worker_feed_next_browser_acceptance_still_required": true,
       "receiving_requires_explicit_intake_delta": true
     }
+  },
+  "site_gateway_wiring": {
+    "state": "APPROVED_SCOPE_WAITING_CORE_FREEZE",
+    "protocol_version": "v2-site-gateway-v1",
+    "control_commit": "8b84ee97a94bae28e98b550b2721991f30088486",
+    "review_path": "docs/progress/SITE-GATEWAY-ADDENDUM.md",
+    "review_sha256": "28d85b479b532526c8fc6be307588f713cd77b5485a1f4535ab9d1955f518d60",
+    "plan_path": "release-integration/night/WIRING-REVIEW.md",
+    "file_manifest_path": "release-integration/night/wiring-files.json",
+    "source_and_receiving_patch_hashes_required_before_build": true,
+    "receiving_patch_sha256": {},
+    "implemented_or_received": false,
+    "does_not_accept_worker_core_or_deployment": true
   }
 }

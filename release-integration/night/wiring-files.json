@@ -1,10 +1,10 @@
 {
-  "state": "READ_ONLY_WIRING_REVIEW_PREPARATION_ONLY",
+  "state": "APPROVED_WIRING_SCOPE_WAITING_CORE_FREEZE",
   "at": "2026-10-16T02:12:23.212092+08:00",
   "base_commit": "f7933f0d64f83f02f4274ea434e8a919f482b4c6",
   "authority_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
   "direction_authorized_by_chief_message": true,
-  "protocol_delta_control_commit": null,
+  "protocol_delta_control_commit": "8b84ee97a94bae28e98b550b2721991f30088486",
   "core_freeze_required_before_implementation": true,
   "phase2_existing_global_SSE_semantics_preserved": true,
   "routes": [
@@ -115,7 +115,7 @@
     },
     {
       "path": "apps/website/components/hunter-controller.tsx",
-      "change": "pending_owner_frozen_SSE_binding_not_currently_URL_only"
+      "change": "approved_minimal_cancellable_module_SSE_drives_existing_load_after_freeze"
     },
     {
       "path": "apps/website/app/api/v1/commands/[id]/route.ts",
@@ -123,8 +123,8 @@
     },
     {
       "path": "scripts/start-c0-lite.mjs",
-      "change": "candidate_existing_website_lifecycle_relayOnce_caller",
-      "exact_entry_pending_chief_record": true
+      "change": "approved_website_startup_or_instrumentation_single_flight_existing_relayOnce",
+      "exact_executable_entry_and_patch_hash_pending_final_runtime": true
     },
     {
       "path": "release-integration/night/",
@@ -137,6 +137,10 @@
     {
       "path": "release-integration/tests/",
       "change": "future_module_SSE_command_and_relay_integration_checks"
+    },
+    {
+      "path": "apps/website/lib/service-gateway/",
+      "change": "approved_thin_website_gateway_and_lifecycle_wiring_only"
     }
   ],
   "do_not_receive_global_preview_mounts": [
@@ -158,5 +162,21 @@
   "deployed": false,
   "live_database_accessed": false,
   "actual_jobs_changed": false,
-  "real_provider_calls": 0
+  "real_provider_calls": 0,
+  "protocol_version": "v2-site-gateway-v1",
+  "protocol_delta_path": "docs/progress/SITE-GATEWAY-ADDENDUM.md",
+  "protocol_delta_sha256": "28d85b479b532526c8fc6be307588f713cd77b5485a1f4535ab9d1955f518d60",
+  "implementation_started": false,
+  "exact_runtime_patch_hashes_pending_core_freeze": true,
+  "approved_resolutions": {
+    "module_SSE_aliases": true,
+    "projects_helper_two_exact_readPaths_only": true,
+    "hunter_controller_cancellable_SSE_drives_existing_load": true,
+    "tracking_controller_module_URL_only": true,
+    "existing_global_projects_stream_preserved": true,
+    "ownership_aware_original_command_queries": true,
+    "website_same_process_single_flight_existing_relayOnce": true,
+    "new_HTTP_timer_entry_token_bus_database_or_service": false,
+    "Auth_domain_policy_or_public_UI_changes": false
+  }
 }

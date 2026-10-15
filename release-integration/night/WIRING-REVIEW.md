@@ -1,8 +1,8 @@
 # SSE / command / relay 最小接线只读审查
 
-状态：方向可行，有明确接线差异；只读准备，尚未实施或验收。基线`f7933f0d64f83f02f4274ea434e8a919f482b4c6`。路径、输入快照与未来文件清单见`wiring-files.json`。不将未冻结工作区字节登记为accepted依赖。
+状态：接线范围已获`v2-site-gateway-v1`批准，等待worker核心冻结；只读准备，尚未实施或验收。首次核对基线`f7933f0d64f83f02f4274ea434e8a919f482b4c6`。路径、输入快照与未来文件清单见`wiring-files.json`。不将未冻结工作区字节登记为accepted依赖。
 
-依据：总管本次技术裁定、phase2 API第90/92行的原command_id链，以及夜间授权`579a57f2e3e470525eb53f9f1f85ba75d25f3728`。总管仍需把两个增量公开路径及精确接收差异记入版本化协议/收件记录；本窗口不改冻结全局接口或机器清单。
+依据：总管本次技术裁定、phase2 API第90/92行的原command_id链，以及夜间授权`579a57f2e3e470525eb53f9f1f85ba75d25f3728`。正式增量已记录为`8b84ee97a94bae28e98b550b2721991f30088486:docs/progress/SITE-GATEWAY-ADDENDUM.md`（`v2-site-gateway-v1`）。本窗口已核对该Git对象，不改冻结全局接口或机器清单；核心冻结后按此范围实施，并把实际输入/目标/patch hash填入精确收件表。
 
 ## SSE
 
@@ -14,7 +14,7 @@
 
 两个新增route只委托本模块handler，固定Node/dynamic，不改id、事件type或payload，不拼接或互译cursor。分别保留B1建连、逐数据块和安静流撤销，以及原重放/无重复提醒语义；原生无效/过期cursor按原handler错误处理，不通过切换来源或清空cursor假装恢复。handler内部已有的转换保留，不由新route重写。
 
-当前直接冲突是：Projects已占全局stream；Tracking候选也把它导向Tracking；Hunter预览脚本生成同名Hunter挂载。后两者的全局挂载不能收进正式站。Tracking live当前确实使用全局URL，应改为本模块URL；Hunter当前未冻结controller只有读取/刷新，未发现EventSource，不能宣称“替换URL即完成”。Hunter live订阅/恢复行为需要先由owner交付可验收版本，或在总管明确的最小接线范围内另收增量，不在本轮补写。
+当前直接冲突是：Projects已占全局stream；Tracking候选也把它导向Tracking；Hunter预览脚本生成同名Hunter挂载。后两者的全局挂载不能收进正式站。Tracking live当前确实使用全局URL，应改为本模块URL；Hunter当前未冻结controller只有读取/刷新，未发现EventSource，不能宣称“替换URL即完成”。正式增量已允许集成在核心冻结后补有界、可取消的Hunter SSE读取，仅驱动既有load，保留旧行/失败语义，卸载/撤销时关闭，重连不重复告警；不重写发现/feed/研究，本轮不实施。
 
 **B1门槛是具体阻断。** 当前B1 readApi只认可原stream，两个新路径对user会先403；仅新建Route Handler不能解决Proxy前置拒绝。最小接法是经批准在网站`projectsAuth()`已有只读规则增量中增加两个精确正则，继续使用已验C03/cc95的同一store与当前实例constructor。现有Proxy已调用`projectsAuth()`；两个新route也应先调用该准入，再委托`withAuth` handler，保证不经Proxy的入口同样受控。不得由某个worker重建Auth singleton、扩大为整个hunter/tracking前缀或更改B1源码。C03 helper的域源hash仍保留，接收端两条规则需单列批准delta及目标hash。
 
@@ -44,9 +44,10 @@
 | `apps/website/lib/projects.ts` | 先精确接C03，再只添加两条获批只读规则；源hash/接收delta分别绑定 |
 | `apps/website/lib/hunter.ts`、`lib/tracking.ts` | 只接最终已验handler/helper，不在本轮合入或重写 |
 | `apps/website/components/tracking-live.tsx` | 最终已验live的EventSource改本模块路径，保留原事件处理/恢复 |
-| `apps/website/components/hunter-controller.tsx` | 最终SSE绑定仍待owner冻结；当前不是单纯URL替换 |
+| `apps/website/components/hunter-controller.tsx` | 核心冻结后按已批增量补SSE驱动既有load；当前不是单纯URL替换 |
 | `apps/website/app/api/v1/commands/[id]/route.ts` | 唯一gateway的三域原cmd查询组合；不照抄单来源预览route |
-| `scripts/start-c0-lite.mjs`或网站受托管服务端入口 | 待总管固定执行位置/编译映射；只调度原relayOnce，无新服务 |
+| `apps/website/lib/service-gateway/**` | 已批网站侧薄组合/生命周期接线；不承接领域状态机 |
+| `scripts/start-c0-lite.mjs`或网站startup/instrumentation | 已批生命周期入口，实际路径/编译映射随最终收件固定；只单飞调度原relayOnce，无新服务 |
 | `release-integration/night/**`、自有接线/收件工具及测试 | 记录批准Git/输入/目标hash；覆盖三域并存、权限/撤销、原cmd恢复 |
 
 原`apps/website/app/api/v1/events/stream/route.ts`及`lib/project-events.ts`保持Projects语义；`lib/outbox-relay.ts`机制、领域库/schema、B1领域源码、现有Auth/Projects readiness不因这次接线扩写。根协议/ownership/manifest的增量由总管记录，本窗口不自行改冻结文件。

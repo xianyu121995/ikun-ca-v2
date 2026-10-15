@@ -70,3 +70,11 @@ test('Malformed query view hints are rejected before any resource request',async
   let calls=0;const response=await publishedFeed(new Request(root,{headers:{'x-tracking-query-view':value}}),{user_id:'usr_view',tenant_id:'ikun-main',role:'user'},'req_view',async()=>{calls++;throw Error('MUST_NOT_CALL');});assert.equal(response.status,422);assert.equal(calls,0);
  }
 });
+
+test('A streamed Worker error body remains readable after attempt cancellation',async()=>{
+ const payload=JSON.stringify({error:{code:'RATE_LIMITED',message:'capacity',retryable:true},request_id:'req_stream'});
+ const server=createServer((request,response)=>{response.writeHead(429,{'content-type':'application/json','content-length':Buffer.byteLength(payload),'retry-after':'1'});response.flushHeaders();setTimeout(()=>{if(!response.destroyed)response.end(payload);},50);});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{const response=await publishedFeed(new Request(root),{user_id:'usr_stream',tenant_id:'ikun-main',role:'user'},'req_stream',async(path,id,options)=>fetch('http://127.0.0.1:'+server.address().port,{signal:options.signal}));assert.equal(response.status,429);assert.equal((await response.json()).error.code,'RATE_LIMITED');assert.equal(response.headers.get('retry-after'),'1');}
+ finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});

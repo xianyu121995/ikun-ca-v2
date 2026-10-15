@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "pytest_total": 155,
+  "failures": 0,
+  "errors": 0,
+  "groups": {
+    "tests.test_b2_browser": 9,
+    "tests.test_b2_domain": 54,
+    "tests.test_b2_home": 18,
+    "tests.test_b2_lifecycle": 3,
+    "tests.test_browser": 8,
+    "tests.test_projects": 63
+  },
+  "nested_node_tests": 9,
+  "nested_node_tests_included_in_pytest_wrapper": true,
+  "production": false,
+  "real_workers": false,
+  "command": ".venv/bin/python -m pytest -q tests --basetemp=/private/tmp/ikun-b2-full-regression --junitxml=../artifacts/pytest.xml",
+  "screenshots": {
+    "homepage-1440.png": "71741bf36659b1ca60a49b56523029099c3923c21b8783ec35e005de96faf493",
+    "homepage-390.png": "35ca355012315a4f25a49adfb3418a2237546360204e3c2c6a78d4f4fb0b8b09"
+  }
+}

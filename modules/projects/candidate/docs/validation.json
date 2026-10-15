@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-15",
+  "branch": "codex/projects",
+  "base": "f89d8f55fc3e68d6360e7a1e33e23bde48591098",
+  "status": "ISOLATED_CANDIDATE_TESTED_INTEGRATION_PENDING",
+  "pytest": {
+    "tests": "71",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0",
+    "time": "21.318"
+  },
+  "next_proxy_smoke": {
+    "status": "passed",
+    "version": "16.4.1",
+    "runtime": "Node 24.22.0",
+    "browser": true,
+    "temporary_projects_db": true,
+    "formal_website_modified": false
+  },
+  "local_db": {
+    "path": "data/projects.db",
+    "projects": 0,
+    "migrations": [
+      "001_projects",
+      "002_tenant_queries"
+    ],
+    "integrity_check": "ok",
+    "foreign_key_check_rows": 0
+  },
+  "runtime": {
+    "python": "3.11.15",
+    "fastapi": "0.143.0",
+    "pydantic": "2.14.0",
+    "starlette": "1.8.0",
+    "sqlite": "3.50.4"
+  },
+  "checks": {
+    "shared_build": "passed",
+    "javascript_syntax": "passed",
+    "python_compile": "passed",
+    "other_business_db_access": "none",
+    "production_deployed": false
+  },
+  "warning": "Starlette TestClient currently warns that httpx is deprecated in favor of httpx2; tests passed.",
+  "not_verified": [
+    "formal auth session binding",
+    "confirmed new homepage UI binding",
+    "v1 envelope/cursor/ETag facade",
+    "three formal processes combined acceptance",
+    "production deployment"
+  ]
+}

@@ -4,6 +4,8 @@ ikun.ca 公共视觉组件候选。设计与交互规范见 [DESIGN.md](./DESIGN
 
 第二阶段 UI0 以 [UI0-HANDOFF.md](./UI0-HANDOFF.md) 和 [UI0-VALIDATION.json](./UI0-VALIDATION.json) 为本轮交付入口；旧 HANDOFF 保留第一轮记录。遵循 `phase2-v1.0.0`，冻结基线 `4527ba4` 保留，没有合并规范分支。
 
+三个已定稿页面的统一交互预览见 [review/README.md](./review/README.md)。在本 Worktree 运行 `pnpm --dir packages/ui preview:review`，打开 `http://127.0.0.1:3255`，可从同一个导航切换主页、猎手监控和猎手项目监控。
+
 ## 在当前候选 Worktree 运行
 
 基础锁文件尚未登记新 UI 包。先安装基础依赖，再只安装包内开发依赖；不会修改根 lockfile，也不创建第二个 Git 仓库。版本均已固定，与基础版本一致；esbuild 已存在于基础锁文件的 tsx 传递依赖中，此包将其作为预览工具直接声明。

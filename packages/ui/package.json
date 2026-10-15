@@ -15,7 +15,8 @@
     "test": "TSX_TSCONFIG_PATH=./tsconfig.check.json node --import tsx --test tests/*.test.tsx",
     "preview": "node scripts/preview.mjs",
     "preview:no-js": "node scripts/no-js-fixture.mjs",
-    "test:no-js": "node --test tests/no-js-form.test.mjs"
+    "test:no-js": "node --test tests/no-js-form.test.mjs",
+    "preview:review": "node scripts/review-preview.mjs"
   },
   "peerDependencies": { "react": "^19.3.1", "react-dom": "^19.3.1" },
   "devDependencies": {

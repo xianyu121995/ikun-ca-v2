@@ -7,6 +7,7 @@
   --ik-accent: #8ce4c2; --ik-on-accent: #0b1713;
   --ik-success: #8ce4c2; --ik-success-bg: #172e28; --ik-info: #92bfff; --ik-info-bg: #18283b;
   --ik-warning: #f3c779; --ik-warning-bg: #342b1d; --ik-danger: #ff9caa; --ik-danger-bg: #36202a;
+  --ik-score-b: #c7b8ff; --ik-score-b-bg: #282337;
   --ik-font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   --ik-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --ik-radius: 8px; --ik-control-radius: 6px; --ik-dialog-radius: 12px;
@@ -63,7 +64,7 @@
 .ik-theme .ik-score strong { font-size: 13px; }
 .ik-theme .ik-score--s { color: var(--ik-accent); background: var(--ik-success-bg); }
 .ik-theme .ik-score--a { color: var(--ik-info); background: var(--ik-info-bg); }
-.ik-theme .ik-score--b { color: #c7b8ff; background: #282337; }
+.ik-theme .ik-score--b { color: var(--ik-score-b); background: var(--ik-score-b-bg); }
 .ik-theme .ik-score--c { color: var(--ik-warning); background: var(--ik-warning-bg); }
 .ik-theme .ik-score--d, .ik-theme .ik-score--unknown { color: var(--ik-secondary); background: var(--ik-raised); }
 .ik-theme .ik-panel { border: 1px solid var(--ik-border); border-radius: var(--ik-radius); background: var(--ik-panel); min-width: 0; overflow: hidden; }

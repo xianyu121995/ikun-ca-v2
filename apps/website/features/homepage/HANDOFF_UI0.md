@@ -100,7 +100,7 @@ node apps/website/features/homepage/verify-ui0.mjs
 
 概览只统计当前页已加载的 active 项目，不是全库总量；参与中/已暂停直接按 progress_stage 计数。时间卡片仅来自 token_date/status，不新增事件模型，不补未知日期或制造倒计时。虚构 fixture 补充两个明确的预计日期，便于测试四卡布局。预计与确认始终区分；没有模拟 WSS/REST/数据库/Telegram 在线状态。
 
-视觉仍使用唯一公共组件和冻结 tokens；未改侧栏/全站公共包，仅改本页布局与样式。1440px 可在本页表格内横向滚动，1920/2560px 操作按钮留在自己的单元格内，390px 概览两列/日期单列。最新浏览器测试增加概览筛选、日期查看与双向排序回归。
+视觉仍使用唯一公共组件和冻结 tokens；未改侧栏/全站公共包，仅改本页布局与样式。1440px 可在本页表格内横向滚动，1920/2560px 操作按钮留在自己的单元格内，390px 概览三列/日期单行横向滚动。最新浏览器测试增加概览筛选、日期查看与双向排序回归。
 
 ## 给主页功能窗口的接入点
 
@@ -110,3 +110,9 @@ node apps/website/features/homepage/verify-ui0.mjs
 4. 本页没有数据库、真实 API/SSE、轮询、持久任务或默认 demo fallback。演示仅存在 demo-fixtures/phase2-preview；发布候选不得默认启用预览写按钮。
 
 尚未验证：根 workspace clean checkout/frozen install、可信 AuthSession 与真实 Projects adapter、跨浏览器/屏幕阅读器完整矩阵、生产部署。当前交付是可接入的主页 UI 原型，不代表业务链路或发布 READY。
+
+## 紧凑布局调整
+
+按用户反馈，近期时间卡片始终单行横向排列，显示当前页所有已填写日期的项目；超出容器时仅在时间区滚动，不再截断到前四条。S/A/B 等概览卡片桌面高度 56px、手机 48px，数值与标签同行；评分筛选按钮高度 23px。仍复用公共组件，没有新增业务字段、API 或数据库。
+
+本次仅做小幅布局调整，未新增测试或重跑此前 21 项完整套件。已通过包含 TypeScript 检查的 Next 构建，并在实际预览中验证 1440/1920/2560/390px：日期卡片均同一行、整页无横向溢出、390px 时间区域可横向滚动；S 级筛选返回 2 行、恢复 10 行、编辑弹窗可打开和取消。实测与源码 hash 位于 components/homepage-ui/evidence/compact/validation.json。原 reference/ 的测试与截图保持为此前版本证据。

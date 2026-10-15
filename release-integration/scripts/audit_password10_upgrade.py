@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sqlite3
 import urllib.request
+import re
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGET = Path.home() / 'Library/Application Support/ikun-ca-v2-c0-lite'
@@ -57,10 +58,13 @@ def private_json(path, value):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('phase', choices=('before', 'after'))
+    parser.add_argument('--receipt-prefix', default='password10')
     args = parser.parse_args()
+    assert re.fullmatch('[a-z0-9-]{1,40}', args.receipt_prefix)
+    prefix = args.receipt_prefix
     result = metadata()
     if args.phase == 'before':
-        backup = TARGET / 'backups' / ('password10-' + datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S'))
+        backup = TARGET / 'backups' / (prefix + '-' + datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S'))
         backup.mkdir(mode=0o700, parents=True, exist_ok=False)
         for domain in ('auth', 'projects'):
             source = DATA / domain / (domain + '.db')
@@ -72,7 +76,7 @@ def main():
                 assert not dst.execute('PRAGMA foreign_key_check').fetchall()
         result['backup'] = str(backup)
     else:
-        before = json.loads((OUTPUT / 'password10-before.json').read_text())
+        before = json.loads((OUTPUT / (prefix + '-before.json')).read_text())
         assert result['data_root'] == before['data_root']
         for domain in ('auth', 'projects'):
             for key in ('path', 'inode', 'schema_sha256'):
@@ -81,7 +85,7 @@ def main():
         result.update(data_paths_inodes_schema_unchanged=True, all_existing_user_rows_unchanged=True,
                       backup=before['backup'], previous_candidate=before['candidate_sha'])
     result['at'] = datetime.now(timezone.utc).isoformat()
-    private_json(OUTPUT / ('password10-' + args.phase + '.json'), result)
+    private_json(OUTPUT / (prefix + '-' + args.phase + '.json'), result)
     print(json.dumps({'phase': args.phase, 'status': 'PASS', 'candidate_sha': result['candidate_sha'],
                       'data_root': result['data_root'], 'build_id': result['build_id']}))
 

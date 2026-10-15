@@ -1,0 +1,105 @@
+/* Review-only visual normalization. Approved page structures and callbacks stay intact. */
+body { margin:0; background:#0b0e12; }
+.review-app {
+  --review-bg:var(--ik-bg); --review-nav:var(--ik-nav); --review-panel:var(--ik-panel); --review-raised:var(--ik-raised);
+  --review-border:var(--ik-border); --review-control-border:var(--ik-control-border); --review-text:var(--ik-text);
+  --review-secondary:var(--ik-secondary); --review-muted:var(--ik-muted); --review-accent:var(--ik-accent); --review-on-accent:var(--ik-on-accent);
+  --review-font:var(--ik-font); --review-mono:var(--ik-mono);
+}
+.review-app > .ik-shell > .ik-main { padding:0; min-width:0; }
+.review-sidebar-note p { margin-top:9px; line-height:1.7; }
+.review-page { min-width:0; }
+.review-page .review-embedded-shell { min-width:0; }
+.review-page .review-embedded-shell > .ik-main { padding:0; min-width:0; }
+.review-page--home .review-embedded-shell > .ik-main { padding:24px; }
+.review-app .review-page :is(.ik-theme,.hunter-v3) {
+  --ik-bg:var(--review-bg); --ik-nav:var(--review-nav); --ik-panel:var(--review-panel); --ik-raised:var(--review-raised);
+  --ik-border:var(--review-border); --ik-control-border:var(--review-control-border); --ik-text:var(--review-text);
+  --ik-secondary:var(--review-secondary); --ik-muted:var(--review-muted); --ik-accent:var(--review-accent); --ik-on-accent:var(--review-on-accent);
+  --ik-font:var(--review-font); --ik-mono:var(--review-mono);
+  --bg:var(--review-bg); --panel:var(--review-panel); --panel2:var(--review-raised); --panel3:var(--review-raised);
+  --ink:var(--review-text); --muted:var(--review-muted); --light:var(--review-secondary); --line:var(--review-border);
+  --teal:var(--review-accent); --tealbg:var(--ik-success-bg); --cyan:var(--ik-info); --orange:var(--ik-warning); --red:var(--ik-danger);
+  font-family:var(--review-font)!important; font-size:13px; line-height:1.55; color:var(--review-text); background-color:var(--review-bg);
+}
+.review-app .review-page :is(button,input,select,textarea) { font-family:var(--review-font)!important; }
+.review-app .review-page :is(h1,.page-title) { font:600 22px/1.35 var(--review-font)!important; letter-spacing:-.4px!important; }
+.review-app .review-page :is(.ik-panel,.kpi,.hunter-summary>div) { background-color:var(--review-panel)!important; background-image:none!important; border-color:var(--review-border)!important; }
+.review-app .review-page .hpv2-root { background-image:none; }
+.review-app .review-page .ik-panel-head { background-image:none!important; }
+.review-app .review-page .ik-button:where(:not([class*="manageStat"],.hpv2-project-name,.drawer-back)) {
+  min-height:36px!important; padding:0 12px!important; gap:7px!important; border:1px solid var(--review-control-border)!important;
+  border-radius:6px!important; font-size:13px!important; line-height:1.45!important; font-weight:500!important;
+  color:var(--review-text)!important; background:var(--review-raised)!important; box-shadow:none!important;
+}
+.review-app .review-page .ik-button--sm:where(:not([class*="manageStat"],.hpv2-project-name,.drawer-back)) { min-height:28px!important; padding:0 9px!important; font-size:12px!important; }
+.review-app .review-page .ik-button svg { flex-shrink:0; }
+.review-app .review-page .ik-button[class*="openPost"] { width:28px!important; padding:0!important; }
+.review-app .review-page .hpv2-events thead th { font-size:0!important; }
+.review-app .review-page :is(.ik-button--primary,.seg .ik-button.on,.score-buttons .ik-button.on) {
+  background:var(--review-accent)!important; border-color:var(--review-accent)!important; color:var(--review-on-accent)!important;
+}
+.review-app .review-page .ik-button--ghost { border-color:transparent!important; background:transparent!important; color:var(--review-secondary)!important; }
+.review-app .review-page .ik-button--danger { background:var(--ik-danger-bg)!important; border-color:var(--ik-danger)!important; color:var(--ik-danger)!important; }
+.review-app .review-page .ik-button.soft { background:var(--ik-success-bg)!important; color:var(--review-accent)!important; border-color:var(--review-accent)!important; }
+.review-app .review-page .ik-search { min-height:36px!important; background:var(--review-bg)!important; border-color:var(--review-control-border)!important; border-radius:6px!important; }
+.review-app .review-page .ik-search input { height:34px!important; font-size:13px!important; color:var(--review-text)!important; }
+.review-app .review-page :is(.ik-input,textarea):not([type="checkbox"]):not([type="radio"]) {
+  min-height:36px!important; font:400 13px/1.55 var(--review-font)!important; color:var(--review-text)!important;
+  background:var(--review-bg)!important; border-color:var(--review-control-border)!important; border-radius:6px!important;
+}
+.review-app .review-page .ik-label { font-family:var(--review-font)!important; font-size:12px!important; font-weight:500!important; color:var(--review-secondary)!important; }
+.review-app .review-page .ik-input[aria-invalid="true"] { border-color:var(--ik-danger)!important; }
+.review-app .review-page .ik-table { font:400 13px/1.55 var(--review-font)!important; }
+.review-app .review-page .ik-table th { font-size:11px!important; font-weight:500!important; color:var(--review-secondary)!important; background:var(--review-raised)!important; }
+.review-app .review-page .ik-table td { font-size:13px!important; border-color:var(--review-border)!important; }
+.review-app .review-page .ik-table .ik-sort-button { font-size:11px!important; }
+.review-app .review-page .ik-badge { color:var(--ik-tone)!important; background:var(--ik-tone-bg)!important; border-radius:4px!important; font-size:11px!important; font-weight:500!important; }
+.review-app .review-page .ik-score { min-height:24px!important; height:auto!important; padding:2px 8px!important; border:1px solid transparent!important; border-radius:4px!important; font:12px/1.5 var(--review-mono)!important; }
+.review-app .review-page .ik-score strong { font:600 13px/1.5 var(--review-mono)!important; }
+.review-app .review-page .ik-score--s { color:var(--ik-success)!important; background:var(--ik-success-bg)!important; }
+.review-app .review-page .ik-score--a { color:var(--ik-info)!important; background:var(--ik-info-bg)!important; }
+.review-app .review-page .ik-score--b { color:var(--ik-score-b)!important; background:var(--ik-score-b-bg)!important; }
+.review-app .review-page .ik-score--c { color:var(--ik-warning)!important; background:var(--ik-warning-bg)!important; }
+.review-app .review-page :is(.ik-score--d,.ik-score--unknown) { color:var(--review-secondary)!important; background:var(--review-raised)!important; }
+.review-app .review-page .ik-dialog { background:var(--review-raised)!important; border-color:var(--review-control-border)!important; }
+.review-app .review-page .ik-dialog-head h2 { font:600 16px/1.5 var(--review-font)!important; }
+.review-app .review-page .ik-hint { color:var(--review-muted)!important; }
+.review-app .review-page :is(.ik-field-error,.save-error) { color:var(--ik-danger)!important; }
+.review-app .review-page :is(button,input,select,textarea,a,[tabindex]):focus-visible { outline:2px solid var(--review-accent)!important; outline-offset:3px; }
+.review-app .review-page [data-post] p { font-size:13px!important; line-height:1.6!important; }
+.review-page--hunter { height:100dvh; overflow:hidden; }
+.review-app .review-page--hunter .hunter-v3 { height:100%; min-height:0; }
+.review-page--hunter .review-embedded-shell { display:flex; height:100%; min-height:0; }
+.review-page--hunter .review-embedded-shell > .ik-main { display:flex; flex:1; height:100%; min-height:0; }
+.review-app .review-page--hunter .kpi { box-shadow:none; }
+.review-app .review-page--hunter .main { flex:1; min-width:0; }
+.review-app .review-page--hunter .top { border-color:var(--review-border); }
+.review-app .review-page--hunter .ik-table td { font-size:13px!important; }
+.review-app .review-page--hunter .ik-table th { letter-spacing:0; }
+.review-app .review-page--hunter .ik-table { min-width:1130px!important; }
+.review-app .review-page--hunter .ik-table th:nth-child(1) { width:112px!important; }
+.review-app .review-page--hunter .ik-table th:nth-child(2) { width:190px!important; }
+.review-app .review-page--hunter .ik-table th:nth-child(4) { width:104px!important; }
+.review-app .review-page--hunter .ik-table th:nth-child(5) { width:70px!important; }
+.review-app .review-page--hunter .ik-table th:nth-child(6) { width:112px!important; }
+.review-app .review-page--hunter .ik-table th:nth-child(7) { width:180px!important; }
+.review-app .review-page--hunter :is(.bio,.account strong) { font-size:13px; color:var(--review-text); }
+.review-app .review-page--hunter :is(.date,.account small,.hunter-cell,.status) { font-size:12px; color:var(--review-secondary); }
+.review-app .review-page--hunter :is(.avatar,.hunter-number) { color:var(--review-accent); background:var(--ik-success-bg); }
+.review-app .review-page--hunter :is(.kpi strong.teal,.status.joined,.hunter-summary strong,.drawer-section-title) { color:var(--ik-success); }
+.review-app .review-page--hunter :is(.kpi strong.blue,.status.reviewed) { color:var(--ik-info); }
+.review-app .review-page--hunter .kpi strong.yellow { color:var(--ik-warning); }
+.review-app .review-page--hunter .status.joined i { background:var(--ik-success); box-shadow:none; }
+.review-app .review-page--hunter .status.reviewed i { background:var(--ik-info); }
+.review-app .review-page--hunter :is(.seg,.drawer-note) { background:var(--review-panel); border-color:var(--review-border); }
+.review-app .review-page--hunter :is(.drawer-note,.subtitle,.crumb,.help) { color:var(--review-secondary); }
+.review-app .review-page--hunter :is(.ik-table tbody tr,.drawer) { background:var(--review-panel); }
+.review-app .review-page--hunter .ik-table tbody tr:nth-child(even) { background:var(--review-raised); }
+.review-app .review-page--hunter .ik-table tbody tr:hover { background:var(--ik-success-bg); }
+.review-app .review-page--hunter :is(.table-footer,.drawer,.filters) { border-color:var(--review-border); }
+@media(max-width:767px) {
+  .review-page--home .review-embedded-shell > .ik-main { padding:16px; }
+  .review-app .review-page :is(h1,.page-title) { font-size:20px!important; }
+  .review-page--hunter { height:calc(100dvh - 114px); min-height:500px; }
+}

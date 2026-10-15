@@ -1,0 +1,143 @@
+{
+  "contract_version": "phase2-v1.0.0",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "frozen_base_commit": "4527ba4510dcb3ea8a3d1bf932dc46367070d1d5",
+  "branch": "codex/website",
+  "owner_prefix": "packages/ui/",
+  "validated_on": "2026-10-15",
+  "timezone": "Asia/Shanghai",
+  "results": {
+    "typecheck": "passed",
+    "build": "passed",
+    "component_tests": {
+      "passed": 13,
+      "failed": 0
+    },
+    "no_js_http_tests": {
+      "passed": 1,
+      "failed": 0
+    },
+    "browser_groups": 9,
+    "browser_console": []
+  },
+  "browser": {
+    "contract": "phase2-v1.0.0",
+    "checks": [
+      "账号默认 /auth，业务导航保持三个入口",
+      "user 只读与 live 缺省能力拒绝，原因可见",
+      "unknown 展示待核实并阻止重复写入",
+      "pending 禁重与公开 409 code/request_id 展示",
+      "可操作按钮触发一次真实展示回调",
+      "破坏性默认取消焦点；pending 阻止 Esc、原生 dialog 提交与关闭按钮",
+      "双向 16 次焦点循环与关闭后恢复焦点",
+      "加载、筛选空结果、后台刷新与失败保留四行",
+      "无脚本原生 POST、安全拒绝、地址与浏览器历史 URL 无密码"
+    ],
+    "layouts": [
+      {
+        "navCount": 3,
+        "pageWidth": 1425,
+        "sidebar": 216,
+        "tableScrollWidth": 1159,
+        "tableWidth": 1159,
+        "width": 1440
+      },
+      {
+        "navCount": 3,
+        "pageWidth": 1905,
+        "sidebar": 216,
+        "tableScrollWidth": 1639,
+        "tableWidth": 1639,
+        "width": 1920
+      },
+      {
+        "navCount": 3,
+        "pageWidth": 2545,
+        "sidebar": 216,
+        "tableScrollWidth": 2279,
+        "tableWidth": 2279,
+        "width": 2560
+      },
+      {
+        "navCount": 3,
+        "pageWidth": 375,
+        "sidebar": 375,
+        "tableScrollWidth": 760,
+        "tableWidth": 341,
+        "width": 390
+      }
+    ],
+    "no_js": {
+      "form": {
+        "action": "http://127.0.0.1:3251/api/v1/auth/login",
+        "method": "post",
+        "scripts": 0
+      },
+      "submitted_url": "http://127.0.0.1:3251/api/v1/auth/login",
+      "history_urls": [
+        "http://127.0.0.1:3251/"
+      ],
+      "request_observations": [
+        {
+          "method": "POST",
+          "request_path": "/api/v1/auth/login",
+          "query_present": false,
+          "credential_query_present": false,
+          "body_bytes": 59
+        }
+      ]
+    },
+    "console": []
+  },
+  "spec_files_sha256": {
+    "docs/phase2/API.md": "ec1547e1349da1e45caea5c009499f258c34de2e387af4cbf14c81dbc7e16722",
+    "docs/phase2/DTO.md": "6911a952c0dfe5aa452460a2b78e29cda8ca282af734be899adafd9314d7efb4",
+    "docs/phase2/OWNERSHIP.md": "3ffdd0f0563526ca2bea8434ed42cd30f8856beec8b3e4652ba3d0628dc9ec6e",
+    "docs/phase2/README.md": "c9a32297516da2aeffb76e50cb1d0d739ca0f2e757b5d3ba34c840b1527fc271",
+    "docs/phase2/RELEASES.md": "96c4ab144bb2c87d858fbafda0e237ae3f0cf86cdce18b65f082ef1327d440be",
+    "docs/phase2/STORAGE.md": "d8231a616db6f71837322bc0e59b87bf8bbb8f9abeb8ffec9626e59dc0a74071",
+    "docs/phase2/UI.md": "65387a74d3b9f69025a5762815db3a0c2dc03476f1d8c7db0f837631c0234366",
+    "docs/phase2/VALIDATION.md": "84d4b6bac20073693a0ab1277428ada999963ef6aca5043436ad94ca7a3f5c99",
+    "docs/phase2/contract.json": "ed2f47a118226cc5acd05beffa706be07de4a28b465cd252897186ecf6fcf8e2",
+    "docs/phase2/ownership.json": "9c343fea470bcb898be5695390c1dbba06b9aaf07685d0776173fd73a387e55b",
+    "docs/phase2/releases.json": "2d231c6f0010e7af54d87df95df79ce31cdbeb25d0cdee84760f28be3d200777",
+    "docs/phase2/source-freeze.json": "26c172f0de93cf60a8fbbe93c8f024e5c1fa298d9a01d88faee8c38a91f6c98c"
+  },
+  "source_inputs_sha256": {
+    "package.json": "48127fe49c79a5ecab2140a012a862cb65d66ae545a98dc0d6d0d8793eb25164",
+    "preview/index.html": "ba43f1ff86271cbb39fab84711fab543ff94f4623c83c1f7e7c438d3989a1422",
+    "preview/main.tsx": "e463de0ac0ccf7c0ed7834991c925f7f275a93ef43812df0b5d48f522d1e9832",
+    "preview/preview.css": "f14df187976381bdb251519ce2798257a2571489714b465b92ba040821175c55",
+    "scripts/copy-styles.mjs": "165e12b3a1cdfb136e4b9a9e8421d75005b9f018250fe8e658c3bd5b57ac9c01",
+    "scripts/no-js-fixture.mjs": "1ee45ac0b95b646f3c5c289273d01a60d220edac3b10901879e9a28fef9f35bc",
+    "scripts/preview.mjs": "be90d3cd0197ba64b1ff511b36bbd0ea4bd1a28c9b353ada8483b59bf628935a",
+    "src/auth.tsx": "16ce13f3b4134898f37ba2e3edcc6e7dcc8d43cd1c044f43ee9c6d44408946c6",
+    "src/feedback.tsx": "bd489e40fb7ef4de395873ddc8940a8c7483dcdd18f2853e6cb86a9b23a0d6ea",
+    "src/icons.tsx": "95f5be22ef00c78919321299f1f92016dbfe9297fcf43501ae5e4406506b02e3",
+    "src/index.ts": "543ae285875fd993521cb1403867c57a599c3d91b7ce601e9bc6f102de81eef2",
+    "src/navigation.tsx": "78d9dadf58bffe0ef95e9defb46fc15fdd0892aae0ec215160d8f1a247db498c",
+    "src/primitives.tsx": "bc77880613ad23e60a6bb08cc100444be73d46d7ec8739455d1c7983c9a1b5fc",
+    "src/styles.css": "ca6e8568e2a7406f5e8b1072414e209a84af12ab353e5687a639bd5cb420c4e8",
+    "src/table.tsx": "14eb0cca268d295c244cb27e25b967c924bdf68161f2cfa77359948ce1fc3cc1",
+    "tests/components.test.tsx": "bfb59e081e7f5e6aff4ce8a6d9d0ed951d8277a22ff4fec268d2ddd31a4a4d1f",
+    "tests/no-js-form.test.mjs": "1aca8fe58c1e6ca79105f871d318db85716a93b2edd63267c0cc7d01b0d06d8e",
+    "tsconfig.check.json": "1a8bcb5c6a8aa81841fe634b1fff606435bc919231396b6cf16af0097b8b7f0d",
+    "tsconfig.json": "0350fbfcdeb5c68fce36f533b3a02a8694df92dc938984e020755a725a0982d1"
+  },
+  "local_ignored_evidence_sha256": {
+    "var/ui0-evidence/browser-checks.json": "cc2368d48f34c4620f4e6ac5a13898085b092aee6cdf3a1dbba2638f8a43d6b0",
+    "var/ui0-evidence/mobile.jpg": "234b2f73ce2387fda22ad604f714d9f83c44b3001545ccc3e5003866d72d89aa",
+    "var/ui0-evidence/no-js-rejection.jpg": "76bce94f9ccc2ec118b612e0d8ef30c0c31301210670622fdd27eb2991bf3d8d",
+    "var/ui0-evidence/pending-dialog.jpg": "0ee2b256d42398baab251105213f3801ee55d42bbc1c0b4b9c931f1e4ae7296f",
+    "var/ui0-evidence/states-desktop.jpg": "c2b0aac0aaf36e2a72b7d98018dbb493bb2df0b9028c6c4ff335f35e63bd925d"
+  },
+  "not_verified": [
+    "workspace frozen-lock clean checkout and root build registration",
+    "actual Next/Auth/API/SSE/worker integration",
+    "cross-browser and screen reader matrix",
+    "production deployment"
+  ],
+  "integration_accepted": false,
+  "production_authorized": false,
+  "dependencies_and_existing_exports_unchanged": true
+}

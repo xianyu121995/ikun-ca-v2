@@ -1,0 +1,8 @@
+{
+  "purpose": "User-authorized composition of the three approved UI designs; presentation only",
+  "pages": {
+    "home": { "title": "主页", "commit": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e", "entry": "apps/website/components/homepage-ui/phase2-preview.tsx", "prefixes": ["apps/website/components/homepage-ui/", "apps/website/features/homepage/"] },
+    "hunter": { "title": "猎手监控", "commit": "08065d700239b20fb4c887bbd0c85321904687f8", "entry": "apps/website/features/hunter-discovery/v3/App.tsx", "prefixes": ["apps/website/features/hunter-discovery/"] },
+    "tracking": { "title": "猎手项目监控", "commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0", "entry": "apps/website/features/tracking/tracking-workspace.tsx", "prefixes": ["apps/website/features/tracking/"] }
+  }
+}

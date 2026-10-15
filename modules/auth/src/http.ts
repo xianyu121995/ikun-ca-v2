@@ -66,7 +66,24 @@ export class AuthHttp {
   private sessionData(actor: Identity) {
     return {user_id:actor.id,username:actor.username,role:actor.role,
       tenant_id:this.store.cfg.tenantId,must_change_password:actor.must_change_password,
-      csrf_token:actor.csrf_token};
+      csrf_token:actor.csrf_token,capabilities:{can_edit_projects:actor.role==="superadmin"&&!actor.must_change_password,can_manage_hunter:actor.role==="superadmin"&&!actor.must_change_password,can_manage_tracking:actor.role==="superadmin"&&!actor.must_change_password,can_manage_users:actor.role==="superadmin"&&!actor.must_change_password}};
+  }
+  private userData(user:Record<string,unknown>) {
+    return {user_id:user.id,username:user.username,role:user.role,enabled:user.enabled,
+      must_change_password:user.must_change_password,revision:user.revision,
+      created_at:user.created_at,updated_at:user.updated_at};
+  }
+  principal(request:Request) {
+    const actor=this.authorize(request);
+    return Object.freeze({user_id:actor.id,tenant_id:'ikun-main' as const,role:actor.role});
+  }
+  async business(request:Request,handler:(principal:{user_id:string;tenant_id:'ikun-main';role:Role})=>Response|Promise<Response>) {
+    try {
+      const principal=this.principal(request);
+      const response=await handler(principal);
+      if(response.headers.get('content-type')?.startsWith('text/event-stream')) return this.stream(request,response);
+      response.headers.set('cache-control','no-store, private');response.headers.set('x-request-id',requestId(request));return response;
+    } catch(error) {return this.error(request,error);}
   }
   private sessionCookie(token: string, clear=false) {
     const cfg=this.store.cfg;
@@ -90,6 +107,9 @@ export class AuthHttp {
   private source(request: Request) {
     if (request.headers.get("host")!==new URL(this.store.cfg.origin).host)
       throw new AuthError(400,"VALIDATION_ERROR","无效的请求主机");
+    for(const key of ['x-tenant','x-tenant-id','x-scope']) {
+      const scope=request.headers.get(key);if(scope!==null&&scope!=='ikun-main') throw new AuthError(403,'FORBIDDEN','请求范围无权限');
+    }
     const path=new URL(request.url).pathname;
     if (/\\|\/\/|%2f|%5c/i.test(path)) throw invalid("无效的请求路径");
     for (const key of ["x-http-method-override","x-http-method","x-method-override"])
@@ -170,10 +190,10 @@ export class AuthHttp {
           {"set-cookie":this.sessionCookie(result.token)});
       }
       if (path==="/api/v1/auth/logout" && method==="POST") {
-        this.csrf(request); await body(request);
+        this.csrf(request); fields(await body(request),[]);
         try { const actor=this.authorize(request); this.store.logout(actor); }
         catch (error) { if (!(error instanceof AuthError) || error.status!==401) throw error; }
-        return this.response(request,{ok:true},200,{"set-cookie":this.sessionCookie("",true)});
+        return this.response(request,{logged_out:true},200,{"set-cookie":this.sessionCookie("",true)});
       }
       const actor=this.authorize(request);
       if (["/api/v1/auth/me","/api/auth/session"].includes(path) && method==="GET") {
@@ -186,36 +206,44 @@ export class AuthHttp {
         const data=await body(request); fields(data,["current_password","new_password"]);
         this.store.reserveAttempt("change:"+actor.id,peer);
         const result=await this.store.changePassword(actor,password(data.current_password,false),password(data.new_password));
-        return this.response(request,this.sessionData(result.actor),200,
-          {"set-cookie":this.sessionCookie(result.token)});
+        return this.response(request,result,200,{"set-cookie":this.sessionCookie("",true)});
       }
-      if (path==="/api/v1/auth/users" && method==="GET") return this.response(request,{users:this.store.users(actor)});
+      if (path==="/api/v1/auth/users" && method==="GET") {
+        const query=new URL(request.url).searchParams;
+        if([...query.keys()].some(key=>!['limit','cursor'].includes(key))||query.getAll('limit').length>1||query.getAll('cursor').length>1) throw invalid();
+        const raw=query.get('limit')??'50';if(!/^[1-9][0-9]{0,2}$/.test(raw)) throw invalid();
+        const cursor=query.get('cursor');if(cursor==='') throw invalid();
+        return this.response(request,this.store.pageUsers(actor,Number(raw),cursor??undefined));
+      }
       if (path==="/api/v1/auth/users" && method==="POST") {
         const data=await body(request); fields(data,["username","password","role"]);
         const role=data.role??"user";
         if (role!=="user" && role!=="superadmin") throw invalid("角色只能为 superadmin 或 user");
         const user=await this.store.createUser(actor,username(data.username),password(data.password),role as Role,idempotency(request));
-        return this.response(request,user,201,{etag:`"rev-${user.revision}"`});
+        return this.response(request,this.userData(user),201,{etag:`"rev-${user.revision}"`});
       }
       const target=/^\/api\/v1\/auth\/users\/(usr_[0-9a-f-]{36})(\/reset-password)?$/.exec(path);
       if (target && method===(target[2]?"POST":"PATCH")) {
         const data=await body(request);
-        fields(data,target[2]?["password"]:["enabled"]);
+        fields(data,target[2]?["new_password"]:["enabled","role","must_change_password"]);
         const rev=revision(request),key=idempotency(request);
         let result;
-        if (target[2]) result=await this.store.resetPassword(actor,target[1]!,password(data.password),rev,key);
+        if (target[2]) result=await this.store.resetPassword(actor,target[1]!,password(data.new_password),rev,key);
         else {
-          if (typeof data.enabled!=="boolean") throw invalid();
-          result=await this.store.setEnabled(actor,target[1]!,data.enabled,rev,key);
+          if(!Object.keys(data).length||('enabled' in data&&typeof data.enabled!=='boolean')||
+            ('must_change_password' in data&&typeof data.must_change_password!=='boolean')||
+            ('role' in data&&data.role!=='user'&&data.role!=='superadmin')) throw invalid();
+          result=await this.store.patchUser(actor,target[1]!,data as {enabled?:boolean;role?:Role;must_change_password?:boolean},rev,key);
         }
-        return this.response(request,result,200,{etag:`"rev-${result.revision}"`});
+        return this.response(request,this.userData(result),200,{etag:`"rev-${result.revision}"`});
       }
       throw new AuthError(404,"NOT_FOUND","认证接口不存在");
     } catch (error) { return this.error(request,error); }
   }
   /** Wrap an SSE body; revocation closes quiet streams and cancels the upstream reader. */
   stream(request: Request,upstream: Response): Response {
-    const original=this.authorize(request,false);
+    let original:Identity;
+    try {original=this.authorize(request,false);} catch(error) {void upstream.body?.cancel().catch(()=>{});throw error;}
     const reader=upstream.body?.getReader();
     if (!reader) return upstream;
     const store=this.store,token=tokenFrom(request,cookieName(store.cfg));

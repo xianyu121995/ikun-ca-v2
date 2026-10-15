@@ -8,6 +8,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { spawnSync } from "node:child_process";
 import { config,cookieName } from "../dist/src/config.js";
 import { APP_ID } from "../dist/src/database.js";
+import {MIGRATION_SQL} from "../dist/src/schema.js";
 import { AuthHttp } from "../dist/src/http.js";
 import { AuthStore } from "../dist/src/store.js";
 import { verifyPassword } from "../dist/src/security.js";
@@ -48,8 +49,8 @@ async function viewer(env) {
   const response=await env.api.handle(request("/api/v1/auth/password","POST",{
     current_password:password,new_password:changed},first));
   assert.equal(response.status,200,await response.clone().text());
-  const body=await response.json();
-  return {root,user,session:{cookie:response.headers.get("set-cookie").split(";")[0],csrf:body.data.csrf_token,data:body.data}};
+  assert.deepEqual((await response.json()).data,{changed:true,reauthentication_required:true});
+  return {root,user,session:await login(env,"viewer",changed)};
 }
 
 for (const path of ["/","/projects","/api/v1/projects","/api/v1/auth/me","/auth/users"])
@@ -122,7 +123,7 @@ test("create, disable, enable, reset, version checks and all-device revocation",
   response=await env.api.handle(request(`/api/v1/auth/users/${user.id}`,"PATCH",{enabled:true},root,mutation(3)));
   assert.equal(response.status,200);
   const logged=await login(env,"viewer",changed);
-  response=await env.api.handle(request(`/api/v1/auth/users/${user.id}/reset-password`,"POST",{password},root,mutation(4)));
+  response=await env.api.handle(request(`/api/v1/auth/users/${user.id}/reset-password`,"POST",{new_password:password},root,mutation(4)));
   assert.equal(response.status,200);
   assert.throws(()=>actor(env,logged),error=>error.status===401);
   const reset=await login(env,"viewer");assert.ok(reset.data.must_change_password);
@@ -157,7 +158,8 @@ test("last enabled admin is protected, including simultaneous attempts",()=>fixt
   await assert.rejects(env.store.setEnabled(first,first.id,false,1,randomUUID()),error=>error.status===409);
   const other=await env.store.createUser(first,"second_admin",password,"superadmin",randomUUID());
   const initial=await env.store.login("second_admin",password,"loopback");
-  const next=await env.store.changePassword(initial.actor,password,changed);
+  await env.store.changePassword(initial.actor,password,changed);
+  const next=await env.store.login("second_admin",changed,"loopback");
   const results=await Promise.allSettled([
     env.store.setEnabled(first,other.id,false,2,randomUUID()),
     env.store.setEnabled(next.actor,first.id,false,1,randomUUID())]);
@@ -294,8 +296,8 @@ test("foundation auth DB upgrades in place, restarts; scope/checksum mismatch fa
   assert.throws(()=>new AuthStore(cfg,false),/AUTH_MIGRATION_REQUIRED/);
   let store=new AuthStore(cfg,true);assert.equal(store.db.prepare("SELECT max(version) AS v FROM _schema_migrations").get().v,2);store.close();
   store=new AuthStore(cfg,false);store.close();
-  assert.throws(()=>new AuthStore(config({...cfg,tenantId:"other"}),false),/AUTH_SCOPE_MISMATCH/);
-  const corrupt=new DatabaseSync(path);corrupt.exec("UPDATE auth_migration_checksums SET checksum='bad'");corrupt.close();
+  assert.throws(()=>new AuthStore(config({...cfg,tenantId:"other"}),false),/AUTH_SCOPE_REJECTED/);
+  const corrupt=new DatabaseSync(path);corrupt.exec("UPDATE _migration_checksums SET sha256='bad' WHERE version=2");corrupt.close();
   assert.throws(()=>new AuthStore(cfg,false),/AUTH_MIGRATION_CHECKSUM_MISMATCH/);
   rmSync(directory,{recursive:true,force:true});
 });
@@ -318,9 +320,10 @@ test("scope cannot be selected by query; identity includes the bound tenant",()=
 
 test("schema SQL review copy and generated UI match executable sources",()=>{
   const source=readFileSync(new URL("../src/database.ts",import.meta.url),"utf8");
-  const sql=source.split("const migration = `")[1].split("`;")[0];
+  const sql=readFileSync(new URL("../../../schemas/auth/002_accounts.sql",import.meta.url),"utf8");
+  assert.ok(source.includes("MIGRATION_SQL"));
   const review=readFileSync(new URL("../../../schemas/auth/002_accounts.sql",import.meta.url),"utf8");
-  assert.equal(review.split("\n").slice(1).join("\n"),sql);
+  assert.equal(review,sql);assert.equal(MIGRATION_SQL,sql);
   const generated=readFileSync(new URL("../src/ui.ts",import.meta.url),"utf8");
   assert.ok(generated.includes(JSON.stringify(readFileSync(new URL("../static/auth.js",import.meta.url),"utf8"))));
 });

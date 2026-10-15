@@ -17,7 +17,7 @@ export function config(input: Partial<AuthConfig> & Pick<AuthConfig, "dataRoot">
   const cfg: AuthConfig = {origin: "https://ikun.ca", secure: true, absoluteTtl: 43200,
     idleTtl: 1800, rateWindow: 900, accountAttempts: 10, ipAttempts: 30,
     globalAttempts: 300, maxSessions: 5, tenantId: "ikun-main", ...input};
-  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(cfg.tenantId)) throw new Error("AUTH_SCOPE_REJECTED");
+  if (cfg.tenantId !== "ikun-main") throw new Error("AUTH_SCOPE_REJECTED");
   if (!isAbsolute(cfg.dataRoot)) throw new Error("AUTH_DATA_ROOT_MUST_BE_ABSOLUTE");
   const url = new URL(cfg.origin);
   if (url.origin !== cfg.origin || url.username || url.password ||

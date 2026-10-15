@@ -35,10 +35,10 @@ async function api(path, method = "GET", body, extra = {}) {
     }
     throw new Error(data.error?.message || "操作失败，请稍后重试。");
   }
-  if (["/api/v1/auth/me", "/api/v1/auth/login", "/api/v1/auth/password"].includes(path)) {
+  if (["/api/v1/auth/me", "/api/v1/auth/login"].includes(path)) {
     const value = data.data;
     return {user: {id: value.user_id, username: value.username, role: value.role,
-      tenant_id: value.tenant_id, must_change_password: value.must_change_password}, csrf_token: value.csrf_token};
+      tenant_id: value.tenant_id, must_change_password: value.must_change_password}, csrf_token: value.csrf_token, capabilities: value.capabilities ?? {can_manage_users:false}};
   }
   return data.data;
 }
@@ -70,14 +70,18 @@ $("login-form")?.addEventListener("submit", event => {
 $("password-form")?.addEventListener("submit", event => {
   event.preventDefault(); submit(event.target, async () => {
     if ($("new-password").value !== $("confirm-password").value) throw new Error("两次新密码不一致。");
-    session = await api("/api/v1/auth/password", "POST", {current_password: $("current-password").value,
+    await api("/api/v1/auth/password", "POST", {current_password: $("current-password").value,
       new_password: $("new-password").value});
-    event.target.reset(); location.replace("/auth");
+    event.target.reset(); location.replace("/login?next=%2Fauth&reason=password_changed");
   });
 });
-async function loadUsers() {
-  const {users} = await api("/api/v1/auth/users");
-  $("users").replaceChildren();
+let usersCursor = null;
+async function loadUsers(append = false) {
+  const data = await api("/api/v1/auth/users" + (append && usersCursor ? "?cursor=" + encodeURIComponent(usersCursor) : ""));
+  const users = data.items.map(value => ({...value, id: value.user_id}));
+  usersCursor = data.next_cursor;
+  if (!append) $("users").replaceChildren();
+  $("load-more").hidden = !usersCursor;
   for (const user of users) {
     const row = document.createElement("tr");
     for (const [label, text] of [["用户名", user.username], ["角色", roles[user.role]]]) {
@@ -107,6 +111,7 @@ function openDialog(action, user) {
     (create ? "新用户首次登录必须修改临时密码。" : `为 ${user.username} 设置临时密码，所有现有会话将失效。`) :
     `确认${user.enabled ? "禁用" : "启用"} ${user.username}？${user.enabled ? "该账号将立即退出所有设备。" : "用户可使用原有密码重新登录。"}`;
   $("user-dialog").showModal();
+  if (action === "toggle") $("cancel-dialog").focus();
 }
 $("create-user")?.addEventListener("click", () => openDialog("create"));
 $("cancel-dialog")?.addEventListener("click", () => $("user-dialog").close());
@@ -118,17 +123,17 @@ $("user-form")?.addEventListener("submit", event => {
     if (dialogAction === "create") await api("/api/v1/auth/users", "POST", {
       username: $("new-username").value, password: $("temporary-password").value, role: $("new-role").value}, {"Idempotency-Key": dialogKey});
     else if (dialogAction === "reset") await api(`/api/v1/auth/users/${dialogUser.id}/reset-password`, "POST", {
-      password: $("temporary-password").value}, {"Idempotency-Key": dialogKey, "If-Match": `"rev-${dialogUser.revision}"`});
+      new_password: $("temporary-password").value}, {"Idempotency-Key": dialogKey, "If-Match": `"rev-${dialogUser.revision}"`});
     else await api(`/api/v1/auth/users/${dialogUser.id}`, "PATCH", {enabled: !dialogUser.enabled}, {"Idempotency-Key": dialogKey, "If-Match": `"rev-${dialogUser.revision}"`});
     $("user-dialog").close(); message("操作已保存。", "status", true); await loadUsers();
   }, "dialog-status");
 });
 async function init() {
-  if (page === "login") return;
+  if (page === "login") { if (new URLSearchParams(location.search).get("reason") === "password_changed") message("密码已更新，请重新登录。", "status", true); return; }
   session = await api("/api/v1/auth/me");
   const user = session.user;
   if (user.must_change_password && page !== "password") { location.replace("/auth/password"); return; }
-  document.querySelectorAll("[data-admin]").forEach(el => { el.hidden = user.role !== "superadmin"; });
+  document.querySelectorAll("[data-admin]").forEach(el => { el.hidden = !session.capabilities.can_manage_users; });
   if (page === "users") { $("current-user").textContent = user.username; await loadUsers(); }
   if (page === "password" && user.must_change_password)
     $("password-hint").textContent = "请先修改初始密码，再进入工作空间。";
@@ -142,3 +147,19 @@ async function init() {
 init().catch(error => message(error.message));
 // Revalidate on Back/Forward cache restore before displaying authenticated content.
 addEventListener("pageshow", event => { if (event.persisted && page !== "login") location.reload(); });
+
+$("user-dialog")?.addEventListener("cancel", event => { if ($("user-form").getAttribute("aria-busy") === "true") event.preventDefault(); });
+$("load-more")?.addEventListener("click", async event => { const button = event.currentTarget; button.disabled = true; try { await loadUsers(true); } catch(error) { message(error.message); } finally { button.disabled = false; } });
+$("user-dialog")?.addEventListener("keydown", event => {
+  if (event.key !== "Tab") return;
+  const dialog = event.currentTarget;
+  const controls = [...dialog.querySelectorAll("button,input,select,a[href],[tabindex]")]
+    .filter(el => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length);
+  const first = controls[0], last = controls[controls.length - 1];
+  if (!first) { event.preventDefault(); return; }
+  if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+    event.preventDefault(); last.focus();
+  } else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+    event.preventDefault(); first.focus();
+  }
+});

@@ -2,14 +2,14 @@
 
 所有者：登录系统窗口，`codex/auth`，基线 `f89d8f55`。正式实现为 TypeScript / Node 24.22，直接嵌入 Next.js 网站进程，**不增加第四个服务**，不增加 pnpm 依赖，不修改三个业务库。主目录中的早期 Python 候选保留原状，不属于本次正式实现。
 
-**状态：认证模块与 Next 接入候选可本地验证，未合并主站、未部署。** 集成文件保存在 `integration/website/`；未覆盖其他窗口的 `apps/website`、共享 contracts/runtime 或锁文件。总管审阅后接入。生产不提供默认账号，不开放注册。
+**状态：B1 本地认证验收通过，待总管审查；未合并主站、未部署。** 本轮从 `aa3cf65` 向前修复，规范 `phase2-v1.0.0` / `9699375c`，隔离基础 `85be3bd6`，详见 `B1-REPORT.md`。 集成文件保存在 `integration/website/`；未覆盖其他窗口的 `apps/website`、共享 contracts/runtime 或锁文件。总管审阅后接入。生产不提供默认账号，不开放注册。
 
 ## 功能与安全
 
 - 用户名/密码登录、退出、修改自己的密码。仅 `superadmin` / `user`；管理员可创建两种角色、禁用/启用、重置密码。普通用户不能修改业务数据。
 - Node 原生异步 Argon2id，64 MiB、3 轮、并行度 1、随机 16 字节盐、32 字节输出；15–128 字符密码，不截断。最多同时 4 个哈希，超额返回 429/Retry-After。
 - 256 位随机会话，数据库仅保存 token SHA-256 摘要；最多 5 个设备。生产 `__Host-ikun_session`，Secure / HttpOnly / SameSite=Strict / Path=/，无 Domain，不写浏览器存储。
-- 12 小时绝对、30 分钟闲置过期；`me` 后台探测不续期。登录和改密换 token；退出撤销当前会话，禁用/重置/改密撤销全部旧会话。新建和重置后先改密，完成前禁止业务访问。
+- 12 小时绝对、30 分钟闲置过期；`me` 后台探测不续期。登录换 token；本人改密清 Cookie 并要求重新认证，退出撤销当前会话；禁用/重置/改密/降级及强制改密状态变更撤销全部旧会话。新建和重置后先改密，完成前禁止业务访问。
 - 每请求重新验证身份、角色、禁用状态、会话版本；账号写事务内再次复查操作者。只读页面/API 必须显式声明；未知路由默认仅管理员，不能凭 GET 推断无副作用。业务 API 接入还需声明经过审计的读取清单。
 - Origin + JSON + 同步 CSRF token；Host/方法覆盖校验；请求体实际流量上限 16 KiB、5 秒读取超时；统一 `data/error + request_id`，不回显密码或验证原始输入。
 - 持久登录限流：用户名 10 次/15 分钟、可信直连来源 30 次/15 分钟、全局 300 次/15 分钟；成功也计数，重启不清空。Next 适配器不信任客户端转发 Header，默认按 ingress 聚合；边缘真实 IP 限流由入口补充。
@@ -23,7 +23,7 @@
 
 唯一打开路径是 `DATA_ROOT/auth/auth.db`。兼容基础标记 application_id `0x494b0204`、`_store_identity='auth'`、foundation 版本 1。迁移 002 新增 `auth_*` 表、迁移校验和及服务端 site scope。只提供本机显式 CLI 迁移；请求不运行 DDL，不接纳无 v2 标记的已有库。WAL、FULL、外键、busy_timeout=5000，目录 0700 / 文件 0600；拒绝路径及 WAL/SHM 的软/硬链接。
 
-初始 `tenant_id=ikun-main`（可用 `IKUN_AUTH_TENANT_ID` 设置）；持久绑定账号库，配置与库不一致时拒绝启动。单站点账号全属这个 scope，不实现组织管理，不接受浏览器指定其他 scope。三个业务库和监控引擎不导入本模块。
+固定 `tenant_id=ikun-main`（`IKUN_AUTH_TENANT_ID` 只允许相同值）；持久绑定账号库，配置与库不一致时拒绝启动。单站点账号全属这个 scope，不实现组织管理，不接受浏览器指定其他 scope。三个业务库和监控引擎不导入本模块。
 
 迁移前对 **auth.db** 做 SQLite online backup 或停网站后完整备份；不在线只复制主文件遗漏 WAL。002 为新增表，无旧账号导入。失败事务回滚，可修复原因后重跑；迁移后的库不做删除用户/会话表的自动降级。回滚恢复变更前 auth 备份并回退网站版本，会使备份之后的新会话失效；不回滚业务库。
 
@@ -35,6 +35,7 @@
 export PATH="/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin:$PATH"
 pnpm install --frozen-lockfile
 pnpm build:shared
+node modules/auth/scripts/generate-schema.mjs
 node modules/auth/scripts/generate-ui.mjs
 pnpm exec tsc -p modules/auth/tsconfig.json
 
@@ -54,12 +55,12 @@ node modules/auth/dist/src/cli.js bootstrap --username your_admin_name
 |---|---|---|
 | POST `/api/v1/auth/login` | 匿名 + 限流 | username、password → Cookie、会话 DTO |
 | POST `/api/v1/auth/logout` | 当前会话 | 撤销；重复退出返回成功并清 Cookie |
-| GET `/api/v1/auth/me` | 本人 | user_id、username、tenant_id、role、must_change_password、csrf_token |
-| POST `/api/v1/auth/password` | 本人 | current_password、new_password；换 Cookie |
-| GET `/api/v1/auth/users` | superadmin | 当前单站点账号列表，不含 hash |
+| GET `/api/v1/auth/me` | 本人 | user_id、username、tenant_id、role、must_change_password、csrf_token、capabilities |
+| POST `/api/v1/auth/password` | 本人 | current_password、new_password；返回 changed/reauthentication_required，清 Cookie |
+| GET `/api/v1/auth/users` | superadmin | PageV2<AuthUserV2>；cursor/limit，默认50最大100，不含 hash |
 | POST `/api/v1/auth/users` | superadmin | username、password、role；201 + ETag |
-| PATCH `/api/v1/auth/users/{id}` | superadmin | enabled；If-Match、Idempotency-Key |
-| POST `/api/v1/auth/users/{id}/reset-password` | superadmin | password；If-Match、Idempotency-Key |
+| PATCH `/api/v1/auth/users/{id}` | superadmin | enabled/role/must_change_password 非空白名单；If-Match、Idempotency-Key |
+| POST `/api/v1/auth/users/{id}/reset-password` | superadmin | new_password；If-Match、Idempotency-Key |
 
 用户管理写入都需要 UUID Idempotency-Key；冲突返回 409。未登录 401、无权限 403、缺 If-Match 428、错误版本 409、限流 429 + Retry-After，错误含稳定 code/retryable/request_id。登录、退出、本人改密属于会话轮换协议，不持久缓存原始 token，因此不套账号管理幂等回放；退出本身幂等。
 
@@ -71,9 +72,9 @@ node modules/auth/dist/src/cli.js bootstrap --username your_admin_name
 node --test modules/auth/tests/*.test.mjs
 node --check modules/auth/static/auth.js
 
-# 在 ignored test-results 中复制当前基础源码和本模块候选，不修改 apps/website。
+# 从固定 B0 与 UI Git 对象组装 ignored 新目录，不覆盖旧预览或 apps/website。
 node modules/auth/scripts/prepare-preview.mjs
-NEXT_TELEMETRY_DISABLED=1 pnpm --dir modules/auth/test-results/next-preview --filter @ikun/website build
+node modules/auth/scripts/build-preview.mjs
 
 # 可选浏览器测试驱动，Python 只用于测试，不是网站运行依赖。
 python3.11 -m venv modules/auth/.venv
@@ -84,4 +85,12 @@ IKUN_NODE="$(command -v node)" modules/auth/.venv/bin/python modules/auth/tests/
 
 已有 Chromium 可通过 `IKUN_TEST_CHROMIUM` 指定。浏览器测试使用临时本地端口和临时 auth.db；验证生产 Next 构建的首页拦截、登录、账号管理、首次改密、只读拒绝、退出，以及 1440px/390px 布局。截图与 JSON 结果在 `test-results/`，进程和临时 DB 自动清理。
 
-正式主站路由、项目/Hunter/Tracking BFF 读取清单、现有 SSE 消费者、TLS/Cloudflare、公网认证与业务功能仍由总管集成验收；模块证据不能代表这些路径已上线。接入审阅差异详见 `HANDOFF.md`。
+正式主站路由、项目/Hunter/Tracking BFF 读取清单、现有 SSE 消费者、TLS/Cloudflare、公网认证与业务功能仍由总管集成验收；模块证据不能代表这些路径已上线。接入补丁需求详见 `B1-REPORT.md`。
+
+## B1 迁移与接入约束
+
+唯一 SQL 权威为 `schemas/auth/002_accounts.sql`；`generate-schema.mjs` 绑定 B0 元数据来源并生成可打包常量。公共 `_migration_checksums(version,sha256)` 保存 foundation1/Auth2 校验和。原 `auth_migration_checksums` 和 `002_accounts.legacy.sql` 仅用于冻结 Auth2 的显式兼容，保留既有用户、密码哈希、会话、幂等回执、legacy 校验和及额外 metadata 列，不删除或重建库。运行时/只读 readiness 不做 DDL；旧 Auth2 必须显式 migrate 后再运行。
+
+`integration/preview-only/lib/stores.ts` 仅在隔离预览中准入 auth maximumVersion=2，再由本领域核对 SQL、checksum、scope；不全局放宽 B0 默认版本1，也不打开 projects/hunter/tracking 库。最终主站 readiness/proxy/构建接线只能由总管另行收件。
+
+BFF 应通过 `AuthHttp.business(request,handler)` 获取刚验证的冻结 principal。该包装器在调用 handler 前完成身份/角色/CSRF/scope 校验，若返回 SSE 自动包装持续撤销；不要只依赖页面跳转或 proxy 建连。正式业务读取清单取冻结 API，未知 GET 与账号配置仍默认管理员。真实业务 handler、方向凭据与 IPC 属后续领域/集成验收，本模块未代写。

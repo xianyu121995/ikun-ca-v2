@@ -1,4 +1,4 @@
--- Auth migration 002 candidate. Apply only via the auth CLI, which binds site scope and records checksum.
+-- Auth 002 authoritative SQL. Apply through the explicit auth CLI only.
 
 CREATE TABLE auth_users (
  id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
@@ -22,3 +22,4 @@ CREATE TABLE auth_idempotency (
 ) STRICT;
 CREATE TABLE auth_migration_checksums (version INTEGER PRIMARY KEY, checksum TEXT NOT NULL) STRICT;
 CREATE TABLE auth_site_scope (singleton INTEGER PRIMARY KEY CHECK(singleton=1), tenant_id TEXT NOT NULL) STRICT;
+CREATE TABLE auth_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;

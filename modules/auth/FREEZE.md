@@ -61,3 +61,7 @@ git diff HEAD^ HEAD -- modules/auth schemas/auth
 ```
 
 仅在上述 Worktree 查询。后续新规范收到正式放行前，暂停新增业务工作。
+
+## 2026-10-15 B1 后续记录
+
+本文件上文完整保留 aa3cf65 的冻结时点失败与未验证状态，不能改写为当时已通过。用户后续通过 `docs/b1/release.json` 明确放行本地 B1。P0 安全修复单独提交 `8f381a0b07253d57683e0078dbc33369cad7ab69`；本轮完整证据、剩余边界与最终 SHA 查询见 `B1-REPORT.md` 和忽略的 B1 回执。不自动放行其他后端、合并或生产。

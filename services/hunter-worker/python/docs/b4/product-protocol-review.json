@@ -2,9 +2,9 @@
   "record_version": 1,
   "protocol_version": "hunter-research-retention-v1.0.0",
   "recorded_at_utc": "2026-10-15T16:41:12.620952+00:00",
-  "state": "pending_protocol_review",
+  "state": "approved_implemented_pending_chief_freeze",
   "product_recommendation": "approved",
-  "implementation_state": "pending_owner_implementation",
+  "implementation_state": "local_fixture_validation_complete",
   "runtime_acceptance": false,
   "runtime_tests_run_for_this_increment": 0,
   "baseline_commit": "bd69bbd0bba6fdc4f7c66191a839612dd53989d6",
@@ -24,7 +24,7 @@
     }
   },
   "protocol_file": "services/hunter-worker/B4-C04-PROPOSAL.md",
-  "protocol_file_sha256": "d501c6221b7015764de0db8d7107ecb545d7b5bd57df9c190cfff51c00d4445c",
+  "protocol_file_sha256": "59689794cb45b24a26380cce70deb753955db514e1f9b89a0d1373d305636a13",
   "proposed_wire": {
     "method": "PATCH",
     "path": "/api/v1/hunter/discoveries/{discovery_id}",
@@ -66,28 +66,32 @@
       "implementation_commit": null,
       "command": null,
       "runtime_count": 0,
-      "status": "pending_owner_implementation"
+      "status": "PASS_local_fixture_pending_chief_freeze",
+      "evidence": "night-receipt.json; python-night-final.xml; final-batch.json"
     },
     "DEC-D4": {
       "protocol_version": "hunter-research-retention-v1.0.0",
       "implementation_commit": null,
       "command": null,
       "runtime_count": 0,
-      "status": "pending_owner_implementation"
+      "status": "PASS_local_fixture_pending_chief_freeze",
+      "evidence": "night-receipt.json; python-night-final.xml; final-batch.json"
     },
     "DEC-D5": {
       "protocol_version": "hunter-research-retention-v1.0.0",
       "implementation_commit": null,
       "command": null,
       "runtime_count": 0,
-      "status": "pending_owner_implementation"
+      "status": "PASS_local_fixture_pending_chief_freeze",
+      "evidence": "night-receipt.json; python-night-final.xml; final-batch.json"
     },
     "DEC-C04": {
       "protocol_version": "hunter-research-retention-v1.0.0",
       "implementation_commit": null,
       "command": null,
       "runtime_count": 0,
-      "status": "pending_owner_implementation"
+      "status": "PASS_local_fixture_pending_chief_freeze",
+      "evidence": "night-receipt.json; python-night-final.xml; final-batch.json"
     }
   },
   "planned_case_groups": [
@@ -143,13 +147,23 @@
   "heavy_work_launched_for_protocol_increment": false,
   "merge_push_deploy": false,
   "blocking": [
-    "chief precise protocol review required before affected interface/migration/cleanup implementation",
-    "missing reliable follow timestamp policy remains undecided",
-    "runtime regressions and C0 full chain not accepted by this document"
+    "chief exact implementation review/freeze required",
+    "real provider and C0 cross-worker/production acceptance not performed",
+    "missing reliable follow timestamp policy remains undecided"
   ],
   "notes": [
     "Only documentation and boundary checks are PASS; no runtime test result is claimed.",
     "Existing B4 runtime work and failures remain outside this documentation-only commit.",
     "D1/D8 confirmed; voice implementation held until separate release."
-  ]
+  ],
+  "approval_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "approved_protocol_commit": "b16fb36a8b8269350319c02a60faa6ea2708d95a",
+  "local_fixture_results": {
+    "python": 227,
+    "node": 10,
+    "formal_browser_groups": 14,
+    "legacy_browser_groups": 11,
+    "main_process_starts": 3,
+    "restore_sigkill_cases": 5
+  }
 }

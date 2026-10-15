@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "external_enable_attempt_rejected": true,
+  "exit_code": 1,
+  "database_not_created": true,
+  "real_provider_calls": 0,
+  "private_cwd_without_dotenv": true
+}

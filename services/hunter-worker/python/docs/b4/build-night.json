@@ -1,0 +1,33 @@
+{
+  "pins": {
+    "release": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+    "spec": "9699375c920465b5d802e7acff17b5421203e544",
+    "b0": "85be3bd6dce25d82033b6cb1a7157aaa39bd571e",
+    "auth": "f097bd4722155d5e689b8894956391ed7e5f2fa7",
+    "auth_increment_review": "1d56ef2f003c531574e41fe079c70510ac6ed437",
+    "projects": "cc95dc27852d056457ca0582cff64a88c0eab1d4",
+    "projects_constructor_review": "967f3098e84de7e299d970019d56b571ac63de94",
+    "ui": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "hunter_ui": "08065d700239b20fb4c887bbd0c85321904687f8"
+  },
+  "ui_patch_sha256": "9bac82b9a1d1f2b5791ea4eecb71c580a59d364ea6896b95376f9432a8c1f93f",
+  "candidate_files_sha256": {
+    "integration/website/app/api/v1/hunter/[...path]/route.ts": "2647193116d12027e97c98355c58e016d355bbb091983780b9ef1d9251f20854",
+    "integration/website/app/hunter/actions.ts": "163885d4db8b39448eea7f7d764d007a70f95541fcd752ec5f4eb1d8705fa677",
+    "integration/website/app/hunter/page.tsx": "043baa7080b13dea2694b6bf0f4c86c26866b7f9676adc2f61a501c1019d5bf2",
+    "integration/website/components/hunter-controller.tsx": "02be49982ffd8cfc46d9311424d0bf023ad6900bfd286aa0624bc7c744a96f4f",
+    "integration/website/components/hunter-host.css": "ef701341c264cb36cd2a40818ade7510d6a08cced8722225c6252f9261525a03",
+    "integration/website/lib/hunter.ts": "151165438072d62a55e4f647e7910977344783c7e90daeee4d733670edc17bda"
+  },
+  "patched_ui_files_sha256": {
+    "apps/website/features/hunter-discovery/v3/App.tsx": "0704ed3f2cb3f2fe5479a6bd1e013ff4d21cbab229d0275b5aca1ca8966dcd2c",
+    "apps/website/features/hunter-discovery/v3/model.ts": "37307d0dc8f7d17641792f2cfc47f6a96b47df5e8566581dbd6611e08a2c43c5"
+  },
+  "projects_helper_sha256": "3b9924c8bde29502faf181662372da4d19213bbe76a9655994933b352a0937f5",
+  "projects_auth_policy_exercised_in_hunter_page": true,
+  "source_receiving": false,
+  "provider_io": false,
+  "preview_only_fixture_label": true,
+  "next_build_id": "wVn17QM6ayrkdvehUyk6E",
+  "status": "passed"
+}

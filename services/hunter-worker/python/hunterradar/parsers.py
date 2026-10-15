@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import math
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -16,6 +17,7 @@ def handle(value) -> str:
 
 def timestamp(value) -> float:
     if isinstance(value, (int, float)):
+        if isinstance(value,bool) or not math.isfinite(value) or value<0:raise ValueError('invalid_event_time')
         return float(value) / (1000 if value > 1e12 else 1)
     dt = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
     if dt.tzinfo is None:
@@ -62,6 +64,8 @@ def wss_events(payload: dict, received_at: float) -> list[Follow]:
     for item in content:
         if not isinstance(item, dict):
             raise ValueError('invalid_follow_target')
+        if item.get('twId') is not None and (isinstance(item['twId'],bool) or not re.fullmatch(r'[0-9]{1,40}',str(item['twId']))):
+            raise ValueError('invalid_target_stable_id')
         target = Target(handle(item.get('twAccount')), str(item['twId']) if item.get('twId') else None,
                         str(item.get('twUserName') or '')[:200], str(item.get('description') or '')[:10000])
         if hunter == target.username:
@@ -82,7 +86,7 @@ def profile(payload: dict, expected: str) -> tuple[str, str, int]:
         raise ValueError('profile_identity_mismatch')
     count = next((data[k] for k in ('followersCount', 'followerCount', 'followers', 'follower_count') if k in data), None)
     user_id = next((data[k] for k in ('twId', 'userId', 'idStr', 'twitterId', 'id') if data.get(k)), None)
-    if isinstance(count, bool) or not str(count).isdigit() or not str(user_id).isdigit():
+    if isinstance(count, bool) or not str(count).isdigit() or not re.fullmatch(r'[0-9]{1,40}',str(user_id)):
         raise ValueError('profile_missing_stable_id_or_follower_count')
     return str(user_id), str(data.get('name') or data.get('twUserName') or expected)[:200], int(count)
 
@@ -93,7 +97,7 @@ def followings(payload: dict) -> list[Target]:
         raise ValueError('invalid_followings_page')
     result, seen = [], set()
     for row in rows:
-        if not isinstance(row, dict) or not str(row.get('id')).isdigit() or row.get('unavailable'):
+        if not isinstance(row, dict) or not re.fullmatch(r'[0-9]{1,40}',str(row.get('id'))) or row.get('unavailable'):
             raise ValueError('invalid_following_identity')
         name = handle(row.get('userName'))
         if name not in seen:

@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: actual Route Handler rejects anonymous and user writes without Proxy
+ok 1 - actual Route Handler rejects anonymous and user writes without Proxy
+  ---
+  duration_ms: 1153.956458
+  type: 'test'
+  ...
+# Subtest: trusted principal replaces forged browser headers, no cookie forwarded
+ok 2 - trusted principal replaces forged browser headers, no cookie forwarded
+  ---
+  duration_ms: 1048.299792
+  type: 'test'
+  ...
+# Subtest: foreign Request implementation is reconstructed from explicit fields
+ok 3 - foreign Request implementation is reconstructed from explicit fields
+  ---
+  duration_ms: 1052.744167
+  type: 'test'
+  ...
+# Subtest: research PATCH preserves raw JSON and forwards only concurrency headers
+ok 4 - research PATCH preserves raw JSON and forwards only concurrency headers
+  ---
+  duration_ms: 1075.087709
+  type: 'test'
+  ...
+# Subtest: CSRF, Origin and Host are checked in the actual handler
+ok 5 - CSRF, Origin and Host are checked in the actual handler
+  ---
+  duration_ms: 1070.737291
+  type: 'test'
+  ...
+# Subtest: force-change, disable, enable and reset revoke actual sessions
+ok 6 - force-change, disable, enable and reset revoke actual sessions
+  ---
+  duration_ms: 1500.822708
+  type: 'test'
+  ...
+# Subtest: password rotation and absolute seven day expiry are enforced
+ok 7 - password rotation and absolute seven day expiry are enforced
+  ---
+  duration_ms: 1394.867917
+  type: 'test'
+  ...
+# Subtest: SSE frames are enveloped and resume the original stable event sequence
+ok 8 - SSE frames are enveloped and resume the original stable event sequence
+  ---
+  duration_ms: 1066.001125
+  type: 'test'
+  ...
+# Subtest: silent SSE revocation cancels the upstream polling work
+ok 9 - silent SSE revocation cancels the upstream polling work
+  ---
+  duration_ms: 2212.063875
+  type: 'test'
+  ...
+# Subtest: upstream failure stays explicit and never falls back to demo
+ok 10 - upstream failure stays explicit and never falls back to demo
+  ---
+  duration_ms: 1064.400583
+  type: 'test'
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 12985.579125

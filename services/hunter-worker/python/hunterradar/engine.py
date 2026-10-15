@@ -8,6 +8,7 @@ import logging
 import os
 import random
 import re
+import sqlite3
 from urllib.parse import urlsplit
 import time
 from urllib.parse import quote
@@ -18,7 +19,7 @@ from websockets.asyncio.client import connect
 from .config import Settings
 from .parsers import followings, profile, watch_coverage, wss_events
 from .providers import ProviderError, Providers
-from .store import BudgetExceeded, LeaseLost, Store
+from .store import BudgetExceeded, Conflict, LeaseLost, Store
 
 LOG = logging.getLogger('hunterradar')
 
@@ -39,6 +40,7 @@ class Engine:
         self.connector = connector or connect
         self.stop = asyncio.Event()
         self.semaphore = asyncio.Semaphore(settings.concurrency)
+        self.poll_inflight=set()
 
     async def pause(self, seconds):
         try:
@@ -55,7 +57,7 @@ class Engine:
         self.store.set_state('worker_error', None)
         loops = [asyncio.create_task(self.supervise(name, fn)) for name, fn in
                  [('profiles', self.profile_loop), ('rest', self.rest_loop), ('wss', self.wss_loop),
-                  ('watch', self.watch_loop), ('outbox', self.outbox_loop), ('heartbeat', self.heartbeat_loop)]]
+                  ('watch', self.watch_loop), ('outbox', self.outbox_loop), ('heartbeat', self.heartbeat_loop),('retention',self.retention_loop)]]
         try:
             await self.stop.wait()
         finally:
@@ -92,6 +94,17 @@ class Engine:
             self.store.set_state('worker_heartbeat', time.time())
             await self.pause(3)
 
+    async def retention_loop(self):
+        while not self.stop.is_set():
+            try:
+                result=await asyncio.to_thread(self.store.cleanup)
+                self.store.set_state('retention_error',None)
+                self.store.set_state('retention_checked_at',time.time())
+                if result['deleted']>=500:continue
+            except (ValueError,OSError,sqlite3.Error,TimeoutError) as error:
+                self.store.set_state('retention_error',type(error).__name__)
+            await self.pause(60)
+
     async def scan_profile(self, row):
         try:
             payload = await self.providers.request('profile', row['username'])
@@ -100,8 +113,8 @@ class Engine:
         except asyncio.CancelledError:
             raise
         except Exception as error:
-            self.store.job_failure(row, 'profile', str(error) if isinstance(error, (ProviderError, BudgetExceeded)) else type(error).__name__,
-                                   retry_time(row['profile_failures'], time.time(), error))
+            self.store.job_failure(row, 'profile','stable_identity_conflict' if isinstance(error,Conflict) else str(error) if isinstance(error,(ProviderError,BudgetExceeded)) else type(error).__name__,
+                                   9999999999 if isinstance(error,Conflict) else retry_time(row['profile_failures'], time.time(), error))
 
     async def profile_loop(self):
         while not self.stop.is_set():
@@ -113,6 +126,12 @@ class Engine:
             await self.pause(2)
 
     async def poll(self, row):
+        if row['id'] in self.poll_inflight:return
+        self.poll_inflight.add(row['id'])
+        try:await self._poll(row)
+        finally:self.poll_inflight.discard(row['id'])
+
+    async def _poll(self, row):
         async with self.semaphore:
             # Account may have been disabled while queued behind another account.
             current = self.store.hunter(row['id'])
@@ -121,12 +140,12 @@ class Engine:
             try:
                 payload = await self.providers.request('followings', row['username'])
                 result = self.store.apply_poll(row, followings(payload), time.time())
-                LOG.info('rest_poll id=%s baseline=%s new=%s warning=%s', row['id'], result.get('baseline'), result['new'], result.get('warning'))
+                LOG.info('rest_poll baseline=%s new=%s warning=%s',result.get('baseline'),result['new'],result.get('warning'))
             except asyncio.CancelledError:
                 raise
             except Exception as error:
-                code = str(error) if isinstance(error, (ProviderError, BudgetExceeded)) else type(error).__name__
-                self.store.job_failure(row, 'poll', code, retry_time(row['poll_failures'], time.time(), error))
+                code = 'stable_identity_conflict' if isinstance(error,Conflict) else str(error) if isinstance(error,(ProviderError,BudgetExceeded)) else type(error).__name__
+                self.store.job_failure(row,'poll',code,9999999999 if isinstance(error,Conflict) else retry_time(row['poll_failures'],time.time(),error))
 
     async def rest_loop(self):
         while not self.stop.is_set():
@@ -185,6 +204,7 @@ class Engine:
                 await self.pause(min(60, retry_time(failures, time.time(), error)-time.time()))
 
     async def consume(self):
+        generation_snapshot=[h for h in self.store.hunters() if h['enabled'] and h['mode']=='WSS' and h['profile_status']=='ready']
         uri = 'wss://ai.6551.io/open/twitter_wss?token='+quote(self.settings.token_6551, safe='')
         async with self.connector(uri, open_timeout=15, close_timeout=5, ping_interval=20, ping_timeout=20, max_size=1_000_000) as socket:
             await socket.send(json.dumps({'jsonrpc':'2.0','id':1,'method':'twitter.subscribe'}))
@@ -192,7 +212,9 @@ class Engine:
             if ack.get('id') != 1 or not isinstance(ack.get('result'), dict) or ack['result'].get('success') is not True:
                 raise ProviderError('wss_subscription_not_acknowledged')
             self.store.set_state('wss_state', 'subscribed')
-            self.store.set_state('last_pong_at', time.time())
+            self.store.set_state('last_pong_at',None)
+            # Subscription ACK is not a source heartbeat. Establish only new generations.
+            self.store.establish_wss_baseline(generation_snapshot,time.time())
             self.store.set_state('wss_error', None)
             last_pong = time.monotonic()
             next_ping = time.monotonic()+20
@@ -215,29 +237,41 @@ class Engine:
                     if not isinstance(payload, dict):
                         raise ValueError('invalid_envelope')
                     for event in wss_events(payload, time.time()):
-                        self.store.ingest_wss(event)
-                except (ValueError, TypeError, KeyError):
+                        origin=next((h for h in generation_snapshot if h['username']==event.hunter),None)
+                        if origin:self.store.ingest_wss(event,generation=origin['generation'])
+                except (ValueError, TypeError, KeyError,Conflict):
                     self.store.set_state('last_rejected_event_at', time.time())
                 if not any(h['enabled'] and h['mode']=='WSS' for h in self.store.hunters()):
                     return
+                if any(h['enabled'] and h['mode']=='WSS' and not h['baseline_ready'] for h in self.store.hunters()):return
 
     def accept_v2_receipt(self, task, payload):
         receipt=payload.get('data') if isinstance(payload,dict) else None
-        event_id='evt_'+task['id']
+        event_id=task.get('event_id')
         if not isinstance(receipt,dict) or receipt.get('event_id')!=event_id:
             return False
         project_id=receipt.get('project_id','')
         if (not isinstance(project_id,str) or not re.fullmatch(r'prj_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}',project_id)
                 or not isinstance(receipt.get('receipt_id'),str) or not receipt['receipt_id']
-                or not isinstance(receipt.get('duplicate'),bool) or not receipt.get('accepted_at')):
+                or not isinstance(receipt.get('duplicate'),bool) or receipt.get('command_id')!=task.get('command_id')
+                or not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|\+00:00)',str(receipt.get('accepted_at','')))
+                or task.get('project_id') not in (None,project_id)):
             return False
-        self.store.finish_task(task['id'],'delivered',receipt=receipt['receipt_id'],now=time.time(),canonical=project_id)
+        try:
+            from datetime import datetime
+            datetime.fromisoformat(receipt['accepted_at'].replace('Z','+00:00'))
+        except ValueError:return False
+        clean={key:receipt[key] for key in ('event_id','command_id','project_id','receipt_id','accepted_at','duplicate')}
+        self.store.finish_task(task['id'],'delivered',receipt=receipt['receipt_id'],now=time.time(),canonical=project_id,receipt_data=clean)
         return True
 
     async def deliver_v2(self, task):
+        if not task.get('event_id') or not task.get('command_id'):
+            self.store.finish_task(task['id'],'failed',code='legacy_confirmation_protocol_review_required')
+            return
         # Reconcile FIRST, including after an ambiguous POST/crash; never invent success.
         parsed=urlsplit(self.settings.project_url)
-        receipt_url=f'{parsed.scheme}://{parsed.netloc}/internal/v1/receipts/hunter/evt_'+task['id']
+        receipt_url=f'{parsed.scheme}://{parsed.netloc}/internal/v1/receipts/hunter/'+task['event_id']
         headers={'Authorization':'Bearer '+self.settings.project_token,'Idempotency-Key':task['idempotency_key'],
                  'Content-Type':'application/json'}
         try:
@@ -251,6 +285,12 @@ class Engine:
                 status='failed' if existing.status_code in (401,403) else 'unknown'
                 self.store.finish_task(task['id'],status,code='receiver_reconcile_http_'+str(existing.status_code),retry_at=time.time()+300)
                 return
+            if task.get('posted'):
+                self.store.finish_task(task['id'],'unknown',code='posted_event_receipt_not_found',retry_at=time.time()+300)
+                return
+            # Mark before IO; crash/ambiguous failure can only reconcile, never blind repost.
+            with self.store.connect(True) as db:
+                db.execute('UPDATE task_outbox SET posted=1 WHERE id=?',(task['id'],))
             response=await self.providers.client.post(self.settings.project_url,content=task['body'].encode(),
                                                        headers=headers,timeout=5,follow_redirects=False)
             if response.status_code in (200,201,202) and self.accept_v2_receipt(task,response.json()):
@@ -297,7 +337,7 @@ class Engine:
 
     async def outbox_loop(self):
         while not self.stop.is_set():
-            if self.settings.external_io_enabled and self.settings.project_url:
+            if self.settings.project_url and (self.settings.project_delivery_enabled if self.settings.delivery_protocol=='v2-event' else self.settings.external_io_enabled):
                 task = self.store.claim_task(time.time())
                 if task:
                     await self.deliver(task)

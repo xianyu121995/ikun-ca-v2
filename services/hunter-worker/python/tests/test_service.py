@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import time
+import uuid
 
 import httpx
 import pytest
@@ -246,8 +247,10 @@ async def test_external_io_is_off_by_default_even_with_credentials(store):
 
 async def test_v2_reconcile_before_post_and_canonical_receipt(store):
     item=reviewed(store)
-    scope='ten_00000000-0000-4000-8000-000000000001'
-    store.confirm('project1',item['version'],'key','admin',NOW,tenant_id=scope,protocol='v2-event')
+    from hunterradar.formal import FormalService
+    from hunterradar.protocol import Principal
+    service=FormalService(store);dto=service.discovery(item['discovery_id'])
+    service.write(Principal(user_id='admin',tenant_id='ikun-main',role='superadmin'),'POST','/api/v1/hunter/discoveries/'+dto['discovery_id']+'/monitoring-requests',{'confirmed':True,'project':dto['project']},str(uuid.uuid4()),f'"rev-{dto["revision"]}"','fixture',NOW)
     task=store.claim_task(NOW)
     calls=[]
     project_id='prj_00000000-0000-4000-8000-000000000001'
@@ -255,11 +258,11 @@ async def test_v2_reconcile_before_post_and_canonical_receipt(store):
         calls.append(request.method)
         if request.method=='GET':return httpx.Response(404)
         body=json.loads(request.content)
-        assert body['tenant_id']==scope and body['project_id'] is None
-        assert body['payload']['manual_confirmed'] is True
+        assert body['tenant_id']=='ikun-main' and body['project_id'] is None
+        assert body['event_type']=='hunter.monitoring_requested' and body['payload']['confirmed'] is True
         assert request.headers['authorization']=='Bearer '+'t'*32
         assert 'hunter1' not in request.content.decode()
-        return httpx.Response(202,json={'data':{'event_id':body['event_id'],'project_id':project_id,'receipt_id':'receipt1','accepted_at':'2026-10-15T00:00:00Z','duplicate':False}})
+        return httpx.Response(200,json={'data':{'event_id':body['event_id'],'command_id':body['payload']['command_id'],'project_id':project_id,'receipt_id':'receipt1','accepted_at':'2026-10-15T00:00:00Z','duplicate':False}})
     settings=Settings(db=store.path,project_url='http://127.0.0.1:9000/internal/v1/ingest/hunter',delivery_protocol='v2-event',project_token='t'*32)
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as c:
         await Engine(settings,store,Providers(settings,store,c)).deliver(task)
@@ -269,7 +272,10 @@ async def test_v2_reconcile_before_post_and_canonical_receipt(store):
 
 async def test_v2_unknown_receipt_does_not_resend(store):
     item=reviewed(store)
-    store.confirm('project1',item['version'],'key','admin',NOW,tenant_id='ten_00000000-0000-4000-8000-000000000001',protocol='v2-event')
+    from hunterradar.formal import FormalService
+    from hunterradar.protocol import Principal
+    service=FormalService(store);dto=service.discovery(item['discovery_id'])
+    service.write(Principal(user_id='admin',tenant_id='ikun-main',role='superadmin'),'POST','/api/v1/hunter/discoveries/'+dto['discovery_id']+'/monitoring-requests',{'confirmed':True,'project':dto['project']},str(uuid.uuid4()),f'"rev-{dto["revision"]}"','fixture',NOW)
     task=store.claim_task(NOW)
     calls=[]
     async def handler(request):
@@ -288,4 +294,5 @@ def test_v2_health_and_closed_auth(store):
         assert health.status_code==200 and 'data' in health.json()
         assert 'request_id' in health.json() and 'x-request-id' in health.headers
         assert c.get('/internal/v1/status').status_code==503
-        assert c.get(PREFIX+'/hunters').status_code==401
+        assert c.get('/internal/v1/status').json()['error']['retryable'] is False
+        assert c.get(PREFIX+'/hunters').status_code==503

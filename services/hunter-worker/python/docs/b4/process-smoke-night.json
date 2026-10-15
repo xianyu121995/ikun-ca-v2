@@ -1,0 +1,22 @@
+{
+  "status": "passed",
+  "starts": 3,
+  "entry": "Node24 execve -> Python",
+  "graceful_restart": true,
+  "sigkill_lease_recovery": true,
+  "same_account_id": true,
+  "website_process_required": false,
+  "provider_calls": 0,
+  "process_ids": [
+    83539,
+    83540,
+    83563
+  ],
+  "research_and_confirmation_survive": true,
+  "same_patch_key_replays_after_restart": true,
+  "kill_inside_transaction_exit": 77,
+  "transaction_rolled_back": true,
+  "cli_init_migrate_restore": true,
+  "expired_discovery_not_revived": true,
+  "outbox_ids_hash_body_preserved": true
+}

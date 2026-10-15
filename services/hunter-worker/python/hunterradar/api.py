@@ -66,6 +66,9 @@ def create_app(settings: Settings | None = None, *, worker=False, store=None, en
     settings = settings or Settings.load()
     store = store or Store(settings.db)
     engine = engine or (Engine(settings, store) if worker else None)
+    if settings.v2_mode:
+        from .formal_api import create_formal_app
+        return create_formal_app(settings,store,engine)
 
     @asynccontextmanager
     async def lifespan(app):

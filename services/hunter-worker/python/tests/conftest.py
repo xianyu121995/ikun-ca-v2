@@ -6,17 +6,19 @@ import pytest
 from hunterradar.parsers import Follow, Target
 from hunterradar.store import Store
 
-NOW = time.time()
+NOW = round(time.time(),3)
 
 
 @pytest.fixture
 def store(tmp_path):
-    return Store(tmp_path.resolve()/'hunter.db')
+    return Store(tmp_path.resolve()/'hunter.db',initialize=True)
 
 
 def ready(store, username='hunter1', followers=5000, user_id=None, now=NOW):
     row = store.add(username, now=now-300000)
-    store.apply_profile(row, user_id or str(100+len(store.hunters())), username, followers, now)
+    store.apply_profile(row, user_id or str(100+len(store.hunters())), username, followers, now-300000)
+    current=store.hunter(row['id'])
+    if followers>=5000:store.establish_wss_baseline([current],now-300000)
     return store.hunter(row['id'])
 
 

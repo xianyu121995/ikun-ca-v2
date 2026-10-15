@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "owner": "hunter-worker",
+  "wrapper_pid": 75123,
+  "lock_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca\u5f00\u53d1/ikun-ca-v2/var/coordination/heavy.lock",
+  "started_at_epoch": 1792086571.489692,
+  "child_pid": 75135,
+  "ended_at_epoch": 1792086590.225066,
+  "exit_code": 0,
+  "interrupted_signal": null
+}

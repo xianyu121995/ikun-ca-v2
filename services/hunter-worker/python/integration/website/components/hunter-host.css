@@ -1,0 +1,2 @@
+/* Isolate AppShell from the host scaffold's global main width/margin. */
+.hunter-v3 .ik-main { max-width: none; margin: 0; }

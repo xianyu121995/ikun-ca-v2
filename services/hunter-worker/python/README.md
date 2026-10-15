@@ -1,3 +1,7 @@
+# B4 正式v2候选入口
+
+本批研究PATCH、七天清理、迁移/恢复、鉴权及独立后台运行的权威说明为 [integration/README-B4.md](integration/README-B4.md)，验收为 [../B4-REPORT.md](../B4-REPORT.md)。生产候选经Node24 compiled入口 execve Python，显式HUNTER_ENGINE=python/v2_mode及私有DATA_ROOT，外采关闭；不使用Worktree、旧服务DB/端口、cwd .env或本地免密回退。下文保留的是早期私有候选/夹具历史，不作为正式API或部署命令。
+
 # HunterRadar 独立候选
 
 已有实现和真实验证、启动方式、权限/契约差异、未验证项均见上级 [FREEZE.md](../FREEZE.md)。本目录只是 Hunter 模块候选，未部署、未完成正式网站/项目模块联调。

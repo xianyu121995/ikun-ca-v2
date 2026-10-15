@@ -1,0 +1,64 @@
+TAP version 13
+# Subtest: actual Route Handler rejects anonymous and user writes without Proxy
+ok 1 - actual Route Handler rejects anonymous and user writes without Proxy
+  ---
+  duration_ms: 3505.355167
+  type: 'test'
+  ...
+# Subtest: trusted principal replaces forged browser headers, no cookie forwarded
+ok 2 - trusted principal replaces forged browser headers, no cookie forwarded
+  ---
+  duration_ms: 1336.541084
+  type: 'test'
+  ...
+# Subtest: foreign Request implementation is reconstructed from explicit fields
+ok 3 - foreign Request implementation is reconstructed from explicit fields
+  ---
+  duration_ms: 1178.238375
+  type: 'test'
+  ...
+# Subtest: CSRF, Origin and Host are checked in the actual handler
+ok 4 - CSRF, Origin and Host are checked in the actual handler
+  ---
+  duration_ms: 1653.9705
+  type: 'test'
+  ...
+# Subtest: force-change, disable, enable and reset revoke actual sessions
+ok 5 - force-change, disable, enable and reset revoke actual sessions
+  ---
+  duration_ms: 2159.33125
+  type: 'test'
+  ...
+# Subtest: password rotation and absolute seven day expiry are enforced
+ok 6 - password rotation and absolute seven day expiry are enforced
+  ---
+  duration_ms: 1602.211625
+  type: 'test'
+  ...
+# Subtest: SSE frames are enveloped and resume the original stable event sequence
+ok 7 - SSE frames are enveloped and resume the original stable event sequence
+  ---
+  duration_ms: 1149.704958
+  type: 'test'
+  ...
+# Subtest: silent SSE revocation cancels the upstream polling work
+ok 8 - silent SSE revocation cancels the upstream polling work
+  ---
+  duration_ms: 2514.345
+  type: 'test'
+  ...
+# Subtest: upstream failure stays explicit and never falls back to demo
+ok 9 - upstream failure stays explicit and never falls back to demo
+  ---
+  duration_ms: 1131.220792
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16513.788

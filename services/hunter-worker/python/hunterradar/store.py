@@ -7,14 +7,18 @@ import sqlite3
 import time
 import uuid
 import copy
+from contextvars import ContextVar
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
 from .parsers import Follow, Target, handle
+from .migration import location, inspect, migrate
+from .retention import advance,active,retired,micros,TTL_US
 
 APP_ID = 0x494b0201
 WINDOW = 72 * 3600
+ACTIVE_TRANSACTION=ContextVar('hunter_transaction',default=None)
 
 
 class Conflict(Exception):
@@ -36,48 +40,24 @@ class LeaseLost(RuntimeError):
 
 
 class Store:
-    def __init__(self, path: Path):
-        path = path.absolute()
-        if path.name != 'hunter.db':
-            raise ValueError('database_must_be_named_hunter.db')
-        for part in (path, Path(str(path)+'-wal'), Path(str(path)+'-shm'), *path.parents):
-            if part.is_symlink():
-                raise ValueError('symlinked_database_path_forbidden')
-        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        if path.exists() and (not path.is_file() or path.stat().st_nlink != 1):
-            raise ValueError('database_must_be_private_regular_file')
-        self.path = path
+    def __init__(self, path: Path, *, initialize=False):
+        self.path = location(path)
         self.worker_token = None
-        # Check ownership BEFORE schema/WAL mutations. No opening tracking/projects databases.
-        if path.exists() and path.stat().st_size:
-            with sqlite3.connect(f'{path.as_uri()}?mode=ro', uri=True) as db:
-                if db.execute('PRAGMA application_id').fetchone()[0] != APP_ID:
-                    raise ValueError('foreign_database_refused')
-                identity = db.execute('SELECT store_name FROM _store_identity WHERE singleton=1').fetchone()
-                if not identity or identity[0] != 'hunter':
-                    raise ValueError('store_owner_mismatch')
-                if db.execute('PRAGMA user_version').fetchone()[0] not in (0,2):
-                    raise ValueError('unsupported_schema_version')
-        with self.connect() as db:
-            db.execute('PRAGMA journal_mode=WAL')
-            schema=Path(__file__).with_name('schema.sql').read_text()
-            checksum=hashlib.sha256(schema.encode()).hexdigest()
-            db.executescript('BEGIN IMMEDIATE;\n'+schema)
-            previous=db.execute('SELECT checksum FROM _hunter_migrations WHERE version=2').fetchone()
-            if previous and previous[0]!=checksum:
-                raise ValueError('hunter_migration_checksum_mismatch')
-            db.execute(f'PRAGMA application_id={APP_ID}')
-            db.execute('PRAGMA user_version=2')
-            applied=datetime.now(timezone.utc).isoformat()
-            db.execute("INSERT OR IGNORE INTO _store_identity VALUES(1,'hunter')")
-            db.execute("INSERT OR IGNORE INTO _schema_migrations VALUES(1,'foundation',?)",(applied,))
-            db.execute("INSERT OR IGNORE INTO _schema_migrations VALUES(2,'hunterradar_business',?)",(applied,))
-            db.execute('INSERT OR IGNORE INTO _hunter_migrations VALUES(2,?,?)',(checksum,applied))
-        os.chmod(path, 0o600)
+        if initialize:migrate(self.path)
+        inspect(self.path)
+
+    def inspect(self):
+        inspect(self.path)
 
     @contextmanager
     def connect(self, write=False):
-        db = sqlite3.connect(self.path, timeout=5)
+        active=ACTIVE_TRANSACTION.get()
+        if active is not None:
+            if active[0]!=self.path:raise ValueError('cross_store_transaction_forbidden')
+            yield active[1]
+            return
+        location(self.path,require_exists=True)
+        db = sqlite3.connect(self.path.as_uri()+'?mode=rw', uri=True, timeout=5)
         db.row_factory = sqlite3.Row
         db.execute('PRAGMA foreign_keys=ON')
         db.execute('PRAGMA synchronous=FULL')
@@ -96,13 +76,46 @@ class Store:
         finally:
             db.close()
 
+    @contextmanager
+    def transaction(self):
+        with self.connect(True) as db:
+            token=ACTIVE_TRANSACTION.set((self.path,db))
+            try:yield db
+            finally:ACTIVE_TRANSACTION.reset(token)
+
+    def retention_clock(self,now=None):
+        with self.connect(True) as db:return advance(db,time.time() if now is None else now)/1e6
+
+    def cleanup(self,now=None,**kwargs):
+        from .retention import cleanup,prune_bundles,watermark
+        try:return cleanup(self,now,**kwargs)
+        except BaseException:
+            try:
+                with self.connect() as db:stamp=watermark(db,time.time() if now is None else now)
+                prune_bundles(self.path,stamp)
+            except (OSError,ValueError,sqlite3.Error):pass
+            raise
+
+    def change(self,db,target,now,*,initial=False):
+        from .formal import discovery_dto
+        row=db.execute('SELECT * FROM discoveries WHERE target=?',(target,)).fetchone()
+        if not active(db,row,now):return
+        data=discovery_dto(db,target,now)
+        db.execute('INSERT INTO public_changes(type,entity_id,data,received_at,initial_publication) VALUES(?,?,?,?,?)',
+                   ('hunter.discovery.updated',data['discovery_id'],json.dumps(data,ensure_ascii=False),now,int(initial)))
+
+    def establish_wss_baseline(self,rows,now):
+        with self.connect(True) as db:
+            for row in rows:
+                db.execute("UPDATE hunters SET baseline_ready=1,baseline_at=? WHERE id=? AND generation=? AND enabled=1 AND deleted_at IS NULL AND mode='WSS' AND baseline_ready=0",(now,row['id'],row['generation']))
+
     def acquire_worker(self):
         owner, now = str(uuid.uuid4()), time.time()
         with self.connect(True) as db:
             lease = db.execute('SELECT * FROM worker_lease WHERE id=1').fetchone()
             if lease and lease['expires_at'] > now:
                 raise RuntimeError('another_hunterradar_worker_owns_this_database')
-            db.execute('INSERT INTO worker_lease VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,expires_at=excluded.expires_at', (owner,now+15))
+            db.execute('INSERT INTO worker_lease(id,owner,expires_at) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET owner=excluded.owner,expires_at=excluded.expires_at', (owner,now+15))
         return owner
 
     def worker_view(self, owner):
@@ -134,7 +147,7 @@ class Store:
                 raise Missing('hunter_not_found')
             return dict(row)
 
-    def add(self, username, note='', actor='local', now=None):
+    def add(self, username, note='', actor='local', now=None, *, label='',enabled=True):
         now = time.time() if now is None else now
         username = handle(username)
         with self.connect(True) as db:
@@ -142,15 +155,15 @@ class Store:
             if row:
                 if row['deleted_at'] is None:
                     return dict(row)
-                db.execute("UPDATE hunters SET deleted_at=NULL,enabled=1,note=?,version=version+1,generation=generation+1,profile_status='pending',next_profile_at=0,baseline_ready=0 WHERE id=?", (note, row['id']))
+                db.execute("UPDATE hunters SET deleted_at=NULL,enabled=?,note=?,label=?,version=version+1,generation=generation+1,profile_status='pending',next_profile_at=0,baseline_ready=0,baseline_at=NULL,active_since=? WHERE id=?", (int(enabled),note,label,now,row['id']))
                 identifier = row['id']
             else:
                 identifier = str(uuid.uuid4())
-                db.execute('INSERT INTO hunters(id,username,note,created_at) VALUES(?,?,?,?)', (identifier, username, note, now))
+                db.execute('INSERT INTO hunters(id,username,note,label,enabled,created_at,active_since) VALUES(?,?,?,?,?,?,?)', (identifier, username, note,label,int(enabled),now,now))
             self.audit(db, actor, 'hunter.add', identifier, now)
         return self.hunter(identifier)
 
-    def patch(self, identifier, version, *, note=None, enabled=None, delete=False, recheck=False, actor='local', now=None):
+    def patch(self, identifier, version, *, note=None, label=None,enabled=None, delete=False, recheck=False, actor='local', now=None):
         now = time.time() if now is None else now
         with self.connect(True) as db:
             row = db.execute('SELECT * FROM hunters WHERE id=? AND deleted_at IS NULL', (identifier,)).fetchone()
@@ -161,14 +174,15 @@ class Store:
             data = dict(row)
             if note is not None:
                 data['note'] = note
+            if label is not None:data['label']=label
             if enabled is not None and bool(enabled) != bool(data['enabled']):
                 data.update(enabled=int(enabled), generation=data['generation'] + 1, baseline_ready=0,
-                            next_poll_at=0, next_profile_at=0, profile_status='pending',active_since=now)
+                            next_poll_at=0, next_profile_at=0, profile_status='pending',active_since=now,baseline_at=None)
             if delete:
-                data.update(enabled=0, deleted_at=now, generation=data['generation'] + 1, baseline_ready=0)
+                data.update(enabled=0, deleted_at=now, generation=data['generation'] + 1, baseline_ready=0,baseline_at=None)
             if recheck:
                 data['next_profile_at'] = 0
-            fields = ('note', 'enabled', 'generation', 'baseline_ready', 'next_poll_at', 'next_profile_at', 'profile_status', 'deleted_at','active_since')
+            fields = ('note','label', 'enabled', 'generation', 'baseline_ready','baseline_at', 'next_poll_at', 'next_profile_at', 'profile_status', 'deleted_at','active_since')
             db.execute('UPDATE hunters SET ' + ','.join(k+'=?' for k in fields) + ',version=version+1 WHERE id=?',
                        tuple(data[k] for k in fields) + (identifier,))
             self.audit(db, actor, 'hunter.delete' if delete else 'hunter.update', identifier, now)
@@ -187,8 +201,10 @@ class Store:
             db.execute("""UPDATE hunters SET user_id=?,name=?,followers=?,mode=?,profile_status='ready',
                 next_profile_at=?,profile_failures=0,profile_error=NULL,version=version+1,
                 generation=generation+?,baseline_ready=CASE WHEN ? THEN 0 ELSE baseline_ready END,
+                baseline_at=CASE WHEN ? THEN ? ELSE baseline_at END,
+                active_since=CASE WHEN ? THEN ? ELSE active_since END,
                 next_poll_at=CASE WHEN ? THEN 0 ELSE next_poll_at END WHERE id=?""",
-                       (user_id, name, followers, mode, now+6*3600, int(changed), changed, changed, row['id']))
+                       (user_id, name, followers, mode, now+6*3600, int(changed), changed,changed,now,changed,now,changed, row['id']))
         return True
 
     @staticmethod
@@ -200,41 +216,77 @@ class Store:
         with self.connect(True) as db:
             db.execute(f'UPDATE hunters SET {job}_failures={job}_failures+1,{job}_error=?,next_{job}_at=? WHERE id=? AND generation=? AND enabled=1 AND deleted_at IS NULL',
                        (code, retry_at, row['id'], row['generation']))
+            if job=='profile' and code=='stable_identity_conflict':
+                db.execute("UPDATE hunters SET profile_status='pending',baseline_ready=0,generation=generation+1 WHERE id=? AND generation=?",(row['id'],row['generation']))
+
+    def resolve_target(self,db,target:Target,observed_at):
+        alias=db.execute('SELECT i.* FROM target_identities i JOIN target_aliases a USING(entity_key) WHERE a.x_handle=?',(target.username,)).fetchone()
+        identity=db.execute('SELECT * FROM target_identities WHERE x_user_id=?',(target.user_id,)).fetchone() if target.user_id else None
+        if alias and target.user_id and alias['x_user_id'] and alias['x_user_id']!=target.user_id:raise Conflict('target_stable_identity_conflict')
+        if alias and identity and alias['entity_key']!=identity['entity_key']:raise Conflict('target_alias_conflict')
+        current=identity or alias
+        if current:
+            db.execute('UPDATE target_identities SET x_user_id=COALESCE(x_user_id,?),current_handle=CASE WHEN updated_at<=? THEN ? ELSE current_handle END,updated_at=max(updated_at,?) WHERE entity_key=?',(target.user_id,observed_at,target.username,observed_at,current['entity_key']))
+            db.execute('INSERT OR IGNORE INTO target_aliases(x_handle,entity_key) VALUES(?,?)',(target.username,current['entity_key']))
+            return current['anchor']
+        entity='tgt_'+str(uuid.uuid4())
+        db.execute('INSERT INTO target_identities(entity_key,anchor,x_user_id,current_handle,updated_at) VALUES(?,?,?,?,?)',(entity,target.username,target.user_id,target.username,observed_at))
+        db.execute('INSERT INTO target_aliases(x_handle,entity_key) VALUES(?,?)',(target.username,entity))
+        return target.username
 
     def _insert_event(self, db, row, event: Follow):
-        if event.target.username == row['username']:
+        stamp=advance(db,event.received_at)
+        effective=stamp/1e6
+        if event.occurred_at<effective-WINDOW:return False
+        if retired(db,event.target.user_id,event.received_at):return False
+        ledger=db.execute('SELECT discovery_id FROM target_discovery_ledger WHERE x_user_id=?',(event.target.user_id,)).fetchone() if event.target.user_id else None
+        if ledger and not db.execute('SELECT 1 FROM discoveries WHERE discovery_id=?',(ledger[0],)).fetchone():raise Conflict('discovery_ledger_requires_recovery')
+        if event.target.username == row['username'] or (event.target.user_id and event.target.user_id==row['user_id']):
             return False
+        existing=db.execute('SELECT anchor FROM target_identities WHERE x_user_id=? OR entity_key=(SELECT entity_key FROM target_aliases WHERE x_handle=?)',(event.target.user_id,event.target.username)).fetchall()
+        if event.source=='6551_WSS' and any(db.execute('SELECT 1 FROM follow_events WHERE hunter_x_id=? AND target=? AND occurred_at=? AND source=?',(row['user_id'],item['anchor'],event.occurred_at,event.source)).fetchone() for item in existing):return False
+        target=self.resolve_target(db,event.target,event.occurred_at)
+        if event.source=='6551_WSS' and db.execute('SELECT 1 FROM follow_events WHERE hunter_x_id=? AND target=? AND occurred_at=? AND source=?',(row['user_id'],target,event.occurred_at,event.source)).fetchone():return False
         count = db.execute('''INSERT OR IGNORE INTO follow_events(event_key,hunter_id,hunter_x_id,generation,
             target,target_id,target_name,description,occurred_at,received_at,window_at,source,time_basis)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-            (event.key, row['id'], row['user_id'], row['generation'], event.target.username, event.target.user_id,
+            (event.key, row['id'], row['user_id'], row['generation'], target, event.target.user_id,
              event.target.name, event.target.description, event.occurred_at, event.received_at,
              event.occurred_at, event.source, event.time_basis)).rowcount
         if count:
-            qualified = db.execute('SELECT count(DISTINCT hunter_x_id) FROM follow_events WHERE target=? AND window_at>=? AND window_at<=?',
-                                   (event.target.username, event.received_at-WINDOW, event.received_at)).fetchone()[0]
-            if qualified >= 2:
-                db.execute('INSERT OR IGNORE INTO discoveries(target,first_discovered_at) VALUES(?,?)',
-                           (event.target.username, event.received_at))
+            qualified = db.execute('SELECT count(DISTINCT hunter_x_id) FROM follow_events WHERE target=? AND target_id IS NOT NULL AND window_at>=? AND window_at<=?',
+                                   (target, effective-WINDOW, effective)).fetchone()[0]
+            if qualified >= 2 and event.target.user_id:
+                identifier='dsc_'+str(uuid.uuid4())
+                created=db.execute('INSERT OR IGNORE INTO target_discovery_ledger(scope,platform,x_user_id,discovery_id,first_discovered_at_us) VALUES(?,?,?,?,?)',('ikun-main','x',event.target.user_id,identifier,stamp)).rowcount
+                if created:
+                    db.execute('INSERT INTO discoveries(target,first_discovered_at,discovery_id,updated_at,first_discovered_at_us,profile_json) VALUES(?,?,?,?,?,?)',
+                               (target,stamp/1e6,identifier,event.received_at,stamp,json.dumps({'target_name':event.target.name,'description':event.target.description})))
+                elif not db.execute('SELECT 1 FROM discoveries WHERE target=?',(target,)).fetchone():
+                    raise Conflict('discovery_ledger_requires_recovery')
+                else:db.execute('UPDATE discoveries SET version=version+1,updated_at=? WHERE target=?',(event.received_at,target))
+                self.change(db,target,effective,initial=bool(created))
         return bool(count)
 
-    def ingest_wss(self, event: Follow):
+    def ingest_wss(self, event: Follow, *, generation=None):
         with self.connect(True) as db:
             row = db.execute("SELECT * FROM hunters WHERE username=? AND enabled=1 AND deleted_at IS NULL AND mode='WSS' AND profile_status='ready'", (event.hunter,)).fetchone()
-            if not row or not row['user_id'] or event.occurred_at < max(row['created_at'],row['active_since']):
+            if not row or (generation is not None and generation!=row['generation']) or not row['user_id'] or not row['baseline_ready'] or event.occurred_at < max(row['created_at'],row['active_since'],row['baseline_at'] or 0):
                 return False
             return self._insert_event(db, row, event)
 
     def apply_poll(self, row, targets: list[Target], now):
-        next_hour = (int(now)//3600+1)*3600
+        next_hour = now+3600
         with self.connect(True) as db:
             current = db.execute('SELECT * FROM hunters WHERE id=?', (row['id'],)).fetchone()
             if not self.current(current, row) or current['mode'] != 'REST' or not current['user_id']:
                 return {'discarded': True, 'new': 0}
             count = 0
             for target in targets:
+                if retired(db,target.user_id,now):continue
+                anchor=self.resolve_target(db,target,now)
                 inserted = db.execute('INSERT OR IGNORE INTO seen_targets(hunter_id,generation,target,user_id) VALUES(?,?,?,?)',
-                                      (row['id'], row['generation'], target.username, target.user_id)).rowcount
+                                      (row['id'], row['generation'], anchor, target.user_id)).rowcount
                 if inserted and current['baseline_ready']:
                     key = hashlib.sha256(f"rest:{row['id']}:{row['generation']}:{target.username}".encode()).hexdigest()
                     event = Follow(row['username'], target, now, now, 'TWITTERAPI_IO', key, 'first_observed_after_baseline')
@@ -248,15 +300,17 @@ class Store:
 
     def aggregate(self, now=None, limit=200, offset=0):
         now = time.time() if now is None else now
+        clock=self.retention_clock(now)
+        now=clock
         with self.connect() as db:
             rows = db.execute('''WITH grouped AS (
                 SELECT target,count(DISTINCT hunter_x_id) hunter_count,min(window_at) first_seen,max(window_at) last_seen
-                FROM follow_events WHERE window_at>=? AND window_at<=? GROUP BY target HAVING count(DISTINCT hunter_x_id)>=2)
+                FROM follow_events WHERE target_id IS NOT NULL AND window_at>=? AND window_at<=? GROUP BY target HAVING count(DISTINCT hunter_x_id)>=2)
                 SELECT g.*,d.first_discovered_at activated_at,d.version,d.name review_name,d.description review_description,
                 (SELECT target_name FROM follow_events e WHERE e.target=g.target ORDER BY id DESC LIMIT 1) profile_name,
                 (SELECT description FROM follow_events e WHERE e.target=g.target ORDER BY id DESC LIMIT 1) profile_bio,
                 o.status task_status FROM grouped g JOIN discoveries d USING(target) LEFT JOIN task_outbox o USING(target)
-                ORDER BY g.last_seen DESC,g.target LIMIT ? OFFSET ?''', (now-WINDOW, now, limit, offset)).fetchall()
+                WHERE d.first_discovered_at_us>? ORDER BY g.last_seen DESC,g.target LIMIT ? OFFSET ?''', (now-WINDOW, now, micros(clock)-TTL_US,limit, offset)).fetchall()
             result = []
             for item in rows:
                 item = dict(item)
@@ -266,9 +320,10 @@ class Store:
             return result
 
     def discovery(self, target):
+        now=self.retention_clock()
         with self.connect() as db:
             row = db.execute('SELECT * FROM discoveries WHERE target=?', (handle(target),)).fetchone()
-            if not row:
+            if not active(db,row,now):
                 raise Missing('discovery_not_found')
             result = dict(row)
             event = db.execute('SELECT target_name,description,target_id FROM follow_events WHERE target=? ORDER BY id DESC LIMIT 1', (target,)).fetchone()
@@ -279,18 +334,21 @@ class Store:
 
     def discoveries(self, limit=100, offset=0, now=None):
         now = time.time() if now is None else now
+        clock=self.retention_clock(now)
+        now=clock
         with self.connect() as db:
             rows=db.execute('''SELECT d.*,o.status task_status,o.id task_id,o.last_error task_error,
-                (SELECT count(DISTINCT hunter_x_id) FROM follow_events e WHERE e.target=d.target AND e.window_at>=? AND e.window_at<=?) hunter_count,
+                (SELECT count(DISTINCT hunter_x_id) FROM follow_events e WHERE e.target=d.target AND e.target_id IS NOT NULL AND e.window_at>=? AND e.window_at<=?) hunter_count,
                 (SELECT target_name FROM follow_events e WHERE e.target=d.target ORDER BY id DESC LIMIT 1) profile_name,
                 (SELECT description FROM follow_events e WHERE e.target=d.target ORDER BY id DESC LIMIT 1) profile_bio
                 FROM discoveries d LEFT JOIN task_outbox o USING(target)
-                ORDER BY d.first_discovered_at DESC,d.target LIMIT ? OFFSET ?''',(now-WINDOW,now,limit,offset)).fetchall()
+                WHERE d.first_discovered_at_us>? ORDER BY d.first_discovered_at DESC,d.target LIMIT ? OFFSET ?''',(now-WINDOW,now,micros(clock)-TTL_US,limit,offset)).fetchall()
             return [dict(row) for row in rows]
 
     def review(self, target, version, data, actor, now=None):
         target = handle(target)
         with self.connect(True) as db:
+            if not active(db,db.execute('SELECT * FROM discoveries WHERE target=?',(target,)).fetchone(),now or time.time()):raise Missing('discovery_not_found')
             if not db.execute('UPDATE discoveries SET name=?,description=?,website=?,notes=?,rating=?,category=?,stage=?,ignored=?,version=version+1 WHERE target=? AND version=?',
                               (data['name'], data['description'], data['website'], data['notes'], data['rating'],data.get('category','其他'),data.get('stage','未知'),int(data.get('ignored',False)),target, version)).rowcount:
                 raise Conflict('stale_discovery_version')
@@ -298,6 +356,7 @@ class Store:
         return self.discovery(target)
 
     def confirm(self, target, version, request_key, actor, now=None, *, tenant_id='', protocol='project-task-v1'):
+        if protocol=='v2-event':raise ValueError('use_formal_confirmed_monitoring_request')
         now = time.time() if now is None else now
         target = handle(target)
         request_hash = hashlib.sha256(json.dumps([target, version,tenant_id,protocol], separators=(',', ':')).encode()).hexdigest()
@@ -308,13 +367,13 @@ class Store:
                     raise Conflict('idempotency_key_payload_conflict')
                 return self.task_dto(previous)
             row = db.execute('SELECT * FROM discoveries WHERE target=?', (target,)).fetchone()
-            if not row:
+            if not active(db,row,now):
                 raise Missing('discovery_not_found')
             if row['version'] != version:
                 raise Conflict('stale_discovery_version')
             if not row['name'].strip() or row['ignored']:
                 raise Conflict('saved_review_name_required_and_not_ignored')
-            count = db.execute('SELECT count(DISTINCT hunter_x_id) FROM follow_events WHERE target=? AND window_at>=? AND window_at<=?', (target, now-WINDOW, now)).fetchone()[0]
+            count = db.execute('SELECT count(DISTINCT hunter_x_id) FROM follow_events WHERE target=? AND target_id IS NOT NULL AND window_at>=? AND window_at<=?', (target, now-WINDOW, now)).fetchone()[0]
             if count < 2:
                 raise Conflict('discovery_no_longer_qualified')
             previous = db.execute('SELECT * FROM task_outbox WHERE target=?', (target,)).fetchone()
@@ -328,14 +387,6 @@ class Store:
                     'confirmed_at': now, 'target': {'username': target, 'x_id_hint': event['target_id'] if event else None},
                     'review': {k: row[k] for k in ('name','description','website','notes','rating','category','stage')}}
             key = 'hunterradar:' + identifier
-            if protocol=='v2-event':
-                body={'schema_version':1,'event_id':'evt_'+identifier,'source':'hunter',
-                      'event_type':'hunter.project_monitoring_requested','occurred_at':datetime.fromtimestamp(now,timezone.utc).isoformat(),
-                      'received_at':datetime.fromtimestamp(now,timezone.utc).isoformat(), 'tenant_id':tenant_id,
-                      'project_id':None,'correlation_id':'cor_'+identifier,
-                      'payload':{'source_entity_key':target,'display_name':row['name'],
-                                 'manual_confirmed':True,'review':body['review']}}
-                key=identifier
             db.execute('''INSERT INTO task_outbox(id,target,idempotency_key,request_key,request_hash,body,confirmed_by,confirmed_at)
                 VALUES(?,?,?,?,?,?,?,?)''', (identifier, target, key, request_key, request_hash, json.dumps(body, ensure_ascii=False, separators=(',', ':')), actor, now))
             db.execute('UPDATE discoveries SET version=version+1 WHERE target=?', (target,))
@@ -348,19 +399,26 @@ class Store:
 
     def recover(self):
         with self.connect(True) as db:
-            db.execute("UPDATE task_outbox SET status='pending' WHERE status='delivering'")
+            db.execute("UPDATE task_outbox SET status=CASE WHEN posted=1 THEN 'unknown' ELSE 'pending' END,public_state=CASE WHEN posted=1 THEN 'unknown' ELSE 'pending' END WHERE status='delivering'")
 
     def claim_task(self, now):
         with self.connect(True) as db:
             row = db.execute("SELECT * FROM task_outbox WHERE status IN ('pending','unknown') AND next_attempt_at<=? ORDER BY confirmed_at LIMIT 1", (now,)).fetchone()
             if row:
-                db.execute("UPDATE task_outbox SET status='delivering',attempts=attempts+1 WHERE id=?", (row['id'],))
+                db.execute("UPDATE task_outbox SET status='delivering',attempts=attempts+1,command_revision=command_revision+1,updated_at=? WHERE id=?", (now,row['id']))
                 return dict(row) | {'attempts': row['attempts']+1}
 
-    def finish_task(self, identifier, status, *, code=None, retry_at=0, receipt=None, now=None,canonical=None):
+    def finish_task(self, identifier, status, *, code=None, retry_at=0, receipt=None, now=None,canonical=None,receipt_data=None):
         with self.connect(True) as db:
-            db.execute('UPDATE task_outbox SET status=?,last_error=?,next_attempt_at=?,receipt_id=?,delivered_at=?,project_id=COALESCE(?,project_id) WHERE id=?',
-                       (status, code, retry_at, receipt, now if status == 'delivered' else None, canonical,identifier))
+            stamp=time.time() if now is None else now
+            db.execute('UPDATE task_outbox SET status=?,public_state=?,last_error=?,next_attempt_at=?,receipt_id=?,delivered_at=?,project_id=COALESCE(?,project_id),updated_at=?,command_revision=command_revision+1 WHERE id=?',
+                       (status,'pending' if status in ('pending','delivered','delivering') else status,code,retry_at,receipt,stamp if status=='delivered' else None,canonical,stamp,identifier))
+            if receipt_data is not None:db.execute('UPDATE task_outbox SET receipt_json=? WHERE id=?',(json.dumps(receipt_data,sort_keys=True),identifier))
+            task=db.execute('SELECT * FROM task_outbox WHERE id=?',(identifier,)).fetchone()
+            if task and task['command_id']:
+                from .formal import command_dto
+                db.execute('INSERT INTO public_changes(type,entity_id,data,received_at) VALUES(?,?,?,?)',('command.updated',task['command_id'],json.dumps(command_dto(task,task['request_id'])),stamp))
+                if task['target']:self.change(db,task['target'],stamp)
 
     def retry_task(self, identifier, actor):
         with self.connect(True) as db:
@@ -377,12 +435,12 @@ class Store:
                 row = db.execute('SELECT reserved FROM quota WHERE provider=? AND window=?', (provider, label)).fetchone()
                 if row and row[0]+amount > cap or amount > cap:
                     raise BudgetExceeded(retry_at)
-                db.execute('INSERT INTO quota VALUES(?,?,?) ON CONFLICT(provider,window) DO UPDATE SET reserved=reserved+excluded.reserved', (provider, label, amount))
+                db.execute('INSERT INTO quota(provider,window,reserved) VALUES(?,?,?) ON CONFLICT(provider,window) DO UPDATE SET reserved=reserved+excluded.reserved', (provider, label, amount))
             db.execute("DELETE FROM quota WHERE window LIKE 'minute:%' AND window<>?", ('minute:'+minute,))
 
     def set_state(self, key, value):
         with self.connect(True) as db:
-            db.execute('INSERT INTO state VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, json.dumps(value)))
+            db.execute('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, json.dumps(value)))
 
     def states(self):
         with self.connect() as db:

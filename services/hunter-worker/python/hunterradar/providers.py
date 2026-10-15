@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import time
+import hashlib
+from email.utils import parsedate_to_datetime
 
 import httpx
 
@@ -49,15 +51,21 @@ class Providers:
         cooldown = self.store.states().get('cooldown:'+provider, 0)
         if cooldown > now:
             raise ProviderError('provider_cooldown', cooldown-now)
+        intent='provider_intent:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest()
+        if self.store.states().get(intent) in ('in_flight','billing_unknown'):
+            raise ProviderError('provider_billing_unknown',9999999999-now)
         # Every attempt, including failed/ambiguous requests, reserves budget before IO.
         self.store.reserve(provider, cost, limit, self.settings.requests_per_minute, now)
+        self.store.set_state(intent,'in_flight')
         try:
             response = await self.client.request(method, url, **kwargs)
+            self.store.set_state(intent,None)
             if response.status_code == 429:
                 try:
                     wait = min(86400, max(60, int(response.headers.get('retry-after', '60'))))
                 except ValueError:
-                    wait = 60
+                    try:wait=min(86400,max(60,parsedate_to_datetime(response.headers['retry-after']).timestamp()-now))
+                    except (ValueError,TypeError,KeyError,OverflowError):wait=60
                 self.store.set_state('cooldown:'+provider, now+wait)
                 raise ProviderError('provider_rate_limited', wait)
             if response.status_code in (401, 403):
@@ -72,7 +80,9 @@ class Providers:
                 raise ProviderError('provider_application_error', 300)
             return payload
         except (httpx.ReadTimeout,httpx.WriteTimeout,httpx.ReadError,httpx.WriteError,httpx.RemoteProtocolError):
+            self.store.set_state(intent,'billing_unknown')
             raise ProviderError('provider_billing_unknown',9999999999-time.time()) from None
         except (httpx.HTTPError, ValueError):
+            self.store.set_state(intent,None)
             # Do not log exceptions containing URLs, token query strings or provider bodies.
             raise ProviderError('provider_transport_or_json_error', 30) from None

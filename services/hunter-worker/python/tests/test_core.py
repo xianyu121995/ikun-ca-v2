@@ -83,10 +83,9 @@ def test_two_distinct_hunters_cross_provider_id_mismatch(store):
     second=ready(store,'hunter2',followers=4999,user_id='102')
     store.apply_poll(second,[Target('old','7')],NOW-10)
     store.ingest_wss(event(target_id='111'))
-    store.apply_poll(second,[Target('project1','222')],NOW)
-    signal=store.aggregate(NOW)[0]
-    assert signal['hunter_count']==2 and signal['target']=='project1'
-    assert not any('hunter' in k for k in signal if k!='hunter_count')
+    with pytest.raises(Conflict,match='identity_conflict'):
+        store.apply_poll(second,[Target('project1','222')],NOW)
+    assert store.aggregate(NOW)==[]
 
 
 def test_72_hour_boundary_and_expiry(store):
@@ -225,11 +224,11 @@ def test_database_boundary(tmp_path):
 
 def test_symlink_and_hardlink_boundary(tmp_path):
     folder=tmp_path.resolve()
-    folder.joinpath('real').mkdir()
+    folder.joinpath('real').mkdir(mode=0o700)
     folder.joinpath('alias').symlink_to(folder/'real',target_is_directory=True)
     with pytest.raises(ValueError):
         Store(folder/'alias'/'hunter.db')
-    original=Store(folder/'real'/'hunter.db')
+    original=Store(folder/'real'/'hunter.db',initialize=True)
     os.link(original.path,folder/'hunter.db')
     with pytest.raises(ValueError):
         Store(folder/'hunter.db')
@@ -287,10 +286,11 @@ def test_foundation_hunter_database_upgrade_and_checksum(tmp_path):
     with sqlite3.connect(path) as db:
         db.execute(f'PRAGMA application_id={APP_ID}')
         db.executescript('CREATE TABLE _store_identity(singleton INTEGER PRIMARY KEY, store_name TEXT); INSERT INTO _store_identity VALUES(1,\'hunter\'); CREATE TABLE _schema_migrations(version INTEGER PRIMARY KEY,name TEXT,applied_at TEXT); INSERT INTO _schema_migrations VALUES(1,\'foundation\',\'2026-10-15\');')
-    store=Store(path)
+    os.chmod(path,0o600)
+    store=Store(path,initialize=True)
     with store.connect() as db:
-        assert db.execute('SELECT version FROM _schema_migrations ORDER BY version').fetchall()[-1][0]==2
-        assert db.execute('PRAGMA user_version').fetchone()[0]==2
+        assert db.execute('SELECT version FROM _schema_migrations ORDER BY version').fetchall()[-1][0]==4
+        assert db.execute('PRAGMA user_version').fetchone()[0]==4
         db.execute("UPDATE _hunter_migrations SET checksum='tampered'")
     with pytest.raises(ValueError,match='checksum'):
         Store(path)

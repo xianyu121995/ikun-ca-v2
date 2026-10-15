@@ -2,7 +2,7 @@
 
 协议版本：`hunter-research-retention-v1.0.0`。日期：2026-10-16（Asia/Shanghai）。
 
-状态：**产品方案已批准，精确协议 `pending_protocol_review`；本提交仅供审查，受影响的新接口、迁移及清理任务尚未实现/验收。** 批准精确协议后再在原 Store/引擎上增量实现，不另建研究系统或 CRUD。
+状态：**精确协议已获 `579a57f2e3e470525eb53f9f1f85ba75d25f3728` 夜间记录批准（审查源为 `b16fb36a8b8269350319c02a60faa6ea2708d95a`）；已在原 Store/引擎增量实现，本地验收见 B4-REPORT.md，等待总管源码审查冻结。** 没有另建研究系统或 CRUD。
 
 依据（仅 Git 对象读取，未合并协调分支）：
 
@@ -188,7 +188,7 @@ posted意图必须先于网络发送持久化。压缩不能把posted变回false
 
 ## 10. 迁移、兼容和回滚
 
-拟在现有B4 schema3候选之上增加 `schemas/hunter/004_research_retention.sql`（版本/文件名随本协议审查；此提交不创建SQL/修改registry）。只允许显式migrate/init；先成功备份并校验，再在单事务中新增Target账本/时钟/清理批次状态及命令自有恢复引用、重建所需外键。foundation1、原2、B4候选3及其哈希不重写，checksum仍归同一registry，INSERT显式列名。
+已在现有B4 schema3候选之上增加 `schemas/hunter/004_research_retention.sql`（已按批准协议实施，原1/2/3未改写）。只允许显式migrate/init；先成功备份并校验，再在单事务中新增Target账本/时钟/清理批次状态及命令自有恢复引用、重建所需外键。foundation1、原2、B4候选3及其哈希不重写，checksum仍归同一registry，INSERT显式列名。
 
 回填全部已有发现的稳定Target键/原discovery_id/起点，包括已滑出72h但未满七天的发现。重复/缺失稳定身份不猜测，整个迁移回滚并报告核对阻断。已有超过七天的记录回填账本并逻辑到期，但物理清理仍必须经过可核验的清理备份；迁移不能借重建表提前丢未决链。
 
@@ -200,30 +200,30 @@ HTTP旧GET/分页/monitoring-request DTO与SSE枚举不改；新PATCH使用最�
 
 ## 11. 裁定覆盖表与验收计划
 
-以下均为**计划，运行时结果pending_owner_implementation**，不能引用历史130项Python/9项Node/构建或OS smoke证明本增量已通过。协议获批后补实际实现完整SHA、命令、计数和证据；协议提交SHA以Git对象及交付短报为准。
+下表原计划已进入本地验收；结果为PASS_local_fixture，具体227项Python、10项Node、14组正式浏览器、11组私有兼容、3次OS启动/CLI恢复及边界限度见B4-REPORT.md与docs/b4/night-receipt.json。历史130/9项或旧OS成绩不累加；完整实现SHA以本批Git对象及交付短报为准。真实来源与C0跨worker仍未验证。
 
 | ID | 协议条款/计划用例 | 当前状态 |
 |---|---|---|
-| DEC-C04 / C04-01 | §1–4全部字段min/max/空/null/非法/未知/日期关联，非空subset合并；真实刷新GET持久化 | pending_owner_implementation |
-| DEC-C04 / C04-02 | 匿名/user/伪造角色/错方向/跨scope/禁用/强制改密/撤销、Route Handler绕过Proxy、实际Action及同源CSRF | pending_owner_implementation |
-| DEC-C04 / C04-03 | 缺If-Match428、格式422、旧版本409；同key重排字段、1/1.0及-0/0规范化回放，异body/If-Match409，actor/route隔离 | pending_owner_implementation |
-| DEC-C04 / C04-04 | 两请求并发、事务中断/kill、提交后丢回包；研究/revision/audit/receipt/SSE恰好一次或全回滚 | pending_owner_implementation |
-| DEC-C04 / C04-05 | 当前draft与已确认immutable命令分离；不新增canonical/POST/outbox；审计/SSE/日志无Hunter归因或正文泄露 | pending_owner_implementation |
-| DEC-C04 / C04-06 | 临近7天PATCH不延TTL；过期新key404、旧key原最小结果，无正文/复活/事件；回执自身七天边界 | pending_owner_implementation |
-| DEC-D3 / D3-01 | 604800秒前1微秒/恰好/后1微秒；编辑/重放/确认不延寿；后台定时且网站关闭也清理 | pending_owner_implementation |
-| DEC-D3 / D3-02 | 备份成功/权限/软硬链/锁忙/满盘/超时/校验失败；失败不删、逻辑到期不再读；3份/48h和pin边界 | pending_owner_implementation |
-| DEC-D3 / D3-03 | 清理前备份恢复到新路径、manifest栅栏、时钟回拨/重启；裸旧备份/证据不全fail closed | pending_owner_implementation |
-| DEC-D3 / D3-04 | pending未POST/posted未知/丢ACK/正确及错回执/终止失败在7天边界前后；原cmd/evt/hash/receipt/posted不丢，不盲重发 | pending_owner_implementation |
-| DEC-D3 / D3-05 | 清理发现、project_json、旧列、DTO/SSE全文；账本/audit/最小回执字段白名单；不得保留全量原始数据冒充账本 | pending_owner_implementation |
-| DEC-D3 / D3-06 | 非Hunter合成哨兵文件前后hash相同、捕获文件访问/SQLite authorizer无他库路径、ATTACH或跨库SQL | pending_owner_implementation |
-| DEC-D4 / D4-01 | A停用前有效+B后关注达标；A历史72h前/恰好/之后，停用/删除不提前剔除 | pending_owner_implementation |
-| DEC-D4 / D4-02 | 停用事务与WSS/REST在途竞态、旧generation/发生时间伪装；停用后不接新事件，双稳定Hunter才达标 | pending_owner_implementation |
-| DEC-D4 / D4-03 | 恢复先baseline、REST20条旧目标不算新增、WSS ACK非心跳；缺时间按来源现行策略且报告待定 | pending_owner_implementation |
-| DEC-D5 / D5-01 | 同目标初次达标一次首次发布；追加关注/窗口滑出再达标/7天清理均零新增提醒 | pending_owner_implementation |
-| DEC-D5 / D5-02 | handle改名/乱序/重放/新代/重启/备份恢复仍同稳定键；不同稳定ID独立、冲突不合并、未知ID不假造 | pending_owner_implementation |
-| DEC-D5 / D5-03 | 永久账本不含Hunter归因/资料正文；研究updated及Last-Event-ID重放不当成新提醒，无重置例外 | pending_owner_implementation |
-| MIG-01 / HUN-04 | 空新库、foundation→2→3→4、重复迁移、三/四列ledger、失败回滚/备份恢复、身份歧义阻断和旧binary拒绝 | pending_owner_implementation |
-| AUTH/PRO/ISO/OPS | 仅local synthetic来源；四库由各owner持有，整链路/C0另验；1440/390接线回归在共享heavy lock完整生命周期内 | pending_owner_implementation |
+| DEC-C04 / C04-01 | §1–4全部字段min/max/空/null/非法/未知/日期关联，非空subset合并；真实刷新GET持久化 | PASS_local_fixture（详见报告的限度） |
+| DEC-C04 / C04-02 | 匿名/user/伪造角色/错方向/跨scope/禁用/强制改密/撤销、Route Handler绕过Proxy、实际Action及同源CSRF | PASS_local_fixture（详见报告的限度） |
+| DEC-C04 / C04-03 | 缺If-Match428、格式422、旧版本409；同key重排字段、1/1.0及-0/0规范化回放，异body/If-Match409，actor/route隔离 | PASS_local_fixture（详见报告的限度） |
+| DEC-C04 / C04-04 | 两请求并发、事务中断/kill、提交后丢回包；研究/revision/audit/receipt/SSE恰好一次或全回滚 | PASS_local_fixture（详见报告的限度） |
+| DEC-C04 / C04-05 | 当前draft与已确认immutable命令分离；不新增canonical/POST/outbox；审计/SSE/日志无Hunter归因或正文泄露 | PASS_local_fixture（详见报告的限度） |
+| DEC-C04 / C04-06 | 临近7天PATCH不延TTL；过期新key404、旧key原最小结果，无正文/复活/事件；回执自身七天边界 | PASS_local_fixture（详见报告的限度） |
+| DEC-D3 / D3-01 | 604800秒前1微秒/恰好/后1微秒；编辑/重放/确认不延寿；后台定时且网站关闭也清理 | PASS_local_fixture（详见报告的限度） |
+| DEC-D3 / D3-02 | 备份成功/权限/软硬链/锁忙/满盘/超时/校验失败；失败不删、逻辑到期不再读；3份/48h和pin边界 | PASS_local_fixture（详见报告的限度） |
+| DEC-D3 / D3-03 | 清理前备份恢复到新路径、manifest栅栏、时钟回拨/重启；裸旧备份/证据不全fail closed | PASS_local_fixture（详见报告的限度） |
+| DEC-D3 / D3-04 | pending未POST/posted未知/丢ACK/正确及错回执/终止失败在7天边界前后；原cmd/evt/hash/receipt/posted不丢，不盲重发 | PASS_local_fixture（详见报告的限度） |
+| DEC-D3 / D3-05 | 清理发现、project_json、旧列、DTO/SSE全文；账本/audit/最小回执字段白名单；不得保留全量原始数据冒充账本 | PASS_local_fixture（详见报告的限度） |
+| DEC-D3 / D3-06 | 非Hunter合成哨兵文件前后hash相同、捕获文件访问/SQLite authorizer无他库路径、ATTACH或跨库SQL | PASS_local_fixture（详见报告的限度） |
+| DEC-D4 / D4-01 | A停用前有效+B后关注达标；A历史72h前/恰好/之后，停用/删除不提前剔除 | PASS_local_fixture（详见报告的限度） |
+| DEC-D4 / D4-02 | 停用事务与WSS/REST在途竞态、旧generation/发生时间伪装；停用后不接新事件，双稳定Hunter才达标 | PASS_local_fixture（详见报告的限度） |
+| DEC-D4 / D4-03 | 恢复先baseline、REST20条旧目标不算新增、WSS ACK非心跳；缺时间按来源现行策略且报告待定 | PASS_local_fixture（详见报告的限度） |
+| DEC-D5 / D5-01 | 同目标初次达标一次首次发布；追加关注/窗口滑出再达标/7天清理均零新增提醒 | PASS_local_fixture（详见报告的限度） |
+| DEC-D5 / D5-02 | handle改名/乱序/重放/新代/重启/备份恢复仍同稳定键；不同稳定ID独立、冲突不合并、未知ID不假造 | PASS_local_fixture（详见报告的限度） |
+| DEC-D5 / D5-03 | 永久账本不含Hunter归因/资料正文；研究updated及Last-Event-ID重放不当成新提醒，无重置例外 | PASS_local_fixture（详见报告的限度） |
+| MIG-01 / HUN-04 | 空新库、foundation→2→3→4、重复迁移、三/四列ledger、失败回滚/备份恢复、身份歧义阻断和旧binary拒绝 | PASS_local_fixture（详见报告的限度） |
+| AUTH/PRO/ISO/OPS | 仅local synthetic来源；四库由各owner持有，整链路/C0另验；1440/390接线回归在共享heavy lock完整生命周期内 | PASS_local_fixture（详见报告的限度） |
 
 重任务只使用主仓库唯一 `scripts/with-heavy-lock.py --owner hunter-worker --timeout 600 -- <前台命令>`，构建和预览全生命周期串行；不并跑、不改锁、不停止他人进程。不调用真实6551/REST/付费API，不动Watch，不合并/推送/部署。
 
@@ -232,3 +232,7 @@ HTTP旧GET/分页/monitoring-request DTO与SSE枚举不改；新PATCH使用最�
 ## 12. 初稿历史（2026-10-15，已由本版本状态/细节取代）
 
 初稿为“C-04 最小增量提案（待裁定，未实施正式写路由）”，建议同一路径、ProjectFields非空子集、可信superadmin/固定scope/CSRF、If-Match及至少七天UUID幂等、同库事务/审计，并建议完整HunterDiscoveryV2响应。它明确不注册canonical、不发监控，正式写入口保持关闭。产品推荐方案现已批准；仍待的是本版本精确协议审查及后续实现验收。旧“待产品裁定”和“完整响应”不再代表本次提案。
+
+已批准实施细化：备份实际总deadline为8秒（小于批准30秒上限，配合10秒drain）；损坏/未完成副本同样受3份/48小时界限，过期只留最小失败记录。--current必须是由操作者核验、已停服务的真实最新Hunter源，不接受bundle内DB/同inode或其他恢复副本冒充；缺失或无法确认最新性即停止，不宣称程序能从任意旧快照证明未来状态。恢复保留共享public_changes的sqlite_sequence及已删空洞高水位，且提高恢复资源revision、轮换cursor，旧事件全文不保留。R1/R2/R3补充回归见报告。
+
+R4实施补正：恢复全过程使用不能被Store接受的私有临时文件，合并及校验/checkpoint/fsync完成后独占目标并原子发布。5个真实SIGKILL边界已验；异常catch不作为安全保证。路径检查按总管静态建议采用单次lstat，保留拒软硬链/私密权限及sidecar消失容忍；未声称该静态风险是已现场复现故障。

@@ -139,10 +139,14 @@ def validate(plan, root=TARGET):
                 and not config.get('service_token_file')
                 and not config.get('admin_token_file') and not config.get('read_token_file')
                 and not config.get('auth_session_url'), 'TRACKING_OFF_MODE_REQUIRED')
+        require(sha(config_path) == receipt.get('tracking_config_sha256'), 'TRACKING_CONFIG_DRIFT')
     cwd = inside(plan['cwd'], root / 'jobs')
     require(cwd == root / 'jobs' / worker and cwd.is_dir(), 'OWNED_EMPTY_CWD_REQUIRED')
-    for directory in (cwd, release, release / 'services' / (worker + '-worker'),
-                      release / 'services' / (worker + '-worker') / 'python'):
+    directories = (cwd, release, release / 'services' / (worker + '-worker'),
+                   release / 'services' / (worker + '-worker') / 'python')
+    if worker == 'tracking':
+        directories += (config_path.parent,)
+    for directory in directories:
         require(not (directory / '.env').exists() and not (directory / '.env.local').exists(), 'IMPLICIT_DOTENV_REJECTED')
     argv = plan.get('argv', [])
     require(argv == receipt.get('argv') and argv and all(isinstance(x, str) and x for x in argv),
@@ -155,6 +159,8 @@ def validate(plan, root=TARGET):
         require(argv == [argv[0], str(release / entry)] and entry in files, 'EXACT_WORKER_ENTRY_REQUIRED')
         if worker == 'hunter':
             require(values.get('HUNTER_ENGINE') == 'python', 'REAL_ENGINE_ENTRY_REQUIRED')
+        else:
+            require('services/tracking-worker/python/entry.py' in files, 'TRACKING_PYTHON_ENTRY_REQUIRED')
     else:
         args = ['-m', 'hunterradar', 'run'] if worker == 'hunter' else ['-m', 'tracking.cli', 'serve', '--config', values['IKUN_TRACKING_CONFIG']]
         require(argv[1:] == args, 'EXACT_WORKER_ENTRY_REQUIRED')

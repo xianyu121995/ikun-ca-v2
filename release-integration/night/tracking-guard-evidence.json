@@ -1,0 +1,25 @@
+{
+  "state": "PASS_TRACKING_GUARD_DELTA_PENDING_CHIEF_REVIEW",
+  "baseline_guard_commit": "69878e12aa3224e83da471859cca0ef1a4594a25",
+  "unit_tests": 38,
+  "unit_failed": 0,
+  "original_tests_preserved": 31,
+  "new_tests": 7,
+  "unit_tool_chunk": "4c42a3",
+  "scope": "temporary synthetic files/SQLite, mocked launchctl and isolated preflight CLI only",
+  "tracking_config_sha256_required": true,
+  "Node_Tracking_entry_py_sha256_required": true,
+  "both_launchd_and_config_parent_dotenv_rejected": true,
+  "nonempty_absolute_config_already_required": true,
+  "service_direction_credential": "TRACKING_API_TOKEN environment only",
+  "credential_files_not_permitted": true,
+  "source_sha256": {
+    "release-integration/scripts/night_worker_ops.py": "4ac7144929559e2169684e803319cd181fab4dc00cfb5da0885635a031fd9fd0",
+    "release-integration/tests/test_night_worker_ops.py": "8e0af9722cdb5aa09f661318ff9e387a783e8475a98787973862d99ab8782f6c"
+  },
+  "B3_runtime_received": false,
+  "live_database_accessed": false,
+  "installed_or_deployed": false,
+  "running_Hunter_launcher_changed": false,
+  "audio_emitted": false
+}

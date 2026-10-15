@@ -37,6 +37,8 @@ Hunter要求外采=0、v2模式、ikun-main、v2-event、loopback/独立DB；Tra
 
 原`preparation-evidence.json`保留首轮19项测试和当时源码hash；后续安全修复以`guard-hardening-evidence.json`记录，保留原19项并新增12项，共31项。两份均是临时夹具/模拟launchctl证据，实际CLI只做待冻结计划render、plist语法检查及拒绝启动检查。最终CLI/venv入口仍需与获验收的worker冻结包逐字核对。
 
+Tracking冻结前的窄范围入口/配置补证另记`tracking-guard-evidence.json`：原31项逐名保留，加7项共38项，不与历史执行累加。仍只用临时夹具，不把文档可选token文件引入正式配置；方向token固定env、相关file和旧human auth字段保持空。新守卫尚未安装，Hunter运行计划中的旧副本保持不动。
+
 启动工具`69878e12aa3224e83da471859cca0ef1a4594a25`已经总管静态审查并独立复跑31/31；审查对象为`2a30b9682e84c9817eacfbd2c07d4e0e4bdde01d:docs/progress/WORKER-GUARD-REVIEW.md`，精确hash登记于intake.json。两次运行同一套31项，不能累加为62项。此批准仅适用于启动准备；B3/B4仍等待实现验收冻结，最终runtime/CLI/venv/schema及精确收件核对不能省略。逐个收件后按原夜间授权接入，不等待另一个worker。
 
 ## 每个模块的实际接入顺序

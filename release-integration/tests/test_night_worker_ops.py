@@ -29,6 +29,9 @@ class WorkerPlanTests(unittest.TestCase):
         self.entry = self.release / 'services/tracking-worker/dist/main.js'
         self.entry.parent.mkdir(parents=True)
         self.entry.write_text('// synthetic artifact, never executed\n')
+        self.python_entry = self.release / 'services/tracking-worker/python/entry.py'
+        self.python_entry.parent.mkdir(parents=True)
+        self.python_entry.write_text('# synthetic Python entry, never executed\n')
         self.exe = self.root / 'toolchains/node24/bin/node'
         self.exe.write_text('synthetic executable, never executed\n')
         self.exe.chmod(0o700)
@@ -49,9 +52,10 @@ class WorkerPlanTests(unittest.TestCase):
         argv = [str(self.exe), str(self.entry)]
         self.receipt = self.root / 'config/tracking.accepted.json'
         self.record = {'worker': 'tracking', 'accepted_frozen': True, 'source_commit': 'b' * 40,
-                       'control_commit': 'c' * 40, 'runtime_sha256': {'services/tracking-worker/dist/main.js': ops.sha(self.entry)},
+                       'control_commit': 'c' * 40, 'runtime_sha256': {'services/tracking-worker/dist/main.js': ops.sha(self.entry),
+                                                                 'services/tracking-worker/python/entry.py': ops.sha(self.python_entry)},
                        'argv': argv, 'executable_sha256': ops.sha(self.exe), 'database_user_version': 2,
-                       'database_application_id': 123}
+                       'database_application_id': 123, 'tracking_config_sha256': ops.sha(self.config)}
         self.write(self.receipt, self.record)
         self.plan = {'worker': 'tracking', 'accepted_frozen': True, 'source_commit': 'b' * 40,
                      'control_commit': 'c' * 40, 'candidate_sha': 'a' * 40, 'release': str(self.release),
@@ -222,6 +226,66 @@ class WorkerPlanTests(unittest.TestCase):
         self.write(self.config, config)
         with self.assertRaisesRegex(ValueError, 'TRACKING_OFF_MODE_REQUIRED'):
             self.check()
+
+    def test_tracking_config_bytes_are_bound(self):
+        self.config.write_text(self.config.read_text() + '\n')
+        with self.assertRaisesRegex(ValueError, 'TRACKING_CONFIG_DRIFT'):
+            self.check()
+
+    def test_tracking_config_hash_is_required(self):
+        self.record.pop('tracking_config_sha256')
+        self.write(self.receipt, self.record)
+        self.plan['acceptance_sha256'] = ops.sha(self.receipt)
+        with self.assertRaisesRegex(ValueError, 'TRACKING_CONFIG_DRIFT'):
+            self.check()
+
+    def test_tracking_config_directory_dotenv_is_rejected(self):
+        for name in ('.env', '.env.local'):
+            with self.subTest(name=name):
+                file = self.config.parent / name
+                file.write_text('synthetic-only')
+                try:
+                    with self.assertRaisesRegex(ValueError, 'IMPLICIT_DOTENV_REJECTED'):
+                        self.check()
+                finally:
+                    file.unlink()
+
+    def test_tracking_node_python_entry_hash_is_required(self):
+        self.record['runtime_sha256'].pop('services/tracking-worker/python/entry.py')
+        self.write(self.receipt, self.record)
+        self.plan['acceptance_sha256'] = ops.sha(self.receipt)
+        with self.assertRaisesRegex(ValueError, 'TRACKING_PYTHON_ENTRY_REQUIRED'):
+            self.check()
+
+    def test_tracking_node_python_entry_bytes_are_bound(self):
+        self.python_entry.write_text('# changed synthetic entry\n')
+        with self.assertRaisesRegex(ValueError, 'RUNTIME_FILE_DRIFT'):
+            self.check()
+
+    def test_tracking_requires_absolute_nonempty_config_to_prevent_fallback(self):
+        for value in (None, '', 'tracking.json'):
+            with self.subTest(value=value):
+                values = dict(self.values)
+                if value is None:
+                    values.pop('IKUN_TRACKING_CONFIG')
+                else:
+                    values['IKUN_TRACKING_CONFIG'] = value
+                self.write(self.env, values)
+                with self.assertRaisesRegex(ValueError, 'OWNED_PATH_REQUIRED'):
+                    self.check()
+
+    def test_tracking_tokens_remain_environment_only(self):
+        for field in ('token_file', 'service_token_file', 'admin_token_file', 'read_token_file', 'auth_session_url'):
+            with self.subTest(field=field):
+                config = json.loads(self.config.read_text())
+                config[field] = '/private/tmp/synthetic-unowned-credential'
+                self.write(self.config, config)
+                try:
+                    with self.assertRaisesRegex(ValueError, 'TRACKING_OFF_MODE_REQUIRED'):
+                        self.check()
+                finally:
+                    config.pop(field)
+                    self.write(self.config, config)
 
     def test_external_destination_is_rejected(self):
         self.values['CONTROLLED_RECEIVER'] = 'https://outside.invalid/receive'

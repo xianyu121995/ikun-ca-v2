@@ -23,10 +23,12 @@
 
 硬关闭外采：`remote_enabled=false`、`dedicated_account=false`、provider `token_file`为空，`IKUN_TRACKING_EXTERNAL_IO_DISABLED=1`；provider key/旧Watch/代理和隐式.env均不得继承。网站只新增既有方向的`TRACKING_API_URL=http://127.0.0.1:4012`及独立`TRACKING_API_TOKEN`，保留现有Hunter/Projects配置值；不是新增一种方向或token协议。Tracking不能收到Hunter token、Projects IPC凭据或Auth会话。
 
-配置尚有两项必须对最终实现检查，不能把旧准备假设硬套在owner代码上：
+总管已只读确认Node白名单与Config.secret支持现有环境变量方向token，配置方案按本次裁定固定；不接收该未冻结候选的运行文件：
 
-1. 当前守卫直接Python分支是`-m tracking.cli serve`，新交接采用绝对`python/entry.py serve --config ...`。优先精确冻结Node `dist/main.js`，由已验launcher管理正式Python入口；若最终确需其他argv，仅最小适配守卫并补拒绝测试，不能启动开发模式/隐式迁移。
-2. 当前守卫拒绝所有`service_token_file`，而owner交接使用该文件承载既有网站→Tracking方向token。先核最终compiled环境白名单是否支持现有`TRACKING_API_TOKEN` env；支持则保留env方案。否则只允许本worker固定新私有文件（例如`config/tracking/api.token`），核路径/逐级非链接/单链接/0600及长度和两边值一致，补窄范围守卫测试。provider token文件仍为空，不放宽到任意凭据路径。
+1. 正式计划固定精确冻结Node `dist/main.js`，其实际启动绝对`python/entry.py serve`；不使用无config的B0 fallback，也不使用预备工具中保留的旧直接Python模块分支。`IKUN_TRACKING_CONFIG`必须非空绝对路径且位于本root/config；实际Python cwd是配置父目录，launchd cwd与该目录均无.env。最终compiled hash、entry.py源hash、独立Python及owner预检仍必须与冻结包核对。
+2. 固定`TRACKING_API_TOKEN`私密env方案；`service_token_file`、provider `token_file`、`admin_token_file`、`read_token_file`与旧`auth_session_url`均保持空。文档的file示例只是可选载体，不因此添加秘密文件、token机制或放宽守卫。
+
+已按总管允许的窄范围补守卫：接受回执新增必需`tracking_config_sha256`；Node Tracking runtime清单必须含`services/tracking-worker/python/entry.py`并逐字节校验；配置父目录加入既有dotenv拒绝检查。原31项保留并新增7项，38/38通过，见`tracking-guard-evidence.json`。此增量仅供后续Tracking收件审查，尚未部署；运行中的Hunter仍使用原75b release/原计划内的守卫副本。
 
 部署receipt必须分别记录：网站新candidate、Tracking新candidate、保持原位的Hunter release75b及Hunter域源10fe。不能因网页升级就把Hunter作业记成新release。对现存Auth/Projects/Hunter做在线备份，Tracking意外已有库时先停准入核归属，绝不能覆盖或默认为可重建。
 

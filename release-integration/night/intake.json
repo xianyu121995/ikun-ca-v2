@@ -75,7 +75,17 @@
       "preparation_plan": "release-integration/night/tracking-plan.pending.json",
       "preparation_report": "release-integration/night/B3-PREPARATION.md",
       "preparation_evidence": "release-integration/night/tracking-preparation-evidence.json",
-      "view_hint_approval_commit": "6ea8b004c368e17a123e055848f59f6370f2c29d"
+      "view_hint_approval_commit": "6ea8b004c368e17a123e055848f59f6370f2c29d",
+      "service_direction_credential": "TRACKING_API_TOKEN_ENV_ONLY",
+      "service_token_file": "",
+      "guard_delta": {
+        "state": "PENDING_CHIEF_REVIEW",
+        "evidence": "release-integration/night/tracking-guard-evidence.json",
+        "source_sha256": "4ac7144929559e2169684e803319cd181fab4dc00cfb5da0885635a031fd9fd0",
+        "tests": 38,
+        "original_tests_preserved": 31,
+        "runtime_installed": false
+      }
     }
   },
   "real_sources_enabled": false,

@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import plistlib
+import pwd
 import re
 import sqlite3
 import subprocess
@@ -15,10 +16,21 @@ import time
 import uuid
 from urllib.parse import urlsplit
 
-TARGET = Path.home() / 'Library/Application Support/ikun-ca-v2-c0-lite'
+ACCOUNT_HOME = Path(pwd.getpwuid(os.getuid()).pw_dir)
+TARGET = ACCOUNT_HOME / 'Library/Application Support/ikun-ca-v2-c0-lite'
 DOMAINS = {'hunter': 4011, 'tracking': 4012}
 PROVIDER_KEYS = {'OPENNEWS_TOKEN', 'TWITTERAPI_IO_API_KEY', 'IKUN_TRACKING_6551_TOKEN',
                  'HUNTER_SECRETS_FILE', 'HUNTER_PROJECT_TASK_SECRET', 'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY'}
+PROCESS_KEYS = {'HOME', 'PATH', 'USER', 'LOGNAME', 'SHELL', 'PWD', 'OLDPWD', 'TMPDIR', 'TMP', 'TEMP',
+                'LANG', 'LC_ALL', 'TZ', 'ENV', 'BASH_ENV', 'SHELLOPTS', 'ZDOTDIR', 'CDPATH', 'IFS',
+                'IKUN_ENV_FILE', 'HUNTER_PYTHON_BIN', 'IKUN_TRACKING_PYTHON', 'UV_THREADPOOL_SIZE',
+                'NEXT_TELEMETRY_DISABLED', '__PYVENV_LAUNCHER__'}
+
+
+def process_control(key):
+    key = key.upper()
+    return (key in PROCESS_KEYS or key.startswith(('PYTHON', 'DYLD_', 'LD_', 'LC_'))
+            or (key.startswith('NODE_') and key not in ('NODE_ENV', 'NODE_OPTIONS')))
 
 
 def require(value, code):
@@ -32,13 +44,16 @@ def sha(path):
 
 def inside(path, parent):
     path, parent = Path(path), Path(parent)
-    require(path.is_absolute() and parent in path.parents, 'OWNED_PATH_REQUIRED')
-    require(not any(p.is_symlink() for p in (path, *path.parents)), 'ALIASED_PATH_REJECTED')
-    return path
+    require(path.is_absolute() and parent.is_absolute() and '..' not in path.parts
+            and '..' not in parent.parts, 'OWNED_PATH_REQUIRED')
+    require(not any(p.is_symlink() for p in (path, *path.parents, parent, *parent.parents)), 'ALIASED_PATH_REJECTED')
+    normalized, boundary = path.resolve(), parent.resolve()
+    require(boundary in normalized.parents, 'OWNED_PATH_REQUIRED')
+    return normalized
 
 
 def private_json(path):
-    path = Path(path)
+    path = inside(Path(path), Path(path).parent)
     info = path.lstat()
     require(path.is_file() and not path.is_symlink() and info.st_nlink == 1 and info.st_mode & 0o777 == 0o600,
             'PRIVATE_JSON_REQUIRED')
@@ -78,6 +93,7 @@ def validate(plan, root=TARGET):
     env_path = inside(plan['environment_file'], root / 'config')
     values = private_json(env_path)
     require(all(isinstance(k, str) and isinstance(v, str) for k, v in values.items()), 'STRING_ENV_REQUIRED')
+    require(not any(process_control(k) for k in values), 'RESERVED_PROCESS_ENV_REJECTED')
     require(not any(k.upper() in PROVIDER_KEYS or k.startswith('NEXT_PUBLIC_') for k in values), 'PROVIDER_OR_PUBLIC_ENV_REJECTED')
     for value in values.values():
         if '://' in value:
@@ -141,15 +157,14 @@ def validate(plan, root=TARGET):
             require(values.get('HUNTER_ENGINE') == 'python', 'REAL_ENGINE_ENTRY_REQUIRED')
     else:
         args = ['-m', 'hunterradar', 'run'] if worker == 'hunter' else ['-m', 'tracking.cli', 'serve', '--config', values['IKUN_TRACKING_CONFIG']]
-        require(argv[1:] == args and values.get('PYTHONPATH') == str(release / 'services' / (worker + '-worker') / 'python'),
-                'EXACT_WORKER_ENTRY_REQUIRED')
+        require(argv[1:] == args, 'EXACT_WORKER_ENTRY_REQUIRED')
     require(sha(argv[0]) == receipt.get('executable_sha256'), 'EXECUTABLE_DRIFT')
-    if 'PYTHONPATH' in values:
-        require(values['PYTHONPATH'] == str(release / 'services' / (worker + '-worker') / 'python'), 'PYTHONPATH_CHANGED')
-    clean = {'HOME': str(Path.home()), 'PATH': str(root / 'toolchains/node24/bin') + ':/usr/bin:/bin',
+    clean = {'HOME': str(ACCOUNT_HOME), 'PATH': str(root / 'toolchains/node24/bin') + ':/usr/bin:/bin',
              'LANG': 'en_US.UTF-8', 'TZ': 'Asia/Shanghai', 'NODE_ENV': 'production',
              'NODE_OPTIONS': '--max-old-space-size=256', 'NEXT_TELEMETRY_DISABLED': '1',
-             'UV_THREADPOOL_SIZE': '2', 'PYTHONUNBUFFERED': '1', 'PYTHONDONTWRITEBYTECODE': '1'}
+             'UV_THREADPOOL_SIZE': '2', 'PYTHONUNBUFFERED': '1', 'PYTHONDONTWRITEBYTECODE': '1',
+             'PYTHONNOUSERSITE': '1', 'PYTHONPATH': str(release / 'services' / (worker + '-worker') / 'python'),
+             ('HUNTER_PYTHON_BIN' if worker == 'hunter' else 'IKUN_TRACKING_PYTHON'): str(root / 'venvs' / worker / 'bin/python')}
     clean.update(values)
     require(clean['NODE_ENV'] == 'production' and clean['NODE_OPTIONS'] == '--max-old-space-size=256', 'RESOURCE_MODE_CHANGED')
     return cwd, argv, clean
@@ -159,7 +174,7 @@ def render(plan, destination, root=TARGET):
     """Freeze-gated run wrapper is used even for an intentionally pending review plan."""
     worker = plan.get('worker')
     require(worker in DOMAINS, 'WORKER_REQUIRED')
-    destination = Path(destination)
+    destination = inside(Path(destination), Path(destination).parent)
     require(not destination.exists() and destination.is_absolute(), 'NEW_PLAN_DIRECTORY_REQUIRED')
     if plan.get('accepted_frozen') is True:
         inside(destination, root / 'plans')
@@ -170,7 +185,7 @@ def render(plan, destination, root=TARGET):
     write_new(spec, plan)
     label = 'ca.ikun.v2.c0lite.' + worker
     python = str(root / 'venv/bin/python')
-    job = {'Label': label, 'ProgramArguments': [python, str(launcher), 'run', '--plan', str(spec)],
+    job = {'Label': label, 'ProgramArguments': [python, '-I', str(launcher), 'run', '--plan', str(spec)],
            'WorkingDirectory': str(root / 'jobs' / worker), 'RunAtLoad': True, 'KeepAlive': True,
            'ThrottleInterval': 30, 'ExitTimeOut': 30, 'Umask': 0o077, 'Nice': 5, 'ProcessType': 'Background',
            'StandardOutPath': str(root / 'logs' / (worker + '.log')),
@@ -190,12 +205,12 @@ def unload(plan_path, root=TARGET, agents=None, invoke=subprocess.run):
     worker = plan.get('worker')
     require(worker in DOMAINS, 'WORKER_REQUIRED')
     label = 'ca.ikun.v2.c0lite.' + worker
-    agents = Path(agents) if agents else Path.home() / 'Library/LaunchAgents'
+    agents = Path(agents) if agents else ACCOUNT_HOME / 'Library/LaunchAgents'
     plist = agents / (label + '.plist')
     info = plist.lstat()
     require(not plist.is_symlink() and info.st_nlink == 1 and info.st_mode & 0o777 == 0o600, 'OWNED_PLIST_REQUIRED')
     raw = plist.read_bytes();job = plistlib.loads(raw)
-    expected = [str(root / 'venv/bin/python'), str(plan_path.parent / 'night_worker_ops.py'), 'run', '--plan', str(plan_path)]
+    expected = [str(root / 'venv/bin/python'), '-I', str(plan_path.parent / 'night_worker_ops.py'), 'run', '--plan', str(plan_path)]
     require(job.get('Label') == label and job.get('ProgramArguments') == expected
             and job.get('WorkingDirectory') == str(root / 'jobs' / worker), 'OWNED_JOB_MISMATCH')
     target = 'gui/' + str(os.getuid()) + '/' + label

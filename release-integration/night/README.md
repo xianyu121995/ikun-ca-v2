@@ -23,6 +23,8 @@
 
 启动检查：冻结回执/文件字节/argv/二进制一致；仅本worker源码/编译/schema路径；唯一DB路径、0600、非软硬链接，**只读检查本worker库**完整性及域/版本。缺库或迁移不匹配即拒绝，不在serve/readiness自动DDL。只继承明确私密env，不继承宿主环境；拒绝provider密钥、旧密钥文件、代理、NEXT_PUBLIC、有效配置里的外网目的地址；允许原受控loopback方向。代码里未启用的URL常量不作网络行为证据。
 
+所有受检路径先拒绝任意`..`段及逐级软链接，再验证规范化绝对路径仍在指定父目录内；回执、环境、Tracking配置、render输出和unload计划均覆盖。私密env只提供业务配置，拒绝HOME/PATH、PYTHON*、NODE_PATH及其他NODE_*执行控制、DYLD_*/LD_*、shell/locale等保留变量。NODE_ENV与NODE_OPTIONS仍只接受production与固定256MB值。HOME从系统账户记录取得；模块路径与worker Python入口由独立release/venv位置派生，不能经私密env覆盖。launchd的Python守卫使用`-I`，在preflight前也忽略继承的Python控制变量。
+
 Hunter要求外采=0、v2模式、ikun-main、v2-event、loopback/独立DB；Tracking要求remote_enabled=false、dedicated_account=false、token_file/service_token_file为空，服务方向令牌只取私密env。启动目录及release/worker/Python目录都不能存在.env/.env.local，防止Settings.load隐式复用配置。具体字段/CLI仍须与最终冻结实现核对，不能用协议快照替代冻结代码。
 
 ```sh
@@ -32,6 +34,8 @@ Hunter要求外采=0、v2模式、ikun-main、v2-event、loopback/独立DB；Tra
 ```
 
 接受冻结的实际运行计划必须render到新根plans子目录；launchd包装器使用固定C0生产Python。检查通过也只证明配置/字节/本库兼容，不证明真实来源或远端恢复。此准备阶段不安装、不启动、不迁移、不生成真实服务凭据。
+
+原`preparation-evidence.json`保留首轮19项测试和当时源码hash；后续安全修复以`guard-hardening-evidence.json`记录，保留原19项并新增12项，共31项。两份均是临时夹具/模拟launchctl证据，实际CLI只做待冻结计划render、plist语法检查及拒绝启动检查。最终CLI/venv入口仍需与获验收的worker冻结包逐字核对。
 
 ## 每个模块的实际接入顺序
 

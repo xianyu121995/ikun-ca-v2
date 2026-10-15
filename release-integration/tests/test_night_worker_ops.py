@@ -6,6 +6,8 @@ from pathlib import Path
 import plistlib
 import secrets
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -81,6 +83,133 @@ class WorkerPlanTests(unittest.TestCase):
         self.plan['accepted_frozen'] = False
         with self.assertRaisesRegex(ValueError, 'ACCEPTED_FREEZE_REQUIRED'):
             self.check()
+
+    def test_acceptance_path_traversal_is_rejected(self):
+        outside = Path(self.temp.name) / 'outside.accepted.json'
+        self.write(outside, self.record)
+        self.plan.update(acceptance_file=str(self.root / 'config/../../outside.accepted.json'),
+                         acceptance_sha256=ops.sha(outside))
+        with self.assertRaisesRegex(ValueError, 'OWNED_PATH_REQUIRED'):
+            self.check()
+
+    def test_environment_path_traversal_is_rejected(self):
+        outside = Path(self.temp.name) / 'outside.environment.json'
+        self.write(outside, self.values)
+        self.plan['environment_file'] = str(self.root / 'config/../../outside.environment.json')
+        with self.assertRaisesRegex(ValueError, 'OWNED_PATH_REQUIRED'):
+            self.check()
+
+    def test_tracking_config_path_traversal_is_rejected(self):
+        outside = Path(self.temp.name) / 'outside.config.json'
+        self.write(outside, json.loads(self.config.read_text()))
+        self.values['IKUN_TRACKING_CONFIG'] = str(self.root / 'config/../../outside.config.json')
+        self.write(self.env, self.values)
+        with self.assertRaisesRegex(ValueError, 'OWNED_PATH_REQUIRED'):
+            self.check()
+
+    def test_render_path_traversal_is_rejected_before_writing(self):
+        (self.root / 'plans').mkdir()
+        outside = Path(self.temp.name) / 'escaped-render'
+        for accepted in (False, True):
+            with self.subTest(accepted_frozen=accepted):
+                with self.assertRaisesRegex(ValueError, 'OWNED_PATH_REQUIRED'):
+                    ops.render({'worker': 'tracking', 'accepted_frozen': accepted},
+                               self.root / 'plans/../../escaped-render', self.root)
+                self.assertFalse(outside.exists())
+
+    def test_unload_path_traversal_is_rejected_before_launchctl(self):
+        (self.root / 'plans').mkdir()
+        outside = Path(self.temp.name) / 'outside.plan.json'
+        self.write(outside, {'worker': 'tracking', 'accepted_frozen': False})
+        before = outside.read_bytes()
+        def unexpected(*args, **kwargs):
+            raise AssertionError('must not call launchctl for a traversal plan')
+        with self.assertRaisesRegex(ValueError, 'OWNED_PATH_REQUIRED'):
+            ops.unload(self.root / 'plans/../../outside.plan.json', self.root, invoke=unexpected)
+        self.assertEqual(outside.read_bytes(), before)
+
+    def test_inside_checks_normalized_containment_and_rejects_parent_traversal(self):
+        target = self.root / 'config/new/file.json'
+        self.assertEqual(ops.inside(target, self.root / 'config'), target.resolve())
+        for path, parent in ((self.root, self.root), (Path(self.temp.name) / 'outside', self.root),
+                             (target, self.root / 'config/../config')):
+            with self.subTest(path=path, parent=parent):
+                with self.assertRaisesRegex(ValueError, 'OWNED_PATH_REQUIRED'):
+                    ops.inside(path, parent)
+
+    def test_symlink_leaf_and_ancestor_paths_are_rejected(self):
+        outside = Path(self.temp.name) / 'outside'
+        outside.mkdir()
+        self.write(outside / 'private.json', {'synthetic': True})
+        alias = self.root / 'config/alias'
+        alias.symlink_to(outside, target_is_directory=True)
+        leaf = self.root / 'config/leaf.json'
+        leaf.symlink_to(outside / 'private.json')
+        for path in (alias / 'private.json', leaf):
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(ValueError, 'ALIASED_PATH_REJECTED'):
+                    ops.inside(path, self.root / 'config')
+                with self.assertRaisesRegex(ValueError, 'ALIASED_PATH_REJECTED'):
+                    ops.private_json(path)
+
+    def test_private_environment_cannot_override_process_controls(self):
+        keys = ('HOME', 'home', 'PATH', 'PYTHONHOME', 'PYTHONPATH', 'PYTHONSTARTUP',
+                'PYTHONNOUSERSITE', 'NODE_PATH', 'NODE_EXTRA_CA_CERTS', 'DYLD_INSERT_LIBRARIES',
+                'DYLD_LIBRARY_PATH', 'LD_PRELOAD', 'LC_ALL', 'BASH_ENV', 'IKUN_ENV_FILE',
+                'HUNTER_PYTHON_BIN', 'IKUN_TRACKING_PYTHON', 'UV_THREADPOOL_SIZE',
+                'NEXT_TELEMETRY_DISABLED', '__PYVENV_LAUNCHER__')
+        for key in keys:
+            with self.subTest(key=key):
+                self.write(self.env, {**self.values, key: 'synthetic-untrusted-control'})
+                with self.assertRaisesRegex(ValueError, 'RESERVED_PROCESS_ENV_REJECTED'):
+                    self.check()
+
+    def test_process_controls_are_derived_without_host_environment(self):
+        inherited = dict.fromkeys(('HOME', 'PATH', 'PYTHONHOME', 'PYTHONPATH', 'NODE_PATH',
+                                   'DYLD_INSERT_LIBRARIES', 'DYLD_LIBRARY_PATH', 'LD_PRELOAD',
+                                   'IKUN_TRACKING_PYTHON'), '/private/tmp/synthetic-untrusted')
+        with patch.dict(os.environ, inherited):
+            _, _, env = self.check()
+        self.assertEqual(env['HOME'], str(ops.ACCOUNT_HOME))
+        self.assertEqual(env['PATH'], str(self.root / 'toolchains/node24/bin') + ':/usr/bin:/bin')
+        self.assertEqual(env['PYTHONPATH'], str(self.release / 'services/tracking-worker/python'))
+        self.assertEqual(env['IKUN_TRACKING_PYTHON'], str(self.root / 'venvs/tracking/bin/python'))
+        self.assertEqual(env['PYTHONNOUSERSITE'], '1')
+        for key in ('PYTHONHOME', 'NODE_PATH', 'DYLD_INSERT_LIBRARIES', 'DYLD_LIBRARY_PATH', 'LD_PRELOAD'):
+            self.assertNotIn(key, env)
+
+    def test_node_resource_modes_remain_exact(self):
+        for key, wrong in (('NODE_ENV', 'development'), ('NODE_OPTIONS', '--max-old-space-size=999')):
+            with self.subTest(key=key):
+                self.write(self.env, {**self.values, key: wrong})
+                with self.assertRaisesRegex(ValueError, 'RESOURCE_MODE_CHANGED'):
+                    self.check()
+        self.write(self.env, {**self.values, 'NODE_ENV': 'production', 'NODE_OPTIONS': '--max-old-space-size=256'})
+        self.check()
+
+    def test_owned_python_entry_uses_derived_module_path(self):
+        exe = self.root / 'venvs/tracking/bin/python'
+        exe.parent.mkdir(parents=True)
+        exe.write_text('synthetic Python executable, never executed')
+        self.plan['argv'] = [str(exe), '-m', 'tracking.cli', 'serve', '--config', str(self.config)]
+        self.record.update(argv=self.plan['argv'], executable_sha256=ops.sha(exe))
+        self.write(self.receipt, self.record)
+        self.plan['acceptance_sha256'] = ops.sha(self.receipt)
+        _, argv, env = self.check()
+        self.assertEqual(argv, self.plan['argv'])
+        self.assertEqual(env['PYTHONPATH'], str(self.release / 'services/tracking-worker/python'))
+        self.assertNotIn('PYTHONPATH', self.values)
+
+    def test_isolated_guard_ignores_inherited_python_controls_before_preflight(self):
+        pending = Path(self.temp.name) / 'pending.json'
+        self.write(pending, {'worker': 'tracking', 'accepted_frozen': False})
+        inherited = {**os.environ, 'PYTHONHOME': '/private/tmp/synthetic-missing-home',
+                     'PYTHONPATH': '/private/tmp/synthetic-missing-modules'}
+        result = subprocess.run([sys.executable, '-I', str(SCRIPT), 'check', '--plan', str(pending)],
+                                env=inherited, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stderr), {'status': 'BLOCKED_WORKER_PREFLIGHT'})
+        self.assertEqual(result.stdout, '')
 
     def test_provider_credentials_are_rejected(self):
         self.values['IKUN_TRACKING_6551_TOKEN'] = 'synthetic-unwanted-credential'
@@ -179,6 +308,7 @@ class WorkerPlanTests(unittest.TestCase):
         self.assertFalse(result['started'])
         job = plistlib.loads((destination / 'ca.ikun.v2.c0lite.tracking.plist').read_bytes())
         self.assertEqual(job['Label'], 'ca.ikun.v2.c0lite.tracking')
+        self.assertEqual(job['ProgramArguments'][1], '-I')
         self.assertTrue(job['KeepAlive'])
         self.assertEqual(job['Umask'], 0o077)
         self.assertEqual(json.loads((destination / 'rollback.json').read_text())['database_action'], 'preserve')

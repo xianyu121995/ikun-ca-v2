@@ -1,0 +1,60 @@
+{
+  "status": "PASS_GUARD_HARDENING_PREPARATION_ONLY",
+  "at": "2026-10-16T01:45:48.849322+08:00",
+  "authority_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "preparation_commit": "524618fc3e3172f84d3a1d8bc33921f9b31e51ee",
+  "unit_tests": 31,
+  "unit_failed": 0,
+  "original_tests_preserved": 19,
+  "new_tests": 12,
+  "unit_command": "/Users/lvlei/.local/bin/python3.11 -m unittest discover -s release-integration/tests -p test_night_worker_ops.py -v",
+  "unit_result_tool_chunk": "a27dbf",
+  "unit_stdout_retained_in_task_tool_output": true,
+  "unit_scope": "synthetic temporary files/SQLite, mocked launchctl, isolated preflight CLI only",
+  "traversal_rejection_entries": [
+    "acceptance",
+    "environment",
+    "tracking_config",
+    "render_pending_and_accepted",
+    "unload"
+  ],
+  "canonical_path_containment_and_all_ancestor_symlinks_checked": true,
+  "private_execution_controls_rejected": true,
+  "worker_environment_built_without_host_inheritance": true,
+  "node_environment_and_heap_values_still_exact": true,
+  "python_guard_isolated_flag": "-I",
+  "cli_checks": [
+    {
+      "worker": "hunter",
+      "render_exit": 0,
+      "plist_lint_exit": 0,
+      "pending_check_exit": 2,
+      "pending_run_exit": 2,
+      "isolated_guard": true,
+      "installed": false,
+      "worker_started": false
+    },
+    {
+      "worker": "tracking",
+      "render_exit": 0,
+      "plist_lint_exit": 0,
+      "pending_check_exit": 2,
+      "pending_run_exit": 2,
+      "isolated_guard": true,
+      "installed": false,
+      "worker_started": false
+    }
+  ],
+  "source_sha256": {
+    "release-integration/scripts/night_worker_ops.py": "1e2da54f3bdbd24504374a0cb5b42c74dcd48030ece7a735eb18568b900a89ca",
+    "release-integration/tests/test_night_worker_ops.py": "3bcb461d7950a0d6c982dd144daf07afbd0edc2c94cfdfaa5ffa5ceebc6a0a9f"
+  },
+  "existing_intake_immutable_sources": 77,
+  "existing_intake_homepage_sources": 8,
+  "actual_job_install_start_migration": false,
+  "live_database_accessed": false,
+  "real_provider_calls": 0,
+  "running_test_site_changed": false,
+  "final_frozen_worker_cli_venv_validation_still_required": true,
+  "pending_runtime": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/night-prep/1792086348412807000"
+}

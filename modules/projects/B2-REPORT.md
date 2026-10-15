@@ -1,5 +1,7 @@
 # B2 本地交付记录
 
+> 历史首版：`f89c58e639ca9d844ebead5d019c29f0476d5314`。总管退回三项修订，本文件的155项及哈希记录保留为首版证据；当前修订结果见 [B2-REV1-REPORT.md](B2-REV1-REPORT.md)。以下“本地通过”不表示总管验收通过。
+
 本地功能与隔离验收通过：155 项 pytest（原71项 + 新84项），其中一项执行9项真实 B1/Next 入口 Node 子测试，不重复累加。B2 总体验收仍 pending；正式网站收件、真实 worker 联调、公网与生产未验收、未部署。最终完整 Git SHA 在交付消息和忽略的 `artifacts/final-receipt.json`，本报告随该提交保存。
 
 ## 来源与范围
@@ -58,9 +60,9 @@ cd modules/projects/candidate
 .venv/bin/python -m pytest -q tests --basetemp=/private/tmp/ikun-b2-full-regression --junitxml=../artifacts/pytest.xml
 ```
 
-Node24.22.0、Next16.4.1完整生产模式串行构建通过；contracts/runtime/UI/Auth在Next之前完成。构建源集合 SHA256：`e227926ddf3af6ae575ffaab92dcdde5a52d5b1e9880782aa4775ac0644a11b1`。48个本模块代码/测试/SQL输入哈希见 [build-inputs.json](integration/evidence/build-inputs.json)；另核对26个 B0/Auth/UI 原始源码文件与固定 Git 对象字节相同，见 [frozen-inputs.json](integration/evidence/frozen-inputs.json)。测试源码与构建源码未漂移，最终提交后再以实际提交 SHA 执行新版接线回归并写 final-receipt。
+Node24.22.0、Next16.4.1完整生产模式串行构建通过；contracts/runtime/UI/Auth在Next之前完成。构建源集合 SHA256：`e227926ddf3af6ae575ffaab92dcdde5a52d5b1e9880782aa4775ac0644a11b1`。48个本模块代码/测试/SQL输入哈希见 [build-inputs.json](integration/evidence/review-f89c58e/build-inputs.json)；另核对26个 B0/Auth/UI 原始源码文件与固定 Git 对象字节相同，见 [frozen-inputs.json](integration/evidence/frozen-inputs.json)。测试源码与构建源码未漂移，最终提交后再以实际提交 SHA 执行新版接线回归并写 final-receipt。
 
-UI 补丁 SHA256：`d008da704e87f48d9c39f2db9c33eacb97bbf5fa8370f6444e77453902bf59f3`。仅两个UI文件的 server 模式输入/回调/分页接线，补丁留在 Projects 自有目录；原定稿不变，没有改CSS/文案/导航。截图：[1440](integration/evidence/homepage-1440.png)、[390](integration/evidence/homepage-390.png)。图片使用合成数据，无真实账号/项目信息；横向表格在自身容器滚动，文档无横向溢出。计数/截图哈希见 [test-receipt.json](integration/evidence/test-receipt.json)。
+UI 补丁 SHA256：`d008da704e87f48d9c39f2db9c33eacb97bbf5fa8370f6444e77453902bf59f3`。仅两个UI文件的 server 模式输入/回调/分页接线，补丁留在 Projects 自有目录；原定稿不变，没有改CSS/文案/导航。截图：[1440](integration/evidence/review-f89c58e/homepage-1440.png)、[390](integration/evidence/review-f89c58e/homepage-390.png)。图片使用合成数据，无真实账号/项目信息；横向表格在自身容器滚动，文档无横向溢出。计数/截图哈希见 [test-receipt.json](integration/evidence/review-f89c58e/test-receipt.json)。
 
 早期失败记录保留在隔离 /private/tmp/ikun-b2-* 测试目录，没有改写为成功：修正测试选择器；修复空 DELETE 流误报、异步集合旧 revision 覆盖与弹窗翻页竞态；修复 Uvicorn 0.54 SIGTERM 重放跳过 socket 清理。最终以上完整回归通过。唯一警告为 Starlette 对 httpx TestClient 的弃用提示，不升级既有锁定依赖。
 

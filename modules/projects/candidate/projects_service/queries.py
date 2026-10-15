@@ -147,7 +147,7 @@ def milestone_page(con,base,day,window):
     args=[SCOPE,day.isoformat()];where="p.tenant_id=? AND p.home_membership='active' AND p.rating IN ('S','A','B') AND m.date>=?"
     if str(window)!='all':where+=' AND m.date<=?';args.append((day+timedelta(days=int(window))).isoformat())
     if options['rating'] is not None:where+=' AND p.rating=?';args.append(options['rating'])
-    if base.get('cursor'):
+    if 'cursor' in base:
         c=_decode(base['cursor'],secret)
         if not isinstance(c,dict) or c.get('query')!=binding or not isinstance(c.get('after'),list) or len(c['after'])!=3:raise DomainError(422,'VALIDATION_ERROR','事件游标不匹配')
         d,h,p=c['after'];where+=" AND (m.date>? OR (m.date=? AND (COALESCE(m.hour,'99')>? OR (COALESCE(m.hour,'99')=? AND p.id>?))))";args.extend([d,d,h,h,p])

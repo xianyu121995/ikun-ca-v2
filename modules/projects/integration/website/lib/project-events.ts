@@ -20,7 +20,7 @@ export async function projectEvents(request:Request){
             const response=await ipc({operation:'changes',principal,request_id:randomUUID(),query:{after}},abort.signal);
             if(!response.ok){stop();return;}
             const result=await response.json();
-            for(const item of result.data.items){if(stopped)return;after=String(item.sequence);controller.enqueue(encoder.encode(`id: ${after}\nevent: project.updated\ndata: ${JSON.stringify(item.data)}\n\n`));}
+            for(const item of result.data.items){if(stopped)return;after=String(item.sequence);controller.enqueue(encoder.encode(`id: ${after}\nevent: project.updated\ndata: ${JSON.stringify({data:item.data,request_id:id})}\n\n`));}
             if(Date.now()-heartbeat>=15000){heartbeat=Date.now();controller.enqueue(encoder.encode(': heartbeat\n\n'));}
           }catch{stop();return;}
           if(!stopped)timer=setTimeout(poll,500);

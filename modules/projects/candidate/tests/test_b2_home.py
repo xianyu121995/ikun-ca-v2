@@ -116,6 +116,29 @@ def test_event_sort_known_hours_unknown_last_both_directions(domain):
         assert [p['milestone']['hour'] for p in rows]==expected
         assert rows[-1]['milestone']['date'] is None
 
+@pytest.mark.parametrize('cursor',['',' ','\t','not-a-signed-cursor'])
+def test_milestone_rejects_explicit_invalid_cursor(domain,cursor):
+    with pytest.raises(DomainError) as exc:call(domain,'milestones',query={'cursor':cursor})
+    assert exc.value.status==422 and exc.value.code=='VALIDATION_ERROR'
+
+def test_milestone_cursor_pagination_and_query_binding(domain):
+    today=datetime.now(ZoneInfo('Asia/Shanghai')).date()
+    expected=[]
+    for i in range(5):
+        p=home_create(domain,milestone={'date':(today+timedelta(days=i)).isoformat(),'hour':'00','title':'event','status':'confirmed'},rating='A')
+        expected.append(p['project']['project_id'])
+    query={'window_days':'7','rating':'A','limit':2}
+    page=call(domain,'milestones',query=query)[1];cursor=page['next_cursor'];seen=[]
+    assert cursor
+    for changed in ({'window_days':'30'},{'rating':'S'},{'limit':3}):
+        with pytest.raises(DomainError) as exc:call(domain,'milestones',query={**query,'cursor':cursor,**changed})
+        assert exc.value.status==422 and exc.value.code=='VALIDATION_ERROR'
+    while True:
+        seen.extend(item['project']['project_id'] for item in page['items'])
+        if not page['next_cursor']:break
+        page=call(domain,'milestones',query={**query,'cursor':page['next_cursor']})[1]
+    assert seen==expected and len(set(seen))==5
+
 def test_completion_concurrency_and_batch_missing_revision(domain):
     import concurrent.futures
     p=create(domain);target=p['project_id']

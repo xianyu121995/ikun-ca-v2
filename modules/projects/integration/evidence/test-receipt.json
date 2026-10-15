@@ -1,23 +1,44 @@
 {
   "status": "passed",
-  "pytest_total": 155,
+  "reviewed_commit": "f89c58e639ca9d844ebead5d019c29f0476d5314",
+  "review_findings": [
+    "B2-REV-001",
+    "B2-REV-002",
+    "B2-REV-003"
+  ],
+  "pytest_total": 162,
   "failures": 0,
   "errors": 0,
   "groups": {
-    "tests.test_b2_browser": 9,
+    "tests.test_b2_browser": 11,
     "tests.test_b2_domain": 54,
-    "tests.test_b2_home": 18,
+    "tests.test_b2_home": 23,
     "tests.test_b2_lifecycle": 3,
     "tests.test_browser": 8,
     "tests.test_projects": 63
   },
-  "nested_node_tests": 9,
+  "nested_node_tests": 10,
   "nested_node_tests_included_in_pytest_wrapper": true,
   "production": false,
   "real_workers": false,
-  "command": ".venv/bin/python -m pytest -q tests --basetemp=/private/tmp/ikun-b2-full-regression --junitxml=../artifacts/pytest.xml",
+  "command": ".venv/bin/python -m pytest -q tests --basetemp=/private/tmp/ikun-b2-rev1-verified --junitxml=../artifacts/pytest-rev1.xml",
+  "junit_sha256": "93161ccb89032a81cd5ecacd092902d75047437ec765c3cdaa85d5fbb9eefb9a",
   "screenshots": {
-    "homepage-1440.png": "71741bf36659b1ca60a49b56523029099c3923c21b8783ec35e005de96faf493",
-    "homepage-390.png": "35ca355012315a4f25a49adfb3418a2237546360204e3c2c6a78d4f4fb0b8b09"
-  }
+    "homepage-1440.png": "9808244f22a1b39abfd753d52c7c702ba365216a4d7e541ace84c601310aa885",
+    "homepage-390.png": "fd9c52aafa253bfbb38923fc1498f410beed72a77a5290f261a55e5ae5360cdd"
+  },
+  "earlier_attempts": [
+    {
+      "passed": 161,
+      "failed": 1,
+      "reason": "New page test read stale rows before async response; now awaits target project ID",
+      "junit": "modules/projects/artifacts/pytest-rev1-initial.xml"
+    },
+    {
+      "passed": 161,
+      "failed": 1,
+      "reason": "Existing completion test selected rating strong rather than project-name strong; selector corrected",
+      "junit": "modules/projects/artifacts/pytest-rev1-second.xml"
+    }
+  ]
 }

@@ -66,6 +66,9 @@ def test_real_http_permissions_and_projection(website):
         assert client.get('/api/v1/projects?collection=other').status_code==422
         assert client.get('/api/v1/projects?tenant_id=foreign').status_code==403
         assert client.get('/api/v1/projects?view=unknown').status_code==422
+        invalid=client.get('/api/v1/projects/milestones?cursor=')
+        assert invalid.status_code==422 and invalid.json()['error']['code']=='VALIDATION_ERROR'
+        assert invalid.json()['request_id']==invalid.headers['x-request-id']
         assert client.get('/api/v1/auth/me').json()['data']['capabilities']['can_manage_users'] is False
         assert client.post('/internal/v1/ingest/hunter',json={}).status_code==401
         data=event();headers={'Authorization':'Bearer '+website['env']['PROJECTS_INGEST_HUNTER_TOKEN']}
@@ -113,9 +116,9 @@ def test_real_homepage_server_pages_editor_and_visual(website,width):
         page.get_by_role('button',name='已完成记录 (13)',exact=True).click()
         # The newly completed record may be on any stable cursor page; find it using real pages.
         while not page.locator('.hpv2-record-row').filter(has_text=f'浏览器新增{width}').count():
-            previous=page.locator('.hpv2-record-row strong').first.inner_text()
+            previous=page.locator('.hpv2-record-row > div > strong').first.inner_text()
             page.get_by_label('下一页记录',exact=True).click()
-            expect(page.locator('.hpv2-record-row strong').first).not_to_have_text(previous)
+            expect(page.locator('.hpv2-record-row > div > strong').first).not_to_have_text(previous)
         page.locator('.hpv2-record-row').filter(has_text=f'浏览器新增{width}').get_by_role('button',name='恢复跟踪',exact=True).click()
         expect(page.get_by_role('dialog')).to_have_attribute('aria-busy','false')
         page.get_by_role('dialog').get_by_role('button',name='关闭弹窗',exact=True).click();expect(page.get_by_role('dialog')).to_have_count(0);expect(page.locator('.hpv2-projects button[data-project-id]').filter(has_text=f'浏览器新增{width}')).to_be_visible()
@@ -125,6 +128,38 @@ def test_real_homepage_server_pages_editor_and_visual(website,width):
         stored=call(website['domain'],'get',target=project_id)[1]
         assert stored['home_membership']=='removed' and stored['progress_stage']=='researching' and stored['notes']=='浏览器编辑持久化'
         assert not errors
+        browser.close()
+
+@pytest.mark.parametrize('width',[1440,390])
+def test_browser_numbered_pages_require_known_cursor_and_allow_return(website,width):
+    with sync_playwright() as p:
+        candidates=sorted(Path.home().glob('Library/Caches/ms-playwright/chromium-*/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'))
+        browser=p.chromium.launch(executable_path=str(candidates[-1]),headless=True)
+        page=browser.new_page(viewport={'width':width,'height':1000})
+        page.goto(website['origin']+'/login');page.locator('input[name=username]').fill(website['accounts']['admin']['username']);page.locator('input[name=password]').fill(website['accounts']['admin']['password']);page.get_by_role('button',name='登录',exact=True).click()
+        expect(page.locator('.hpv2-table-footer')).to_contain_text('共 113 条')
+        third=page.get_by_label('第 3 页',exact=True);expect(third).to_be_disabled()
+        # Independent HTTP oracle: compare rendered IDs with each real cursor page.
+        query={'view':'home-v1','collection':'tracked','limit':'9','sort':'discovered','direction':'desc'}
+        first=page.request.get(website['origin']+'/api/v1/projects',params=query).json()['data']
+        second=page.request.get(website['origin']+'/api/v1/projects',params={**query,'cursor':first['next_cursor']}).json()['data']
+        third_page=page.request.get(website['origin']+'/api/v1/projects',params={**query,'cursor':second['next_cursor']}).json()['data']
+        rows=page.locator('.hpv2-projects button[data-project-id]')
+        def assert_rows(expected):
+            expect(rows).to_have_count(9)
+            expect(rows.first).to_have_attribute('data-project-id',expected['items'][0]['project']['project_id'])
+            assert rows.evaluate_all('(nodes)=>nodes.map(node=>node.dataset.projectId)')==[item['project']['project_id'] for item in expected['items']]
+        assert_rows(first)
+        requests=[];page.on('request',lambda request:requests.append(request.url) if '/api/v1/projects?' in request.url else None)
+        page.get_by_label('第 2 页',exact=True).click();expect(page.locator('.hpv2-table-footer')).to_contain_text('显示 10–18 条');expect(third).to_be_enabled();assert_rows(second)
+        third.click();expect(page.locator('.hpv2-table-footer')).to_contain_text('显示 19–27 条');expect(page.get_by_label('下一页',exact=True)).to_be_enabled();assert_rows(third_page)
+        page.get_by_label('全选当前页',exact=True).check();expect(page.get_by_role('button',name='移除已选 (9)',exact=True)).to_be_enabled()
+        page.get_by_label('第 1 页',exact=True).click();expect(page.locator('.hpv2-table-footer')).to_contain_text('显示 1–9 条');expect(third).to_be_enabled();assert_rows(first)
+        expect(page.get_by_label('全选当前页',exact=True)).not_to_be_checked()
+        page.get_by_label('全选当前页',exact=True).check();third.click();expect(page.locator('.hpv2-table-footer')).to_contain_text('显示 19–27 条');expect(page.get_by_label('下一页',exact=True)).to_be_enabled();assert_rows(third_page)
+        expect(page.get_by_label('全选当前页',exact=True)).not_to_be_checked()
+        assert len(requests)==4 # Exactly one server page per navigation; no multi-page prefetch/merge.
+        assert not page.get_by_label('第 5 页',exact=True).is_enabled()
         browser.close()
 
 @pytest.mark.parametrize('failure',['TERM','KILL','IPC_KILL'])

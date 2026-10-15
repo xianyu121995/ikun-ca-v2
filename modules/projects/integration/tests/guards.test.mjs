@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {createHash,randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
-import {createServer} from 'node:http';
+import http,{createServer} from 'node:http';
 import {dirname} from 'node:path';
 globalThis.AsyncLocalStorage=AsyncLocalStorage;
 const preview=new URL('../../.preview/',import.meta.url);
@@ -52,6 +52,42 @@ test('Actual page guard and Server Action bypassing Proxy validate B1 identity',
   await assert.rejects(context(req('/','POST',user),()=>action(user.csrf,randomUUID(),fields)));
   await assert.rejects(context(req('/','POST',admin),()=>action('wrong',randomUUID(),fields)));
   const result=await context(req('/','POST',admin),()=>action(admin.csrf,randomUUID(),{...fields,name:'Action entry'}));assert.equal(result.status,201);
+});
+test('Actual Next SSE data envelope, safe DTO, Last-Event-ID replay and upstream cancellation',async()=>{
+  const {GET}=await import(new URL('apps/website/app/api/v1/events/stream/route.ts',preview));
+  const admin=await session('admin'),user=await session('user');
+  const request=await quietRequest(user);request.headers.set('x-request-id','B2_REV_001_first');
+  async function create(name){const response=await route.POST(req('/api/v1/projects','POST',admin,{...fields,name}));assert.equal(response.status,201);return (await response.json()).data;}
+  async function frame(reader){
+    const decoder=new TextDecoder();let buffer='';const deadline=Date.now()+3000;
+    while(Date.now()<deadline){
+      let timer;const part=await Promise.race([reader.read(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('SSE_DATA_TIMEOUT')),Math.max(1,deadline-Date.now()));})]).finally(()=>clearTimeout(timer));
+      assert.equal(part.done,false);buffer+=decoder.decode(part.value,{stream:true});
+      let end;while((end=buffer.indexOf('\n\n'))>=0){const block=buffer.slice(0,end);buffer=buffer.slice(end+2);if(!block.includes('data: '))continue;
+        const fields=Object.fromEntries(block.split('\n').map(line=>{const at=line.indexOf(': ');return [line.slice(0,at),line.slice(at+2)];}));
+        return {id:fields.id,event:fields.event,envelope:JSON.parse(fields.data)};
+      }
+    }
+    throw Error('SSE_DATA_TIMEOUT');
+  }
+  function check(value,response,expected){
+    assert.match(value.id,/^\d+$/);assert.equal(value.event,'project.updated');
+    assert.deepEqual(Object.keys(value.envelope).sort(),['data','request_id']);
+    assert.match(value.envelope.request_id,/^[A-Za-z0-9_-]{1,64}$/);assert.equal(value.envelope.request_id,response.headers.get('x-request-id'));
+    assert.deepEqual(value.envelope.data,expected);
+    assert.deepEqual(Object.keys(value.envelope.data).sort(),['project_id','name','rating','description','website_url','notes','category','progress_stage','progress_percent','token_date','token_date_status','home_membership','discovered_at','revision','created_at','updated_at'].sort());
+  }
+  const original=http.request;let calls=0;const readers=[];
+  http.request=function(...args){if(args[0]?.socketPath===manager.identity.socketPath)calls++;return Reflect.apply(original,this,args);};
+  try{
+    const first=await create('SSE envelope first'),response=await GET(request);assert.equal(response.status,200);
+    const reader=response.body.getReader();readers.push(reader);const one=await frame(reader);check(one,response,first);assert.equal(one.envelope.request_id,'B2_REV_001_first');
+    await reader.cancel();const stopped=calls;await new Promise(resolve=>setTimeout(resolve,650));assert.equal(calls,stopped,'cancelled stream must stop upstream IPC polling');
+    const second=await create('SSE envelope replay');const replay=req('/api/v1/events/stream','GET',user);replay.headers.set('last-event-id',one.id);
+    const resumed=await GET(replay);assert.equal(resumed.status,200);const replayReader=resumed.body.getReader();readers.push(replayReader);
+    const two=await frame(replayReader);check(two,resumed,second);assert.ok(Number(two.id)>Number(one.id));assert.notEqual(two.envelope.data.project_id,one.envelope.data.project_id);
+    await replayReader.cancel();const replayStopped=calls;await new Promise(resolve=>setTimeout(resolve,650));assert.equal(calls,replayStopped);
+  }finally{await Promise.all(readers.map(reader=>reader.cancel().catch(()=>{})));http.request=original;}
 });
 test('Actual SSE closes a quiet stream after logout and rejects the revoked API cookie',async()=>{
   const user=await session('user');

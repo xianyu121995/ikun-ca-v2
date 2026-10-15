@@ -79,12 +79,19 @@
       "service_direction_credential": "TRACKING_API_TOKEN_ENV_ONLY",
       "service_token_file": "",
       "guard_delta": {
-        "state": "PENDING_CHIEF_REVIEW",
+        "state": "ACCEPTED_PREPARATION_ONLY",
         "evidence": "release-integration/night/tracking-guard-evidence.json",
         "source_sha256": "4ac7144929559e2169684e803319cd181fab4dc00cfb5da0885635a031fd9fd0",
         "tests": 38,
         "original_tests_preserved": 31,
-        "runtime_installed": false
+        "runtime_installed": false,
+        "source_commit": "70f6c2bd4f72222432451c1bb05b1851d2c4074d",
+        "control_commit": "fa32db26ced86cc4338f1b5ea542e4518985b6ae",
+        "review_path": "docs/progress/WORKER-GUARD-REVIEW.md",
+        "review_sha256": "3608396e0c46ea86249acd625d7ddd96627a3f3f1211c9181c138ce85af19c43",
+        "chief_independent_same_suite_passed": 38,
+        "distinct_tests": 38,
+        "core_freeze_and_explicit_migration_required": true
       }
     }
   },

@@ -1,5 +1,5 @@
 {
-  "state": "PASS_TRACKING_GUARD_DELTA_PENDING_CHIEF_REVIEW",
+  "state": "ACCEPTED_TRACKING_GUARD_PREPARATION_ONLY",
   "baseline_guard_commit": "69878e12aa3224e83da471859cca0ef1a4594a25",
   "unit_tests": 38,
   "unit_failed": 0,
@@ -21,5 +21,14 @@
   "live_database_accessed": false,
   "installed_or_deployed": false,
   "running_Hunter_launcher_changed": false,
-  "audio_emitted": false
+  "audio_emitted": false,
+  "source_commit": "70f6c2bd4f72222432451c1bb05b1851d2c4074d",
+  "review_commit": "fa32db26ced86cc4338f1b5ea542e4518985b6ae",
+  "review_path": "docs/progress/WORKER-GUARD-REVIEW.md",
+  "review_sha256": "3608396e0c46ea86249acd625d7ddd96627a3f3f1211c9181c138ce85af19c43",
+  "chief_independent_same_suite_passed": 38,
+  "distinct_tests": 38,
+  "chief_full_suite_tool_chunk": "6f45d6",
+  "targeted_9_retest_not_added": true,
+  "core_freeze_and_explicit_migration_still_required": true
 }

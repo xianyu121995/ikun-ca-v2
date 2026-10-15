@@ -28,7 +28,7 @@
 1. 正式计划固定精确冻结Node `dist/main.js`，其实际启动绝对`python/entry.py serve`；不使用无config的B0 fallback，也不使用预备工具中保留的旧直接Python模块分支。`IKUN_TRACKING_CONFIG`必须非空绝对路径且位于本root/config；实际Python cwd是配置父目录，launchd cwd与该目录均无.env。最终compiled hash、entry.py源hash、独立Python及owner预检仍必须与冻结包核对。
 2. 固定`TRACKING_API_TOKEN`私密env方案；`service_token_file`、provider `token_file`、`admin_token_file`、`read_token_file`与旧`auth_session_url`均保持空。文档的file示例只是可选载体，不因此添加秘密文件、token机制或放宽守卫。
 
-已按总管允许的窄范围补守卫：接受回执新增必需`tracking_config_sha256`；Node Tracking runtime清单必须含`services/tracking-worker/python/entry.py`并逐字节校验；配置父目录加入既有dotenv拒绝检查。原31项保留并新增7项，38/38通过，见`tracking-guard-evidence.json`。此增量仅供后续Tracking收件审查，尚未部署；运行中的Hunter仍使用原75b release/原计划内的守卫副本。
+已按总管允许的窄范围补守卫：接受回执新增必需`tracking_config_sha256`；Node Tracking runtime清单必须含`services/tracking-worker/python/entry.py`并逐字节校验；配置父目录加入既有dotenv拒绝检查。源码`70f6c2bd4f72222432451c1bb05b1851d2c4074d`已获根`fa32db26ced86cc4338f1b5ea542e4518985b6ae`准备工具审查通过。原31项保留并新增7项，owner/总管分别复跑同一套38/38，定向9项不另加，见`tracking-guard-evidence.json`。B3核心冻结、显式迁移及最终release/Python预检仍必需；尚未部署，运行中的Hunter仍使用原75b release/原计划内的守卫副本。
 
 部署receipt必须分别记录：网站新candidate、Tracking新candidate、保持原位的Hunter release75b及Hunter域源10fe。不能因网页升级就把Hunter作业记成新release。对现存Auth/Projects/Hunter做在线备份，Tracking意外已有库时先停准入核归属，绝不能覆盖或默认为可重建。
 

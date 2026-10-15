@@ -1,4 +1,4 @@
-"""One wrapper for nine Node query and private UDS budget contract cases."""
+"""One wrapper for twelve Node query, cancellation and private UDS budget cases."""
 
 import subprocess
 import time
@@ -16,6 +16,7 @@ def test_feed_query_node_contract():
             "--test",
             str(module / "integration/tests/feed-query.test.mjs"),
         ],
+        check=False,
         cwd=module,
         capture_output=True,
         text=True,

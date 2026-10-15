@@ -78,3 +78,36 @@ test('A streamed Worker error body remains readable after attempt cancellation',
  try{const response=await publishedFeed(new Request(root),{user_id:'usr_stream',tenant_id:'ikun-main',role:'user'},'req_stream',async(path,id,options)=>fetch('http://127.0.0.1:'+server.address().port,{signal:options.signal}));assert.equal(response.status,429);assert.equal((await response.json()).error.code,'RATE_LIMITED');assert.equal(response.headers.get('retry-after'),'1');}
  finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 });
+
+function cursorRequest(){
+ const input=feedQuery(new URL(root));
+ const cursor=Buffer.from(JSON.stringify({v:1,p:'published-v1',q:input.hash,r:1,c:null})).toString('base64url')+'.fixture';
+ return new Request(root+'&cursor='+cursor);
+}
+
+test('An oversized cursor error body cancels the unfinished upstream stream and signal',async()=>{
+ let upstreamSignal,bodyCancelled=false;
+ const body=new ReadableStream({start(controller){controller.enqueue(new Uint8Array(65537));},cancel(){bodyCancelled=true;}});
+ const response=await publishedFeed(cursorRequest(),{user_id:'usr_cursor',tenant_id:'ikun-main',role:'user'},'req_cursor',async(path,id,options)=>{assert.equal(path,'feed/pages');upstreamSignal=options.signal;return new Response(body,{status:503});});
+ assert.equal(response.status,503);assert.equal((await response.json()).data,undefined);
+ assert.equal(bodyCancelled,true);assert.equal(upstreamSignal.aborted,true);assert.equal(body.locked,false);
+});
+
+test('An early cursor body read failure aborts the upstream signal and releases its reader',async()=>{
+ let upstreamSignal;
+ const body=new ReadableStream({start(controller){controller.error(Error('EARLY_READ_FAILURE'));}});
+ const response=await publishedFeed(cursorRequest(),{user_id:'usr_cursor',tenant_id:'ikun-main',role:'user'},'req_cursor',async(path,id,options)=>{assert.equal(path,'feed/pages');upstreamSignal=options.signal;return new Response(body,{status:503});});
+ assert.equal(response.status,503);assert.equal((await response.json()).data,undefined);
+ assert.equal(upstreamSignal.aborted,true);assert.equal(body.locked,false);
+});
+
+test('A delayed cursor 429 body stays readable after the whole query is cancelled',async()=>{
+ const payload=JSON.stringify({error:{code:'RATE_LIMITED',message:'capacity',retryable:true},request_id:'req_cursor'});
+ let upstreamSignal;
+ const server=createServer((request,response)=>{response.writeHead(429,{'content-type':'application/json','retry-after':'1'});response.flushHeaders();setTimeout(()=>{if(!response.destroyed)response.end(payload);},50);});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{
+  const response=await publishedFeed(cursorRequest(),{user_id:'usr_cursor',tenant_id:'ikun-main',role:'user'},'req_cursor',async(path,id,options)=>{assert.equal(path,'feed/pages');upstreamSignal=options.signal;return fetch('http://127.0.0.1:'+server.address().port,{signal:options.signal});});
+  assert.equal(response.status,429);assert.equal(response.headers.get('retry-after'),'1');assert.equal((await response.json()).error.code,'RATE_LIMITED');assert.equal(upstreamSignal.aborted,true);
+ }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});

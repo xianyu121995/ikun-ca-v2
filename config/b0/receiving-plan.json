@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "status": "reviewed_not_executed",
+  "execution_authorized": false,
+  "basis_candidate": "29326c7c31bedf411cff5b825ec218c00b3d28ed",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "source_pins": {
+    "website": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "homepage-ui": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e",
+    "hunter-ui": "08065d700239b20fb4c887bbd0c85321904687f8",
+    "tracking-ui": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+    "auth": "aa3cf65ce5c24cc293e0daec279659d2cc080c5f",
+    "projects": "7f8a4610b4dcdda1f0785c2fc3c73a18ebdeb35f",
+    "tracking-worker": "9e2835cafc95cb15dc4b8178abacf0c604018536",
+    "hunter-worker": "bd69bbd0bba6fdc4f7c66191a839612dd53989d6",
+    "integration": "c4845f54feb15623b20720ce83340f61c110b372"
+  },
+  "shared_ui": {
+    "commit": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "visual_commit": "a648e3de0ef82f15c469867fc3dba6143044ecf6",
+    "prefix": "packages/ui/",
+    "receiver": "apps/website",
+    "dependency": "workspace:*",
+    "root_lock_candidate": "config/b0/pnpm-ui-lock.yaml",
+    "one_app_shell": true,
+    "normalization": "retain approved review normalization; C0 packaging requires separate authorization"
+  },
+  "receiver_order": [
+    "ui-package",
+    "auth",
+    "projects",
+    "tracking-worker",
+    "hunter-worker"
+  ],
+  "per_domain_store_policy": {
+    "foundation": {
+      "maximum_version": 1,
+      "checksum_version": 1,
+      "authority": "packages/runtime/src/stores.ts"
+    },
+    "auth_business_v2": {
+      "enabled": false,
+      "version_admission": "only in explicit B1 preview/receiving patch after owner migration review; no global version bump",
+      "target_registry": "_migration_checksums",
+      "legacy_registry": "auth_migration_checksums",
+      "preserve_legacy_rows": true,
+      "owner": "auth"
+    },
+    "projects_runtime": {
+      "enabled": false,
+      "owner": "projects",
+      "transport": "website-supervised UDS",
+      "no_independent_job": true
+    },
+    "tracking_business_v2": {
+      "enabled": false,
+      "owner": "tracking-worker",
+      "legacy_checksum_column_compatible": true,
+      "new_checksums_registry": "_migration_checksums"
+    }
+  },
+  "receiving_requirements": [
+    "Revalidate each final owner commit, allowed diff, source/checksum and tests",
+    "Take explicit authorization before applying source/lock/routing changes to any receiving branch",
+    "Keep original branches and snapshots; no amend/reset or duplicate business engines",
+    "Apply each physical database migration with one domain migrator; readiness never migrates",
+    "Bind shared UI and Next dependency to the same immutable source; keep one shell",
+    "Keep business APIs disabled until auth and the owning domain pass their stage gates"
+  ],
+  "protected_main_files_sha256": {
+    "package.json": "130543fbc35536c934963bf44859288e98690306357d68b56271b217fa6b4d1a",
+    "pnpm-lock.yaml": "b6d8c15890754ada75986e3edd5c0be3db182e43654175e5bf58450eb8d5f106",
+    "pnpm-workspace.yaml": "1fab763a84a5a5b0d0898a7e26c1e58f0efd48da28bf000e293e5b3dde6a3b04",
+    "apps/website/package.json": "41ce445fc1d39fad083151498799a91e23081198e88fe3dfb2254043abe153aa",
+    "apps/website/app/layout.tsx": "fe57c16d89a90c5a049e235faca2f9661be2bf7fd7fe7dfe11b4fe6da71d04a2",
+    "apps/website/app/globals.css": "ef45c4c2eb8ae3c6bbd2299bba5667dcef73bfa1049f5a4226d02aabdfb796c3",
+    "apps/website/app/page.tsx": "8b0524ed2832f33271822c0918376cb40b811be0645747f3dd2f6ec4c5cccd82"
+  },
+  "merge_authorized": false,
+  "production_authorized": false
+}

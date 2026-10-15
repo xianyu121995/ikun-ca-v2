@@ -1,3 +1,5 @@
+> 第二阶段权威规范：docs/phase2/README.md；本轮所有合并/推送/生产动作暂停。
+
 # 单仓库、分支与私有 GitHub 规划
 
 主仓库为 `ikun.ca开发/ikun-ca-v2`，是新建独立 `.git`，与上层空仓库和旧版仓库无共享历史。开发 Worktree 在同级 `ikun-ca-v2-worktrees`，只有一个 common Git directory，不是三个子仓库。
@@ -16,9 +18,11 @@
 | codex/tracking-ui | ikun-ca-v2-worktrees/tracking-ui |
 | codex/integration | ikun-ca-v2-worktrees/integration |
 
-初始架构提交在 main，随后创建 develop 和独立窗口 Worktree。分支只能由一个 Worktree checkout。后续专题分支使用 `codex/<module>-<task>`。先提交基础架构再交接，窗口业务尚未开发。
+初始架构提交 f89d8f5；9个已有v2候选现已各自在原Worktree冻结，完整SHA见 docs/phase2/source-freeze.json。分支只能由一个Worktree checkout。
 
-合并步骤：窗口自测、提交、交付 SHA → 总管审阅范围/接口/隐私/兼容 → 合并 codex/develop → 串行 build/typecheck/test/smoke → 验收后 main/tag。不得 force push 主分支；不要删除/重置其他窗口 Worktree。冲突只由相关 owner 协调；main 更新后窗口自行合并或 rebase 自己的未共享工作。
+当前第二阶段禁止 merge、cherry-pick、rebase、reset/amend 冻结提交、push与部署。总管此次仅在main提交统一规范，不合并业务候选；codex/develop保持原基础提交。各窗口只读主仓库规范或 git show phase2-spec-v1.0.0:docs/phase2/README.md，不擅自把规范提交整合到自己的分支。
+
+未来获授权的集成才执行：收件SHA/验收/文件白名单 → 独立候选组合 → 全部门禁 → 再审发布。当前 stages/held 不构成这项授权。不得force push、删除/重置其他窗口Worktree。旧 homepage-projects 未出生分支保留，不作为合并源。
 
 ## 私有远程（规划，未创建、未推送）
 

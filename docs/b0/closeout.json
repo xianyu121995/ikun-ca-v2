@@ -1,0 +1,100 @@
+{
+  "phase": "B0",
+  "checked_at": "2026-10-15T10:18:56.948Z",
+  "node": "v24.22.0",
+  "source_hashes": {
+    "packages/runtime/src/managed.ts": "4723a5de9aeb1db4dae49a2678708b2f37a381d50b67200dfd43c70848e5221c",
+    "packages/runtime/src/process-entry.ts": "7f4940d879215bee6edd4bf855f2d56b30f27032b1d816c9042ba54fb061de94",
+    "packages/runtime/src/stores.ts": "9e2cde245c9c7da002a212cf2c6208da4aca0a9fcc2fc27f4e3a973a9d0a26de",
+    "apps/website/lib/stores.ts": "a879fab4d5453f6be5d442ae90d845c66f05498c03f53d0210e6a75410c0147d",
+    "apps/website/app/health/ready/route.ts": "4d08c2c12742b1d56135a7c30a8ab097297cf661fcabf7302ad855ad354b6183",
+    "scripts/service.mjs": "15c1deb375e98c3e4b3140727d6067762ffcf3606234ebdc891fad1096dd6ebe",
+    "scripts/init-stores.mjs": "1bcb9d285f228fcec99e91ab9558aeb8f630565c05626a38da1a638bd16aa469",
+    "scripts/verify-ui-workspace.mjs": "45838941924621687632afa9f33483da66d17d7f401ea8f1b07f512ada073b74"
+  },
+  "steps": [
+    {
+      "name": "build",
+      "passed": true,
+      "duration_ms": 12430,
+      "log_sha256": "66e9bf860708ec60ac3e1db1abe628cfc3e4053e62bbd52942e2f0c1535c7e74"
+    },
+    {
+      "name": "typecheck",
+      "passed": true,
+      "duration_ms": 3534,
+      "log_sha256": "e6c6d787553015cbaac7c2ac9c0fb9f6b513b7eb74c7676bbaed9f23d097826a"
+    },
+    {
+      "name": "tests",
+      "passed": true,
+      "duration_ms": 1383,
+      "log_sha256": "8e3ba10c5e6987034808e1f5bcf1e4e0730edb21072a2ab4b6118e424421ef5c",
+      "tests": 26,
+      "failed": 0
+    },
+    {
+      "name": "foundation-smoke",
+      "passed": true,
+      "duration_ms": 1160,
+      "log_sha256": "9282d77518d76813bf2df865d31269457adddfd264d694c0a7cd7c8d2d04b086"
+    },
+    {
+      "name": "ipc-smoke",
+      "passed": true,
+      "duration_ms": 637,
+      "log_sha256": "743dc487a511a07337d8208b7a79368aed650750b097024823d6c29aa81bcb69"
+    },
+    {
+      "name": "clean-ui-workspace",
+      "passed": true,
+      "duration_ms": 21463,
+      "log_sha256": "81e470983356182a1b9ebb0cc5c8f2a3fe2390588c2c0b6b4568e8472a140c44"
+    },
+    {
+      "name": "phase2-freeze",
+      "passed": true,
+      "duration_ms": 164,
+      "log_sha256": "3c359de149d63cd0742a675ed2d754f9fc9939268fdaf4f868b1a2e9e7f03a9e"
+    }
+  ],
+  "all_passed": true,
+  "business_tested": false,
+  "merge": false,
+  "production": false,
+  "workspace": {
+    "passed": true,
+    "ui_commit": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "clean_filesystem": true,
+    "frozen_install": true,
+    "offline": true,
+    "install_scripts": false,
+    "serial_build_order": [
+      "@ikun/contracts",
+      "@ikun/runtime",
+      "@ikun/ui",
+      "@ikun/hunter-worker",
+      "@ikun/tracking-worker",
+      "@ikun/website"
+    ],
+    "next_ui_consumption": true,
+    "ui_css_consumption": true,
+    "fixture_route_committed": false,
+    "lock_sha256": "0df973ec2369260cc60a75ce4f2380be37c3b600f51637f599f6f4237b1d2f8e",
+    "services_started": false,
+    "source_merge": false
+  },
+  "services": {
+    "passed": true,
+    "independent_services": 3,
+    "projects_runtime": "synthetic private IPC child",
+    "child_failure_readiness": 503,
+    "next_wrote_projects_database": false,
+    "unaffected_workers": [
+      "hunter",
+      "tracking"
+    ],
+    "real_business_connected": false,
+    "production_deployment": false
+  }
+}

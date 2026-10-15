@@ -1,0 +1,346 @@
+{
+  "checked_at": "2026-10-15T04:51:08.340Z",
+  "sources": [
+    {
+      "owner": "website",
+      "commit": "486294ac3255b08fdb13a307ee15f96c571020d9",
+      "clean": true,
+      "file_count": 33
+    },
+    {
+      "owner": "homepage-ui",
+      "commit": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e",
+      "clean": true,
+      "file_count": 96
+    },
+    {
+      "owner": "hunter-ui",
+      "commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "clean": true,
+      "file_count": 91
+    },
+    {
+      "owner": "tracking-ui",
+      "commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "clean": true,
+      "file_count": 44
+    }
+  ],
+  "input_hashes": {
+    "home/apps/website/components/homepage-ui/phase2-preview.tsx": "6ee02994fc5b50a959860c28712d3530b41257812a73e78de4a2ba7ef39e40da",
+    "hunter/apps/website/features/hunter-discovery/v3/App.tsx": "e9178e9eaf41496d25a65ac072a7b49299abb62ef05014a236c5b263b49bf1da",
+    "tracking/apps/website/features/tracking/tracking-workspace.tsx": "567124c9f6016f804bd346d8eed7fdd555874fdc110c7f697b16ea6cadce7d9e",
+    "hunter/apps/website/features/hunter-discovery/v3/v3.css": "cbbe81e3dc287e7273e51d4f5f51e9b1c28fede86b6a30606033a8a83d177589",
+    "hunter/apps/website/features/hunter-discovery/v3/model.ts": "cec638b4e8773daa783756228f735975a4a73bb95269006666b69a02c6562b82",
+    "home/apps/website/components/homepage-ui/reference-homepage.tsx": "5c057873e3b72711b8f4d54e87cb3e42879c3fc886b891184435a68919a2796c",
+    "home/apps/website/features/homepage/reference-fixtures.ts": "2457fdf23e6fcbdbdefaa0e18f438f9e7a41feb9e94b25f9b0f7046ed3934b4c",
+    "home/apps/website/features/homepage/view-model.ts": "93be738cb12415a693ce603021aafaa9246729feb8e92fd2372dd1d202361039",
+    "tracking/apps/website/features/tracking/final/tracking-page.module.css": "81f87ccd44f00e43f675321880a6e66d630db585d0d63f722390183ab00cf9a3",
+    "tracking/apps/website/features/tracking/final/tracking-page.tsx": "6353c3bf54b8c8acfe07e680e10502d7966e5247fe72f77c6c95a0ee9bd3c6a1",
+    "tracking/apps/website/features/tracking/final/tracking-demo.tsx": "ab738bc9e846f7676acc02fb2e6c5cd1dcb4e58fced5ea3635ca5c4ccfd6bf94",
+    "hunter/apps/website/features/hunter-discovery/v3/reference/seed.json": "a91dfbbd731a975d65ddcccc868dcbca269aa69cdf33d7697b358db28a82b164",
+    "home/apps/website/features/homepage/types.ts": "934363e6fefcd7d8c78c44e3912fdfdbf0ae736bd11bb3032d9dc46501478371",
+    "tracking/apps/website/features/tracking/final/model.ts": "5330cf135d6e55b56d128c8a8a84d647a7bc698797d76c5c258f535fb22c4029",
+    "tracking/apps/website/features/tracking/final/demo-data.ts": "82a2787a872947b18197c6a1314dffcd053bb061fa39fe09b1bd88cf1232c043",
+    "home/apps/website/components/homepage-ui/reference-homepage.css": "1e810366f1f93aebb06aff91cd5d52e76e58aa92cf97e2fd0fd2e751f86d76a2",
+    "home/apps/website/components/homepage-ui/shared-dialog.tsx": "1bf8ee3c6bacaa6cc436b176a93df6c5769aff29b9db123891203cb61f2deb2e",
+    "home/apps/website/components/homepage-ui/reference-editor.tsx": "ddc6b3d04c75084231f8ef45a93995077f168639dc2884ca3720c8e4a033a0dd",
+    "home/apps/website/features/homepage/reference-model.ts": "4f93b248a3d0d0c04bb754146c93505e076ac84698ab390e2f54e47519f8cba0"
+  },
+  "asset_hashes": {
+    "js": "ac4ef097524d2bc5648d112fe718d5a87707f5d335caa23cf026085ff77d67e8",
+    "css": "8f401306744ac258bad03b038cac1282ce4e1354b9026adefefd1e94d59db22c"
+  },
+  "http": [
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/hunter",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/tracking",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/projects",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/api/v1/projects",
+      "method": "POST",
+      "status": 405
+    }
+  ],
+  "layouts": [
+    {
+      "width": 1440,
+      "route": "/",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "route": "/hunter",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1440,
+      "route": "/tracking",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 1440,
+      "scroll": 1440
+    },
+    {
+      "width": 1920,
+      "route": "/",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 1920,
+      "scroll": 1920
+    },
+    {
+      "width": 1920,
+      "route": "/hunter",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 1920,
+      "scroll": 1920
+    },
+    {
+      "width": 1920,
+      "route": "/tracking",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 1920,
+      "scroll": 1920
+    },
+    {
+      "width": 2560,
+      "route": "/",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 2560,
+      "scroll": 2560
+    },
+    {
+      "width": 2560,
+      "route": "/hunter",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 2560,
+      "scroll": 2560
+    },
+    {
+      "width": 2560,
+      "route": "/tracking",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 2560,
+      "scroll": 2560
+    },
+    {
+      "width": 390,
+      "route": "/",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 390,
+      "scroll": 390
+    },
+    {
+      "width": 390,
+      "route": "/hunter",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 390,
+      "scroll": 390
+    },
+    {
+      "width": 390,
+      "route": "/tracking",
+      "sidebar": 1,
+      "main": 1,
+      "links": [
+        "/",
+        "/hunter",
+        "/tracking"
+      ],
+      "active": 1,
+      "client": 390,
+      "scroll": 390
+    }
+  ],
+  "styles": [
+    {
+      "route": "/",
+      "title": {
+        "font": "Inter, -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": "22px",
+        "color": "rgb(232, 238, 245)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "search": {
+        "font": "Inter, -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": "13px",
+        "color": "rgb(232, 238, 245)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "scoreA": {
+        "font": "SFMono-Regular, Consolas, \"Liberation Mono\", monospace",
+        "size": "12px",
+        "color": "rgb(146, 191, 255)",
+        "background": "rgb(24, 40, 59)"
+      },
+      "scoreB": {
+        "font": "SFMono-Regular, Consolas, \"Liberation Mono\", monospace",
+        "size": "12px",
+        "color": "rgb(199, 184, 255)",
+        "background": "rgb(40, 35, 55)"
+      }
+    },
+    {
+      "route": "/hunter",
+      "title": {
+        "font": "Inter, -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": "22px",
+        "color": "rgb(232, 238, 245)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "search": {
+        "font": "Inter, -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": "13px",
+        "color": "rgb(232, 238, 245)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "scoreA": {
+        "font": "SFMono-Regular, Consolas, \"Liberation Mono\", monospace",
+        "size": "12px",
+        "color": "rgb(146, 191, 255)",
+        "background": "rgb(24, 40, 59)"
+      },
+      "scoreB": {
+        "font": "SFMono-Regular, Consolas, \"Liberation Mono\", monospace",
+        "size": "12px",
+        "color": "rgb(199, 184, 255)",
+        "background": "rgb(40, 35, 55)"
+      }
+    },
+    {
+      "route": "/tracking",
+      "title": {
+        "font": "Inter, -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": "22px",
+        "color": "rgb(232, 238, 245)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "search": {
+        "font": "Inter, -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+        "size": "13px",
+        "color": "rgb(232, 238, 245)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      "scoreA": {
+        "font": "SFMono-Regular, Consolas, \"Liberation Mono\", monospace",
+        "size": "12px",
+        "color": "rgb(146, 191, 255)",
+        "background": "rgb(24, 40, 59)"
+      },
+      "scoreB": {
+        "font": "SFMono-Regular, Consolas, \"Liberation Mono\", monospace",
+        "size": "12px",
+        "color": "rgb(199, 184, 255)",
+        "background": "rgb(40, 35, 55)"
+      }
+    }
+  ],
+  "checks": [
+    "/: empty search and restore",
+    "/hunter: empty search and restore",
+    "/tracking: empty search and restore",
+    "single navigation: three routes, back/forward, direct refresh"
+  ],
+  "errors": [],
+  "forbidden_requests": [],
+  "ui_acceptance": "PASS",
+  "business_acceptance": false,
+  "merge_authorized": false,
+  "production_authorized": false
+}

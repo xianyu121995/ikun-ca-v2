@@ -1,0 +1,13 @@
+{
+  "phase": "B0",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "ui_commit": "486294ac3255b08fdb13a307ee15f96c571020d9",
+  "visual_commit": "a648e3de0ef82f15c469867fc3dba6143044ecf6",
+  "package_prefix": "packages/ui/",
+  "package_name": "@ikun/ui",
+  "website_dependency": "workspace:*",
+  "serial_build_order": ["@ikun/contracts", "@ikun/runtime", "@ikun/ui", "@ikun/hunter-worker", "@ikun/tracking-worker", "@ikun/website"],
+  "source_merge_authorized": false,
+  "business_enabled": false,
+  "production_authorized": false
+}

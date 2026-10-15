@@ -1,0 +1,86 @@
+{
+  "record_version": 2,
+  "phase2_spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "authorization": "User authorized completing and accepting B0 and committing Git; backend business remains frozen, no merge or deployment",
+  "UI0": {
+    "state": "accepted_frozen",
+    "sources": [
+      {
+        "owner": "website",
+        "commit": "486294ac3255b08fdb13a307ee15f96c571020d9",
+        "clean": true,
+        "file_count": 33
+      },
+      {
+        "owner": "homepage-ui",
+        "commit": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e",
+        "clean": true,
+        "file_count": 96
+      },
+      {
+        "owner": "hunter-ui",
+        "commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+        "clean": true,
+        "file_count": 91
+      },
+      {
+        "owner": "tracking-ui",
+        "commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+        "clean": true,
+        "file_count": 44
+      }
+    ]
+  },
+  "B0": {
+    "state": "accepted",
+    "owner": "chief",
+    "infrastructure_candidate": "accepted",
+    "business_acceptance": false,
+    "formal_source_receiving": "plan_reviewed_execution_held",
+    "acceptance_scope": "infrastructure_only",
+    "remaining_B0_blockers": [],
+    "acceptance_record": "docs/b0/closeout.json"
+  },
+  "backends": [
+    {
+      "owner": "auth",
+      "commit": "aa3cf65ce5c24cc293e0daec279659d2cc080c5f",
+      "status": "",
+      "release": "held"
+    },
+    {
+      "owner": "projects",
+      "commit": "7f8a4610b4dcdda1f0785c2fc3c73a18ebdeb35f",
+      "status": "",
+      "release": "held"
+    },
+    {
+      "owner": "tracking-worker",
+      "commit": "9e2835cafc95cb15dc4b8178abacf0c604018536",
+      "status": "",
+      "release": "held"
+    },
+    {
+      "owner": "hunter-worker",
+      "commit": "bd69bbd0bba6fdc4f7c66191a839612dd53989d6",
+      "status": "?? services/hunter-worker/ui/",
+      "release": "held"
+    },
+    {
+      "owner": "integration",
+      "commit": "c4845f54feb15623b20720ce83340f61c110b372",
+      "status": "",
+      "release": "held"
+    }
+  ],
+  "C0": "held",
+  "D0": "held",
+  "merge_authorized": false,
+  "production_authorized": false,
+  "previous_candidate": "29326c7c31bedf411cff5b825ec218c00b3d28ed",
+  "B1": {
+    "state": "held",
+    "development_release_requires": "explicit user authorization and AUTH-RELEASE.md startup gates",
+    "business_acceptance": false
+  }
+}

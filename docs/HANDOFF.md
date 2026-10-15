@@ -1,3 +1,9 @@
+# 第二阶段窗口交接
+
+当前版本 **phase2-v1.0.0**。先读 [冻结规范](phase2/README.md)、[API](phase2/API.md)、[目录](phase2/OWNERSHIP.md)、[放行和验收](phase2/RELEASES.md)。本轮立即放行全站UI设计、主页UI设计、猎手监控UI设计、猎手项目监控UI设计；范围限独立UI，不接真实业务。后端/集成新工作held，三窗口安全冻结已完成，9个候选完整SHA见 source-freeze.json。
+
+规范在主仓库/tag只读查看，本轮不merge/cherry-pick/rebase/push或部署。下面保留原工作目录/端口指引；与当前phase2有差异的旧通用提交/接入文字以phase2为准。
+
 # 其他窗口的开工规范
 
 基础工程完成提交和 Worktree 建立后，此文件作为共同入口。各窗口仅按用户在自己聊天中已授权的任务开发，不得自行实现不在分工中的模块。
@@ -57,12 +63,12 @@ pnpm build:shared
 
 ## 提交与验收
 
-业务窗口按任务写最小实现，在自己分支提交：功能结果、路径、SHA、迁移/契约影响、运行命令、测试证据、未验证项。不要合并他人分支、直推 main、自行部署。总管先合到 codex/develop 完成集成验收，再提交 main 供部署审批。
+此轮只有四个UI窗口可以新增各自展示工作；后端候选继续冻结。获放行的窗口在自己分支提交：结果、路径、SHA、契约影响、运行命令、测试证据、未验证项。不要合并他人分支、直推 main、自行部署。本轮只收件/审阅，不执行合并；后续集成须另行明确授权。
 
 共享基础改动后需重建 shared，只有 `tsx watch` worker 自身文件变化会自动重启。正式生产必须运行 compiled `dist` 和 `next start`，不能用 watch/dev。
 
 ## 并行候选的保留
 
-基础提交仅包含总管架构文件。其他窗口已经写入主目录的 `homepage/`、`auth/`、`services/tracking-worker/python/` 等候选和仓库外 UI/集成目录保持原状，不属于基础提交，不删除、不覆盖、不宣称已集成。各 owner 自行把自己代码（不含 DB/secrets/venv/运行数据）复制到对应 Worktree，然后按规范提交；不得从主目录整体 git add。现有 Python 候选可保留作为隔离候选，如何嵌入三个服务与 Next.js BFF 必须另行接口评审，不能擅自增加正式生产服务或绕开认证。
+基础提交仅包含总管架构文件。其他窗口已经写入主目录的 `homepage/`、`auth/`、`services/tracking-worker/python/` 等候选和仓库外 UI/集成目录保持原状，不属于基础提交，不删除、不覆盖、不宣称已集成。9个窗口现已在原Worktree冻结，不再从主目录重复复制/开发；不得从主目录整体git add。现有Python候选的三服务封装已由phase2/STORAGE.md规定，后续按放行批次适配，不擅自增加正式服务或绕开认证。
 
 权限必须只有 superadmin/user；所有业务写入仅 superadmin，user 只读，不开放公开注册。基础 Auth route 关闭状态不是已有认证候选的验收结论。

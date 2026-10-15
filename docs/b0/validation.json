@@ -1,0 +1,51 @@
+{
+  "ui_tests": {
+    "components": 13,
+    "no_js": 1,
+    "models": 33,
+    "browser_route_sizes": 12
+  },
+  "foundation_infrastructure_tests": 26,
+  "root_build": "PASS",
+  "root_typecheck": "PASS",
+  "foundation_smoke": "PASS",
+  "workspace": {
+    "passed": true,
+    "ui_commit": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "clean_filesystem": true,
+    "frozen_install": true,
+    "offline": true,
+    "install_scripts": false,
+    "serial_build_order": [
+      "@ikun/contracts",
+      "@ikun/runtime",
+      "@ikun/ui",
+      "@ikun/hunter-worker",
+      "@ikun/tracking-worker",
+      "@ikun/website"
+    ],
+    "next_ui_consumption": true,
+    "ui_css_consumption": true,
+    "fixture_route_committed": false,
+    "lock_sha256": "0df973ec2369260cc60a75ce4f2380be37c3b600f51637f599f6f4237b1d2f8e",
+    "services_started": false,
+    "source_merge": false
+  },
+  "services": {
+    "passed": true,
+    "independent_services": 3,
+    "projects_runtime": "synthetic private IPC child",
+    "child_failure_readiness": 503,
+    "next_wrote_projects_database": false,
+    "unaffected_workers": [
+      "hunter",
+      "tracking"
+    ],
+    "real_business_connected": false,
+    "production_deployment": false
+  },
+  "production_deployed": false,
+  "backend_business_enabled": false,
+  "closeout_acceptance": "PASS_INFRASTRUCTURE_ONLY",
+  "closeout_record": "docs/b0/closeout.json"
+}

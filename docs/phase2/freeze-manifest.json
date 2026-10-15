@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "contract_version": "phase2-v1.0.0",
+  "tag": "phase2-spec-v1.0.0",
+  "files": {
+    "AGENTS.md": "34f5f488081467b6e59d73fbb65fb013706b8cf8cd542455a715c8799b819076",
+    "README.md": "1009da9be3d755f4640afa93192a9026dc87e299663ec44297489249dde9bfbb",
+    "docs/API.md": "71f6623af4b07c648841884888682739d38ed9bd38707ac0652f771ee9c612f1",
+    "docs/ARCHITECTURE.md": "d7a1a246ec922d434eef2d4426311bc52247cdf09fd675bf6c02be09a559adc0",
+    "docs/DEPLOYMENT.md": "a18aa8c3b9a4fd05dca9991ac16910bef9313efda0dc2913fca9144a279c1cda",
+    "docs/GIT.md": "ff45eb71f9b31a470e360a6ed5ab8bf50be13922cb5f734ab58772518a8f6380",
+    "docs/HANDOFF.md": "5b12b46d0fb31ff84c200fb31e396e6472508bbcbe7fa90c58a376742217f429",
+    "docs/OWNERSHIP.md": "19f0cae785a27e50b84c31a1aa9b3588e25ff2c50e993871d3dd19b5839a8b91",
+    "docs/phase2/API.md": "ec1547e1349da1e45caea5c009499f258c34de2e387af4cbf14c81dbc7e16722",
+    "docs/phase2/DTO.md": "6911a952c0dfe5aa452460a2b78e29cda8ca282af734be899adafd9314d7efb4",
+    "docs/phase2/OWNERSHIP.md": "3ffdd0f0563526ca2bea8434ed42cd30f8856beec8b3e4652ba3d0628dc9ec6e",
+    "docs/phase2/README.md": "c9a32297516da2aeffb76e50cb1d0d739ca0f2e757b5d3ba34c840b1527fc271",
+    "docs/phase2/RELEASES.md": "96c4ab144bb2c87d858fbafda0e237ae3f0cf86cdce18b65f082ef1327d440be",
+    "docs/phase2/STORAGE.md": "d8231a616db6f71837322bc0e59b87bf8bbb8f9abeb8ffec9626e59dc0a74071",
+    "docs/phase2/UI.md": "65387a74d3b9f69025a5762815db3a0c2dc03476f1d8c7db0f837631c0234366",
+    "docs/phase2/VALIDATION.md": "84d4b6bac20073693a0ab1277428ada999963ef6aca5043436ad94ca7a3f5c99",
+    "docs/phase2/contract.json": "ed2f47a118226cc5acd05beffa706be07de4a28b465cd252897186ecf6fcf8e2",
+    "docs/phase2/ownership.json": "9c343fea470bcb898be5695390c1dbba06b9aaf07685d0776173fd73a387e55b",
+    "docs/phase2/releases.json": "2d231c6f0010e7af54d87df95df79ce31cdbeb25d0cdee84760f28be3d200777",
+    "docs/phase2/source-freeze.json": "26c172f0de93cf60a8fbbe93c8f024e5c1fa298d9a01d88faee8c38a91f6c98c",
+    "packages/contracts/src/index.ts": "2d64386f8a9301f0ea8c80a20d0e79346946f6c71a44d33dc836eaf2b347fda0",
+    "packages/contracts/src/phase2.ts": "ae4cd7dc9c7b7acdd1092dd5dab97de118334da941e86e9f7293c01e8470311d",
+    "scripts/check-phase2.mjs": "779f0489965204c7cdfda12aa00c3949ada01a177a5d2943d3571940521f4c16"
+  }
+}

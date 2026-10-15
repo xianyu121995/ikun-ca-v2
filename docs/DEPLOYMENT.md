@@ -1,3 +1,5 @@
+> 第二阶段服务/IPC/四库归属以 docs/phase2/STORAGE.md 为准。当前 D0 held，禁止执行本文件部署命令。
+
 # Mac mini M2 / 8GB 本机生产方案（未部署）
 
 目标是原生 Node 24 LTS + 三个独立 launchd 作业 + 本地 SQLite。正式启用、域名切换、Tunnel 修改、旧服务停止和共享 Watch 变更均等待用户明确批准；本次只验证新工程的临时服务并生成可审阅工具。

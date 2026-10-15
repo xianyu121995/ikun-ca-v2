@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "contract_version": "phase2-v1.0.0",
+  "scope": "ikun-main",
+  "roles": ["superadmin", "user"],
+  "api_prefix": "/api/v1",
+  "internal_prefix": "/internal/v1",
+  "page_routes": {"homepage": "/", "hunter": "/hunter", "tracking": "/tracking", "login": "/login", "account": "/auth", "users": "/auth/users", "password": "/auth/password"},
+  "id_patterns": {
+    "project_id": "^prj_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    "subscription_id": "^sub_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    "command_id": "^cmd_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    "event_id": "^evt_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+  },
+  "ratings": ["S", "A", "B", "C", "D", null],
+  "progress_stages": ["todo", "researching", "watching", "participating", "completed", "paused"],
+  "home_memberships": ["hidden", "active", "removed"],
+  "command_states": ["accepted", "pending", "running", "succeeded", "failed", "unknown"],
+  "databases": {
+    "hunter": {"relative_path": "hunter/hunter.db", "service": "hunter", "writer": "hunter-worker", "application_id": 1229652481},
+    "tracking": {"relative_path": "tracking/tracking.db", "service": "tracking", "writer": "tracking-worker", "application_id": 1229652482},
+    "projects": {"relative_path": "projects/projects.db", "service": "website", "writer": "projects-domain", "application_id": 1229652483},
+    "auth": {"relative_path": "auth/auth.db", "service": "website", "writer": "auth-domain", "application_id": 1229652484}
+  },
+  "migration_metadata": {"table": "_schema_migrations", "columns": ["version", "name", "applied_at"], "checksum_table": "_migration_checksums", "insert_uses_explicit_columns": true},
+  "runtime": {"independent_services": ["website", "hunter", "tracking"], "launchd_jobs": 3, "projects_runtime": "website-supervised private IPC child, no independent TCP port or launchd job", "external_io_default": false},
+  "session_owner": "auth/auth.db",
+  "service_identity": "direction-scoped server credential plus BFF-verified principal for human commands",
+  "project_delete": "remove homepage membership only; retain canonical identity and references; no automatic worker operation",
+  "pagination": {"default_limit": 50, "max_limit": 100, "cursor": "opaque"},
+  "write_protocol": {"idempotency_key": "UUID", "retention_days_min": 7, "revision_header": "If-Match", "etag": "rev-N", "auth_session_rotation_exempt": true},
+  "business_routes_implemented_by_this_commit": false
+}

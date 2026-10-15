@@ -1,0 +1,312 @@
+{
+  "state": "PASS_B3_PROTECTED_TEST_SITE_ONLY",
+  "website_release": "64088893841122491aba508fdb514507db3d9339",
+  "Tracking_release": "64088893841122491aba508fdb514507db3d9339",
+  "Tracking_source": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+  "Hunter_release": "75b81a2b5210e41bdf8522467c7fba2a6a6e693c",
+  "Hunter_source": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+  "build_id": "QTLRQ2vGatyCJCEhtFEVA",
+  "local_production_assertions": 76,
+  "local_prior74_not_added": true,
+  "strict_gateway_tests": 12,
+  "guard_tests": 38,
+  "chief_preflight_same_suite": 36,
+  "owner131_core_not_rerun_here": true,
+  "source_hashes": 311,
+  "compiled_hashes": 248,
+  "original_immutable_sources": 77,
+  "original_homepage_sources": 8,
+  "B4_C03_frozen_paths": 247,
+  "B3_original_source_hashes": 62,
+  "B3_preflight_exact_runtime_overrides": 1,
+  "jobs": {
+    "web": {
+      "label": "ca.ikun.v2.c0lite.web",
+      "loaded": true,
+      "pid": 25136
+    },
+    "hunter": {
+      "label": "ca.ikun.v2.c0lite.hunter",
+      "loaded": true,
+      "pid": 2608
+    },
+    "tracking": {
+      "label": "ca.ikun.v2.c0lite.tracking",
+      "loaded": true,
+      "pid": 25225
+    },
+    "tunnel": {
+      "label": "ca.ikun.v2.c0lite.tunnel",
+      "loaded": true,
+      "pid": 39523
+    }
+  },
+  "databases": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/auth/auth.db",
+      "device": 16777229,
+      "inode": 20187691,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652484,
+      "user_version": 2
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/projects/projects.db",
+      "device": 16777229,
+      "inode": 20187927,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652483,
+      "user_version": 2
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/hunter/hunter.db",
+      "device": 16777229,
+      "inode": 20535150,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652481,
+      "user_version": 4
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/tracking/tracking.db",
+      "device": 16777229,
+      "inode": 20685563,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652482,
+      "user_version": 4,
+      "business_change_rows": 0
+    }
+  },
+  "Tracking_keepalive_recovered": true,
+  "website_Hunter_PID_preserved_during_Tracking_crash": true,
+  "Hunter_plan_env_plist_bytes_preserved": true,
+  "preflight": {
+    "passed": true,
+    "external_collection_enabled": false,
+    "source_state": "unconfigured",
+    "migration_checksums": {
+      "1": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac",
+      "2": "bfd615d27d143ff4b651d7b8158a616ae665ac4b5b81297dc16f11abfce16015",
+      "3": "aac6acc9c4811836e0070befeedc6a4ef93e948b353df96daa0342ff20e37a82",
+      "4": "778af32acf082ee85210dd06000ac7cac369c6234f6f7bc18d159c7f63d01faa"
+    },
+    "python": "3.11.15",
+    "venv_root": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/venvs/tracking",
+    "entry_sha256": "f936a4b18add4568356539f5499c482900f81286910ec3e6180633a4961082e6",
+    "dependency_lock_sha256": "89cb0cca8c57c2e4a12d9947a9c6e5924ce10aefa163554640cf74f09c6e3287",
+    "pinned_dependency_count": 25,
+    "installed_pinned_versions": {
+      "Pygments": "2.21.0",
+      "annotated-doc": "0.0.5",
+      "annotated-types": "0.8.0",
+      "anyio": "4.15.1",
+      "certifi": "2026.7.22",
+      "click": "8.5.0",
+      "fastapi": "0.143.1",
+      "h11": "0.16.0",
+      "httpcore": "1.0.9",
+      "httpx": "0.28.1",
+      "idna": "3.20",
+      "iniconfig": "2.3.1",
+      "opentelemetry-api": "1.45.1",
+      "packaging": "26.3",
+      "pluggy": "1.6.0",
+      "pydantic": "2.14.1",
+      "pydantic_core": "2.50.1",
+      "pytest-asyncio": "1.4.0",
+      "pytest": "9.1.1",
+      "ruff": "0.17.0",
+      "starlette": "1.8.0",
+      "typing-inspection": "0.4.4",
+      "typing_extensions": "4.16.0",
+      "uvicorn": "0.54.0",
+      "websockets": "16.1.1"
+    },
+    "runtime_uses_worktree": false,
+    "database_ddl_executed": false,
+    "provider_calls": 0
+  },
+  "public_admin_after_disable": [
+    {
+      "path": "/api/v1/auth/me",
+      "status": 200,
+      "role": "superadmin",
+      "username": "admin"
+    },
+    {
+      "path": "/api/v1/projects",
+      "status": 200,
+      "rows": 1
+    },
+    {
+      "path": "/api/v1/hunter/signals",
+      "status": 200,
+      "rows": 1
+    },
+    {
+      "path": "/api/v1/tracking/subscriptions",
+      "status": 200,
+      "rows": 0
+    }
+  ],
+  "public_ordinary": {
+    "user": [
+      {
+        "path": "/api/v1/auth/me",
+        "role": "user",
+        "username": "c0_b3_viewer_1792093640",
+        "status": 200
+      },
+      {
+        "path": "/api/v1/projects",
+        "status": 200,
+        "rows": 1
+      },
+      {
+        "path": "/api/v1/hunter/signals",
+        "status": 200,
+        "rows": 1
+      },
+      {
+        "path": "/api/v1/tracking/subscriptions",
+        "status": 200,
+        "rows": 0
+      },
+      {
+        "path": "/api/v1/tracking/latest?profile=published-v1",
+        "status": 200,
+        "rows": 0
+      },
+      {
+        "path": "/api/v1/tracking/subscriptions",
+        "method": "POST",
+        "status": 403
+      },
+      {
+        "path": "/api/v1/tracking/subscriptions",
+        "method": "PATCH",
+        "status": 403
+      },
+      {
+        "path": "/api/v1/tracking/subscriptions",
+        "method": "DELETE",
+        "status": 403
+      }
+    ],
+    "stream": {
+      "status": 200,
+      "normal_eof": false,
+      "frames": 0
+    }
+  },
+  "public_disabled": [
+    {
+      "path": "/api/v1/auth/me",
+      "status": 401
+    },
+    {
+      "path": "/api/v1/projects",
+      "status": 401
+    },
+    {
+      "path": "/api/v1/hunter/signals",
+      "status": 401
+    },
+    {
+      "path": "/api/v1/tracking/subscriptions",
+      "status": 401
+    }
+  ],
+  "public_sse_revoked": {
+    "status": 200,
+    "normal_eof": true,
+    "frames": 1,
+    "username": "c0_b3_viewer_1792093960",
+    "frames_count_includes_heartbeat": true,
+    "frame_types_not_captured": true
+  },
+  "public_guest": {
+    "fresh_Chrome_guest": true,
+    "cloudflare_dashboard_login_host": true,
+    "cloudflare_access_host": false,
+    "cloudflare_sign_in_visible": true,
+    "application_content_visible": false
+  },
+  "unauthenticated_http": [
+    {
+      "path": "/",
+      "status": 403,
+      "redirect_host": null,
+      "https_certificate_verified": true,
+      "server": "cloudflare"
+    },
+    {
+      "path": "/tracking",
+      "status": 403,
+      "redirect_host": null,
+      "https_certificate_verified": true,
+      "server": "cloudflare"
+    },
+    {
+      "path": "/api/v1/tracking/subscriptions",
+      "status": 403,
+      "redirect_host": null,
+      "https_certificate_verified": true,
+      "server": "cloudflare"
+    },
+    {
+      "path": "/api/v1/tracking/events",
+      "status": 403,
+      "redirect_host": null,
+      "https_certificate_verified": true,
+      "server": "cloudflare"
+    }
+  ],
+  "initial_http302_assumption_failed_actual403_preserved": true,
+  "public_readonly_screenshot": "release-integration/.runtime/night-b3/public-readonly-drawer.png",
+  "temporary_accounts_disabled": 2,
+  "temporary_password_fields_retired": true,
+  "private_file_preview_performed": false,
+  "audio_output": "not invoked",
+  "real_provider_calls": 0,
+  "Projects_tracking_ingest": "501 remains; observation outbox not delivery",
+  "tracking_public_current_rows": 0,
+  "public_worker_fixture_mutations": false,
+  "owned_RSS_MiB_snapshot": 204.6,
+  "long_run_pressure_test": false,
+  "before_backup_domains": [
+    "auth",
+    "projects",
+    "hunter"
+  ],
+  "after_backup_domains": [
+    "auth",
+    "projects",
+    "hunter",
+    "tracking"
+  ],
+  "main_unchanged": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+  "Cloudflare_changed": false,
+  "apex_switched": false,
+  "old_services_changed": false,
+  "private_evidence_sha256": {
+    "release-integration/.runtime/night-b3/public-admin.json": "77c917cf4968b75eb06d59729dc0729150468ff32532ec6d37a0a9c2ae4271db",
+    "release-integration/.runtime/night-b3/public-admin-final.json": "1f0367f2f503f37a8f1c8a10e16f428e0b7ef0951f736fe46012e9420507a353",
+    "release-integration/.runtime/night-b3/public-user.json": "d6cd974601dc38ed3ad84e3abbf8888ad1efbe2c4a9b8a04242156ad462f9923",
+    "release-integration/.runtime/night-b3/public-disabled.json": "d199c39acba158e374ff89a791e7d9a1a1c0b5787e705530a87f4e352d160064",
+    "release-integration/.runtime/night-b3/public-sse-revoked.json": "616310dae1dcb54792eaed3c5be7990c67c3083b9824f299d98f4208a750db90",
+    "release-integration/.runtime/night-b3/public-guest.json": "f0a1eccd4f2e12589bbe8d1e756ff924ec7eb956f0de4ecc226b2b6eeb634be0",
+    "release-integration/.runtime/night-b3/public-unauthorized-http.json": "1b56a4ec0e4892da7001e2ecb7de1bd088017fabea8d62acf7cb3626230246ad",
+    "release-integration/.runtime/night-b3/public-temp-cycle.json": "ac0f3265698ad2d50163cd730443a75055e055db491c3eb3c8830c188ed34dc3",
+    "release-integration/.runtime/night-b3/public-temp-cycle.first-disabled.json": "a4994e55db7ea7b16049f58d34b59e063cbead28dd5dbdbeae6d5f2b0b6a7cc6",
+    "release-integration/.runtime/night-b3/final-runtime-audit.json": "2e623eebf31396fd7626e9f3f55f569b63b9feca5f13a7cf3e9068a4460ae791",
+    "release-integration/.runtime/night-b3/deployment.json": "10548ec94036bcd883869a7ad33c7d2697f897c2d346230cf5628a1e54983a9f"
+  }
+}

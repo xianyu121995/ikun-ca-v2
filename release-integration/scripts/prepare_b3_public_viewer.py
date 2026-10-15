@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create one disposable v2 readonly viewer via real CLI; never save or print its password."""
+"""Create one disposable v2 readonly viewer via real CLI; never print its password."""
 import argparse
 import getpass
 import json
@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 import pexpect
-from deploy_c0_lite import ROOT, TARGET
+from deploy_c0_lite import ROOT, TARGET, write_private
 from night_worker_ops import private_json
 
 
@@ -17,13 +17,14 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--expected-sha',required=True)
     parser.add_argument('--username',required=True)
+    parser.add_argument('--generate-private',action='store_true',help='new 0600 synthetic credential file for field-only browser entry; retire after test')
     args=parser.parse_args()
     assert re.fullmatch(r'c0_b3_viewer_[0-9]{10}',args.username)
     owner=private_json(TARGET/'owner.json');env=private_json(TARGET/'config/web.environment.json')
     assert owner['candidate_sha']==env['IKUN_RELEASE_SHA']==args.expected_sha
     assert env['DATA_ROOT']==str(TARGET/'data') and env['IKUN_AUTH_ORIGIN']=='https://v2.ikun.ca' and 'IKUN_AUTH_DEV' not in env
-    assert sys.stdin.isatty()
-    final=getpass.getpass('临时只读账号口令（隐藏输入，不保存）：')
+    assert args.generate_private or sys.stdin.isatty()
+    final=secrets.token_urlsafe(32) if args.generate_private else getpass.getpass('临时只读账号口令（隐藏输入，不保存）：')
     assert len(final)>=24
     initial=secrets.token_urlsafe(32)
     child=pexpect.spawn(sys.executable,[str(ROOT/'release-integration/scripts/c0_auth.py'),'create','--username',args.username],encoding='utf-8',echo=False,timeout=30)
@@ -40,12 +41,16 @@ try{const row=store.list().find(x=>x.username===payload.username);if(!row||row.r
 """
     result=subprocess.run([str(TARGET/'toolchains/node24/bin/node'),'--input-type=module','-e',code,str(TARGET/'releases'/args.expected_sha)],
                           input=json.dumps({'username':args.username,'initial':initial,'final':final}),env=env,capture_output=True,text=True,timeout=20)
-    initial=final=''
+    initial=''
     if result.returncode:
         cleanup=pexpect.spawn(sys.executable,[str(ROOT/'release-integration/scripts/c0_auth.py'),'disable','--username',args.username],encoding='utf-8',echo=False,timeout=30)
         cleanup.expect(pexpect.EOF);cleanup.close()
         raise RuntimeError('VIEWER_ACTIVATION_FAILED_DISABLED' if cleanup.exitstatus==0 else 'VIEWER_ACTIVATION_FAILED_DISABLE_REQUIRED')
     safe=json.loads(result.stdout);assert safe['role']=='user' and not safe['must_change_password']
+    safe['credential_saved']=args.generate_private
+    if args.generate_private:
+        write_private(ROOT/'release-integration/.runtime/night-b3'/('public-viewer.'+args.username+'.private.json'),{'username':args.username,'password':final})
+    final=''
     path=ROOT/'release-integration/.runtime/night-b3/public-temp-cycle.json'
     path.write_text(json.dumps(safe,indent=2)+'\n');path.chmod(0o600)
     print(json.dumps(safe,ensure_ascii=False))

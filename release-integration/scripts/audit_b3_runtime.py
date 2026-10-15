@@ -63,6 +63,8 @@ def main():
                               'application_id': db.execute('PRAGMA application_id').fetchone()[0],
                               'user_version': db.execute('PRAGMA user_version').fetchone()[0]}
     assert stores['hunter']['user_version'] == 4 and stores['hunter']['application_id'] == 0x494B0201
+    with closing(sqlite3.connect((TARGET/'data/tracking/tracking.db').as_uri()+'?mode=ro',uri=True)) as db:
+        stores['tracking']['business_change_rows']=db.execute('select count(*) from changes').fetchone()[0]
     assert stores['tracking']['user_version'] == 4 and stores['tracking']['application_id'] == 1229652482
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     health = {}
@@ -72,7 +74,7 @@ def main():
             health[name] = json.load(response)['data']
     assert health['hunter']['external_io_enabled'] is False and health['tracking']['external_collection_enabled'] is False
     assert health['web']['workers_enabled'] and all(health['web']['workers'][x]['configured'] for x in ('hunter','tracking'))
-    code = "const{pathToFileURL}=await import('node:url');const root=process.argv[1];const{LocalAccounts}=await import(pathToFileURL(root+'/modules/auth/dist/src/local.js'));const{environment}=await import(pathToFileURL(root+'/modules/auth/dist/src/config.js'));const a=new LocalAccounts(environment());try{const users=a.list();const t=users.find(x=>x.username==='c0_pub_viewer_1792079586');const s=users.find(x=>x.username==='admin');if(!t||t.enabled||!s?.enabled)throw Error('FIXTURE_OR_ADMIN_STATE');console.log(JSON.stringify({temporary_enabled:false,temporary_role:t.role,admin_enabled:true,admin_role:s.role}));}finally{a.close();}"
+    code = "const{pathToFileURL}=await import('node:url');const root=process.argv[1];const{LocalAccounts}=await import(pathToFileURL(root+'/modules/auth/dist/src/local.js'));const{environment}=await import(pathToFileURL(root+'/modules/auth/dist/src/config.js'));const a=new LocalAccounts(environment());try{const users=a.list();const t=users.find(x=>x.username==='c0_pub_viewer_1792079586');const s=users.find(x=>x.username==='admin');const current=users.filter(x=>x.username.startsWith('c0_b3_viewer_'));if(!t||t.enabled||!s?.enabled||current.length!==2||current.some(x=>x.enabled||x.role!=='user'))throw Error('FIXTURE_OR_ADMIN_STATE');console.log(JSON.stringify({temporary_enabled:false,temporary_role:t.role,admin_enabled:true,admin_role:s.role,B3_temporary_count:current.length,B3_temporary_enabled:false}));}finally{a.close();}"
     result = subprocess.run([str(TARGET / 'toolchains/node24/bin/node'), '--input-type=module', '-e', code, str(release)], env=env, capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, 'AUTH_OWNER_FIXTURE_STATE_CHECK'
     accounts = json.loads(result.stdout)

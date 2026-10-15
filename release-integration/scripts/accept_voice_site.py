@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Production Next/B1/Tracking metadata with browser-only silent speech/time/SSE mocks."""
 import json
+import hashlib
 import os
 from pathlib import Path
 import secrets
@@ -16,6 +17,7 @@ from accept_b4_site import port, wait_ready, login
 OUT=ROOT/'release-integration/.runtime/night-voice'
 TRACKING_PYTHON=ROOT/'release-integration/.runtime/night-b3/venv/bin/python'
 CHECKS=[]
+SHOTS=OUT
 def check(value,name):
     CHECKS.append({'check':name,'result':'PASS' if value else 'FAIL'})
     if not value: raise AssertionError(name)
@@ -104,8 +106,9 @@ def browser_checks(browser,origin,accounts,sid,pid,data):
             check(page.evaluate('__silentVoice.spoken.length')==3,role+'_global_off_drops_events')
             for width in (1440,390):
                 page.set_viewport_size({'width':width,'height':1000})
+                page.evaluate('async()=>{await document.fonts.ready;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));}')
                 check(page.evaluate('document.documentElement.scrollWidth<=innerWidth'),f'voice_layout_{role}_{width}')
-                page.screenshot(path=str(OUT/f'voice-{role}-{width}.png'),full_page=True)
+                page.screenshot(path=str(SHOTS/f'voice-{role}-{width}.png'),full_page=True)
             if role=='user':
                 page.get_by_role('button',name='监控账号总数 1').click()
                 check(page.get_by_text('已加入追踪的 X 账号 · 只读视图',exact=True).count()==1,'ordinary_business_drawer_still_readonly')
@@ -129,7 +132,9 @@ def browser_checks(browser,origin,accounts,sid,pid,data):
 
 
 def main():
+    global SHOTS
     OUT.mkdir(mode=0o700,parents=True,exist_ok=True);scratch=Path(tempfile.mkdtemp(prefix='ikun-voice-',dir='/private/tmp'));data=scratch/'data'
+    SHOTS=OUT/('run-'+str(time.time_ns()));SHOTS.mkdir(mode=0o700)
     origin='http://127.0.0.1:'+str(port());tracking_origin='http://127.0.0.1:'+str(port())
     accounts=provision(data,origin,scratch/'accounts.private.json');migrate_projects(data)
     cfg=scratch/'tracking.json';cfg.write_text(json.dumps({'db_path':str(data/'tracking/tracking.db'),'remote_enabled':False,'dedicated_account':False,'port':int(tracking_origin.rsplit(':',1)[1])}));cfg.chmod(0o600)
@@ -166,7 +171,7 @@ def main():
                 process.send_signal(signal.SIGTERM)
                 try:process.wait(timeout=12)
                 except subprocess.TimeoutExpired:os.killpg(process.pid,signal.SIGKILL);process.wait(timeout=5)
-        log.close();path=OUT/('site-acceptance-'+str(time.time_ns())+'.json');path.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');path.chmod(0o600)
+        log.close();report['screenshots']={str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(SHOTS.glob('*.png'))};path=OUT/('site-acceptance-'+str(time.time_ns())+'.json');path.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');path.chmod(0o600)
         print(json.dumps({'state':report['state'],'checks':len(CHECKS),'receipt':str(path)},ensure_ascii=False))
 
 

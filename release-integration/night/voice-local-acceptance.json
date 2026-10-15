@@ -198,13 +198,35 @@
   "SSE_frames": "browser synthetic only; existing real EventSource and B1 metadata used",
   "real_provider_calls": 0,
   "build_id": "toKW74u9T1cCk_lyTUZXo",
-  "receipt_path": "release-integration/.runtime/night-voice/site-acceptance-1792095023125656000.json",
+  "receipt_path": "release-integration/.runtime/night-voice/site-acceptance-1792095246818597000.json",
   "receipt_sha256": "00393bbffd559a05846c46b33c3b69ab45a04890f27b076049ac34c01435dfc2",
+  "tested_harness_snapshot": "release-integration/.runtime/night-voice/run-1792095246818597000/tested-harness.py",
+  "tested_harness_sha256": "59a860c9e7b93729225fe1297d46ff268d72b730e2459ebb2bd41ee8475cef49",
   "screenshots": {
-    "release-integration/.runtime/night-voice/voice-admin-1440.png": "4f8a0c387a9c474278bfbe833988941273f56535d6df783fdf61c908c0daf33d",
-    "release-integration/.runtime/night-voice/voice-admin-390.png": "fa0a2a2b2fc62e71c67da212e62ec0ea7fbb0272297bc353cb9f44e03c28e6a1",
-    "release-integration/.runtime/night-voice/voice-user-1440.png": "10bb997ea2763436cdac8b1fe7f3d354e85d92a1491f380eaf93a8cc4735af7a",
-    "release-integration/.runtime/night-voice/voice-user-390.png": "14810d5991d6c7afdaa130e0449eca9cd1a19e90e85f1b6af0a1ade09fb86111"
+    "release-integration/.runtime/night-voice/run-1792095246818597000/voice-admin-1440.png": "717061a1c64b85771319e6e548c03e61cd4f25a06c9763fd10b71240c83dfaa5",
+    "release-integration/.runtime/night-voice/run-1792095246818597000/voice-admin-390.png": "ad00d96374ed95cd651cfb909c49282cf45d83531844b2e9799a67340eca8883",
+    "release-integration/.runtime/night-voice/run-1792095246818597000/voice-user-1440.png": "cc456a0f5967d1d508140362dc3365ced7a2f11dc3d3cc25a37a3cc3c839f1bc",
+    "release-integration/.runtime/night-voice/run-1792095246818597000/voice-user-390.png": "0ffe8384c88ecd0afeaf51654e4a9e72334193d3d277b1266ef3bb28ca880e8c"
   },
-  "source_binding": "release-integration/night/voice-source-binding.json"
+  "source_binding": "release-integration/night/voice-source-binding.json",
+  "counts_not_cumulative": true,
+  "prior_attempts": [
+    {
+      "receipt": "release-integration/.runtime/night-voice/site-acceptance-1792095023125656000.json",
+      "sha256": "00393bbffd559a05846c46b33c3b69ab45a04890f27b076049ac34c01435dfc2",
+      "checks": 48
+    },
+    {
+      "receipt": "release-integration/.runtime/night-voice/site-acceptance-1792095246818597000.json",
+      "sha256": "00393bbffd559a05846c46b33c3b69ab45a04890f27b076049ac34c01435dfc2",
+      "checks": 48
+    }
+  ],
+  "initial_screenshots_preserved": {
+    "release-integration/.runtime/night-voice/initial-screenshots/voice-admin-1440.png": "4f8a0c387a9c474278bfbe833988941273f56535d6df783fdf61c908c0daf33d",
+    "release-integration/.runtime/night-voice/initial-screenshots/voice-admin-390.png": "fa0a2a2b2fc62e71c67da212e62ec0ea7fbb0272297bc353cb9f44e03c28e6a1",
+    "release-integration/.runtime/night-voice/initial-screenshots/voice-user-1440.png": "10bb997ea2763436cdac8b1fe7f3d354e85d92a1491f380eaf93a8cc4735af7a",
+    "release-integration/.runtime/night-voice/initial-screenshots/voice-user-390.png": "14810d5991d6c7afdaa130e0449eca9cd1a19e90e85f1b6af0a1ade09fb86111"
+  },
+  "screenshot_correction": "same production bytes/build; second 48-check run adds fonts.ready + two animation frames before resize screenshot; initial images and both reports retained"
 }

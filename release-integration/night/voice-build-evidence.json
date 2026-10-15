@@ -1,0 +1,61 @@
+{
+  "build_driver_attempt": {
+    "status": "FAIL",
+    "commands": [
+      {
+        "args": [
+          "--filter",
+          "@ikun/ui",
+          "build"
+        ],
+        "exit_code": 0,
+        "duration_ms": 1281
+      },
+      {
+        "args": [
+          "--filter",
+          "@ikun/website",
+          "build"
+        ],
+        "exit_code": 0,
+        "duration_ms": 12969
+      },
+      {
+        "args": [
+          "--filter",
+          "@ikun/website",
+          "typecheck"
+        ],
+        "exit_code": 0,
+        "duration_ms": 1897
+      },
+      {
+        "args": [
+          "exec",
+          "node",
+          "--import",
+          "tsx",
+          "--test",
+          "packages/ui/src/voice/tests/voice.test.mjs"
+        ],
+        "exit_code": 1,
+        "duration_ms": 514
+      }
+    ],
+    "log_sha256": "09d132407ab4f949afb7f1181bfcecefb91d3cf9b4d1a67d20bbd35eba27df01"
+  },
+  "corrected_light_checks": {
+    "Next_build_typecheck_passed": true,
+    "build_id": "toKW74u9T1cCk_lyTUZXo",
+    "voice_tests_corrected_loader": {
+      "passed": 32,
+      "TSX_TSCONFIG_PATH": "./packages/ui/tsconfig.check.json"
+    },
+    "metadata_adapter_tests": 12,
+    "initial_wrong_loader_failure_preserved": true,
+    "production_inputs_changed_for_loader_fix": false,
+    "real_sound": false,
+    "worker_compiled_entries_unchanged": true
+  },
+  "initial_test_loader_failure_not_source_bug": "root tsx used classic JSX; corrected TSX_TSCONFIG_PATH, same32 passed; no runtime edit or redundant rebuild"
+}

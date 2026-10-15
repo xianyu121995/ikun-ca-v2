@@ -1,0 +1,54 @@
+{
+  "source_commit": "684d4013d97118612cdfbdc77d32adfc22704af8",
+  "control_commit": "6f6ba3c4e5ca0fcea4b98873faf340da64082eac",
+  "frozen_files_sha256": {
+    "packages/ui/src/index.ts": "ec91d032bce4ad539a083711f5faacc1c26a77f87773c1b147b841a3baf1eb81",
+    "packages/ui/src/voice/HANDOFF.md": "49547842d0d099cbe431826cd364ffd33633bbc0886ff148bcfd5c970941479a",
+    "packages/ui/src/voice/README.md": "23e774eca9d927e8793d691ffae3a27f468ae4f99d7818c1724afc749e9bd269",
+    "packages/ui/src/voice/browser.ts": "850a9263a770a630c808a0d2ae3b275ee75ce1646dc0729c519bb3699028f30f",
+    "packages/ui/src/voice/controller.ts": "787e13d732d041bc0dee25a33beddda0efda558296350980ba047d2d15fdea0c",
+    "packages/ui/src/voice/controls.tsx": "4cf6a7a6adae72d314ff2976009919046ad1f78ecc08adb43db37f9d20e62c85",
+    "packages/ui/src/voice/harness/main.mjs": "c81004ec4fd4ac03983032967dedde26d9fe1f64efacd41aef980090f015769b",
+    "packages/ui/src/voice/harness/serve.mjs": "8fbee1342debc45ecbc14f276bac0710b75c1866ab0f6122cef2b34934666055",
+    "packages/ui/src/voice/index.ts": "a17387806b176192ce6c45cb716bafb6f19a65c70502169161185ef20d6f5a83",
+    "packages/ui/src/voice/preferences.ts": "f49235cf90081d4d1198db3526f89393293422ed827e221148b04f6e8cc68e42",
+    "packages/ui/src/voice/tests/compiled-smoke.mjs": "c1b8633815bc09c835ea34059432473630f8e67e2ccd990a5e25658b8882a1ac",
+    "packages/ui/src/voice/tests/helpers.mjs": "438b3580004791aea448199a56a7550f588cd5a2d51a4eb985b8ff2ef051fb5a",
+    "packages/ui/src/voice/tests/voice.test.mjs": "d8ac99c9f77744a412c5cee1e5781bdcf9c90a5606f6683d1a111425fa908ef3",
+    "packages/ui/src/voice/types.ts": "a29bc103db30f16dccfa64b4d4caaa78578787299462f9e726ffda4143930aa6",
+    "packages/ui/src/voice/validation.ts": "d976cc112bba57b5b104aa7080f82cf45ab3748fd25230b2b7246df7800dd196"
+  },
+  "manifest_sha256": "e0133be5ab078c048c9d1d6610404357ad8168b7868e8b303e36788e8113ee59",
+  "site_patches": {
+    "apps/website/app/tracking/page.tsx": {
+      "baseline_commit": "f46ca183775f9824a6bfe0920f91dd9c3c0ab5fc",
+      "baseline_sha256": "7a0193966ab5e691b322ce5d469d80cd75f334e23936c0f8c9d228e361361f0f",
+      "target_sha256": "f540ddd46df304263f50d4f85da175290f0d2de712ed9ec2ba6ca9d35a71cb04",
+      "patch_path": "release-integration/night/patches/voice-1.patch",
+      "patch_sha256": "f6aa0b1b9814e9e4225129920ed632fd3fb517cc9c392c20e931b6826b00d8bf"
+    },
+    "apps/website/components/tracking-live.tsx": {
+      "baseline_commit": "f46ca183775f9824a6bfe0920f91dd9c3c0ab5fc",
+      "baseline_sha256": "75a9053f5b8b55d6a92d1750685e0ee529e2ad52b093f7da6616b5bd0d5606bd",
+      "target_sha256": "7510e2df417980de95aca8e586a5512fafde41ca8166409d6cad2bc5b1e6c07e",
+      "patch_path": "release-integration/night/patches/voice-2.patch",
+      "patch_sha256": "086a95f1ffa1e1b1304d0b7470e11fbac4d3ea9f24378fadec16e589c416a042"
+    },
+    "apps/website/components/tracking-voice.tsx": {
+      "baseline_commit": null,
+      "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "target_sha256": "d9fe636b6c8fde621f3a6f29b98f6a9cceb9f80aebb5fd965e2f9a429bd642e4",
+      "patch_path": "release-integration/night/patches/voice-3.patch",
+      "patch_sha256": "4d673aa08c9a426106d7c0733d222e57ae5fb516bf3e84ad0b9464ab3fcf9473"
+    },
+    "apps/website/lib/tracking-voice-metadata.ts": {
+      "baseline_commit": null,
+      "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "target_sha256": "ef1a81587f8e547014de6fd5ca545781bbc55fbfd0ffc83d3c0f501c283a2231",
+      "patch_path": "release-integration/night/patches/voice-4.patch",
+      "patch_sha256": "3c95414a31463bf7750d40caca6d532a2ca46eeafe56b8a15ed403afd1350203"
+    }
+  },
+  "original_77_checks_remain": true,
+  "immutable_source_exception": "packages/ui/src/index.ts exact single appended export only"
+}

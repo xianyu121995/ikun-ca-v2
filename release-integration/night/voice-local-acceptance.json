@@ -1,0 +1,210 @@
+{
+  "state": "PASS_VOICE_LOCAL_PRODUCTION_SILENT",
+  "checks": [
+    {
+      "check": "explicit_new_local_Tracking_init",
+      "result": "PASS"
+    },
+    {
+      "check": "real_Project_canonical_creation",
+      "result": "PASS"
+    },
+    {
+      "check": "real_Tracking_subscription_creation",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_default_off_no_sound",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_no_initial_speech",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_personal_voice_control_available",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_one_existing_Tracking_EventSource",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_real_feed_empty_no_page_metadata_fallback",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_mock_speech_uses_real_B1_metadata",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_two_actual_authenticated_metadata_reads",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_duplicate_and_replay_rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_personal_subscription_toggle_available",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_subscription_mute_drops_new_event",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_quote_uses_same_authoritative_metadata",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_preferences_key_real_user_id_no_content",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_reconnect_requires_new_gesture",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_late_metadata_after_disconnect_discarded",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_22_boundary_cancels_active_mock",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_08_does_not_replay_quiet_queue",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_global_off_drops_events",
+      "result": "PASS"
+    },
+    {
+      "check": "voice_layout_admin_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "voice_layout_admin_390",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_logout_cancels_voice_and_navigates_login",
+      "result": "PASS"
+    },
+    {
+      "check": "user_default_off_no_sound",
+      "result": "PASS"
+    },
+    {
+      "check": "user_no_initial_speech",
+      "result": "PASS"
+    },
+    {
+      "check": "user_personal_voice_control_available",
+      "result": "PASS"
+    },
+    {
+      "check": "user_one_existing_Tracking_EventSource",
+      "result": "PASS"
+    },
+    {
+      "check": "user_real_feed_empty_no_page_metadata_fallback",
+      "result": "PASS"
+    },
+    {
+      "check": "user_mock_speech_uses_real_B1_metadata",
+      "result": "PASS"
+    },
+    {
+      "check": "user_two_actual_authenticated_metadata_reads",
+      "result": "PASS"
+    },
+    {
+      "check": "user_duplicate_and_replay_rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "user_personal_subscription_toggle_available",
+      "result": "PASS"
+    },
+    {
+      "check": "user_subscription_mute_drops_new_event",
+      "result": "PASS"
+    },
+    {
+      "check": "user_quote_uses_same_authoritative_metadata",
+      "result": "PASS"
+    },
+    {
+      "check": "user_preferences_key_real_user_id_no_content",
+      "result": "PASS"
+    },
+    {
+      "check": "user_reconnect_requires_new_gesture",
+      "result": "PASS"
+    },
+    {
+      "check": "user_late_metadata_after_disconnect_discarded",
+      "result": "PASS"
+    },
+    {
+      "check": "user_22_boundary_cancels_active_mock",
+      "result": "PASS"
+    },
+    {
+      "check": "user_08_does_not_replay_quiet_queue",
+      "result": "PASS"
+    },
+    {
+      "check": "user_global_off_drops_events",
+      "result": "PASS"
+    },
+    {
+      "check": "voice_layout_user_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "voice_layout_user_390",
+      "result": "PASS"
+    },
+    {
+      "check": "ordinary_business_drawer_still_readonly",
+      "result": "PASS"
+    },
+    {
+      "check": "user_logout_cancels_voice_and_navigates_login",
+      "result": "PASS"
+    },
+    {
+      "check": "real_B1_disable_quiet_SSE_cancels_active_mock",
+      "result": "PASS"
+    },
+    {
+      "check": "late_open_after_revocation_cannot_revive_old_epoch",
+      "result": "PASS"
+    },
+    {
+      "check": "revoked_voice_user_real_API401",
+      "result": "PASS"
+    },
+    {
+      "check": "local_admin_unaffected_by_voice_user_revocation",
+      "result": "PASS"
+    }
+  ],
+  "real_sound": false,
+  "SSE_frames": "browser synthetic only; existing real EventSource and B1 metadata used",
+  "real_provider_calls": 0,
+  "build_id": "toKW74u9T1cCk_lyTUZXo",
+  "receipt_path": "release-integration/.runtime/night-voice/site-acceptance-1792095023125656000.json",
+  "receipt_sha256": "00393bbffd559a05846c46b33c3b69ab45a04890f27b076049ac34c01435dfc2",
+  "screenshots": {
+    "release-integration/.runtime/night-voice/voice-admin-1440.png": "4f8a0c387a9c474278bfbe833988941273f56535d6df783fdf61c908c0daf33d",
+    "release-integration/.runtime/night-voice/voice-admin-390.png": "fa0a2a2b2fc62e71c67da212e62ec0ea7fbb0272297bc353cb9f44e03c28e6a1",
+    "release-integration/.runtime/night-voice/voice-user-1440.png": "10bb997ea2763436cdac8b1fe7f3d354e85d92a1491f380eaf93a8cc4735af7a",
+    "release-integration/.runtime/night-voice/voice-user-390.png": "14810d5991d6c7afdaa130e0449eca9cd1a19e90e85f1b6af0a1ade09fb86111"
+  },
+  "source_binding": "release-integration/night/voice-source-binding.json"
+}

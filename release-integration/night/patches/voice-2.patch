@@ -1,0 +1,36 @@
+--- a/apps/website/components/tracking-live.tsx
++++ b/apps/website/components/tracking-live.tsx
+@@ -7,0 +8,2 @@
++import { useTrackingVoice, TrackingVoiceSettings } from './tracking-voice';
++import type { VoiceSession } from '@ikun/ui';
+@@ -21 +23 @@
+-export function TrackingLive({ csrf, canManage, username, fixture = false }: {
++export function TrackingLive({ csrf, canManage, username, voiceSession, fixture = false }: {
+@@ -24,0 +27 @@
++    voiceSession: VoiceSession;
+@@ -26,0 +30 @@
++    const voice = useTrackingVoice(voiceSession);
+@@ -51 +55,2 @@
+-            if (response.status === 401)
++            if (response.status === 401) {
++                voice.revoke();
+@@ -52,0 +58 @@
++            }
+@@ -98,0 +105,4 @@
++        const opened = () => voice.connected(true);
++        const disconnected = () => { voice.connected(false); void voice.verifyIdentity(); };
++        events.addEventListener('open', opened);
++        events.addEventListener('error', disconnected);
+@@ -100,0 +111 @@
++            if (event.type === 'tracking.feed.activity.created.v1') voice.consume(event as MessageEvent);
+@@ -113,2 +124,2 @@
+-        return () => { clearInterval(timer);clearTimeout(eventTimer); events.close(); };
+-    }, [refresh]);
++        return () => { voice.connected(false); events.removeEventListener('open', opened); events.removeEventListener('error', disconnected); clearInterval(timer);clearTimeout(eventTimer); events.close(); };
++    }, [refresh, voice.connected, voice.consume, voice.verifyIdentity]);
+@@ -168 +179 @@
+-    return <><Alert title='未连接真实来源' />{fixture&&<Alert title='本地验收夹具 · 合成数据仅供测试' />}{error && <Alert tone='danger' title={error}/>} {command && <Alert title={command}/>}<TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
++    return <><Alert title='未连接真实来源' />{fixture&&<Alert title='本地验收夹具 · 合成数据仅供测试' />}{error && <Alert tone='danger' title={error}/>} {command && <Alert title={command}/>}<TrackingVoiceSettings controller={voice.controller} subscriptions={subs.map(row => ({ subscription_id: row.subscription_id, label: row.notes || row.name }))}/><TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
+@@ -172 +183 @@
+-        }} live={{ server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password'>修改本人密码</a><LogoutButton /></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
++        }} live={{ server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password' onClick={voice.revoke}>修改本人密码</a><span onClickCapture={voice.revoke}><LogoutButton /></span></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {

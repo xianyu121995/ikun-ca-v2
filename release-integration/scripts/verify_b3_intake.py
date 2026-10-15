@@ -13,6 +13,8 @@ PREFLIGHT_ADDED = ('services/tracking-worker/python/tests/test_preflight.py', 's
 
 
 def verify():
+    from verify_voice_intake import verify as verify_voice
+    voice_overrides,voice_paths,voice_targets=verify_voice()
     freeze = json.loads(at(CONTROL, 'docs/progress/b3-freeze.json'))
     body = at(DELIVERY, freeze['receiving_manifest'])
     assert sha(body) == freeze['receiving_manifest_sha256']
@@ -57,7 +59,11 @@ def verify():
                 assert sha((ROOT / path).read_bytes()) == patched
                 assert row['reviewed_patch_output_sha256'] == patched
                 expected = (ROOT / path).read_bytes()
-        assert (ROOT / path).read_bytes() == expected, path
+        if path in voice_targets:
+            assert sha(expected)==voice_targets[path]['baseline_sha256'],path
+            assert sha((ROOT/path).read_bytes())==voice_targets[path]['target_sha256'],path
+        else:
+            assert (ROOT / path).read_bytes() == expected, path
         allowed.add(path)
     # These are intentionally NOT replaced with the owner's preview implementations.
     for path in ('apps/website/app/api/v1/events/stream/route.ts', 'apps/website/app/api/v1/commands/[id]/route.ts',
@@ -71,10 +77,11 @@ def verify():
         expected_paths = {p for p,r in receipt['files'].items() if r.get('target_sha256',r['source_sha256']) != r['source_sha256']}
         assert set(bound['site_patches']) == expected_paths
         for target,row in bound['site_patches'].items():
-            before,after = at(B3,row['source_path']), (ROOT/target).read_bytes()
+            before = at(B3,row['source_path'])
+            after = at(voice_targets[target]['baseline_commit'],target) if target in voice_targets else (ROOT/target).read_bytes()
             patch = ''.join(difflib.unified_diff(before.decode().splitlines(True),after.decode().splitlines(True),n=0,fromfile='a/'+target,tofile='b/'+target)).encode()
             assert patch == (ROOT/row['patch_path']).read_bytes()
             assert sha(patch) == row['patch_sha256'] and sha(before) == row['source_sha256'] and sha(after) == row['target_sha256']
     overrides = {path: {'sha256': sha(at(B3, path)), 'source_commit': B3, 'control_commit': CONTROL}
                  for path in manifest['source_inputs'] if path.startswith(('services/tracking-worker/', 'schemas/tracking/'))}
-    return overrides, allowed
+    return {**overrides,**voice_overrides}, allowed|voice_paths

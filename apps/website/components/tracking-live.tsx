@@ -5,6 +5,8 @@ import { LogoutButton } from './auth/forms';
 import { TrackingPage } from '../features/tracking/final/tracking-page';
 import { emptyFilters, type Account, type Post, type Filters } from '../features/tracking/final/model';
 import { coalescedRefresh } from '../lib/coalesced-refresh';
+import { useTrackingVoice, TrackingVoiceSettings } from './tracking-voice';
+import type { VoiceSession } from '@ikun/ui';
 type Subscription = {
     subscription_id: string;
     project_id: string;
@@ -18,12 +20,14 @@ type Subscription = {
     connection: string;
 };
 type Activity = {activity_id:string;subscription_id:string;project_id:string;name:string;x_handle:string;notes:string;rating:'S'|'A'|'B';rating_revision:number;text:string;occurred_at:string|null;received_at:string;sort_at:string;sort_basis:string;url:string};
-export function TrackingLive({ csrf, canManage, username, fixture = false }: {
+export function TrackingLive({ csrf, canManage, username, voiceSession, fixture = false }: {
     csrf: string;
     canManage: boolean;
     username: string;
+    voiceSession: VoiceSession;
     fixture?:boolean;
 }) {
+    const voice = useTrackingVoice(voiceSession);
     const queryView=useRef<string|null>(null);
     useEffect(()=>{queryView.current??='qv1_'+crypto.randomUUID();},[]);
     const pull = useRef<() => Promise<void>>(async () => { });
@@ -48,8 +52,10 @@ export function TrackingLive({ csrf, canManage, username, fixture = false }: {
         const response = await fetch('/api/v1/' + path, { method, credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(12000), headers: { 'content-type': 'application/json', 'x-csrf-token': csrf,...(path.startsWith('tracking/latest?')&&queryView.current?{'x-tracking-query-view':queryView.current}:{}), ...(method === 'GET' ? {} : { 'idempotency-key': crypto.randomUUID() }), ...(row ? { 'if-match': `"rev-${row.revision}"` } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
         const value = await response.json();
         if (!response.ok) {
-            if (response.status === 401)
+            if (response.status === 401) {
+                voice.revoke();
                 location.assign('/login?next=/tracking');
+            }
             throw Error((value.error?.code || 'ERROR') + ' · ' + (value.error?.message || '请求失败') + ' · ' + value.request_id);
         }
         return value.data;
@@ -96,8 +102,13 @@ export function TrackingLive({ csrf, canManage, username, fixture = false }: {
     useEffect(() => {
         const timer = setInterval(() => void refresh(), 15000);
         const events = new EventSource('/api/v1/tracking/events');
+        const opened = () => voice.connected(true);
+        const disconnected = () => { voice.connected(false); void voice.verifyIdentity(); };
+        events.addEventListener('open', opened);
+        events.addEventListener('error', disconnected);
         let eventTimer:ReturnType<typeof setTimeout>|undefined;
         const reload = (event: Event) => {
+            if (event.type === 'tracking.feed.activity.created.v1') voice.consume(event as MessageEvent);
             if(event.type.startsWith('tracking.feed.activity.')){try{if(JSON.parse((event as MessageEvent).data).data?.replay===true)return;}catch{return;}}
             if (event.type === 'command.updated') {
                 try {
@@ -110,8 +121,8 @@ export function TrackingLive({ csrf, canManage, username, fixture = false }: {
         };
         for (const type of ['tracking.feed.activity.created.v1','tracking.feed.activity.updated.v1', 'tracking.subscription.updated', 'command.updated'])
             events.addEventListener(type, reload);
-        return () => { clearInterval(timer);clearTimeout(eventTimer); events.close(); };
-    }, [refresh]);
+        return () => { voice.connected(false); events.removeEventListener('open', opened); events.removeEventListener('error', disconnected); clearInterval(timer);clearTimeout(eventTimer); events.close(); };
+    }, [refresh, voice.connected, voice.consume, voice.verifyIdentity]);
     async function operate(row: Subscription, operation: string) {
         if (busy)
             return;
@@ -165,11 +176,11 @@ export function TrackingLive({ csrf, canManage, username, fixture = false }: {
             setBusy(false);
         }
     }
-    return <><Alert title='未连接真实来源' />{fixture&&<Alert title='本地验收夹具 · 合成数据仅供测试' />}{error && <Alert tone='danger' title={error}/>} {command && <Alert title={command}/>}<TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
+    return <><Alert title='未连接真实来源' />{fixture&&<Alert title='本地验收夹具 · 合成数据仅供测试' />}{error && <Alert tone='danger' title={error}/>} {command && <Alert title={command}/>}<TrackingVoiceSettings controller={voice.controller} subscriptions={subs.map(row => ({ subscription_id: row.subscription_id, label: row.notes || row.name }))}/><TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
             const row = subs.find(r => r.subscription_id === id);
             if (row && !(await operate(row, 'remove')))
                 throw Error('移除未确认');
-        }} live={{ server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password'>修改本人密码</a><LogoutButton /></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
+        }} live={{ server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password' onClick={voice.revoke}>修改本人密码</a><span onClickCapture={voice.revoke}><LogoutButton /></span></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
                 if (post.original_url && /^https:\/\/x\.com\/[A-Za-z0-9_]+\/status\/[0-9]+$/.test(post.original_url))
                     window.open(post.original_url, '_blank', 'noopener,noreferrer');
             },

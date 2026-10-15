@@ -60,7 +60,8 @@ def verify():
     assert all(path in scope or path.startswith('release-integration/') for path in receiving_changes), receiving_changes
     return {'status': 'PASS', 'review_commit': CONTROL, 'source_commit': source,
             'original_control_commit': ORIGINAL, 'immutable_sources_verified': 77,
-            'original_immutable_hashes_retained': 75, 'approved_immutable_overrides': overrides,
+            'original_immutable_hashes_retained': sum(digest((ROOT/path).read_bytes())==row['sha256'] for path,row in intake['immutable_domain_and_shared_sources'].items()),
+            'approved_immutable_overrides': {**overrides, **{p:r for p,r in night_overrides.items() if p=='packages/ui/src/index.ts'}},
             'homepage_sources_verified': 8, 'exact_form_three_line_delta': True,
             'workspace_link_preserved': True, 'reviewed_source_paths_verified': len(changed),
             'readonly_ui_delta': {'review_commit': READONLY_CONTROL, 'source_commit': readonly['source_commit'],

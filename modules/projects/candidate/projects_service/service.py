@@ -12,9 +12,10 @@ from .models import CoreProjectImport, CoreProjectPatch, normalize_website
 from .queries import canonical, page, record, summary, milestones
 from . import home
 from .transport import CommandResult, Event, Fields, MembershipAction, Rpc, SCOPE, UUID4
+from .ratings import RatingsCatalog
 
 WRITES={'create','patch','membership','delete','completion','completions','restore'}
-READS={'get','list','command','changes','reconcile','summary','milestones'}
+READS={'get','list','command','changes','reconcile','summary','milestones','ratings'}
 
 def route_identity(rpc):
     root='/api/v1/projects'
@@ -58,8 +59,9 @@ def _legacy_error(error):
 
 
 class Service:
-    def __init__(self,database:FormalDatabase):
+    def __init__(self,database:FormalDatabase,*,catalog_context=''):
         self.db=database
+        self.ratings=RatingsCatalog(catalog_context)
 
     def execute(self,rpc:Rpc):
         if rpc.operation in WRITES|READS:
@@ -75,6 +77,7 @@ class Service:
             if rpc.operation.startswith('outbox_'):return self.outbox(rpc)
             with self.db.connect() as con:
                 con.execute('BEGIN')
+                if rpc.operation=='ratings':return 200,self.ratings.lookup(con,rpc.body),None
                 if rpc.operation=='list':return 200,page(con,rpc.query,rpc.contract),None
                 if rpc.operation=='summary':return 200,summary(con,rpc.query),None
                 if rpc.operation=='milestones':return 200,milestones(con,rpc.query),None

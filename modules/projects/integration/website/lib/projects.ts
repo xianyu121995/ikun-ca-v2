@@ -2,7 +2,7 @@ import {randomUUID,timingSafeEqual} from 'node:crypto';
 import {lstat} from 'node:fs/promises';
 import http from 'node:http';
 import {auth,requireIdentity,requireSuperadmin,withAuth} from '../../../modules/auth/dist/src/server.js';
-import {AuthHttp} from '../../../modules/auth/dist/src/http.js';
+import type {AuthHttp} from '../../../modules/auth/dist/src/http.js';
 
 const uuid='[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const readPaths=[/^\/api\/v1\/projects\/(?:home-summary|milestones)$/,new RegExp('^/api/v1/projects/operations/'+uuid+'$')];
@@ -10,14 +10,49 @@ const globalState=globalThis as typeof globalThis & {ikunAuth?:AuthHttp;ikunProj
 /** Reviewed additive route admission on the very same B1 store/singleton. */
 export function projectsAuth(){
   const current=auth();
-  if(!globalState.ikunProjectsPolicy){globalState.ikunAuth=new AuthHttp(current.store,[...current.readApi,...readPaths],current.readPages);globalState.ikunProjectsPolicy=true;}
+  if(!globalState.ikunProjectsPolicy){const CurrentAuth=current.constructor as typeof AuthHttp;globalState.ikunAuth=new CurrentAuth(current.store,[...current.readApi,...readPaths],current.readPages);globalState.ikunProjectsPolicy=true;}
   return auth();
 }
 export function requestId(request:Request){const id=request.headers.get('x-request-id');return id&&/^[A-Za-z0-9_-]{1,64}$/.test(id)?id:randomUUID();}
 export function failure(id:string,status:number,code:string,message:string){return Response.json({error:{code,message,retryable:[429,502,503,504].includes(status)},request_id:id},{status,headers:{'cache-control':'no-store','x-request-id':id}});}
 export type Principal={user_id:string;tenant_id:'ikun-main';role:'superadmin'|'user'};
 export type Rpc={operation:string;request_id:string;principal?:Principal;source?:'hunter'|'tracking';target?:string;query?:Record<string,string>;body?:unknown;idempotency_key?:string|null;if_match?:string|null;contract?:string};
+function validRatings(data:unknown,payload:Rpc){
+  const exact=(value:unknown,keys:string[])=>!!value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).sort().join(',')===[...keys].sort().join(',');
+  if(!exact(data,['contract','catalog_version','checked_at','items']))return false;
+  const value=data as {contract:unknown;catalog_version:unknown;checked_at:unknown;items:unknown};
+  if(value.contract!=='tracking-ratings-v1'||typeof value.catalog_version!=='string'||value.catalog_version.length<1||value.catalog_version.length>128||typeof value.checked_at!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value.checked_at)||!Number.isFinite(Date.parse(value.checked_at)))return false;
+  const ids=(payload.body as {project_ids?:unknown})?.project_ids;
+  if(!Array.isArray(ids)||!Array.isArray(value.items)||ids.length!==value.items.length)return false;
+  const expected=new Set(ids),seen=new Set<string>();
+  for(const item of value.items){
+    if(!exact(item,['project_id','state','rating','revision']))return false;
+    const row=item as {project_id:string;state:string;rating:unknown;revision:unknown};
+    if(typeof row.project_id!=='string'||!expected.has(row.project_id)||seen.has(row.project_id))return false;
+    seen.add(row.project_id);
+    if(row.state==='missing'){if(row.rating!==null||row.revision!==null)return false;}
+    else if(row.state!=='found'||!['S','A','B','C','D',null].includes(row.rating as string|null)||typeof row.revision!=='number'||!Number.isSafeInteger(row.revision)||row.revision<1)return false;
+  }
+  return seen.size===expected.size;
+}
 export async function ipc(payload:Rpc,signal?:AbortSignal):Promise<Response>{
+  if(payload.operation!=='ratings')return ipcRequest(payload,signal);
+  // The feed owner supplies only a freshly B1-verified principal. This is not a public route.
+  const abort=new AbortController();const cancel=()=>abort.abort(signal?.reason);
+  const stopped=new Promise<Response>(resolve=>abort.signal.addEventListener('abort',()=>resolve(failure(payload.request_id,503,'UPSTREAM_UNAVAILABLE','项目评分查询暂不可用')),{once:true}));
+  const timer=setTimeout(()=>abort.abort(),2000);
+  if(signal?.aborted)cancel();else signal?.addEventListener('abort',cancel,{once:true});
+  try{
+    const response=await Promise.race([ipcRequest(payload,abort.signal),stopped]);
+    if(response.status>=500)return failure(payload.request_id,503,'UPSTREAM_UNAVAILABLE','项目评分查询暂不可用');
+    if(response.ok){
+      try{const value=await response.clone().json();if(response.status!==200||!validRatings(value.data,payload)||abort.signal.aborted)throw Error('RATINGS_PROJECTION');}
+      catch{return failure(payload.request_id,503,'UPSTREAM_UNAVAILABLE','项目评分查询暂不可用');}
+    }
+    return response;
+  }finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);abort.abort();}
+}
+async function ipcRequest(payload:Rpc,signal?:AbortSignal):Promise<Response>{
   const socketPath=process.env.IKUN_PROJECTS_IPC_SOCKET,token=process.env.IKUN_PROJECTS_IPC_TOKEN,build=process.env.IKUN_PROJECTS_BUILD_SHA;
   if(!socketPath||!socketPath.startsWith('/')||Buffer.byteLength(socketPath)>100||!token||token.length<32||!build||!/^[a-f0-9]{40}$/.test(build))return failure(payload.request_id,503,'DB_UNAVAILABLE','项目 IPC 未就绪');
   try{
@@ -29,7 +64,7 @@ export async function ipc(payload:Rpc,signal?:AbortSignal):Promise<Response>{
       const timer=setTimeout(()=>req.destroy(Error('IPC_TIMEOUT')),8000);
       const req=http.request({socketPath,path:'/v1/rpc',method:'POST',signal,headers:{authorization:'Bearer '+token,'x-ikun-build-sha':build,'content-type':'application/json','content-length':data.length,'x-request-id':payload.request_id}},res=>{
         const pieces:Buffer[]=[];let size=0;
-        res.on('data',(chunk:Buffer)=>{size+=chunk.length;if(size>4194304)req.destroy(Error('IPC_BODY_TOO_LARGE'));else pieces.push(chunk);});
+        res.on('data',(chunk:Buffer)=>{size+=chunk.length;if(size>(payload.operation==='ratings'?65536:4194304))req.destroy(Error('IPC_BODY_TOO_LARGE'));else pieces.push(chunk);});
         res.on('end',()=>{clearTimeout(timer);try{const body=Buffer.concat(pieces);const envelope=JSON.parse(body.toString());if(!envelope||envelope.request_id!==payload.request_id||(!('data'in envelope)&&!('error'in envelope)))throw Error('IPC_ENVELOPE');resolve(new Response(body,{status:res.statusCode??502,headers:{'content-type':'application/json','cache-control':'no-store','x-request-id':payload.request_id,...(res.headers.etag?{etag:res.headers.etag}:{})}}));}catch(error){reject(error);}});
         res.on('error',reject);
       });

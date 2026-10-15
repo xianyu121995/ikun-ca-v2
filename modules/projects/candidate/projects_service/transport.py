@@ -115,9 +115,22 @@ class Event(StrictModel):
         return value
 
 
+class RatingsQuery(StrictModel):
+    project_ids: list[str]=Field(max_length=200)
+    expected_catalog_version: str | None=Field(min_length=1,max_length=128,strict=True)
+
+    @field_validator('project_ids',mode='before')
+    @classmethod
+    def unique_ids(cls,value):
+        if not isinstance(value,list) or any(not isinstance(item,str) or not re.fullmatch('prj_'+UUID4,item) for item in value):
+            raise ValueError('canonical project IDs required')
+        if len(value)!=len(set(value)):raise ValueError('duplicate project IDs')
+        return value
+
+
 class Rpc(StrictModel):
     operation: Literal['list','get','create','patch','membership','delete','ingest','receipt','command','reconcile',
-                       'changes','outbox_claim','outbox_result','summary','milestones','completion','completions','restore']
+                       'changes','outbox_claim','outbox_result','summary','milestones','completion','completions','restore','ratings']
     principal: Principal | None=None
     source: Literal['hunter','tracking'] | None=None
     request_id: str=Field(pattern=r'^[A-Za-z0-9_-]{1,64}$')
@@ -126,7 +139,17 @@ class Rpc(StrictModel):
     body: dict=Field(default_factory=dict)
     idempotency_key: str | None=None
     if_match: str | None=None
-    contract: Literal['phase2-v1.0.0','projects-home-v1']='phase2-v1.0.0'
+    contract: Literal['phase2-v1.0.0','projects-home-v1','tracking-ratings-v1']='phase2-v1.0.0'
+
+    @model_validator(mode='after')
+    def ratings_contract(self):
+        if (self.operation=='ratings')!=(self.contract=='tracking-ratings-v1'):
+            raise ValueError('ratings operation requires its exact contract')
+        if self.operation=='ratings':
+            if self.model_fields_set & {'target','source','query','idempotency_key','if_match'}:
+                raise ValueError('ratings is a dedicated read-only request')
+            self.body=RatingsQuery.model_validate(self.body).model_dump()
+        return self
 
 
 class Milestone(StrictModel):

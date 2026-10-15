@@ -1,0 +1,212 @@
+{
+  "record_version": 1,
+  "proposal_id": "projects-product-c02-c03-v1",
+  "policy_version": "product-decisions-v1",
+  "state": "pending_protocol_review",
+  "joint_alignment_state": "pending_owner_alignment",
+  "implementation_state": "pending_protocol_review",
+  "decisions": [
+    "C-02",
+    "C-03"
+  ],
+  "acceptance_ids": [
+    "DEC-C02",
+    "DEC-C03"
+  ],
+  "authority": {
+    "commit": "5c208ec74429c37a51f67f04558508e7f9b2538a",
+    "documents_sha256": {
+      "docs/product/DECISIONS.md": "4eca64f8a7442f8211e9a69703d3a3545bc8d00961a97ffe4f71c12c5e28436b",
+      "docs/product/DECISIONS-P0.md": "fde180d85dd07ce6481d72379cc959e2af87657e7996b2512476dc5ee4f01382",
+      "docs/product/decisions-v1.json": "a29c2d6794adb67454f08b8a4ccb521b6ddf03db6a539f9d5b57641489c0ea5b"
+    }
+  },
+  "baseline": {
+    "projects_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+    "projects_acceptance_commit": "ad4d5df91450a735465d21142ffc3e26536e948a",
+    "b3_reference_commit": "2c7ce9a36350aa438c8d197b60d41de2b4aa1c96",
+    "b2_source_set_sha256": "c75259acfcd8f37cee1bdd05812f3e41bd5f901a862db071a2aba7ab7611547a"
+  },
+  "document": {
+    "path": "modules/projects/protocols/product-c02-c03-v1.md",
+    "sha256": "6d23eb94da081cab78838ec02c8d60e25b8a3ad13fc177c148ac3ecd14957313"
+  },
+  "c02": {
+    "profile": "projects-home-v1",
+    "new_crud": false,
+    "new_schema": false,
+    "mapping": [
+      {
+        "ui": "onArchive",
+        "method": "POST",
+        "path": "/api/v1/projects/completions?view=home-v1",
+        "revision": "per_item",
+        "semantic": "completion"
+      },
+      {
+        "ui": "single_completion",
+        "method": "POST",
+        "path": "/api/v1/projects/{id}/completion?view=home-v1",
+        "revision": "if_match",
+        "semantic": "completion"
+      },
+      {
+        "ui": "onRestore",
+        "method": "POST",
+        "path": "/api/v1/projects/{id}/restore?view=home-v1",
+        "revision": "if_match",
+        "semantic": "restore"
+      },
+      {
+        "ui": "onMembership_remove",
+        "method": "POST",
+        "path": "/api/v1/projects/{id}/home-membership?view=home-v1",
+        "revision": "if_match",
+        "semantic": "membership_only"
+      },
+      {
+        "ui": "onDelete",
+        "method": "DELETE",
+        "path": "/api/v1/projects/{id}?view=home-v1",
+        "revision": "if_match",
+        "semantic": "membership_only"
+      }
+    ],
+    "changes_monitoring_state": false
+  },
+  "c03": {
+    "approach": "precise_readonly_adapter_to_existing_b2_private_ipc",
+    "ratings_authority": "projects",
+    "notes_authority": "tracking_subscription_notes",
+    "http": {
+      "method": "POST",
+      "path": "/internal/v1/projects/ratings/query",
+      "profile": "projects-rating-read-v1",
+      "query_parameters": false,
+      "body_exact_keys": [
+        "profile",
+        "project_ids",
+        "snapshot"
+      ],
+      "project_id_batch_min": 0,
+      "project_id_batch_max": 100,
+      "project_ids_unique": true,
+      "body_max_bytes": 16384,
+      "response_max_bytes": 65536
+    },
+    "credential": {
+      "new_independent_direction": true,
+      "website_config_name": "PROJECTS_RATING_READ_TRACKING_TOKEN",
+      "random_bytes_min": 32,
+      "role_granted": null,
+      "service_id": "tracking-worker",
+      "scope": "ikun-main",
+      "capability": "projects.rating.read",
+      "worker_gets_ipc_identity": false,
+      "no_secret_created": true
+    },
+    "private_rpc": {
+      "path": "/v1/rpc",
+      "operation": "ratings_query",
+      "contract": "projects-rating-read-v1",
+      "exact_keys": [
+        "operation",
+        "contract",
+        "request_id",
+        "service",
+        "body"
+      ],
+      "service_exact_keys": [
+        "id",
+        "tenant_id",
+        "capability",
+        "credential_epoch"
+      ],
+      "body_exact_keys": [
+        "project_ids",
+        "snapshot"
+      ],
+      "strict_separate_model": "RatingReadRpcV1",
+      "legacy_rpc_changed": false,
+      "allows_human_principal": false
+    },
+    "projection": {
+      "item_exact_keys": [
+        "project_id",
+        "state",
+        "rating",
+        "project_revision"
+      ],
+      "state_enum": [
+        "found",
+        "not_found"
+      ],
+      "rating_enum": [
+        "S",
+        "A",
+        "B",
+        "C",
+        "D",
+        null
+      ],
+      "found_null_is_unrated": true,
+      "missing_is_distinct": true,
+      "home_membership_filters_rating": false,
+      "legacy_dto_required_fields_added": false
+    },
+    "snapshot": {
+      "source": "projects_boot_nonce_and_committed_project_changes_sequence",
+      "binds_credential_epoch": true,
+      "signed": true,
+      "ttl_seconds": 300,
+      "sliding_expiry": false,
+      "expiry_clock": "monotonic_with_boot_binding",
+      "stale_status": 409,
+      "stale_code": "SNAPSHOT_STALE",
+      "malformed_status": 422,
+      "cache": "optional_memory_only_validate_before_use_and_before_response",
+      "persistent_rating_replica": false
+    },
+    "feed_alignment_required": {
+      "candidate_public_path": "/api/v1/tracking/feed",
+      "candidate_public_profile": "tracking-feed-v1",
+      "filter_rating": [
+        "all",
+        "S",
+        "A",
+        "B"
+      ],
+      "filter_before_page": true,
+      "full_query_counts": true,
+      "notes_must_not_fallback_to_name": true,
+      "all_project_ids_of_full_candidate_set_required": true,
+      "b3_feed_epoch_covers_all_mutations_and_cleanup": true,
+      "cursor_binds_full_filter_limit_sort_policy_and_both_versions": true,
+      "b3_protocol_commit": null,
+      "b3_alignment_accepted": false
+    },
+    "failure_mode": "whole_profile_fails_without_partial_items_or_fake_total",
+    "limits": {
+      "adapter_inflight_max": 2,
+      "feed_inflight_max": 2,
+      "rating_call_timeout_ms": 1500,
+      "compound_feed_timeout_ms": 5000,
+      "website_outer_timeout_ms": 10000,
+      "automatic_retries": 0
+    },
+    "projects_migration_required": false
+  },
+  "gates": {
+    "only_protocol_files_in_this_delivery": true,
+    "chief_review_before_implementation": true,
+    "b3_alignment_before_joint_protocol_approval": true,
+    "formal_source_receiving_authorized": false,
+    "merge_authorized": false,
+    "push_authorized": false,
+    "deployment_authorized": false,
+    "voice_implementation_authorized": false,
+    "real_provider_calls_authorized": false,
+    "heavy_tests_run_this_round": false,
+    "future_heavy_lock": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/scripts/with-heavy-lock.py"
+  }
+}

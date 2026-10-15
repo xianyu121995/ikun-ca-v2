@@ -30,7 +30,7 @@ node modules/auth/dist/src/cli.js recover-admin --username your_admin
 ## 安全与会话
 
 - 仅 superadmin/user。匿名业务 API 401，user 写入 403；must_change_password 在服务端阻止全部业务页面/API/Server Actions。普通用户只可访问显式只读业务清单和本人的会话/密码接口。
-- Argon2id：64MiB、3 次、parallelism 1、随机盐；密码 15–128 Unicode 字符且最多512 UTF-8字节；最多4个异步哈希，超限429；新旧密码不得相同。
+- Argon2id：64MiB、3 次、parallelism 1、随机盐；密码 10–128 Unicode 字符且最多512 UTF-8字节；最多4个异步哈希，超限429；新旧密码不得相同。
 - 256 位随机令牌，DB 仅存 SHA-256 token hash。默认7天绝对有效期，访问不延长；配置及认证均强制最长604800秒，不因配置或旧 expires_at 放宽。允许部署收紧，绝不超过7天。最多5个设备。
 - 退出撤销当前会话；禁用/重置/本地恢复撤销该账号全部会话。本人改密必须验证旧密码，在同一事务中撤销全部旧会话并生成唯一新会话；当前浏览器收到新 Cookie/CSRF，不要求重复登录，其他设备立即失效。首次改密亦采用此流程。
 - 每请求重验 enabled/version/role/强制改密/过期；不采纳浏览器 user/role/scope。SSE 每块和静默期间每秒重验，撤销时关闭并取消上游。

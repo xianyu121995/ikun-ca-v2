@@ -73,3 +73,7 @@ export async function updateProject(form:FormData){
 Server Component/Action 接线参考已核对的 [Next.js Authentication](https://nextjs.org/docs/app/guides/authentication) 与 [Proxy](https://nextjs.org/docs/app/api-reference/file-conventions/proxy) 官方文档：Proxy 只是入口预检，实际操作仍由请求内的鉴权函数执行。
 
 auth 备份请使用 SQLite online backup 或停网站后完整备份（不可遗漏 WAL）。回滚仅恢复 auth 的受审阅备份并回退认证版本，不回滚业务库；恢复旧 auth 备份可能失效备份之后的会话，需重新登录。既有账号不做静默删除/角色变更；如收件环境已含旧方案的多个管理员，由总管另审本机处理方案，不自动降级账号。
+
+## 密码长度最小增量
+
+新设/修改/CLI 重置或恢复的密码下限改为10个Unicode码点；上限仍128码点/512 UTF-8字节。仅此政策变化，现有密码/hash/会话不迁移、不重写，不要求已有账号再次改密，登录继续验证原密码。详见 AUTH-CONTRACT-password10.md；原冻结规范与历史报告不改写。

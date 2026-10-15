@@ -20,9 +20,9 @@ export function username(value: unknown): string {
   return key;
 }
 export function password(value: unknown, creating = true): string {
-  if (typeof value !== "string" || [...value].length < (creating ? 15 : 1) ||
+  if (typeof value !== "string" || [...value].length < (creating ? 10 : 1) ||
       [...value].length > 128 || Buffer.byteLength(value) > 512)
-    throw invalid("密码须为 15–128 个字符，建议使用独立长口令");
+    throw invalid("密码须为 10–128 个字符，建议使用独立长口令");
   return value;
 }
 

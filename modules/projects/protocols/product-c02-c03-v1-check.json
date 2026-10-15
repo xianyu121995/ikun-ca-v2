@@ -1,0 +1,29 @@
+{
+  "record_version": 1,
+  "proposal_id": "projects-product-c02-c03-v1",
+  "result": "static_checks_passed_not_implementation_acceptance",
+  "document_sha256": "6d23eb94da081cab78838ec02c8d60e25b8a3ad13fc177c148ac3ecd14957313",
+  "manifest_sha256": "516aa87e5c61409c31327d88b88fa7f07090bf0761f2d6c5008572d88f4b9e50",
+  "authority_commit": "5c208ec74429c37a51f67f04558508e7f9b2538a",
+  "authority_documents_verified": 3,
+  "accepted_b2_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+  "accepted_b2_runtime_schema_test_inputs_unchanged": 48,
+  "source_set_sha256": "c75259acfcd8f37cee1bdd05812f3e41bd5f901a862db071a2aba7ab7611547a",
+  "tracked_changes_outside_protocol": "none",
+  "json_examples_parsed": 2,
+  "new_or_repeated_functional_tests": 0,
+  "heavy_build_or_browser_runs": 0,
+  "databases_opened": 0,
+  "business_network_calls": 0,
+  "worker_starts": 0,
+  "b3_alignment": "pending_owner_alignment",
+  "implementation": "pending_protocol_review",
+  "checks": [
+    "authority Git object hashes match decisions registry",
+    "B2 acceptance and source input binding unchanged",
+    "document and manifest agree",
+    "request and response examples parse and match key lists",
+    "full underlying rating enum preserved",
+    "no implementation or acceptance claimed"
+  ]
+}

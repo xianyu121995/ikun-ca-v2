@@ -1,11 +1,46 @@
 {
   "compilerOptions": {
-    "target": "ES2022", "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true, "skipLibCheck": true, "strict": true, "noEmit": true,
-    "esModuleInterop": true, "module": "esnext", "moduleResolution": "bundler",
-    "resolveJsonModule": true, "isolatedModules": true, "jsx": "react-jsx",
-    "incremental": true, "plugins": [{ "name": "next" }]
+    "target": "ES2022",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "lib/**/*.ts",
+    "components/auth/**/*.tsx",
+    "components/projects-home.tsx",
+    "components/homepage-ui/reference-homepage.tsx",
+    "components/homepage-ui/reference-editor.tsx",
+    "components/homepage-ui/shared-dialog.tsx",
+    "features/homepage/types.ts",
+    "features/homepage/reference-types.ts",
+    "features/homepage/reference-model.ts",
+    "features/homepage/view-model.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

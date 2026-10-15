@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "command": [
+    "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node",
+    "--import",
+    "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/node_modules/tsx/dist/loader.mjs",
+    "--test",
+    "--test-name-pattern",
+    "Actual|Seven-day|Local B1|Password change|B0 rejects",
+    "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/c0-lite/tests/entry-guards.test.mjs"
+  ],
+  "exit_code": 0,
+  "tests": [
+    "ℹ tests 9",
+    "ℹ pass 9",
+    "ℹ fail 0",
+    "ℹ skipped 0"
+  ],
+  "runtime": "/private/tmp/ikun-c0-entries-2owr4x3t",
+  "scope": "actual received Route Handlers/Server Action and real B0 UDS, Proxy bypassed, isolated synthetic credentials"
+}

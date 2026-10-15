@@ -1,0 +1,99 @@
+> ikun-ca-v2@0.1.0 test:auth /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration
+> node --test modules/auth/tests/*.test.mjs
+
+✔ anonymous denied / (796.769875ms)
+✔ anonymous denied /hunter (597.27425ms)
+✔ anonymous denied /tracking (683.528083ms)
+✔ anonymous denied /api/v1/projects (585.509042ms)
+✔ anonymous denied /api/v1/auth/me (663.497125ms)
+✔ user denied business POST, callback not executed (1644.204417ms)
+✔ user denied business PUT, callback not executed (1997.673042ms)
+✔ user denied business PATCH, callback not executed (2927.165875ms)
+✔ user denied business DELETE, callback not executed (1527.616458ms)
+✔ user reads three business pages and audited APIs; unknown and Hunter config denied (1430.770375ms)
+✔ admin business writes use fresh frozen principal, client role is never authority (625.77875ms)
+✔ removed account surface /auth/users is unavailable even to admin (661.845417ms)
+✔ removed account surface /api/v1/auth/users is unavailable even to admin (784.14775ms)
+✔ removed account surface /api/v1/auth/users/usr_example is unavailable even to admin (640.490875ms)
+✔ removed account surface /api/v1/auth/users/usr_example/reset-password is unavailable even to admin (761.164208ms)
+✔ registration unavailable and me capabilities never advertise remote user management (634.40025ms)
+✔ bootstrap admin and new users must change initial password on server before business (522.250209ms)
+✔ local create is user only, duplicate bootstrap/create rejected (2591.321458ms)
+✔ local disable/enable revokes all sessions and returns the same generic login failure (2775.827375ms)
+✔ local reset revokes every device and forces change without automatically enabling user (1951.720375ms)
+✔ admin recovery needs no web session, revokes sessions and forces password change (1552.326875ms)
+✔ last active superadmin cannot be disabled; schema supports future multiple admins safely (1112.230584ms)
+✔ local list uses a strict safe projection and audit contains no credentials (1208.380792ms)
+✔ own password requires current password, rotates token and CSRF, revokes every old device (1108.724334ms)
+✔ user can change own password but cannot change someone else or add fields (1475.531583ms)
+✔ logout revokes current session immediately, other device survives; repeat logout is safe (686.187875ms)
+✔ seven-day absolute boundary survives activity and restart, cannot be extended (573.408708ms)
+✔ configuration and server cap reject sessions longer than seven days (649.260375ms)
+✔ login rotation/session cap do not reuse tokens and persisted tokens remain hashed (1242.162209ms)
+✔ CSRF/Origin/Host and duplicate cookies rejected at actual API entry (536.468ms)
+✔ Server Action guard independently enforces role/CSRF/force-change without proxy (1422.805333ms)
+✔ login limiter survives restart and ignores fake forwarded IP (1273.139917ms)
+✔ weak/oversized passwords and request bodies rejected without echo (764.064791ms)
+✔ native POST forms reject non-JSON safely; no credentials in redirects/responses (903.469625ms)
+✔ production cookie flags, seven-day Max-Age and private cache (251.053167ms)
+✔ Argon2id parameters, private database permissions and no raw tokens (673.166708ms)
+✔ CLI rejects pipes, password/role arguments and unsafe initialization before DB creation (490.975125ms)
+✔ database isolation rejects a business database and filesystem aliases (3.16075ms)
+✔ SSE quiet revocation disable closes and cancels upstream (2203.548292ms)
+✔ SSE quiet revocation reset closes and cancels upstream (2138.326125ms)
+✔ SSE quiet revocation password closes and cancels upstream (2228.367875ms)
+✔ SSE quiet revocation expire closes and cancels upstream (2102.569208ms)
+✔ SSE quiet revocation database-failure closes and cancels upstream (2198.863208ms)
+✔ scope headers/query cannot grant access (736.907625ms)
+✔ password session creation failure rolls back password/version and preserves old sessions (1040.06025ms)
+✔ concurrent local bootstrap creates exactly one superadmin (170.398ms)
+✔ concurrent local resets cannot silently overwrite a newer password (1385.691667ms)
+✔ SSE rechecks before delivering a data chunk after revocation (1093.06675ms)
+✔ new CLI account cannot skip force-change via a forged role or a Server Action (755.413708ms)
+✔ B1 frozen Auth2 reconciliation preserves users, sessions, receipts and legacy checksum (196.92975ms)
+✔ B1 migration failure rolls back/preserves, backup recovers at a new path (9.392708ms)
+✔ B1 readonly inspection cannot migrate or recreate missing auth DB (4.18675ms)
+✔ B1 fixed scope and future SQLite versions fail closed (705.666417ms)
+✔ B1 actual pinned B0 defaults reject Auth2; explicit readonly domain admission checks checksum/scope (31.648833ms)
+ℹ tests 54
+ℹ suites 0
+ℹ pass 54
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 56865.707917
+✔ unsafe adapter configuration fails before creating stores or starting a child (112.141459ms)
+✔ malformed adapter configuration is rejected without logging its input (99.555958ms)
+✔ a fourth independent Projects service cannot be started (132.718375ms)
+✔ termination during IPC startup is bounded and leaves no child or private socket (281.389959ms)
+✔ private IPC has a bound identity; bad token/build, timeout and shutdown fail closed (192.411166ms)
+✔ modified entry is rejected and child death invalidates readiness without paid retries (252.031625ms)
+✔ failed child startup is bounded and cleans its private IPC directory (102.702041ms)
+✔ a stalled IPC body has a hard startup deadline and is cleaned up (307.967041ms)
+✔ managed process group shutdown reaches an uncooperative grandchild (156.585167ms)
+✔ abrupt parent SIGKILL does not orphan the private service or its grandchild (209.923625ms)
+✔ entry drift after construction is rejected before spawning and cleans private directory (1.349542ms)
+✔ caller argument mutation does not change the pinned launch; invalid deadlines reject (112.835875ms)
+✔ private Projects child does not inherit unrelated parent credentials or environment (111.836083ms)
+✔ readiness cannot create missing databases or directories (2.516458ms)
+✔ read-only inspection preserves bytes and cannot write; domain ownership is enforced (9.560416ms)
+✔ foundation reopens supported four-column Tracking metadata without positional inserts or data loss (20.856667ms)
+✔ foreign owner and unsupported metadata fail before mutation (5.059542ms)
+✔ actual frozen Tracking migration upgrades a temporary foundation and reopens compatibly (321.710334ms)
+✔ legacy checksum adoption is explicit and repeatable, tampering fails without repair (8.679875ms)
+✔ failed metadata upgrade rolls back and can recover without recreating business data (9.223959ms)
+✔ future SQLite user_version fails closed even when migration rows look older (5.877583ms)
+✔ service ownership, physical separation and repeatable migration (29.287542ms)
+✔ foreign database is rejected without changing its marker or tables (7.803666ms)
+✔ symlink and hardlink aliases cannot cross store boundaries (4.156667ms)
+✔ service credential checks fail closed (0.452833ms)
+✔ project ID format is canonical and request IDs cannot carry injected text (0.8735ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1528.468292

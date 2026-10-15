@@ -1,0 +1,278 @@
+{
+  "control_commit": "c30cc51f64e95c40a6ccd83b1fbed458090ef3be",
+  "source_commits": {
+    "b0": "85be3bd6dce25d82033b6cb1a7157aaa39bd571e",
+    "ui": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "auth": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+    "homepage": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e",
+    "projects": "d0fdefab2aa230ebb8df856aed306d0184d362e2"
+  },
+  "mappings": {
+    "apps/website/app/api/auth/session/route.ts": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/app/api/auth/session/route.ts",
+      "source_sha256": "3b1e917759710c3d444a2e8c1225a36b3433810ecd57b85582584b67ea483cec",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/api/v1/auth/[[...path]]/route.ts": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/app/api/v1/auth/[[...path]]/route.ts",
+      "source_sha256": "067fc9feb087b390fc3b0673143dc4c9521bd897d08173ed5f55c61b7e0c790b",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/auth/loading.tsx": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/app/auth/loading.tsx",
+      "source_sha256": "88c9b00759fa527040a01019a095c3f8612df17f04aae343406cb54cedba983d",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/auth/page.tsx": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/app/auth/page.tsx",
+      "source_sha256": "c5b0728fcf07ab50e741df5bfac5b941d3a253f21ab7334e1918a93c3f254be9",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/auth/password/page.tsx": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/app/auth/password/page.tsx",
+      "source_sha256": "a08b31b029bc0a1052ade478c777d200e3a03e5a17528b8d33badb591cf6aaff",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/login/loading.tsx": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/app/login/loading.tsx",
+      "source_sha256": "88c9b00759fa527040a01019a095c3f8612df17f04aae343406cb54cedba983d",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/login/page.tsx": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/app/login/page.tsx",
+      "source_sha256": "7c0e3ca396115734b6b3952399f06ca6726a1e93228e1f59126f9ff27ecee81e",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/components/auth/forms.tsx": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/components/auth/forms.tsx",
+      "source_sha256": "6bc4b6b4e4a2ea5e3d48e5fdc2759912395fc33d8cbf4f89601cab3f914aa814",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/components/auth/loading.tsx": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/components/auth/loading.tsx",
+      "source_sha256": "b7ac1accaee2a81efa114de2d939d6986263467f493fd94a5ae2cbd7638a9b15",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/components/auth/shell.tsx": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/components/auth/shell.tsx",
+      "source_sha256": "d77466a21295a88edcc3d13cb196356d199891a461563ca9d382da2448504469",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/lib/auth.ts": {
+      "source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+      "source_path": "modules/auth/integration/website/lib/auth.ts",
+      "source_sha256": "3ad82f5e76acb65af141c75ab0aa232c32c55badafe8a5622ddeed4ab54e7af2",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/proxy.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/proxy.ts",
+      "source_sha256": "c57e632ff51ece2c177cb80ef9ae45d0cc4e30dfb069640e9b723c4b25d902dc",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/api/v1/commands/[id]/route.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/app/api/v1/commands/[id]/route.ts",
+      "source_sha256": "bf662f536bc983af864302d4414cfcb71b7282700a67e595e8f2a710a292f70f",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/api/v1/events/stream/route.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/app/api/v1/events/stream/route.ts",
+      "source_sha256": "428f0561927c7a0aabec77dca751084cd6f100eb516459129ed6e3f7620460d9",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/api/v1/projects/[[...path]]/route.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/app/api/v1/projects/[[...path]]/route.ts",
+      "source_sha256": "4ed891bc871d2a798411688ce3a5ebfbcbc1b3bcd1209d64aff504b810258523",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/internal/v1/ingest/[source]/route.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/app/internal/v1/ingest/[source]/route.ts",
+      "source_sha256": "78f278d7308a4e91f6493c26b360c2d1b514a8884dc05191f5dab4a07677c386",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/internal/v1/receipts/[source]/[id]/route.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/app/internal/v1/receipts/[source]/[id]/route.ts",
+      "source_sha256": "e3489c51c00e078c7e359fdfd234aee08b723535a15816a84655320c1ab0498b",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/app/page.tsx": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/app/page.tsx",
+      "source_sha256": "74269cb76cfe26861afe4d0bd45a6f64c935a3d9eba49f579c07ecb3cb2f3840",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": "8b0524ed2832f33271822c0918376cb40b811be0645747f3dd2f6ec4c5cccd82"
+    },
+    "apps/website/app/project-actions.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/app/project-actions.ts",
+      "source_sha256": "8250f84a40abcb882b975976fbb6497f87903d01e4746f639571fb2d81d65a27",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/components/projects-home.tsx": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/components/projects-home.tsx",
+      "source_sha256": "b026e2a8c212dd49c59f45806f07bd7646370185f6364f467bc0dd4eada94fe0",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/lib/homepage-server.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/lib/homepage-server.ts",
+      "source_sha256": "b10f9790c03e6555b158a335a5ae5238af08e20fa2d91252ae7912cb53028d9f",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/lib/outbox-relay.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/lib/outbox-relay.ts",
+      "source_sha256": "8ac3cf9a4155d23fb5ecbbd1999e4609925220f01a539c442849f23206a18f94",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/lib/project-events.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/lib/project-events.ts",
+      "source_sha256": "f9a3c72d42cd85d4263651db3b67382658e3d6c287f0ed1c2f277ed71116c10f",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/lib/projects.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/lib/projects.ts",
+      "source_sha256": "e05a82263a9441c421ab2e46950524c49988a0c7b09a782b88ab093c25bcf50b",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": null
+    },
+    "apps/website/lib/stores.ts": {
+      "source_commit": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+      "source_path": "modules/projects/integration/website/lib/stores.ts",
+      "source_sha256": "36d23e12bfcac58d333a1d3e739b478a456d2495163095d6f8f761109409a6c2",
+      "adaptation": "minimal_receiving_glue_only; preserve reviewed guards and domain behavior",
+      "previous_sha256": "a879fab4d5453f6be5d442ae90d845c66f05498c03f53d0210e6a75410c0147d"
+    }
+  },
+  "immutable_files": {
+    "packages/contracts/package.json": "8322f535dec746f55a83442ac7888174b76426b1313a6af88ad1a74b899f8aee",
+    "packages/contracts/src/index.ts": "2d64386f8a9301f0ea8c80a20d0e79346946f6c71a44d33dc836eaf2b347fda0",
+    "packages/contracts/src/phase2.ts": "ae4cd7dc9c7b7acdd1092dd5dab97de118334da941e86e9f7293c01e8470311d",
+    "packages/contracts/tsconfig.json": "f0b29eb4cf66109ddaa38cf326692a9db2a6109e68a2709ec214f9a3fb700a2c",
+    "packages/runtime/package.json": "880e802782e8e58334a8c3088b9be7c4473c00e030dfc8fc563d4a65bac3fab3",
+    "packages/runtime/src/http.ts": "0db801c8bc82f47478527999ea413cf311cc708187949421fe24d3939cb093e1",
+    "packages/runtime/src/index.ts": "b4c10a3352a39889570496fa729b61156c5027e7ee74f724ec329e8fdb74ef37",
+    "packages/runtime/src/managed.ts": "4723a5de9aeb1db4dae49a2678708b2f37a381d50b67200dfd43c70848e5221c",
+    "packages/runtime/src/process-entry.ts": "7f4940d879215bee6edd4bf855f2d56b30f27032b1d816c9042ba54fb061de94",
+    "packages/runtime/src/stores.ts": "9e2cde245c9c7da002a212cf2c6208da4aca0a9fcc2fc27f4e3a973a9d0a26de",
+    "packages/runtime/src/worker.ts": "dee4c3bf342d09890f21c05099dff51eb46805d69db857c6ffbdb950ca2cc6c7",
+    "packages/runtime/tsconfig.json": "f0b29eb4cf66109ddaa38cf326692a9db2a6109e68a2709ec214f9a3fb700a2c",
+    "packages/ui/DESIGN.md": "78e308176b951f66005493281889005e2ee1c6e4e51f5d6b871140351edd3855",
+    "packages/ui/HANDOFF.md": "dec2a920aef306f125d608bd24caa662c9f8e02811fe0736af375c3fb4b5e2b3",
+    "packages/ui/README.md": "9298efb5833cc31ad57bc5b415160e3dbce133cd8b63c0dacbd8654f2fa0365f",
+    "packages/ui/UI0-HANDOFF.md": "662597b11038f9f24e6ad8618cbde4d8b6a7383d1d3e050d552c66b64d1b5ab7",
+    "packages/ui/UI0-VALIDATION.json": "18c7c7b7e0a8b943ab2687732b732b397f04f71bc3709e130095060af93c0f57",
+    "packages/ui/package.json": "dc7c1f557324e47d0e2f0afc1172afae7cac9f56d9385e56aaa5942a16f784cf",
+    "packages/ui/preview/index.html": "ba43f1ff86271cbb39fab84711fab543ff94f4623c83c1f7e7c438d3989a1422",
+    "packages/ui/preview/main.tsx": "e463de0ac0ccf7c0ed7834991c925f7f275a93ef43812df0b5d48f522d1e9832",
+    "packages/ui/preview/preview.css": "f14df187976381bdb251519ce2798257a2571489714b465b92ba040821175c55",
+    "packages/ui/review/FINAL_HANDOFF.md": "d5bc720ec40f37cc7d5a42b0622262bea36a2ad66820d9e43b165c05d9c4fa3c",
+    "packages/ui/review/README.md": "e2fa16863dd20e7c2bad39961cfe51c18d7690821c2647845e8bfb3d47459030",
+    "packages/ui/review/embedded-shell.tsx": "ce7489ed836cad0d3bd7a0a906dd993ba2c4bc0e20aec27da4e03b580a45fd7d",
+    "packages/ui/review/final-ui.d.ts": "4fe202b5a61c7775f6721f790f8d1b09d9defabfea44ff4221a181a125ba0101",
+    "packages/ui/review/main.tsx": "72cf7732fe3da1703f424d6e4fddd11aa8dd6fe36faa5eba9b32873a44d18907",
+    "packages/ui/review/sources.json": "7d30bd7fff1d677e273c6fa6d2ddd8c120e2274a6f3ffc475345dbe6bc10215d",
+    "packages/ui/review/unified.css": "95bf046294c4b6f1d355b43da2108ac277a2c28e7c9bea8f333c6c58be8b41b0",
+    "packages/ui/scripts/copy-styles.mjs": "165e12b3a1cdfb136e4b9a9e8421d75005b9f018250fe8e658c3bd5b57ac9c01",
+    "packages/ui/scripts/no-js-fixture.mjs": "1ee45ac0b95b646f3c5c289273d01a60d220edac3b10901879e9a28fef9f35bc",
+    "packages/ui/scripts/preview.mjs": "be90d3cd0197ba64b1ff511b36bbd0ea4bd1a28c9b353ada8483b59bf628935a",
+    "packages/ui/scripts/review-build.mjs": "dce7451a6232aac4ae954b68b5983b7aef253caeeac0d968ed65eee8f1221ed4",
+    "packages/ui/scripts/review-preview.mjs": "4710b8cff9b76ed1722b330e56df9202153312e6e733c2eae4c88486e6ee7e87",
+    "packages/ui/src/auth.tsx": "16ce13f3b4134898f37ba2e3edcc6e7dcc8d43cd1c044f43ee9c6d44408946c6",
+    "packages/ui/src/feedback.tsx": "bd489e40fb7ef4de395873ddc8940a8c7483dcdd18f2853e6cb86a9b23a0d6ea",
+    "packages/ui/src/icons.tsx": "95f5be22ef00c78919321299f1f92016dbfe9297fcf43501ae5e4406506b02e3",
+    "packages/ui/src/index.ts": "543ae285875fd993521cb1403867c57a599c3d91b7ce601e9bc6f102de81eef2",
+    "packages/ui/src/navigation.tsx": "78d9dadf58bffe0ef95e9defb46fc15fdd0892aae0ec215160d8f1a247db498c",
+    "packages/ui/src/primitives.tsx": "bc77880613ad23e60a6bb08cc100444be73d46d7ec8739455d1c7983c9a1b5fc",
+    "packages/ui/src/styles.css": "8efecee7b237f674d6f00ccad5a6796c0d267e3e247be21170c3bf6d92d359ef",
+    "packages/ui/src/table.tsx": "14eb0cca268d295c244cb27e25b967c924bdf68161f2cfa77359948ce1fc3cc1",
+    "packages/ui/tests/components.test.tsx": "bfb59e081e7f5e6aff4ce8a6d9d0ed951d8277a22ff4fec268d2ddd31a4a4d1f",
+    "packages/ui/tests/no-js-form.test.mjs": "1aca8fe58c1e6ca79105f871d318db85716a93b2edd63267c0cc7d01b0d06d8e",
+    "packages/ui/tsconfig.check.json": "7d81b13e35246a62c9fa998fd4424c173d6dc2a717ebb25b69db13886a700018",
+    "packages/ui/tsconfig.json": "0350fbfcdeb5c68fce36f533b3a02a8694df92dc938984e020755a725a0982d1",
+    "modules/auth/src/cli.ts": "033562ec2603e8c20a33688f6a89dab49194b5062f62c92dfebda7529b5f2d71",
+    "modules/auth/src/config.ts": "ea236fae8c3f8b5f46eeb05daea3b5e63c2dc84b2d946e782067484e067e82b2",
+    "modules/auth/src/database.ts": "ca5fd93a58118fe6c0b4f77545748edaadbe9dec546539c7c9e53949c5eea3e1",
+    "modules/auth/src/http.ts": "0b10ad23baf8b5cb70ba8c738b68f6ea83b1e1102aa6bc94d0d44051653777c1",
+    "modules/auth/src/local.ts": "0d5edd2976b16b4523b1506f07db627cf03554cce96e1dc36543a82c7e1642f4",
+    "modules/auth/src/schema.ts": "71a90461c0341d30c231a872012f62b4bedcff5a1e2e5bcd7f84484559ff7f4f",
+    "modules/auth/src/security.ts": "49fd72fd28030090c3e4a129cca71a38a2fe5eb6a2b61370c42c6d956a10d851",
+    "modules/auth/src/server.ts": "290696e9fbc5cefa3a3562417ab980d238baa78537db7f6cfca494b0df6fcd5a",
+    "modules/auth/src/store.ts": "5a4b574dfbd2b7d935f7cc706e8c3f925d5920668d678ec5fe39e5390d7bc181",
+    "modules/auth/tsconfig.json": "94cfd1821aa3208891375e6236b18f530657b2f6ebf45d02e28893ffff1796d0",
+    "schemas/auth/002_accounts.legacy.sql": "a312b047352478d8dedaa1fe9cf41222e0129b0437040fea951982cdcd926bd6",
+    "schemas/auth/002_accounts.sql": "81d5af37906fc4a9e0879a6590fc0ef93c1f191336c27f8f1cf5df572cdccc9a",
+    "schemas/auth/README.md": "f37bc366739e4651d03b95628de754630e2097a32afa35bcd638a18769567826",
+    "modules/projects/candidate/projects_service/__init__.py": "d8efbc53eeeed61e04cb809c04a60faca764e8a248e4e3bfb83276acdec4be32",
+    "modules/projects/candidate/projects_service/__main__.py": "6f3eca34eb8e885ddb0c3ef53d6932130054a09b792de2fc1614f06d892cc8c5",
+    "modules/projects/candidate/projects_service/api.py": "ace5506b8713c9eb9e5fdd91fe2966ec1ebca8cd2df995245037ad25c2f9ab32",
+    "modules/projects/candidate/projects_service/db.py": "db5f87a69bc27c7232b802f8a6d160c2f4c981c7fc69bd89d545276be20e7844",
+    "modules/projects/candidate/projects_service/home.py": "72daaeda92eeecf0235b22364af8a7d0b00f6a09f60d8a819524fc02ae952d8d",
+    "modules/projects/candidate/projects_service/ipc.py": "31477c20ac4bf9ed6909e6b4e395a2f14fd476ab0a5e34b8922eb160674a5903",
+    "modules/projects/candidate/projects_service/migration.py": "c29dbe767ba2f15fceb4b4b9656391268c0cb79f180f003c497e25d42360bb83",
+    "modules/projects/candidate/projects_service/migrations/001_projects.sql": "c12d968f0cadf2804aa9beee7664d68b3a62ab700edd7c40b540de872a993d3d",
+    "modules/projects/candidate/projects_service/migrations/002_tenant_queries.sql": "fe43dbbaa551c2bff512bfd984ed27162ffd4231952de2237366b1f17fef9276",
+    "modules/projects/candidate/projects_service/models.py": "7d5721e951d31c37cd0a10104cbf41560c69ab830d25e5cbd5cebbbee69a5c0f",
+    "modules/projects/candidate/projects_service/queries.py": "7b16ed3fe227bc7f4b1ffd215ffd53ca73d850cccb54779f4bf179544442d23e",
+    "modules/projects/candidate/projects_service/service.py": "1c27dfc1d9b80d8c0298abedb5aaec860c7a2bc473810644b95e3ff3cddcf2a7",
+    "modules/projects/candidate/projects_service/static/home.css": "d65fb5276223e4acb09f0dc703d8d8a0097e754ecfc202203945007b1b8dd24b",
+    "modules/projects/candidate/projects_service/static/home.js": "204eee78851179678f44dc5e645737e2a98ced131822663f8c761e8a0a6c87d8",
+    "modules/projects/candidate/projects_service/static/index.html": "cf1878a400cd85aa4044ac6e381c99a2c083beb8746f6518c32f5ece92894f53",
+    "modules/projects/candidate/projects_service/transport.py": "3215fe1dbcc36c8b3cb18f0983a3b7b16cc792d04b56ca4be75cd6d53917a90b",
+    "schemas/projects/001_foundation.sql": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac",
+    "schemas/projects/002_projects.sql": "340b05b53590a19a45ba4e63dbc7c6cb6b6367095f704828ab44c6c4ac80470b",
+    "schemas/projects/README.md": "e7c66ae717756546e443282e473fb4814410264d35dbe1509b161725e41a1c43"
+  },
+  "homepage_final_sha256": {
+    "apps/website/components/homepage-ui/reference-homepage.tsx": "26ff60d1417ef06b5da780230caa269df472ce848d14aaaac055f2484fe89ba1",
+    "apps/website/components/homepage-ui/reference-editor.tsx": "ddc6b3d04c75084231f8ef45a93995077f168639dc2884ca3720c8e4a033a0dd",
+    "apps/website/components/homepage-ui/shared-dialog.tsx": "1bf8ee3c6bacaa6cc436b176a93df6c5769aff29b9db123891203cb61f2deb2e",
+    "apps/website/components/homepage-ui/reference-homepage.css": "1e810366f1f93aebb06aff91cd5d52e76e58aa92cf97e2fd0fd2e751f86d76a2",
+    "apps/website/features/homepage/types.ts": "934363e6fefcd7d8c78c44e3912fdfdbf0ae736bd11bb3032d9dc46501478371",
+    "apps/website/features/homepage/reference-types.ts": "611146cc9a9d0c050ab27fe3404628e15e54dbab470568a181420ce5ca1aa361",
+    "apps/website/features/homepage/reference-model.ts": "4f93b248a3d0d0c04bb754146c93505e076ac84698ab390e2f54e47519f8cba0",
+    "apps/website/features/homepage/view-model.ts": "93be738cb12415a693ce603021aafaa9246729feb8e92fd2372dd1d202361039"
+  },
+  "homepage_patch_sha256": "cf2f4058659811f93ede9776e226fe1d9336402e2e936aa25274fde3cf55bae2",
+  "main_frozen_at": "63e8a2857241c6a76226f21435e40db9736a1e7e"
+}

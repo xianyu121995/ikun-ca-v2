@@ -1,3 +1,4 @@
+import type {ServerHomepage} from '../../lib/homepage-server';
 import type {HomepageCallbacks,HomepageContext,HomepageData,OperationResult,ProgressStage,ProjectFieldsProjection,ProjectRef} from './types';
 
 // Page-only presentation inputs. These do not extend the frozen Projects API/DTO.
@@ -19,6 +20,7 @@ export interface ReferenceCallbacks extends HomepageCallbacks {
   onDiscoveryDateChange?:(date:string|null)=>void; // Page-only calendar filter, not a frozen API field.
 }
 export interface ReferenceHomepageProps {
+  server?:ServerHomepage;
   context:HomepageContext;
   data:HomepageData;
   callbacks?:ReferenceCallbacks;

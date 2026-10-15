@@ -1,0 +1,400 @@
+{
+  "started_at": "2026-10-15T23:09:07.722520+08:00",
+  "status": "PASS",
+  "origin": "http://127.0.0.1:61970",
+  "scope": "actual received Next production build, synthetic isolated data",
+  "public_access_verified": false,
+  "workers_started": false,
+  "runtime": "/private/tmp/ikun-c0-p0-pvic05pa",
+  "p0_ids": [
+    "AUTH-01",
+    "AUTH-02",
+    "AUTH-03",
+    "PRO-01",
+    "PRO-02",
+    "ISO-01"
+  ],
+  "backup_restore": {
+    "auth": {
+      "restored_path": "/private/tmp/ikun-c0-p0-pvic05pa/restored/auth/auth.db",
+      "sha256": "d90eaad61f08abe40a44cb7298549804fc18f8cfa5a40a5dd47cf11654fd2516",
+      "live_data_replaced": false
+    },
+    "projects": {
+      "restored_path": "/private/tmp/ikun-c0-p0-pvic05pa/restored/projects/projects.db",
+      "sha256": "d48f8d7928e8f540caae7cf2873ac66111e9f393b6c53da24a88dde4f71f45da",
+      "live_data_replaced": false
+    }
+  },
+  "build": {
+    "tested_git_head": "c79df194d536dc479f8228c41bad5644eff75024",
+    "next_build_id": "90ZPOKT2QgS8j1DmMLpAu",
+    "lock_sha256": "0df973ec2369260cc60a75ce4f2380be37c3b600f51637f599f6f4237b1d2f8e"
+  },
+  "checks": [
+    {
+      "check": "AUTH-01 anonymous page",
+      "result": "PASS",
+      "path": "/"
+    },
+    {
+      "check": "AUTH-01 anonymous page",
+      "result": "PASS",
+      "path": "/hunter"
+    },
+    {
+      "check": "AUTH-01 anonymous page",
+      "result": "PASS",
+      "path": "/tracking"
+    },
+    {
+      "check": "AUTH-01 anonymous API",
+      "result": "PASS",
+      "path": "/api/v1/projects"
+    },
+    {
+      "check": "AUTH-01 anonymous API",
+      "result": "PASS",
+      "path": "/api/v1/tracking/subscriptions"
+    },
+    {
+      "check": "AUTH-01 anonymous API",
+      "result": "PASS",
+      "path": "/api/v1/auth/me"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "real_first_password_change",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "real_first_password_change",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "ISO-01 Auth operations do not change Projects",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 user write denied",
+      "result": "PASS",
+      "method": "POST"
+    },
+    {
+      "check": "AUTH-02 user write denied",
+      "result": "PASS",
+      "method": "PUT"
+    },
+    {
+      "check": "AUTH-02 user write denied",
+      "result": "PASS",
+      "method": "PATCH"
+    },
+    {
+      "check": "AUTH-02 user write denied",
+      "result": "PASS",
+      "method": "DELETE"
+    },
+    {
+      "check": "AUTH-02 forged identity rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 foreign scope rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 missing CSRF rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 cross origin rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 web account administration absent",
+      "result": "PASS",
+      "path": "/auth/users"
+    },
+    {
+      "check": "AUTH-02 web account administration absent",
+      "result": "PASS",
+      "path": "/api/v1/auth/users"
+    },
+    {
+      "check": "protected Tracking API explicitly not implemented",
+      "result": "PASS"
+    },
+    {
+      "check": "Hunter account management remains admin only",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 actual create",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 idempotent replay",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 actual edit",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 revision conflict",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 persisted reread",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 original write accepted before response discarded",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 original receipt recovery without retry",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 database pagination beyond 100",
+      "result": "PASS",
+      "total": 115
+    },
+    {
+      "check": "PRO-01 server filtering before pagination",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 independent important events",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 actual completion",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 prior progress snapshot",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 actual restore",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 restores actual prior progress",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 membership removal is separate",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 membership removal does not complete",
+      "result": "PASS"
+    },
+    {
+      "check": "ISO-01 synthetic other-store references unchanged",
+      "result": "PASS"
+    },
+    {
+      "check": "ISO-01 Projects does not change Auth users",
+      "result": "PASS"
+    },
+    {
+      "check": "ISO-01 no login store in Projects",
+      "result": "PASS"
+    },
+    {
+      "check": "actual_quiet_sse_open",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 actual logout",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 logout revokes live SSE",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 logout revokes old API session",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "actual_quiet_sse_open",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 real CLI disable revokes API and SSE",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "actual_quiet_sse_open",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 real CLI reset revokes API and SSE",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "real_first_password_change",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "actual_quiet_sse_open",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 real CLI recovery revokes API and SSE",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "real_first_password_change",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "AUTH-03 exactly one effective superadmin",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 actual browser forced password change and rotated session",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 actual no-JS password form uses safe POST",
+      "result": "PASS"
+    },
+    {
+      "check": "browser known cursor navigation",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser important events independent of main search",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser no whole-page overflow",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser CRUD, refresh, completion and restore",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "AUTH-02 actual UI read-only",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser no page errors",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser known cursor navigation",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser important events independent of main search",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser no whole-page overflow",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser CRUD, refresh, completion and restore",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "AUTH-02 actual UI read-only",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser no page errors",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "AUTH-01 actual no-JS password uses safe POST",
+      "result": "PASS"
+    },
+    {
+      "check": "ISO-01 backup integrity",
+      "result": "PASS",
+      "domain": "auth"
+    },
+    {
+      "check": "ISO-01 backup foreign keys",
+      "result": "PASS",
+      "domain": "auth"
+    },
+    {
+      "check": "ISO-01 restored logical database equals source",
+      "result": "PASS",
+      "domain": "auth"
+    },
+    {
+      "check": "ISO-01 backup integrity",
+      "result": "PASS",
+      "domain": "projects"
+    },
+    {
+      "check": "ISO-01 backup foreign keys",
+      "result": "PASS",
+      "domain": "projects"
+    },
+    {
+      "check": "ISO-01 restored logical database equals source",
+      "result": "PASS",
+      "domain": "projects"
+    }
+  ],
+  "passed_checks": 80,
+  "owned_website_stopped": true,
+  "finished_at": "2026-10-15T23:09:26.363932+08:00"
+}

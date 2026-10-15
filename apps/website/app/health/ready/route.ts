@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const headers = { "cache-control": "no-store", "x-request-id": id };
   try {
     if (!await websiteReady()) throw new Error("DB_UNAVAILABLE");
-    return Response.json({ data: { service: "website", status: "ready", business_enabled: false }, request_id: id }, { headers });
+    return Response.json({ data: { service: "website", status: "ready", business_enabled: true, profile: 'c0-lite', workers_enabled: false }, request_id: id }, { headers });
   } catch {
     return Response.json(apiError("DB_UNAVAILABLE", "Storage is unavailable", id, true), { status: 503, headers });
   }

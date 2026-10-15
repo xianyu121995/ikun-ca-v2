@@ -1,0 +1,21 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "pnpm",
+        "test:auth"
+      ],
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "pnpm",
+        "test"
+      ],
+      "exit_code": 1
+    }
+  ],
+  "fixture_location": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/modules/auth/test-results/b1-preview.json",
+  "fixture_is_actual_runtime": true,
+  "log_sha256": "840da2a5b23e2879d018b670e3fecd9dc12b4fd437c8efae1b14defaffa4635a"
+}

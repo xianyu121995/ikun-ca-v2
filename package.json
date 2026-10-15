@@ -4,21 +4,26 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.33.1",
-  "engines": { "node": ">=24.22.0 <25", "pnpm": ">=10.33.1 <11" },
+  "engines": {
+    "node": ">=24.22.0 <25",
+    "pnpm": ">=10.33.1 <11"
+  },
   "scripts": {
-    "build:shared": "pnpm --filter @ikun/contracts build && pnpm --filter @ikun/runtime build",
-    "build": "pnpm build:shared && pnpm --filter @ikun/hunter-worker build && pnpm --filter @ikun/tracking-worker build && pnpm --filter @ikun/website build",
-    "typecheck": "pnpm --filter @ikun/contracts typecheck && pnpm --filter @ikun/runtime typecheck && pnpm --filter @ikun/hunter-worker typecheck && pnpm --filter @ikun/tracking-worker typecheck && pnpm --filter @ikun/website typecheck",
+    "build:shared": "pnpm --filter @ikun/contracts build && pnpm --filter @ikun/runtime build && pnpm --filter @ikun/ui build",
+    "build": "pnpm build:shared && pnpm build:auth && pnpm --filter @ikun/website build",
+    "typecheck": "pnpm --filter @ikun/contracts typecheck && pnpm --filter @ikun/runtime typecheck && pnpm --filter @ikun/ui typecheck && pnpm build:auth && pnpm --filter @ikun/website typecheck",
     "test": "node --test tests/*.test.mjs",
     "smoke": "node scripts/smoke.mjs",
     "check:git": "node scripts/check-git.mjs",
     "dev:website": "node scripts/service.mjs website dev",
     "dev:hunter": "node scripts/service.mjs hunter dev",
     "dev:tracking": "node scripts/service.mjs tracking dev",
-    "start:website": "node scripts/service.mjs website start",
+    "start:website": "node scripts/start-c0-lite.mjs",
     "start:hunter": "node scripts/service.mjs hunter start",
     "start:tracking": "node scripts/service.mjs tracking start",
-    "deploy:render": "node scripts/render-launchd.mjs"
+    "deploy:render": "node scripts/render-launchd.mjs",
+    "build:auth": "pnpm exec tsc -p modules/auth/tsconfig.json",
+    "test:auth": "node --test modules/auth/tests/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

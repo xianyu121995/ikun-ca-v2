@@ -1,0 +1,17 @@
+✔ Actual route GET/POST bypassing Proxy validates cookie, scope, role and CSRF (1388.532541ms)
+✔ Actual page guard and Server Action bypassing Proxy validate B1 identity (221.929041ms)
+✔ Actual Next SSE data envelope, safe DTO, Last-Event-ID replay and upstream cancellation (1541.816875ms)
+✔ Actual SSE closes a quiet stream after logout and rejects the revoked API cookie (118.4055ms)
+✔ Actual SSE suppresses queued data when B1 account is disabled (223.996625ms)
+✔ Seven-day absolute expiry is enforced at the actual Projects handler (1106.90125ms)
+✔ Local B1 password reset revokes active API and quiet SSE and forces password change (1567.330916ms)
+✔ Password change rotates cookie atomically and revokes both previous sessions and quiet SSE (1223.545666ms)
+✔ B0 rejects entry drift and bounds a failed real child startup (258.764917ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9860.0225

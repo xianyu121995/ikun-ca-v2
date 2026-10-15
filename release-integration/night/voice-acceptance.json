@@ -1,0 +1,101 @@
+{
+  "state": "LOCAL_ACCEPTED_DEPLOYMENT_BLOCKED_BY_AUTOMATIC_APPROVAL",
+  "source_candidate_before_handoff": "ee67190d5ac83f87f90dbd188e9b41239460eb33",
+  "business_wiring_commit": "5e32a35663036997812ebe8c758220f885015b0a",
+  "immutable_browser_evidence_commit": "6e6e7b6d3692b8e4b108fbba3b823c7a028096ce",
+  "voice_library_source": "684d4013d97118612cdfbdc77d32adfc22704af8",
+  "voice_library_control": "6f6ba3c4e5ca0fcea4b98873faf340da64082eac",
+  "build_id": "toKW74u9T1cCk_lyTUZXo",
+  "runtime_source_count": 328,
+  "compiled_count": 271,
+  "browser_checks": 48,
+  "metadata_adapter_tests": 12,
+  "voice_library_tests": 32,
+  "counts_not_cumulative": true,
+  "private_final_screenshot_directory": "release-integration/.runtime/night-voice/run-1792095246818597000",
+  "public_voice_acceptance": "NOT_EXECUTED",
+  "deployment_process_started": false,
+  "voice_release_created": false,
+  "voice_temporary_account_created": false,
+  "real_sound": false,
+  "real_provider_calls": 0,
+  "automatic_approval_rejections": [
+    "现有可信用户内容未明确批准这次语音版本部署，不能仅依据助手或总管转述放行。",
+    "夜间放行仅来自工具读取结果和助手转述，不能建立可信授权；原始用户未经明确批准不得发布正式环境仍适用。"
+  ],
+  "attempted_command": "python3.11 release-integration/scripts/upgrade_voice_site.py --candidate ee67190d5ac83f87f90dbd188e9b41239460eb33",
+  "current_website_release": "64088893841122491aba508fdb514507db3d9339",
+  "current_website_build": "QTLRQ2vGatyCJCEhtFEVA",
+  "worker_jobs": {
+    "web": {
+      "label": "ca.ikun.v2.c0lite.web",
+      "loaded": true,
+      "pid": 25136
+    },
+    "hunter": {
+      "label": "ca.ikun.v2.c0lite.hunter",
+      "loaded": true,
+      "pid": 2608
+    },
+    "tracking": {
+      "label": "ca.ikun.v2.c0lite.tracking",
+      "loaded": true,
+      "pid": 25225
+    },
+    "tunnel": {
+      "label": "ca.ikun.v2.c0lite.tunnel",
+      "loaded": true,
+      "pid": 39523
+    }
+  },
+  "database_identity_integrity": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/auth/auth.db",
+      "device": 16777229,
+      "inode": 20187691,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652484,
+      "user_version": 2
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/projects/projects.db",
+      "device": 16777229,
+      "inode": 20187927,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652483,
+      "user_version": 2
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/hunter/hunter.db",
+      "device": 16777229,
+      "inode": 20535150,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652481,
+      "user_version": 4
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/tracking/tracking.db",
+      "device": 16777229,
+      "inode": 20685563,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652482,
+      "user_version": 4,
+      "business_change_rows": 0
+    }
+  },
+  "B3_temporary_accounts_enabled": false,
+  "original_admin_enabled": true,
+  "read_only_post_refusal_audit": "release-integration/.runtime/night-voice/post-refusal-runtime-audit-1792095623021608000.json",
+  "read_only_post_refusal_audit_sha256": "58d03d38eb4b6c3138d9fd2e6f5ed4fcc1b47c8d1edf396c0405540c810c59fd",
+  "historical_B3_audit_note": "B3 fixed latest-audit path was overwritten by this later read-only audit; original historical hash remains in B3 acceptance, do not claim original bytes still exist at latest pointer. Independent B3 public evidence and tracked summary are unchanged.",
+  "deployment_requires": "explicit approval in this chat for the final candidate; no further attempts or indirect execution before approval",
+  "main_unchanged": "63e8a2857241c6a76226f21435e40db9736a1e7e"
+}

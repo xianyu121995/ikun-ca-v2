@@ -23,7 +23,7 @@ function record(directory) {for(const entry of readdirSync(join(root,directory),
   const name=directory+'/'+entry.name;if(entry.isDirectory()) record(name);
   else inputs[name]=createHash('sha256').update(readFileSync(join(root,name))).digest('hex');
 }}
-for(const name of ['modules/auth/src','modules/auth/static','modules/auth/integration']) record(name);
+for(const name of ['modules/auth/src','modules/auth/integration']) record(name);
 const manifest={preview,b0_commit:B0,ui_commit:UI,spec_commit:'9699375c920465b5d802e7acff17b5421203e544',
   scope:'ikun-main',auth_maximum_version:2,lock_sha256:createHash('sha256').update(readFileSync(join(preview,'pnpm-lock.yaml'))).digest('hex'),inputs};
 writeFileSync(join(root,'modules/auth/test-results/b1-preview.json'),JSON.stringify(manifest,null,2)+'\n');

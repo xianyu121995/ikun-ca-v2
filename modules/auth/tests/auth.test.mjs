@@ -1,364 +1,248 @@
-import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, symlinkSync, linkSync, statSync } from "node:fs";
-import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { test } from "node:test";
-import { setTimeout as delay } from "node:timers/promises";
-import { spawnSync } from "node:child_process";
-import { config,cookieName } from "../dist/src/config.js";
-import { APP_ID } from "../dist/src/database.js";
-import {MIGRATION_SQL} from "../dist/src/schema.js";
-import { AuthHttp } from "../dist/src/http.js";
-import { AuthStore } from "../dist/src/store.js";
-import { verifyPassword } from "../dist/src/security.js";
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {mkdtempSync,rmSync,readFileSync,statSync,mkdirSync,symlinkSync,linkSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+import {AuthStore} from '../dist/src/store.js';
+import {LocalAccounts} from '../dist/src/local.js';
+import {AuthHttp} from '../dist/src/http.js';
+import {config} from '../dist/src/config.js';
+import {verifyPassword} from '../dist/src/security.js';
+import {fixture,user,req,origin,initial,password,changed} from './helpers.mjs';
 
-const password="unit-test-initial-long-passphrase",changed="unit-test-changed-long-passphrase";
-const origin="http://127.0.0.1:3600";
-async function fixture(run,overrides={}) {
-  const directory=mkdtempSync("/private/tmp/ikun-auth-node-");
-  let now=1800000000;
-  const cfg=config({dataRoot:directory,origin,secure:false,...overrides});
-  let store=new AuthStore(cfg,true,()=>now);
-  const admin=await store.bootstrap("root_admin",password);
-  let api=new AuthHttp(store,[/^\/api\/v1\/projects(?:\/[^/]+)?$/],[/^\/$/,/^\/projects$/]);
-  const env={cfg,directory,admin,get store(){return store;},get api(){return api;},
-    advance(value){now+=value;},restart(){store.close();store=new AuthStore(cfg,false,()=>now);
-      api=new AuthHttp(store,[/^\/api\/v1\/projects(?:\/[^/]+)?$/],[/^\/$/,/^\/projects$/]);}};
-  try {await run(env);} finally {store.close();rmSync(directory,{recursive:true,force:true});}
-}
-function request(path,method="GET",data,session,extra={}) {
-  const headers={host:new URL(origin).host,...extra};
-  if (session) {headers.cookie=session.cookie;headers["x-csrf-token"]=session.csrf;}
-  if (data!==undefined) {headers["content-type"]="application/json";headers.origin=origin;}
-  return new Request(origin+path,{method,headers,...(data!==undefined?{body:JSON.stringify(data)}:{})});
-}
-async function login(env,name="root_admin",value=password,previous) {
-  const response=await env.api.handle(request("/api/v1/auth/login","POST",{username:name,password:value},previous));
-  assert.equal(response.status,200,await response.clone().text());
-  const body=await response.json();
-  return {cookie:response.headers.get("set-cookie").split(";")[0],csrf:body.data.csrf_token,data:body.data};
-}
-const token=session=>session.cookie.split("=")[1];
-const actor=(env,session)=>env.store.authenticate(token(session));
-const mutation=(revision,key=randomUUID())=>({"if-match":`"rev-${revision}"`,"idempotency-key":key});
-async function viewer(env) {
-  const root=await login(env);
-  const user=await env.store.createUser(actor(env,root),"viewer",password,"user",randomUUID());
-  const first=await login(env,"viewer");
-  const response=await env.api.handle(request("/api/v1/auth/password","POST",{
-    current_password:password,new_password:changed},first));
-  assert.equal(response.status,200,await response.clone().text());
-  assert.deepEqual((await response.json()).data,{changed:true,reauthentication_required:true});
-  return {root,user,session:await login(env,"viewer",changed)};
-}
+for(const path of ['/','/hunter','/tracking','/api/v1/projects','/api/v1/auth/me'])
+ test(`anonymous denied ${path}`,()=>fixture(async e=>{
+  const denied=e.api.gate(req(path));assert.equal(denied.status,path.startsWith('/api/')?401:303);
+ }));
+for(const method of ['POST','PUT','PATCH','DELETE'])
+ test(`user denied business ${method}, callback not executed`,()=>fixture(async e=>{
+  const {logged}=await user(e);let called=false;
+  const response=await e.api.business(req('/api/v1/projects',method,{},logged),()=>{called=true;return Response.json({});});
+  assert.equal(response.status,403);assert.equal(called,false);
+ }));
 
-for (const path of ["/","/projects","/api/v1/projects","/api/v1/auth/me","/auth/users"])
-  test(`anonymous denied: ${path}`,()=>fixture(async env=>{
-    const blocked=env.api.gate(request(path));
-    assert.ok(blocked);assert.equal(blocked.status,path.startsWith("/api/")?401:303);
-    if (!path.startsWith("/api/")) assert.ok(blocked.headers.get("location").startsWith(origin+"/login?next="));
-  }));
-
-test("public login/assets only; registration unavailable",()=>fixture(async env=>{
-  assert.equal(env.api.page(request("/login")).status,200);
-  assert.equal(env.api.page(request("/auth/assets/auth.css")).status,200);
-  assert.equal((await env.api.handle(request("/api/v1/auth/register","POST",{}))).status,401);
-  assert.ok(env.api.gate(request("/auth/assets/users.html")));
+test('user reads three business pages and audited APIs; unknown and Hunter config denied',()=>fixture(async e=>{
+ const {logged}=await user(e);
+ for(const path of ['/','/hunter','/tracking','/api/v1/projects'])assert.equal(e.api.gate(req(path,'GET',undefined,logged)),null);
+ for(const path of ['/api/v1/unknown','/api/v1/hunter/accounts'])assert.equal(e.api.gate(req(path,'GET',undefined,logged)).status,403);
+}));
+test('admin business writes use fresh frozen principal, client role is never authority',()=>fixture(async e=>{
+ let count=0;const response=await e.api.business(req('/api/v1/projects','POST',{},e.root),p=>{
+  count++;assert.ok(Object.isFrozen(p));assert.equal(p.role,'superadmin');assert.equal(p.tenant_id,'ikun-main');return Response.json({ok:true});});
+ assert.equal(response.status,200);assert.equal(count,1);
+ assert.equal((await e.api.business(req('/api/v1/projects','POST',{},undefined,{'x-role':'superadmin','x-user':e.root.actor.id}),()=>{throw Error('must not run');})).status,401);
+}));
+for(const path of ['/auth/users','/api/v1/auth/users','/api/v1/auth/users/usr_example','/api/v1/auth/users/usr_example/reset-password'])
+ test(`removed account surface ${path} is unavailable even to admin`,()=>fixture(async e=>{
+  for(const method of ['GET','POST','PATCH','DELETE']){
+   const r=req(path,method,method==='GET'?undefined:{},e.root);
+   assert.equal(e.api.gate(r).status,404);assert.equal((await e.api.handle(r)).status,404);
+  }
+ }));
+test('registration unavailable and me capabilities never advertise remote user management',()=>fixture(async e=>{
+ assert.equal((await e.api.handle(req('/api/v1/auth/register','POST',{},e.root))).status,404);
+ const data=(await (await e.api.handle(req('/api/v1/auth/me','GET',undefined,e.root))).json()).data;
+ assert.equal(data.capabilities.can_manage_users,false);assert.equal(data.capabilities.can_edit_projects,true);
+ assert.ok(!JSON.stringify(data).includes(e.root.token));
 }));
 
-for (const method of ["POST","PUT","PATCH","DELETE"])
-  test(`ordinary user cannot write business data: ${method}`,()=>fixture(async env=>{
-    const {session}=await viewer(env);
-    const blocked=env.api.gate(request("/api/v1/projects/1",method,{},session));
-    assert.equal(blocked.status,403);
-  }));
-
-test("reader views audited GET; unknown GET, Hunter configuration and user admin denied",()=>fixture(async env=>{
-  const {session}=await viewer(env);
-  assert.equal(env.api.gate(request("/projects","GET",undefined,session)),null);
-  assert.equal(env.api.gate(request("/api/v1/projects","GET",undefined,session)),null);
-  for (const path of ["/api/v1/sync-on-get","/api/v1/hunter/accounts","/auth/users","/api/v1/auth/users"])
-    assert.equal(env.api.gate(request(path,"GET",undefined,session)).status,403);
-  for (const [path,body] of [["/api/v1/auth/users",{username:"escalate",password,role:"superadmin"}],
-    ["/api/v1/monitors/start",{}]])
-    assert.equal(env.api.gate(request(path,"POST",body,session)).status,403);
+test('bootstrap admin and new users must change initial password on server before business',async()=>{
+ const dir=mkdtempSync('/private/tmp/ikun-initial-');const store=new LocalAccounts(config({dataRoot:dir,origin,secure:false}),true);
+ try {await store.bootstrap('first_admin',initial);const first=await store.login('first_admin',initial);const api=new AuthHttp(store);
+  assert.equal(first.actor.must_change_password,true);
+  assert.equal(api.gate(req('/api/v1/projects','GET',undefined,first)).status,403);
+  assert.equal(api.gate(req('/','GET',undefined,first)).headers.get('location'),origin+'/auth/password');
+  assert.equal((await api.handle(req('/api/v1/auth/me','GET',undefined,first))).status,200);
+  for(const capability of Object.values((await (await api.handle(req('/api/v1/auth/me','GET',undefined,first))).json()).data.capabilities))assert.equal(capability,false);
+  assert.equal(api.gate(req('/auth/password','GET',undefined,first)),null);
+ }finally{store.close();rmSync(dir,{recursive:true,force:true});}
+});
+test('local create is user only, duplicate bootstrap/create rejected',()=>fixture(async e=>{
+ const created=await e.store.create('viewer',initial);assert.equal(created.role,'user');assert.equal(created.must_change_password,true);
+ await assert.rejects(e.store.bootstrap('second_admin',initial),x=>x.status===409);
+ await assert.rejects(e.store.create('viewer',initial),x=>x.status===409);
+ const first=await e.store.login('viewer',initial);
+ assert.equal(e.api.gate(req('/api/v1/projects','GET',undefined,first)).status,403);
+}));
+test('local disable/enable revokes all sessions and returns the same generic login failure',()=>fixture(async e=>{
+ const {logged}=await user(e);const second=await e.store.login('viewer',password);
+ e.store.setEnabled('viewer',false);e.store.setEnabled('viewer',false);
+ for(const session of [logged,second])assert.throws(()=>e.store.authenticate(session.token),x=>x.status===401);
+ const messages=[];for(const [name,pass] of [['viewer',password],['ghost',password],['root_admin','wrong']]){
+  const response=await e.api.handle(req('/api/v1/auth/login','POST',{username:name,password:pass}));assert.equal(response.status,401);messages.push((await response.json()).error.message);
+ }assert.equal(new Set(messages).size,1);
+ e.store.setEnabled('viewer',true);assert.ok(await e.store.login('viewer',password));
+}));
+test('local reset revokes every device and forces change without automatically enabling user',()=>fixture(async e=>{
+ const {logged}=await user(e),second=await e.store.login('viewer',password);
+ await e.store.reset('viewer',changed);
+ for(const s of [logged,second])assert.throws(()=>e.store.authenticate(s.token),x=>x.status===401);
+ const reset=await e.store.login('viewer',changed);assert.equal(reset.actor.must_change_password,true);
+ assert.equal(e.api.gate(req('/api/v1/projects','GET',undefined,reset)).status,403);
+ e.store.setEnabled('viewer',false);await e.store.reset('viewer',initial);
+ await assert.rejects(e.store.login('viewer',initial),x=>x.status===401);
+}));
+test('admin recovery needs no web session, revokes sessions and forces password change',()=>fixture(async e=>{
+ const other=await e.store.login('root_admin',password);await e.store.reset('root_admin',changed,true);
+ for(const s of [e.root,other])assert.throws(()=>e.store.authenticate(s.token),x=>x.status===401);
+ const recovered=await e.store.login('root_admin',changed);assert.equal(recovered.actor.must_change_password,true);
+ await user(e);await assert.rejects(e.store.reset('viewer',changed,true),x=>x.status===409);
+}));
+test('last active superadmin cannot be disabled; schema supports future multiple admins safely',()=>fixture(async e=>{
+ assert.throws(()=>e.store.setEnabled('root_admin',false),x=>x.status===409);
+ const {record}=await user(e);e.store.db.prepare("UPDATE auth_users SET role='superadmin',enabled=0 WHERE id=?").run(record.id);
+ assert.throws(()=>e.store.setEnabled('viewer',true),x=>x.status===409);
+ // Synthetic future-policy fixture only; production CLI has no role-changing command.
+ e.store.db.prepare('UPDATE auth_users SET enabled=1 WHERE id=?').run(record.id);
+ e.store.setEnabled('viewer',false);assert.throws(()=>e.store.setEnabled('root_admin',false),x=>x.status===409);
+}));
+test('local list uses a strict safe projection and audit contains no credentials',()=>fixture(async e=>{
+ await user(e);const list=e.store.list();assert.equal(list.length,2);
+ for(const row of list)assert.deepEqual(Object.keys(row).sort(),['enabled','must_change_password','revision','role','user_id','username']);
+ const audit=JSON.stringify(e.store.db.prepare('SELECT * FROM auth_audit').all());
+ for(const secret of [initial,password,e.root.token])assert.ok(!audit.includes(secret));
 }));
 
-test("superadmin business writes authorized; CSRF and Origin remain mandatory",()=>fixture(async env=>{
-  const session=await login(env);
-  for (const method of ["POST","PUT","PATCH","DELETE"])
-    assert.equal(env.api.gate(request("/api/v1/projects/1",method,{},session)),null);
-  const noCsrf=request("/api/v1/monitors/start","POST",{},session);noCsrf.headers.delete("x-csrf-token");
-  assert.equal(env.api.gate(noCsrf).status,403);
-  const cross=request("/api/v1/monitors/start","POST",{},session);cross.headers.set("origin","https://evil.example");
-  assert.equal(env.api.gate(cross).status,403);
-  const form=request("/api/v1/auth/login","POST",{});form.headers.set("content-type","application/x-www-form-urlencoded");
-  assert.equal((await env.api.handle(form)).status,415);
-  const absent=request("/api/v1/auth/login","POST",{});absent.headers.delete("origin");
-  assert.equal((await env.api.handle(absent)).status,403);
+test('own password requires current password, rotates token and CSRF, revokes every old device',()=>fixture(async e=>{
+ const other=await e.store.login('root_admin',password);
+ assert.equal((await e.api.handle(req('/api/v1/auth/password','POST',{current_password:'wrong',new_password:changed},e.root))).status,422);
+ assert.ok(e.store.authenticate(other.token));
+ const response=await e.api.handle(req('/api/v1/auth/password','POST',{current_password:password,new_password:changed},e.root));
+ assert.equal(response.status,200);assert.deepEqual((await response.json()).data,{changed:true,reauthentication_required:false});
+ const token=response.headers.get('set-cookie').split(';')[0].split('=')[1];assert.notEqual(token,e.root.token);
+ const actor=e.store.authenticate(token);assert.notEqual(actor.csrf_token,e.root.actor.csrf_token);assert.equal(actor.must_change_password,false);
+ for(const s of [e.root,other])assert.throws(()=>e.store.authenticate(s.token),x=>x.status===401);
+ assert.equal(e.store.db.prepare('SELECT count(*) AS n FROM auth_sessions').get().n,1);
+}));
+test('user can change own password but cannot change someone else or add fields',()=>fixture(async e=>{
+ const {logged}=await user(e);
+ assert.equal((await e.api.handle(req('/api/v1/auth/password','POST',{current_password:password,new_password:changed,user_id:e.root.actor.id},logged))).status,422);
+ const response=await e.api.handle(req('/api/v1/auth/password','POST',{current_password:password,new_password:changed},logged));assert.equal(response.status,200);
+ assert.ok(e.store.authenticate(e.root.token));
+}));
+test('logout revokes current session immediately, other device survives; repeat logout is safe',()=>fixture(async e=>{
+ const other=await e.store.login('root_admin',password);
+ for(let i=0;i<2;i++){const response=await e.api.handle(req('/api/v1/auth/logout','POST',{},e.root));assert.equal(response.status,200);assert.ok(response.headers.get('set-cookie').includes('Max-Age=0'));}
+ assert.throws(()=>e.store.authenticate(e.root.token),x=>x.status===401);assert.ok(e.store.authenticate(other.token));
+}));
+test('seven-day absolute boundary survives activity and restart, cannot be extended',()=>fixture(async e=>{
+ const row=e.store.db.prepare('SELECT * FROM auth_sessions').get();assert.equal(row.expires_at-row.created_at,604800);
+ for(let i=0;i<6;i++){e.advance(86400);assert.equal(e.api.gate(req('/','GET',undefined,e.root)),null);}
+ e.advance(86399);assert.ok(e.store.authenticate(e.root.token,true));e.restart();assert.ok(e.store.authenticate(e.root.token));
+ e.advance(1);assert.equal((await e.api.handle(req('/api/v1/auth/me','GET',undefined,e.root))).status,401);
+ assert.equal(e.api.gate(req('/','GET',undefined,e.root)).status,303);
+}));
+test('configuration and server cap reject sessions longer than seven days',()=>fixture(async e=>{
+ assert.throws(()=>config({...e.cfg,absoluteTtl:604801}),/MAXIMUM/);assert.throws(()=>config({...e.cfg,idleTtl:604801}),/MAXIMUM/);
+ e.store.db.exec('UPDATE auth_sessions SET expires_at=expires_at+999999');e.advance(604800);assert.throws(()=>e.store.authenticate(e.root.token),x=>x.status===401);
+}));
+test('login rotation/session cap do not reuse tokens and persisted tokens remain hashed',()=>fixture(async e=>{
+ const tokens=[];for(let i=0;i<6;i++)tokens.push((await e.store.login('root_admin',password)).token);
+ assert.equal(new Set(tokens).size,6);assert.throws(()=>e.store.authenticate(tokens[0]),x=>x.status===401);
+ e.restart();assert.ok(e.store.authenticate(tokens[5]));
+ const rows=e.store.db.prepare('SELECT token_hash FROM auth_sessions').all();assert.equal(rows.length,5);for(const row of rows){assert.equal(row.token_hash.length,64);assert.ok(!tokens.includes(row.token_hash));}
 }));
 
-test("new/reset users must change password before any business access",()=>fixture(async env=>{
-  const root=await login(env);
-  await env.store.createUser(actor(env,root),"viewer",password,"user",randomUUID());
-  const session=await login(env,"viewer");
-  assert.ok(session.data.must_change_password);
-  assert.equal(env.api.gate(request("/api/v1/projects","GET",undefined,session)).status,403);
-  const redirect=env.api.gate(request("/projects","GET",undefined,session));
-  assert.equal(redirect.status,303);assert.equal(redirect.headers.get("location"),origin+"/auth/password");
-  assert.equal(env.api.gate(request("/api/v1/auth/me","GET",undefined,session)),null);
+test('CSRF/Origin/Host and duplicate cookies rejected at actual API entry',()=>fixture(async e=>{
+ for(const patch of [{'x-csrf-token':'wrong'},{origin:'https://evil.example'},{host:'evil.example'},{'x-http-method-override':'DELETE'}]){
+  const r=req('/api/v1/auth/password','POST',{current_password:password,new_password:changed},e.root);for(const [k,v] of Object.entries(patch))r.headers.set(k,v);
+  assert.ok([400,403,422].includes((await e.api.handle(r)).status));
+ }
+ const r=req('/api/v1/auth/me','GET',undefined,e.root);r.headers.append('cookie',r.headers.get('cookie'));assert.equal((await e.api.handle(r)).status,401);
 }));
-
-test("create, disable, enable, reset, version checks and all-device revocation",()=>fixture(async env=>{
-  const {root,user,session}=await viewer(env);
-  let response=await env.api.handle(request(`/api/v1/auth/users/${user.id}`,"PATCH",{enabled:false},root,mutation(1)));
-  assert.equal(response.status,409); // First password change advanced revision to 2.
-  response=await env.api.handle(request(`/api/v1/auth/users/${user.id}`,"PATCH",{enabled:false},root,mutation(2)));
-  assert.equal(response.status,200);
-  assert.throws(()=>actor(env,session),error=>error.status===401);
-  response=await env.api.handle(request("/api/v1/auth/login","POST",{username:"viewer",password:changed}));
-  assert.equal(response.status,401);
-  assert.equal((await response.json()).error.message,"用户名或密码错误");
-  response=await env.api.handle(request(`/api/v1/auth/users/${user.id}`,"PATCH",{enabled:true},root,mutation(3)));
-  assert.equal(response.status,200);
-  const logged=await login(env,"viewer",changed);
-  response=await env.api.handle(request(`/api/v1/auth/users/${user.id}/reset-password`,"POST",{new_password:password},root,mutation(4)));
-  assert.equal(response.status,200);
-  assert.throws(()=>actor(env,logged),error=>error.status===401);
-  const reset=await login(env,"viewer");assert.ok(reset.data.must_change_password);
+test('Server Action guard independently enforces role/CSRF/force-change without proxy',()=>fixture(async e=>{
+ const post=s=>req('/','POST',{},s);
+ assert.equal(e.api.serverAction(post(e.root),e.root.actor.csrf_token).role,'superadmin');
+ const {logged}=await user(e);assert.throws(()=>e.api.serverAction(post(logged),logged.actor.csrf_token),x=>x.status===403);
+ assert.throws(()=>e.api.serverAction(post(e.root),'fake'),x=>x.status===403);
+ const cross=post(e.root);cross.headers.set('origin','https://evil.example');assert.throws(()=>e.api.serverAction(cross,e.root.actor.csrf_token),x=>x.status===403);
+ await e.store.reset('root_admin',changed,true);const first=await e.store.login('root_admin',changed);assert.throws(()=>e.api.serverAction(post(first),first.actor.csrf_token),x=>x.status===403);
 }));
-
-test("account writes require Idempotency-Key/If-Match and forbid extra fields/third role",()=>fixture(async env=>{
-  const root=await login(env);
-  for (const role of ["admin","viewer","editor"])
-    assert.equal((await env.api.handle(request("/api/v1/auth/users","POST",{username:"bad",password,role},root,mutation(1)))).status,422);
-  assert.equal((await env.api.handle(request("/api/v1/auth/users","POST",{username:"viewer",password},root))).status,422);
-  assert.equal((await env.api.handle(request(`/api/v1/auth/users/${env.admin.id}`,"PATCH",{enabled:false},root,
-    {"idempotency-key":randomUUID()}))).status,428);
-  const extra=await env.api.handle(request("/api/v1/auth/users","POST",{username:"viewer",password,tenant_id:"other"},root,mutation(1)));
-  assert.equal(extra.status,422);
-}));
-
-test("idempotency persists across restart and rejects conflicting payload",()=>fixture(async env=>{
-  const root=await login(env),key=randomUUID(),body={username:"viewer",password,role:"user"};
-  let response=await env.api.handle(request("/api/v1/auth/users","POST",body,root,{"idempotency-key":key}));
-  assert.equal(response.status,201);const first=(await response.json()).data;
-  env.restart();
-  response=await env.api.handle(request("/api/v1/auth/users","POST",body,root,{"idempotency-key":key}));
-  assert.equal(response.status,201);assert.deepEqual((await response.json()).data,first);
-  response=await env.api.handle(request("/api/v1/auth/users","POST",{...body,password:changed},root,{"idempotency-key":key}));
-  assert.equal(response.status,409);
-  const persisted=JSON.stringify(env.store.db.prepare("SELECT * FROM auth_idempotency").all());
-  assert.ok(!persisted.includes(password));assert.ok(persisted.includes("argon2id"));
-}));
-
-test("last enabled admin is protected, including simultaneous attempts",()=>fixture(async env=>{
-  const root=await login(env),first=actor(env,root);
-  await assert.rejects(env.store.setEnabled(first,first.id,false,1,randomUUID()),error=>error.status===409);
-  const other=await env.store.createUser(first,"second_admin",password,"superadmin",randomUUID());
-  const initial=await env.store.login("second_admin",password,"loopback");
-  await env.store.changePassword(initial.actor,password,changed);
-  const next=await env.store.login("second_admin",changed,"loopback");
-  const results=await Promise.allSettled([
-    env.store.setEnabled(first,other.id,false,2,randomUUID()),
-    env.store.setEnabled(next.actor,first.id,false,1,randomUUID())]);
-  assert.equal(results.filter(item=>item.status==="fulfilled").length,1);
-  assert.equal(env.store.db.prepare("SELECT count(*) AS n FROM auth_users WHERE enabled=1 AND role='superadmin'").get().n,1);
-}));
-
-test("stale admin identity is rechecked inside write transaction",()=>fixture(async env=>{
-  const root=await login(env),who=actor(env,root);
-  const work=env.store.createUser(who,"new_user",password,"user",randomUUID());
-  env.store.db.prepare("UPDATE auth_users SET enabled=0 WHERE id=?").run(who.id);
-  await assert.rejects(work,error=>error.status===401);
-  assert.equal(env.store.db.prepare("SELECT count(*) AS n FROM auth_users").get().n,1);
-}));
-
-test("session rotation, persistent sessions, logout and idempotent logout",()=>fixture(async env=>{
-  const first=await login(env),second=await login(env,"root_admin",password,first);
-  assert.notEqual(first.cookie,second.cookie);assert.notEqual(first.csrf,second.csrf);
-  assert.throws(()=>actor(env,first),error=>error.status===401);
-  env.restart();assert.equal(actor(env,second).role,"superadmin");
-  const response=await env.api.handle(request("/api/v1/auth/logout","POST",{},second));
-  assert.equal(response.status,200);assert.ok(response.headers.get("set-cookie").includes("Max-Age=0"));
-  assert.throws(()=>actor(env,second),error=>error.status===401);
-  assert.equal((await env.api.handle(request("/api/v1/auth/logout","POST",{},second))).status,200);
-}));
-
-test("self password change rotates current session and invalidates other devices",()=>fixture(async env=>{
-  const first=await login(env),second=await login(env);
-  const response=await env.api.handle(request("/api/v1/auth/password","POST",{
-    current_password:password,new_password:changed},first));
-  assert.equal(response.status,200);
-  assert.throws(()=>actor(env,first),error=>error.status===401);
-  assert.throws(()=>actor(env,second),error=>error.status===401);
-  const next=await login(env,"root_admin",changed);assert.equal(next.data.must_change_password,false);
-}));
-
-test("idle expiry is not extended by background me polling",()=>fixture(async env=>{
-  const root=await login(env);
-  env.advance(1000);assert.equal((await env.api.handle(request("/api/v1/auth/me","GET",undefined,root))).status,200);
-  env.advance(800);assert.equal((await env.api.handle(request("/api/v1/auth/me","GET",undefined,root))).status,401);
-}));
-test("absolute expiry survives ongoing activity",()=>fixture(async env=>{
-  const root=await login(env);
-  for (let i=0;i<4;i++) {env.advance(100);assert.equal(env.api.gate(request("/projects","GET",undefined,root)),null);}
-  env.advance(100);assert.equal(env.api.gate(request("/projects","GET",undefined,root)).status,303);
-},{absoluteTtl:500}));
-
-test("login limits persist and ignore forged forwarding identity",()=>fixture(async env=>{
-  for (let i=0;i<3;i++) assert.equal((await env.api.handle(request("/api/v1/auth/login","POST",{
-    username:"ghost",password:"wrong"},undefined,{"x-forwarded-for":`192.0.2.${i}`}))).status,401);
-  env.restart();
-  const response=await env.api.handle(request("/api/v1/auth/login","POST",{username:"ghost",password:"wrong"}));
-  assert.equal(response.status,429);assert.ok(Number(response.headers.get("retry-after"))>0);
-  env.advance(900);
-  assert.equal((await env.api.handle(request("/api/v1/auth/login","POST",{username:"ghost",password:"wrong"}))).status,401);
+test('login limiter survives restart and ignores fake forwarded IP',()=>fixture(async e=>{
+ for(let i=0;i<3;i++)assert.equal((await e.api.handle(req('/api/v1/auth/login','POST',{username:'ghost',password:'wrong'},undefined,{'x-forwarded-for':`192.0.2.${i}`}))).status,401);
+ e.restart();const r=await e.api.handle(req('/api/v1/auth/login','POST',{username:'ghost',password:'wrong'}));assert.equal(r.status,429);assert.ok(Number(r.headers.get('retry-after'))>0);
+ e.advance(900);assert.equal((await e.api.handle(req('/api/v1/auth/login','POST',{username:'ghost',password:'wrong'}))).status,401);
 },{accountAttempts:3}));
-
-test("Argon2id hashes, hashed tokens, private permissions, no response secrets",()=>fixture(async env=>{
-  const root=await login(env);
-  const user=env.store.db.prepare("SELECT * FROM auth_users").get();
-  assert.ok(user.password_hash.startsWith("$argon2id$v=19$m=65536,t=3,p=1$"));
-  assert.ok(await verifyPassword(user.password_hash,password));
-  const session=env.store.db.prepare("SELECT * FROM auth_sessions").get();
-  assert.notEqual(session.token_hash,token(root));assert.equal(session.token_hash.length,64);
-  assert.equal(statSync(join(env.directory,"auth/auth.db")).mode&0o777,0o600);
-  const response=await env.api.handle(request("/api/v1/auth/login","POST",{username:"root_admin",password:[password]}));
-  assert.equal(response.status,422);assert.ok(!(await response.text()).includes(password));
-  const audit=JSON.stringify(env.store.db.prepare("SELECT * FROM auth_audit").all());
-  assert.ok(!audit.includes(password)&&!audit.includes(token(root)));
+test('weak/oversized passwords and request bodies rejected without echo',()=>fixture(async e=>{
+ for(const p of ['short','x'.repeat(129)])await assert.rejects(e.store.create('bad_user',p),x=>x.status===422);
+ const r=await e.api.handle(req('/api/v1/auth/login','POST',{username:'root_admin',password:'secret'.repeat(4000)}));assert.equal(r.status,413);assert.ok(!(await r.text()).includes('secret'));
+ const r2=await e.api.handle(req('/api/v1/auth/password','POST',{current_password:password,new_password:password},e.root));assert.equal(r2.status,422);
+}));
+test('native POST forms reject non-JSON safely; no credentials in redirects/responses',()=>fixture(async e=>{
+ for(const path of ['/api/v1/auth/login','/api/v1/auth/password']){
+  const r=req(path,'POST',{},e.root);r.headers.set('content-type','application/x-www-form-urlencoded');
+  const response=await e.api.handle(r);assert.equal(response.status,415);assert.equal(response.headers.get('location'),null);assert.ok(!(await response.text()).includes(password));
+ }
+}));
+test('production cookie flags, seven-day Max-Age and private cache',async()=>{
+ const dir=mkdtempSync('/private/tmp/ikun-cookie-');const store=new LocalAccounts(config({dataRoot:dir}),true);
+ try{await store.bootstrap('admin_root',initial);const api=new AuthHttp(store);const response=await api.handle(new Request('https://ikun.ca/api/v1/auth/login',{method:'POST',headers:{host:'ikun.ca',origin:'https://ikun.ca','content-type':'application/json'},body:JSON.stringify({username:'admin_root',password:initial})}));
+  assert.equal(response.status,200);for(const flag of ['__Host-ikun_session=','HttpOnly','Secure','SameSite=Strict','Max-Age=604800','Path=/'])assert.ok(response.headers.get('set-cookie').includes(flag));
+  assert.ok(!response.headers.get('set-cookie').includes('Domain='));assert.match(response.headers.get('cache-control'),/no-store/);
+ }finally{store.close();rmSync(dir,{recursive:true,force:true});}
+});
+test('Argon2id parameters, private database permissions and no raw tokens',()=>fixture(async e=>{
+ const row=e.store.db.prepare('SELECT password_hash FROM auth_users').get();assert.match(row.password_hash,/^\$argon2id\$v=19\$m=65536,t=3,p=1\$/);assert.ok(await verifyPassword(row.password_hash,password));
+ assert.equal(statSync(join(e.dir,'auth/auth.db')).mode&0o777,0o600);assert.equal(statSync(join(e.dir,'auth')).mode&0o777,0o700);
+}));
+test('CLI rejects pipes, password/role arguments and unsafe initialization before DB creation',()=>{
+ for(const args of [['create','--username','viewer'],['bootstrap','--username','admin'],['create','--username','viewer','--role','superadmin'],['bootstrap','--username','admin','--password',password],['recover-admin','--username','admin'],['disable','--username','viewer'],['enable','--username','viewer'],['list']]){
+  const dir=mkdtempSync('/private/tmp/ikun-cli-pipe-');try{const r=spawnSync(process.execPath,['modules/auth/dist/src/cli.js',...args],{input:password,encoding:'utf8',env:{...process.env,DATA_ROOT:dir}});assert.equal(r.status,1);assert.ok(!(r.stdout+r.stderr).includes(password));assert.throws(()=>statSync(join(dir,'auth/auth.db')));}finally{rmSync(dir,{recursive:true,force:true});}
+ }
+});
+test('database isolation rejects a business database and filesystem aliases',()=>{
+ const dir=mkdtempSync('/private/tmp/ikun-isolation-');const cfg=config({dataRoot:dir,origin,secure:false});mkdirSync(join(dir,'auth'));
+ try{const path=join(dir,'auth/auth.db');let db=new DatabaseSync(path);db.exec('CREATE TABLE projects(id TEXT)');db.close();const before=readFileSync(path);assert.throws(()=>new AuthStore(cfg,true));assert.deepEqual(readFileSync(path),before);rmSync(path);
+  const source=join(dir,'foreign.db');db=new DatabaseSync(source);db.close();symlinkSync(source,path);assert.throws(()=>new AuthStore(cfg,true));rmSync(path);linkSync(source,path);assert.throws(()=>new AuthStore(cfg,true));
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+for(const operation of ['disable','reset','password','expire','database-failure'])
+ test(`SSE quiet revocation ${operation} closes and cancels upstream`,()=>fixture(async e=>{
+  const {logged}=await user(e);let cancelled=false;
+  const upstream=new Response(new ReadableStream({cancel(){cancelled=true;}}),{headers:{'content-type':'text/event-stream'}});
+  const result=await e.api.business(req('/api/v1/projects','GET',undefined,logged),()=>upstream);const reader=result.body.getReader();
+  if(operation==='disable')e.store.setEnabled('viewer',false);
+  if(operation==='reset')await e.store.reset('viewer',changed);
+  if(operation==='password')await e.store.changePassword(logged.actor,password,changed);
+  if(operation==='expire')e.advance(604800);
+  if(operation==='database-failure')e.store.db.exec('DROP TABLE auth_sessions');
+  assert.equal((await reader.read()).done,true);assert.equal(cancelled,true);
+ }));
+test('scope headers/query cannot grant access',()=>fixture(async e=>{
+ for(const header of ['x-tenant','x-tenant-id','x-scope'])assert.equal((await e.api.handle(req('/api/v1/auth/me','GET',undefined,e.root,{[header]:'other'}))).status,403);
+ assert.equal(e.api.gate(req('/api/v1/projects?tenant_id=other','GET',undefined,e.root)).status,403);
 }));
 
-test("body bound, host/method spoofing, duplicate cookies, JSON envelope",()=>fixture(async env=>{
-  const large=request("/api/v1/auth/login","POST",{password:"x".repeat(20000)});
-  const response=await env.api.handle(large);assert.equal(response.status,413);
-  const json=await response.json();assert.ok(json.request_id);assert.equal(json.error.retryable,false);
-  assert.equal(env.api.gate(request("/projects","GET",undefined,undefined,{"x-user":"root_admin","x-role":"superadmin"})).status,303);
-  assert.equal(env.api.gate(request("/login","GET",undefined,undefined,{host:"evil.example"})).status,400);
-  const root=await login(env);
-  assert.equal(env.api.gate(request("/api/v1/projects","GET",undefined,root,{"x-http-method-override":"DELETE"})).status,422);
-  const duplicate=request("/api/v1/auth/me","GET",undefined,root);duplicate.headers.append("cookie",root.cookie);
-  assert.equal((await env.api.handle(duplicate)).status,401);
+test('password session creation failure rolls back password/version and preserves old sessions',()=>fixture(async e=>{
+ const before=e.store.db.prepare('SELECT password_hash,version FROM auth_users WHERE username=?').get('root_admin');
+ e.store.db.exec("CREATE TRIGGER refuse_new_session BEFORE INSERT ON auth_sessions BEGIN SELECT RAISE(ABORT,'test rollback'); END");
+ await assert.rejects(e.store.changePassword(e.root.actor,password,changed));
+ assert.deepEqual(e.store.db.prepare('SELECT password_hash,version FROM auth_users WHERE username=?').get('root_admin'),before);
+ assert.ok(e.store.authenticate(e.root.token));
 }));
-
-test("secure cookie production flags and CSP",async()=>{
-  const directory=mkdtempSync("/private/tmp/ikun-auth-secure-");
-  const cfg=config({dataRoot:directory,origin:"https://ikun.ca",secure:true});
-  const store=new AuthStore(cfg,true),api=new AuthHttp(store);
-  try {
-    await store.bootstrap("root_admin",password);
-    const page=api.page(new Request("https://ikun.ca/login",{headers:{host:"ikun.ca"}}));
-    assert.ok(page.headers.get("content-security-policy").includes("frame-ancestors 'none'"));
-    const response=await api.handle(new Request("https://ikun.ca/api/v1/auth/login",{method:"POST",headers:{
-      host:"ikun.ca",origin:"https://ikun.ca","content-type":"application/json"},body:JSON.stringify({username:"root_admin",password})}));
-    assert.equal(response.status,200);
-    const cookie=response.headers.get("set-cookie");
-    for (const flag of ["__Host-ikun_session=","Secure","HttpOnly","SameSite=Strict","Path=/"]) assert.ok(cookie.includes(flag));
-    assert.ok(!cookie.includes("Domain="));
-  } finally {store.close();rmSync(directory,{recursive:true,force:true});}
+test('concurrent local bootstrap creates exactly one superadmin',async()=>{
+ const dir=mkdtempSync('/private/tmp/ikun-bootstrap-race-');const cfg=config({dataRoot:dir,origin,secure:false});
+ const first=new LocalAccounts(cfg,true),second=new LocalAccounts(cfg);
+ try{const result=await Promise.allSettled([first.bootstrap('admin_first',initial),second.bootstrap('admin_second',initial)]);
+  assert.equal(result.filter(x=>x.status==='fulfilled').length,1);assert.equal(first.list().filter(x=>x.role==='superadmin').length,1);
+ }finally{first.close();second.close();rmSync(dir,{recursive:true,force:true});}
 });
-
-test("no default account; bootstrap once; CLI rejects piped passwords",async()=>{
-  const directory=mkdtempSync("/private/tmp/ikun-auth-blank-");
-  const cfg=config({dataRoot:directory,origin,secure:false});const store=new AuthStore(cfg,true);
-  try {
-    assert.equal(store.db.prepare("SELECT count(*) AS n FROM auth_users").get().n,0);
-    await store.bootstrap("root_admin",password);
-    await assert.rejects(store.bootstrap("other",password),error=>error.status===409);
-    const command=spawnSync(process.execPath,[new URL("../dist/src/cli.js",import.meta.url).pathname,"bootstrap","--username","root"],{
-      input:password,encoding:"utf8",env:{...process.env,DATA_ROOT:directory}});
-    assert.equal(command.status,1);assert.ok(!(command.stdout+command.stderr).includes(password));
-  } finally {store.close();rmSync(directory,{recursive:true,force:true});}
-});
-
-test("physical DB isolation, foreign DB and file aliases rejected",async()=>{
-  const directory=mkdtempSync("/private/tmp/ikun-auth-isolation-");
-  const cfg=config({dataRoot:directory,origin,secure:false});mkdirSync(join(directory,"auth"));
-  const path=join(directory,"auth/auth.db"),foreign=new DatabaseSync(path);
-  foreign.exec("CREATE TABLE projects(id TEXT)");foreign.close();const before=readFileSync(path);
-  assert.throws(()=>new AuthStore(cfg,true));assert.deepEqual(readFileSync(path),before);
-  rmSync(path);
-  const source=join(directory,"foreign.db"),db=new DatabaseSync(source);db.close();
-  symlinkSync(source,path);assert.throws(()=>new AuthStore(cfg,true));rmSync(path);
-  linkSync(source,path);assert.throws(()=>new AuthStore(cfg,true));
-  rmSync(directory,{recursive:true,force:true});
-});
-
-test("foundation auth DB upgrades in place, restarts; scope/checksum mismatch fail closed",async()=>{
-  const directory=mkdtempSync("/private/tmp/ikun-auth-migration-");mkdirSync(join(directory,"auth"));
-  const path=join(directory,"auth/auth.db"),base=new DatabaseSync(path);
-  base.exec(`PRAGMA application_id=${APP_ID};CREATE TABLE _schema_migrations(version INTEGER PRIMARY KEY,name TEXT,applied_at TEXT);
-    INSERT INTO _schema_migrations VALUES(1,'foundation','now');CREATE TABLE _store_identity(singleton INTEGER PRIMARY KEY,store_name TEXT);
-    INSERT INTO _store_identity VALUES(1,'auth');`);base.close();
-  const cfg=config({dataRoot:directory,origin,secure:false});
-  assert.throws(()=>new AuthStore(cfg,false),/AUTH_MIGRATION_REQUIRED/);
-  let store=new AuthStore(cfg,true);assert.equal(store.db.prepare("SELECT max(version) AS v FROM _schema_migrations").get().v,2);store.close();
-  store=new AuthStore(cfg,false);store.close();
-  assert.throws(()=>new AuthStore(config({...cfg,tenantId:"other"}),false),/AUTH_SCOPE_REJECTED/);
-  const corrupt=new DatabaseSync(path);corrupt.exec("UPDATE _migration_checksums SET sha256='bad' WHERE version=2");corrupt.close();
-  assert.throws(()=>new AuthStore(cfg,false),/AUTH_MIGRATION_CHECKSUM_MISMATCH/);
-  rmSync(directory,{recursive:true,force:true});
-});
-
-test("session cap and token collisions are not reused",()=>fixture(async env=>{
-  const sessions=[];for(let i=0;i<6;i++) sessions.push(await env.store.login("root_admin",password));
-  assert.equal(new Set(sessions.map(s=>s.token)).size,6);
-  assert.throws(()=>env.store.authenticate(sessions[0].token),error=>error.status===401);
-  assert.ok(env.store.authenticate(sessions[5].token));
+test('concurrent local resets cannot silently overwrite a newer password',()=>fixture(async e=>{
+ await user(e);const result=await Promise.allSettled([e.store.reset('viewer',changed),e.store.reset('viewer',initial)]);
+ assert.equal(result.filter(x=>x.status==='fulfilled').length,1);
+ assert.equal(result.filter(x=>x.status==='rejected'&&x.reason.status===409).length,1);
 }));
-
-test("scope cannot be selected by query; identity includes the bound tenant",()=>fixture(async env=>{
-  const {session}=await viewer(env);
-  assert.equal(session.data.tenant_id,"ikun-main");
-  assert.equal(actor(env,session).tenant_id,"ikun-main");
-  for (const query of ["tenant_id=other","tenant_id=ikun-main&tenant_id=other"])
-    assert.equal(env.api.gate(request("/api/v1/projects?"+query,"GET",undefined,session)).status,403);
-  assert.equal(env.api.gate(request("/settings","GET",undefined,session)).status,403);
+test('SSE rechecks before delivering a data chunk after revocation',()=>fixture(async e=>{
+ const {logged}=await user(e);let streamController,cancelled=false;
+ const upstream=new Response(new ReadableStream({start(c){streamController=c;},cancel(){cancelled=true;}}),{headers:{'content-type':'text/event-stream'}});
+ const result=await e.api.business(req('/api/v1/projects','GET',undefined,logged),()=>upstream);
+ const read=result.body.getReader().read();e.store.setEnabled('viewer',false);
+ streamController.enqueue(new TextEncoder().encode('data: must-not-leak\n\n'));
+ assert.equal((await read).done,true);assert.equal(cancelled,true);
 }));
-
-test("schema SQL review copy and generated UI match executable sources",()=>{
-  const source=readFileSync(new URL("../src/database.ts",import.meta.url),"utf8");
-  const sql=readFileSync(new URL("../../../schemas/auth/002_accounts.sql",import.meta.url),"utf8");
-  assert.ok(source.includes("MIGRATION_SQL"));
-  const review=readFileSync(new URL("../../../schemas/auth/002_accounts.sql",import.meta.url),"utf8");
-  assert.equal(review,sql);assert.equal(MIGRATION_SQL,sql);
-  const generated=readFileSync(new URL("../src/ui.ts",import.meta.url),"utf8");
-  assert.ok(generated.includes(JSON.stringify(readFileSync(new URL("../static/auth.js",import.meta.url),"utf8"))));
-});
-
-test("P0 password forms have fixed same-origin POST even without script handlers",()=>{
-  for (const [name,id,action] of [["login.html","login-form","/api/v1/auth/login"],
-    ["password.html","password-form","/api/v1/auth/password"],["users.html","user-form","/api/v1/auth/users"]]) {
-    const html=readFileSync(new URL(`../static/${name}`,import.meta.url),"utf8");
-    const form=html.match(new RegExp(`<form\\b[^>]*id="${id}"[^>]*>`))?.[0];
-    assert.ok(form);assert.match(form,/method="post"/i);assert.ok(form.includes(`action="${action}"`));
-    assert.ok(!/formaction|formmethod/i.test(html));
-  }
-});
-
-test("P0 native form encoding is refused without echoing credentials or changing data",()=>fixture(async env=>{
-  const root=await login(env),who=actor(env,root);
-  const before=env.store.users(who);
-  for (const path of ["/api/v1/auth/login","/api/v1/auth/password","/api/v1/auth/users"]) {
-    const encoded=new URLSearchParams({username:"not-created",password,current_password:password,new_password:changed});
-    const response=await env.api.handle(new Request(origin+path,{method:"POST",headers:{host:new URL(origin).host,
-      origin,"content-type":"application/x-www-form-urlencoded",cookie:root.cookie},body:encoded.toString()}));
-    assert.equal(response.status,415);
-    const text=await response.text();assert.ok(!text.includes(password)&&!text.includes(changed));
-    assert.equal(response.headers.get("location"),null);
-  }
-  assert.deepEqual(env.store.users(who),before);
-}));
-
-test("SSE closes quiet connection on revocation and cancels upstream",()=>fixture(async env=>{
-  const root=await login(env);let cancelled=false;
-  const upstream=new Response(new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode("data: first\n\n"));},cancel(){cancelled=true;}}),
-    {headers:{"content-type":"text/event-stream"}});
-  const response=env.api.stream(request("/api/v1/projects","GET",undefined,root),upstream),reader=response.body.getReader();
-  assert.equal(new TextDecoder().decode((await reader.read()).value),"data: first\n\n");
-  env.store.logout(actor(env,root));
-  const ended=await Promise.race([reader.read(),delay(2500).then(()=>{throw new Error("SSE did not close");})]);
-  assert.ok(ended.done);assert.ok(cancelled);
+test('new CLI account cannot skip force-change via a forged role or a Server Action',()=>fixture(async e=>{
+ await e.store.create('new_user',initial);const first=await e.store.login('new_user',initial);
+ const request=req('/','POST',{},first,{'x-role':'superadmin'});
+ assert.throws(()=>e.api.serverAction(request,first.actor.csrf_token),x=>x.status===403);
 }));

@@ -27,9 +27,19 @@ function unavailable(request: Request) {
 export async function route(request: Request) {
   try { return await auth().handle(request); } catch { return unavailable(request); }
 }
-export function page(request: Request) {
-  try { return auth().page(request); } catch { return unavailable(request); }
-}
 export function gate(request: Request) {
   try { return auth().gate(request); } catch { return unavailable(request); }
+}
+/** Safe session projection for server-side UI; never serialize the internal Identity. */
+export function getSession(request:Request) {
+  const http=auth();
+  const actor=http.authorize(new Request(new URL('/api/v1/auth/me',http.store.cfg.origin),{headers:request.headers}),false);
+  return {user_id:actor.id,username:actor.username,role:actor.role,tenant_id:actor.tenant_id,
+    must_change_password:actor.must_change_password,csrf_token:actor.csrf_token};
+}
+export function requireIdentity(request:Request) {return auth().principal(request);}
+export function requireSuperadmin(request:Request) {return auth().requireSuperadmin(request);}
+/** Guard and execute in the same request handler, including automatic SSE revocation. */
+export async function withAuth(request:Request,handler:Parameters<AuthHttp['business']>[1]) {
+  try{return await auth().business(request,handler);}catch{return unavailable(request);}
 }

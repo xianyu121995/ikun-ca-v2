@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { cookieName } from "./config.js";
-import { AuthError, equal, invalid, password, username } from "./security.js";
+import { AuthError, equal, invalid, password } from "./security.js";
 import { AuthStore, publicIdentity, type Identity, type Role } from "./store.js";
-import { assets } from "./ui.js";
 
 const selfPaths = new Set(["/auth", "/auth/password", "/api/v1/auth/me", "/api/auth/session",
   "/api/v1/auth/logout", "/api/v1/auth/password"]);
@@ -43,19 +42,6 @@ async function body(request: Request): Promise<Record<string,unknown>> {
 function fields(data: Record<string,unknown>, allowed: string[]) {
   if (Object.keys(data).some(key=>!allowed.includes(key))) throw invalid();
 }
-function idempotency(request: Request) {
-  const key=request.headers.get("idempotency-key")??"";
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key))
-    throw invalid("请提供 UUID 格式 Idempotency-Key");
-  return key;
-}
-function revision(request: Request) {
-  const match=/^"rev-([1-9][0-9]*)"$/.exec(request.headers.get("if-match")??"");
-  if (!match) throw new AuthError(428,"VALIDATION_ERROR","请提供 If-Match 用户版本");
-  const value=Number(match[1]); if (!Number.isSafeInteger(value)) throw invalid();
-  return value;
-}
-
 export class AuthHttp {
   readonly readApi: readonly RegExp[];
   readonly readPages: readonly RegExp[];
@@ -66,16 +52,24 @@ export class AuthHttp {
   private sessionData(actor: Identity) {
     return {user_id:actor.id,username:actor.username,role:actor.role,
       tenant_id:this.store.cfg.tenantId,must_change_password:actor.must_change_password,
-      csrf_token:actor.csrf_token,capabilities:{can_edit_projects:actor.role==="superadmin"&&!actor.must_change_password,can_manage_hunter:actor.role==="superadmin"&&!actor.must_change_password,can_manage_tracking:actor.role==="superadmin"&&!actor.must_change_password,can_manage_users:actor.role==="superadmin"&&!actor.must_change_password}};
-  }
-  private userData(user:Record<string,unknown>) {
-    return {user_id:user.id,username:user.username,role:user.role,enabled:user.enabled,
-      must_change_password:user.must_change_password,revision:user.revision,
-      created_at:user.created_at,updated_at:user.updated_at};
+      csrf_token:actor.csrf_token,capabilities:{can_edit_projects:actor.role==="superadmin"&&!actor.must_change_password,can_manage_hunter:actor.role==="superadmin"&&!actor.must_change_password,can_manage_tracking:actor.role==="superadmin"&&!actor.must_change_password,can_manage_users:false}};
   }
   principal(request:Request) {
     const actor=this.authorize(request);
     return Object.freeze({user_id:actor.id,tenant_id:'ikun-main' as const,role:actor.role});
+  }
+  requireSuperadmin(request: Request) {
+    const actor=this.authorize(request);
+    if(actor.role!=="superadmin" || actor.must_change_password) throw new AuthError(403,"FORBIDDEN","需要超级管理员权限");
+    return Object.freeze({user_id:actor.id,tenant_id:'ikun-main' as const,role:actor.role});
+  }
+  serverAction(request: Request, csrfToken: string) {
+    if(request.method!=="POST") throw new AuthError(405,"VALIDATION_ERROR","仅支持 POST");
+    // Server Actions use multipart encoding. Verify the original Origin/Host and a form token,
+    // then use the same identity/role/force-change checks as a JSON business write.
+    const headers=new Headers(request.headers);
+    headers.set('content-type','application/json');headers.set('x-csrf-token',csrfToken);
+    return this.requireSuperadmin(new Request(new URL('/actions/business',this.store.cfg.origin),{method:'POST',headers}));
   }
   async business(request:Request,handler:(principal:{user_id:string;tenant_id:'ikun-main';role:Role})=>Response|Promise<Response>) {
     try {
@@ -126,6 +120,7 @@ export class AuthHttp {
   authorize(request: Request, touch=true): Identity {
     this.source(request);
     const path=new URL(request.url).pathname;
+    this.noAccountManagement(path);
     const actor=this.store.authenticate(tokenFrom(request,cookieName(this.store.cfg)),
       touch && !["/api/v1/auth/me","/api/auth/session"].includes(path));
     const requestedScopes=new URL(request.url).searchParams.getAll("tenant_id");
@@ -147,7 +142,8 @@ export class AuthHttp {
     const path=new URL(request.url).pathname;
     try {
       this.source(request);
-      if (["/login","/auth/assets/auth.css","/auth/assets/auth.js"].includes(path) &&
+      this.noAccountManagement(path);
+      if (["/login"].includes(path) &&
           ["GET","HEAD"].includes(request.method)) return null;
       if (path==="/api/v1/auth/login" && request.method==="POST") return null;
       // The logout handler independently validates Origin and any live session/CSRF.
@@ -163,24 +159,17 @@ export class AuthHttp {
       return this.error(request,error);
     }
   }
-  page(request: Request) {
-    const blocked=this.gate(request); if (blocked) return blocked;
-    const path=new URL(request.url).pathname;
-    const name=path==="/login"?"login.html":path==="/auth"?"account.html":path==="/auth/users"?"users.html":
-      path==="/auth/password"?"password.html":path==="/auth/assets/auth.css"?"auth.css":
-      path==="/auth/assets/auth.js"?"auth.js":undefined;
-    if (!name) return this.error(request,new AuthError(404,"NOT_FOUND","页面不存在"));
-    const type=name.endsWith(".css")?"text/css":name.endsWith(".js")?"text/javascript":"text/html";
-    return new Response(request.method==="HEAD"?null:assets[name],{headers:{
-      "content-type":type+"; charset=utf-8","cache-control":"no-store, private",
-      "x-content-type-options":"nosniff","x-request-id":requestId(request),
-      "content-security-policy":"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-      "x-frame-options":"DENY","referrer-policy":"same-origin"}});
+  private noAccountManagement(path: string) {
+    // Removed endpoints stay unavailable even to superadmins, including through the proxy.
+    if (path === "/auth/users" || path.startsWith("/auth/users/") ||
+        path === "/api/v1/auth/users" || path.startsWith("/api/v1/auth/users/"))
+      throw new AuthError(404,"NOT_FOUND","页面或接口不存在");
   }
   async handle(request: Request,peer?: string): Promise<Response> {
     const path=new URL(request.url).pathname,method=request.method;
     try {
       this.source(request);
+      this.noAccountManagement(path);
       if (path==="/api/v1/auth/login" && method==="POST") {
         this.csrf(request); const data=await body(request); fields(data,["username","password"]);
         if (typeof data.username!=="string" || data.username.length>64) throw invalid();
@@ -206,36 +195,7 @@ export class AuthHttp {
         const data=await body(request); fields(data,["current_password","new_password"]);
         this.store.reserveAttempt("change:"+actor.id,peer);
         const result=await this.store.changePassword(actor,password(data.current_password,false),password(data.new_password));
-        return this.response(request,result,200,{"set-cookie":this.sessionCookie("",true)});
-      }
-      if (path==="/api/v1/auth/users" && method==="GET") {
-        const query=new URL(request.url).searchParams;
-        if([...query.keys()].some(key=>!['limit','cursor'].includes(key))||query.getAll('limit').length>1||query.getAll('cursor').length>1) throw invalid();
-        const raw=query.get('limit')??'50';if(!/^[1-9][0-9]{0,2}$/.test(raw)) throw invalid();
-        const cursor=query.get('cursor');if(cursor==='') throw invalid();
-        return this.response(request,this.store.pageUsers(actor,Number(raw),cursor??undefined));
-      }
-      if (path==="/api/v1/auth/users" && method==="POST") {
-        const data=await body(request); fields(data,["username","password","role"]);
-        const role=data.role??"user";
-        if (role!=="user" && role!=="superadmin") throw invalid("角色只能为 superadmin 或 user");
-        const user=await this.store.createUser(actor,username(data.username),password(data.password),role as Role,idempotency(request));
-        return this.response(request,this.userData(user),201,{etag:`"rev-${user.revision}"`});
-      }
-      const target=/^\/api\/v1\/auth\/users\/(usr_[0-9a-f-]{36})(\/reset-password)?$/.exec(path);
-      if (target && method===(target[2]?"POST":"PATCH")) {
-        const data=await body(request);
-        fields(data,target[2]?["new_password"]:["enabled","role","must_change_password"]);
-        const rev=revision(request),key=idempotency(request);
-        let result;
-        if (target[2]) result=await this.store.resetPassword(actor,target[1]!,password(data.new_password),rev,key);
-        else {
-          if(!Object.keys(data).length||('enabled' in data&&typeof data.enabled!=='boolean')||
-            ('must_change_password' in data&&typeof data.must_change_password!=='boolean')||
-            ('role' in data&&data.role!=='user'&&data.role!=='superadmin')) throw invalid();
-          result=await this.store.patchUser(actor,target[1]!,data as {enabled?:boolean;role?:Role;must_change_password?:boolean},rev,key);
-        }
-        return this.response(request,this.userData(result),200,{etag:`"rev-${result.revision}"`});
+        return this.response(request,{changed:true,reauthentication_required:false},200,{"set-cookie":this.sessionCookie(result.token)});
       }
       throw new AuthError(404,"NOT_FOUND","认证接口不存在");
     } catch (error) { return this.error(request,error); }

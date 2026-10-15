@@ -14,8 +14,8 @@ export interface AuthConfig {
   tenantId: string;
 }
 export function config(input: Partial<AuthConfig> & Pick<AuthConfig, "dataRoot">): AuthConfig {
-  const cfg: AuthConfig = {origin: "https://ikun.ca", secure: true, absoluteTtl: 43200,
-    idleTtl: 1800, rateWindow: 900, accountAttempts: 10, ipAttempts: 30,
+  const cfg: AuthConfig = {origin: "https://ikun.ca", secure: true, absoluteTtl: 604800,
+    idleTtl: 604800, rateWindow: 900, accountAttempts: 10, ipAttempts: 30,
     globalAttempts: 300, maxSessions: 5, tenantId: "ikun-main", ...input};
   if (cfg.tenantId !== "ikun-main") throw new Error("AUTH_SCOPE_REJECTED");
   if (!isAbsolute(cfg.dataRoot)) throw new Error("AUTH_DATA_ROOT_MUST_BE_ABSOLUTE");
@@ -27,6 +27,7 @@ export function config(input: Partial<AuthConfig> & Pick<AuthConfig, "dataRoot">
   for (const value of [cfg.absoluteTtl, cfg.idleTtl, cfg.rateWindow, cfg.accountAttempts,
     cfg.ipAttempts, cfg.globalAttempts, cfg.maxSessions])
     if (!Number.isSafeInteger(value) || value <= 0) throw new Error("AUTH_LIMIT_REJECTED");
+  if (cfg.absoluteTtl > 604800 || cfg.idleTtl > 604800) throw new Error("AUTH_SESSION_MAXIMUM_7_DAYS");
   return cfg;
 }
 export const cookieName = (cfg: AuthConfig) => cfg.secure ? "__Host-ikun_session" : "ikun_dev_session";

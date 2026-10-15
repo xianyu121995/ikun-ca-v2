@@ -84,6 +84,10 @@ def main():
     edit('"只读 · 未接真实数据"', '"本地服务 · 远端按核验状态显示"')
     edit('disabled={loading || mode !== "demo"}', 'disabled={loading || mode !== "demo" && !live}')
     edit(
+        'title="重置筛选并刷新当前演示列表"',
+        'title={mode === "live" ? "刷新监控状态与动态" : "重置筛选并刷新当前演示列表"}',
+    )
+    edit(
         'reset(); notify("已刷新演示列表 · 不会请求真实推文 API");',
         'reset(); if(live)live.refresh();else notify("已刷新演示列表 · 不会请求真实推文 API");',
     )
@@ -107,6 +111,18 @@ def main():
     edit(
         'onClick={() => notify(mode === "demo" ?',
         'onClick={() => live ? live.onOpenPost(post) : notify(mode === "demo" ?',
+    )
+    edit(
+        'aria-label={`查看 ${account.name} 原文（${mode === "demo" ? "演示" : "未接入"}）`}',
+        'aria-label={`查看 ${account.name} 原文${mode === "demo" ? "（演示）" : ""}`}',
+    )
+    edit(
+        'title="查看原文（演示推文无真实链接）"',
+        'title={mode === "live" ? "打开 X 原文" : "查看原文（演示推文无真实链接）"}',
+    )
+    edit(
+        'description={mode === "demo" ? "查看已加入追踪的 X 账号，演示添加 / 删除操作" : "已加入追踪的 X 账号 · 只读视图"}',
+        'description={mode === "demo" ? "查看已加入追踪的 X 账号，演示添加 / 删除操作" : live?.canManage ? "管理已人工确认的项目 · 操作等待远端核验" : "已加入追踪的 X 账号 · 只读视图"}',
     )
     edit("<div className={s.feedFooter}>", "{live ? live.pagination : <div className={s.feedFooter}>")
     edit("</nav></div></section>", "</nav></div>}</section>")

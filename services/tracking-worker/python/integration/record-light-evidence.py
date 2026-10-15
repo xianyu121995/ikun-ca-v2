@@ -45,7 +45,7 @@ def main():
     if "B3_LIFECYCLE_PASS" not in Path(args.lifecycle_log).read_text():
         raise ValueError("lifecycle did not pass")
     node = Path(args.node_log).read_text()
-    if not re.search(r"(?:#|ℹ) pass 6\b", node) or not re.search(r"(?:#|ℹ) fail 0\b", node):
+    if not re.search(r"(?:#|ℹ) pass 7\b", node) or not re.search(r"(?:#|ℹ) fail 0\b", node):
         raise ValueError("actual Node entry cases did not pass")
     inputs = build.source_inputs()
     result = {
@@ -57,7 +57,7 @@ def main():
             "passed": len(cases),
             "by_file": dict(Counter(c.attrib["classname"] for c in cases)),
             "node_wrapper_count": 1,
-            "nested_node_cases": 6,
+            "nested_node_cases": 7,
             "nested_cases_added_to_total": False,
         },
         "logs": logs

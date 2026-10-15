@@ -1,18 +1,7 @@
 import { createHash } from 'node:crypto';
-import { auth, requireIdentity, requireSuperadmin, withAuth } from '../../../modules/auth/dist/src/server.js';
-import { AuthHttp } from '../../../modules/auth/dist/src/http.js';
+import { requireIdentity, requireSuperadmin, withAuth } from '../../../modules/auth/dist/src/server.js';
 import { ipc, requestId, failure } from './projects';
 const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
-const extra = [/^\/api\/v1\/tracking\/events$/];
-const globals = globalThis as typeof globalThis & {
-    ikunAuth?: AuthHttp;
-    ikunTrackingPolicy?: boolean;
-};
-function policy() { if (!globals.ikunTrackingPolicy) {
-    const current = auth();
-    globals.ikunAuth = new AuthHttp(current.store, [...current.readApi, ...extra], current.readPages);
-    globals.ikunTrackingPolicy = true;
-} }
 export function commandId(actor: string, route: string, key: string) { const bytes = createHash('sha256').update(JSON.stringify([actor, 'ikun-main', route, key])).digest().subarray(0, 16); bytes[6] = (bytes[6]! & 15) | 64; bytes[8] = (bytes[8]! & 63) | 128; const h = bytes.toString('hex'); return 'cmd_' + [h.slice(0, 8), h.slice(8, 12), h.slice(12, 16), h.slice(16, 20), h.slice(20)].join('-'); }
 export async function trackingService(path: string, id: string, options: RequestInit = {}) {
     const target = process.env.TRACKING_API_URL, token = process.env.TRACKING_API_TOKEN;
@@ -39,34 +28,40 @@ export async function trackingService(path: string, id: string, options: Request
         clearTimeout(timer);
     }
 }
-async function readBody(request: Request, empty = false) { const reader = request.body?.getReader(); if (!reader) {
-    if (empty)
-        return {};
-    throw Error('BODY');
-} let length = 0; const parts: Uint8Array[] = []; const until = Date.now() + 5000; try {
-    while (true) {
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        const part = await Promise.race([reader.read(), new Promise<never>((_, reject) => { timer = setTimeout(() => reject(Error('TIMEOUT')), Math.max(1, until - Date.now())); })]).finally(() => clearTimeout(timer));
-        if (part.done)
-            break;
-        length += part.value.length;
-        if (length > 65536)
-            throw Error('SIZE');
-        parts.push(part.value);
-    }
-    if (!length && empty)
-        return {};
-    const body = JSON.parse(Buffer.concat(parts).toString());
-    if (!body || typeof body !== 'object' || Array.isArray(body))
+async function readBody(request: Request, empty = false) {
+    const reader = request.body?.getReader();
+    if (!reader) {
+        if (empty)
+            return {};
         throw Error('BODY');
-    return body as Record<string, unknown>;
+    }
+    let length = 0;
+    const parts: Uint8Array[] = [];
+    const until = Date.now() + 5000;
+    try {
+        while (true) {
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            const part = await Promise.race([reader.read(), new Promise<never>((_, reject) => { timer = setTimeout(() => reject(Error('TIMEOUT')), Math.max(1, until - Date.now())); })]).finally(() => clearTimeout(timer));
+            if (part.done)
+                break;
+            length += part.value.length;
+            if (length > 65536)
+                throw Error('SIZE');
+            parts.push(part.value);
+        }
+        if (!length && empty)
+            return {};
+        const body = JSON.parse(Buffer.concat(parts).toString());
+        if (!body || typeof body !== 'object' || Array.isArray(body))
+            throw Error('BODY');
+        return body as Record<string, unknown>;
+    }
+    finally {
+        void reader.cancel().catch(() => { });
+        reader.releaseLock();
+    }
 }
-finally {
-    void reader.cancel().catch(() => { });
-    reader.releaseLock();
-} }
 export async function trackingRoute(original: Request) {
-    policy();
     const id = requestId(original);
     const headers = new Headers(original.headers);
     headers.set('x-request-id', id);
@@ -75,7 +70,7 @@ export async function trackingRoute(original: Request) {
         const method = request.method, read = ['GET', 'HEAD'].includes(method), principal = read ? requireIdentity(request) : requireSuperadmin(request);
         const url = new URL(request.url), suffix = url.pathname.slice('/api/v1/tracking'.length);
         if (read) {
-            if (!new RegExp('^/(?:subscriptions(?:/sub_' + uuid + ')?|latest|activities|events)$').test(suffix))
+            if (!new RegExp('^/(?:subscriptions(?:/sub_' + uuid + ')?|latest|activities)$').test(suffix))
                 return failure(id, 404, 'NOT_FOUND', '路径不存在');
             const out = await trackingService(suffix.slice(1) + url.search, id, { signal: request.signal, headers: request.headers.has('last-event-id') ? { 'last-event-id': request.headers.get('last-event-id')! } : {} });
             return new Response(out.body, { status: out.status, headers: { 'content-type': out.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store', 'x-request-id': id, ...(out.headers.get('etag') ? { etag: out.headers.get('etag')! } : {}) } });
@@ -121,5 +116,18 @@ export async function trackingRoute(original: Request) {
         const sub = (await current.json()).data;
         const command = { schema_version: 1, command_id: commandId(principal.user_id, method + ' ' + url.pathname, key), tenant_id: 'ikun-main', actor: principal, operation: 'tracking.' + (method === 'DELETE' ? 'remove' : match[2]), project_id: sub.project_id, subscription_id: match[1], expected_revision: Number(revision[1]), payload: {}, issued_at: new Date().toISOString() };
         return trackingService('commands', id, { method: 'POST', body: JSON.stringify(command) });
+    });
+}
+/** Tracking-only candidate for the frozen website SSE gateway; never replaces B1's singleton. */
+export async function trackingEventsRoute(original: Request) {
+    const id = requestId(original), headers = new Headers(original.headers);
+    headers.set('x-request-id', id);
+    const request = new Request(original, { headers });
+    return withAuth(request, async () => {
+        requireIdentity(request);
+        if (new URL(request.url).search)
+            return failure(id, 422, 'VALIDATION_ERROR', '事件流不接受查询字段');
+        const upstream = await trackingService('events', id, { signal: request.signal, headers: request.headers.has('last-event-id') ? { 'last-event-id': request.headers.get('last-event-id')! } : {} });
+        return new Response(upstream.body, { status: upstream.status, headers: { 'content-type': upstream.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store', 'x-request-id': id } });
     });
 }

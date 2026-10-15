@@ -1,4 +1,4 @@
-"""One pytest wrapper contains six actual Node/B1/B2 entry tests; never add those six twice."""
+"""One pytest wrapper contains seven Node cases; never add those seven twice."""
 
 import subprocess
 import time

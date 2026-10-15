@@ -16,7 +16,7 @@ const password='Synthetic-B3-Password-Final-274!',initial='Synthetic-B3-Initial-
 const {config}=await import(pathToFileURL(join(preview,'modules/auth/dist/src/config.js')));
 const {LocalAccounts}=await import(pathToFileURL(join(preview,'modules/auth/dist/src/local.js')));
 const {ManagedProjectsIpc,spawnManaged}=await import(pathToFileURL(join(preview,'packages/runtime/dist/index.js')));
-let manager,managed,api,projects,auth,local,route,pageGuard,action,work,unit,endpoint;
+let manager,managed,api,projects,auth,local,route,eventsRoute,pageGuard,action,work,unit,endpoint;
 const fields={name:'B3 canonical',rating:'A',description:'',website_url:null,notes:'actual project note',category:null,progress_stage:'watching',progress_percent:null,token_date:null,token_date_status:'unconfirmed'};
 const origin='http://127.0.0.1:3490';
 function req(path,method='GET',session,body,headers={}){return new Request(origin+path,{method,headers:{host:new URL(origin).host,origin,'content-type':'application/json','idempotency-key':randomUUID(),...(session?{cookie:session.cookie,'x-csrf-token':session.csrf}:{}),...headers},...(body!==undefined?{body:JSON.stringify(body)}:{})});}
@@ -46,6 +46,7 @@ before(async()=>{
  projects=await import(pathToFileURL(join(preview,'apps/website/lib/projects.ts')));projects.projectsAuth();
  api=await import(pathToFileURL(join(preview,'apps/website/lib/tracking.ts')));
  route=await import(pathToFileURL(join(preview,'apps/website/app/api/v1/tracking/[[...path]]/route.ts')));
+ eventsRoute=await import(pathToFileURL(join(preview,'apps/website/app/api/v1/events/stream/route.ts')));
  const authModule=await import(pathToFileURL(join(preview,'modules/auth/dist/src/server.js')));auth=authModule.auth();
  ({requireAuthPage:pageGuard}=await import(pathToFileURL(join(preview,'apps/website/lib/auth.ts'))));
  ({authorizeTrackingAction:action}=await import(pathToFileURL(join(preview,'apps/website/app/tracking/actions.ts'))));
@@ -58,6 +59,7 @@ test('B1 actual Route Handler, page and Server Action deny anonymous/user/forced
  assert.equal((await route.GET(req('/api/v1/tracking/subscriptions'))).status,401);
  const admin=await session('admin'),user=await session('user'),forced=await session('forced');
  assert.equal((await route.GET(req('/api/v1/tracking/subscriptions','GET',user))).status,200);
+ const authSingleton=(await import(pathToFileURL(join(preview,'modules/auth/dist/src/server.js')))).auth();await route.GET(req('/api/v1/tracking/subscriptions','GET',user));assert.equal((await import(pathToFileURL(join(preview,'modules/auth/dist/src/server.js')))).auth(),authSingleton);
  const configured=process.env.TRACKING_API_URL;process.env.TRACKING_API_URL='invalid configured origin';try{assert.equal((await route.GET(req('/api/v1/tracking/subscriptions','GET',user))).status,503);}finally{process.env.TRACKING_API_URL=configured;}
  const project=await createProject(admin);
  assert.equal((await createSub(user,project)).status,403);
@@ -101,14 +103,14 @@ test('Actual B2 serialized outbox relay, lost ACK reconciles original ID with on
 });
 test('SSE standard envelope/replay and quiet revocation cancel the real Tracking upstream',async()=>{
  const admin=await session('admin'),user=await session('user');
- const request=req('/api/v1/tracking/events','GET',user);const response=await route.GET(request);assert.equal(response.status,200);const reader=response.body.getReader();
+ const request=req('/api/v1/events/stream','GET',user);const response=await eventsRoute.GET(request);assert.equal(response.status,200);const reader=response.body.getReader();
  const first=await reader.read();const block=new TextDecoder().decode(first.value);const data=block.match(/data: (.+)/);assert.ok(data);assert.deepEqual(Object.keys(JSON.parse(data[1])).sort(),['data','request_id']);
  await new Promise(r=>setTimeout(r,5500));assert.equal((await(await fixture('state')).json()).active_streams,1);
  assert.equal((await auth.handle(req('/api/v1/auth/logout','POST',user,{}))).status,200);
  let done=false;for(let i=0;i<10;i++){const part=await Promise.race([reader.read(),new Promise((_,reject)=>setTimeout(()=>reject(Error('SSE_REVOCATION')),3000))]);if(part.done){done=true;break;}}assert.equal(done,true);await until(async()=>(await(await fixture('state')).json()).active_streams===0);
  assert.equal((await route.GET(req('/api/v1/tracking/subscriptions','GET',user))).status,401);
- const active=await session('user');const replay=await route.GET(req('/api/v1/tracking/events','GET',active));const r=replay.body.getReader();const text=new TextDecoder().decode((await r.read()).value);const eventId=text.match(/id: (evt_[^\n]+)/)?.[1];await r.cancel();assert.ok(eventId);
- const resumed=await route.GET(req('/api/v1/tracking/events','GET',active,undefined,{'last-event-id':eventId}));const rr=resumed.body.getReader();const next=new TextDecoder().decode((await rr.read()).value);assert.ok(!next.includes('id: '+eventId+'\n'));await rr.cancel();await until(async()=>(await(await fixture('state')).json()).active_streams===0);
+ const active=await session('user');const replay=await eventsRoute.GET(req('/api/v1/events/stream','GET',active));const r=replay.body.getReader();const text=new TextDecoder().decode((await r.read()).value);const eventId=text.match(/id: (evt_[^\n]+)/)?.[1];await r.cancel();assert.ok(eventId);
+ const resumed=await eventsRoute.GET(req('/api/v1/events/stream','GET',active,undefined,{'last-event-id':eventId}));const rr=resumed.body.getReader();const next=new TextDecoder().decode((await rr.read()).value);assert.ok(!next.includes('id: '+eventId+'\n'));await rr.cancel();await until(async()=>(await(await fixture('state')).json()).active_streams===0);
 });
 test('Disabled, reset, seven-day expiry and rotated B1 cookies are rejected in actual Tracking handler',async()=>{
  let user=await session('user');local.setEnabled('user',false);assert.equal((await route.GET(req('/api/v1/tracking/subscriptions','GET',user))).status,401);local.setEnabled('user',true);
@@ -126,4 +128,14 @@ test('Public command gateway reconciles direct Tracking commands after a genuine
  const {GET}=await import(pathToFileURL(join(preview,'apps/website/app/api/v1/commands/[id]/route.ts')));
  const checked=await GET(req('/api/v1/commands/'+receipt.command_id,'GET',admin));assert.equal(checked.status,200);
  const value=(await checked.json()).data;assert.equal(value.command_id,receipt.command_id);assert.equal(value.subscription_id,receipt.subscription_id);
+});
+
+test('Concurrent refresh waits for a fresh snapshot, coalesces bursts, and recovers after failure',async()=>{
+ const {coalescedRefresh}=await import(pathToFileURL(join(preview,'apps/website/lib/coalesced-refresh.ts')));
+ let version=1,active=0,maximum=0;const seen=[],releases=[];
+ const refresh=coalescedRefresh(async()=>{active++;maximum=Math.max(maximum,active);seen.push(version);await new Promise(resolve=>releases.push(resolve));active--;});
+ const tick=()=>new Promise(resolve=>setImmediate(resolve));
+ const first=refresh();await tick();version=2;const second=refresh();for(let i=0;i<20;i++)assert.equal(refresh(),second);assert.equal(seen.length,1);
+ releases.shift()();await first;await tick();assert.deepEqual(seen,[1,2]);version=3;const third=refresh();releases.shift()();await second;await tick();assert.deepEqual(seen,[1,2,3]);releases.shift()();await third;assert.equal(maximum,1);
+ let attempts=0;const failing=coalescedRefresh(async()=>{if(++attempts===1)throw Error('synthetic read failure');});const rejected=failing();const recovered=failing();await assert.rejects(rejected);await recovered;assert.equal(attempts,2);
 });

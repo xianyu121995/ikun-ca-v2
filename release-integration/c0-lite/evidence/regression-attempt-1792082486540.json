@@ -1,0 +1,27 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "pnpm",
+        "test:auth"
+      ],
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node",
+        "--import",
+        "./release-integration/scripts/permission-fixture.mjs",
+        "--test",
+        "tests/b0-launch.test.mjs",
+        "tests/b0-managed.test.mjs",
+        "tests/b0-stores.test.mjs",
+        "tests/foundation.test.mjs"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "fixture_location": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/modules/auth/test-results/b1-preview.json",
+  "fixture_is_actual_runtime": true,
+  "log_sha256": "7f4296d4823b6d03f914fea39c5b91088ec9a8c6d1c900dff2493b9770066e46"
+}

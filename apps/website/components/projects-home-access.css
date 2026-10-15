@@ -1,0 +1,11 @@
+/* Receiving-layer policy over the frozen homepage presentation.
+   Callbacks and the write controller also deny mutations; CSS only removes
+   inactive business controls so a read-only account has no apparent actions. */
+.projects-home-access[data-project-access='readonly'] .hpv2-heading > button,
+.projects-home-access[data-project-access='readonly'] .hpv2-row-actions,
+.projects-home-access[data-project-access='readonly'] .hpv2-check-field,
+.projects-home-access[data-project-access='readonly'] .hpv2-table-toolbar > button[title],
+.projects-home-access[data-project-access='readonly'] .hpv2-record-row > button:disabled,
+.projects-home-access[data-project-access='readonly'] .hpv2-detail .hpv2-dialog-actions > button {
+  display: none;
+}

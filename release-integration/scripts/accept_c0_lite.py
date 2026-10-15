@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 from c0_test_fixture import ROOT, NODE, PYTHON, cli, environment, migrate_projects, provision
+from readonly_entry_matrix import empty_store, populated
 
 FIELDS = dict(name='C0 actual HTTP', rating='A', description='C0 synthetic validation', website_url=None,
               notes='', category=None, progress_stage='researching', progress_percent=37.0,
@@ -66,6 +67,11 @@ def seed_projects(data_root):
                                   body={'fields':fields,'milestone':milestone,'complete':completed}))
         if result[0]!=201:
             raise AssertionError('SYNTHETIC_PROJECT_SEED_FAILED')
+        if index>=125:
+            project=result[1]['project']
+            service.execute(Rpc(operation='membership',principal=actor,request_id=str(uuid.uuid4()),
+                                idempotency_key=str(uuid.uuid4()),contract='projects-home-v1',target=project['project_id'],
+                                if_match=f'"rev-{project["revision"]}"',body={'action':'remove'}))
 
 
 def activate(client, origin, account):
@@ -266,6 +272,7 @@ def browsers(origin, accounts, output):
                     page.get_by_role('button',name='登录',exact=True).click()
                     expect(page.get_by_role('heading',name='持续跟踪项目',exact=True)).to_be_visible()
                 login('admin')
+                populated(page,'admin',width,output,check)
                 expect(page.locator('.ik-nav-link[href="/tracking"]')).to_have_accessible_name('猎手项目追踪')
                 expect(page.locator('.ik-nav-link[href="/tracking"]')).to_contain_text('猎手项目追踪')
                 check(True,'owner-approved tracking navigation wording',width=width)
@@ -308,7 +315,8 @@ def browsers(origin, accounts, output):
                 context.close()
                 readonly=browser.new_context(viewport={'width':width,'height':1000});page=readonly.new_page()
                 login('user')
-                check(page.get_by_role('button',name='＋ 新增项目',exact=True).is_disabled(),'AUTH-02 actual UI read-only',width=width)
+                populated(page,'user',width,output,check)
+                check(page.get_by_role('button',name='＋ 新增项目',exact=True).count()==0,'AUTH-02 actual UI read-only write entry hidden',width=width)
                 page.screenshot(path=str(output/f'readonly-{width}.png'),full_page=True)
                 readonly.close()
                 check(not errors,'browser no page errors',width=width)
@@ -380,7 +388,7 @@ def main():
     out=OUTPUT/('p0-'+str(int(time.time()*1000)))
     out.mkdir(parents=True,exist_ok=False)
     try:
-        accounts=provision(data,origin,credentials);PRIVATE_PASSWORDS.extend(x['password'] for x in accounts.values());migrate_projects(data);seed_projects(data)
+        accounts=provision(data,origin,credentials);PRIVATE_PASSWORDS.extend(x['password'] for x in accounts.values());migrate_projects(data)
         cli(data,origin,'create','c0_rejected','x'*9,expected=1)
         with sqlite3.connect(data/'auth/auth.db') as con:
             check(con.execute('SELECT count(*) FROM auth_users WHERE username=?',('c0_rejected',)).fetchone()[0]==0,'PASSWORD10 real CLI nine rejected without account creation')
@@ -398,6 +406,8 @@ def main():
             except httpx.HTTPError:pass
             time.sleep(.2)
         else:raise RuntimeError('NEXT_READY_TIMEOUT')
+        empty_store(origin,accounts,out,check,activate)
+        seed_projects(data)
         http_p0(origin,data,accounts)
         browsers(origin,accounts,out)
         session=legacy_login(origin,data,legacy)

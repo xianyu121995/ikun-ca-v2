@@ -2,8 +2,10 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Button} from '@ikun/ui';
 import ReferenceHomepage from './homepage-ui/reference-homepage';
-import type {ArchiveNote,EditorDraft,ProjectMilestone} from '../features/homepage/reference-types';
+import type {ArchiveNote,EditorDraft,ProjectMilestone,ReferenceCallbacks} from '../features/homepage/reference-types';
 import type {HomepageContext,HomepageData,HomepageQuery,OperationResult,ProjectRecordProjection,ProjectRef,PublicError} from '../features/homepage/types';
+import {canEdit} from '../features/homepage/view-model';
+import './projects-home-access.css';
 type Home={project:ProjectRecordProjection;milestone:Omit<ProjectMilestone,'project_id'>;completion:null|{previous_stage:ArchiveNote['previous_stage'];completed_at:string}};
 type Page={items:Home[];total:number;next_cursor:string|null};
 type MainQuery={q:string;rating:string;progress_stage:string;discovered_on:string;sort:string;direction:'asc'|'desc'};
@@ -16,6 +18,7 @@ async function read(path:string,signal?:AbortSignal){const response=await fetch(
 function params(query:MainQuery){const out=new URLSearchParams({view:'home-v1',collection:'tracked',limit:'9',sort:query.sort,direction:query.direction});for(const key of ['q','rating','progress_stage','discovered_on'] as const)if(query[key]&&query[key]!=='all')out.set(key,query[key]);return out;}
 
 export default function ProjectsHome({context,csrf,userId}:{context:HomepageContext;csrf:string;userId:string}){
+  const canWrite=canEdit(context);
   const [query,setQuery]=useState(initial),[main,setMain]=useState<Page>(emptyPage),[completed,setCompleted]=useState<Page>(emptyPage),[other,setOther]=useState<Page>(emptyPage);
   const [summary,setSummary]=useState(emptySummary),[events,setEvents]=useState<Home[]>([]),[asOf,setAsOf]=useState<string>(),[windowDays,setWindow]=useState('all');
   const [detail,setDetail]=useState<Home|null>(null),[error,setError]=useState<PublicError|null>(null),[loading,setLoading]=useState(true),[version,setVersion]=useState(0),[page,setPage]=useState(1);
@@ -43,6 +46,7 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
     try{const search=new URLSearchParams({method:saved.method,path:saved.path,contract:saved.contract});await read('/api/v1/projects/operations/'+saved.key+'?'+search);persist(null);reload();return {state:'succeeded',request_id:null};}catch(e){const error=e as PublicError;return {state:'unknown',request_id:error.request_id,error:{...error,message:error.code==='NOT_FOUND'?'尚未找到原操作回执；结果仍待核对，请勿重复提交':error.message}};}
   }
   async function write(path:string,method:string,body:unknown,target?:ProjectRef,home=true):Promise<OperationResult>{
+    if(!canWrite)return operationError({error:{code:'FORBIDDEN',message:'当前账号只读，不能修改项目资料',retryable:false}});
     if(pending.current){const checked=await reconcile();return checked.state==='succeeded'?operationError({error:{code:'CONFLICT',message:'原操作已核对完成，请重新检查资料后提交当前操作'}}):checked;}
     const saved={key:crypto.randomUUID(),path,method,contract:home?'projects-home-v1':'phase2-v1.0.0'};persist(saved);
     try{const response=await fetch(path+(home?'?view=home-v1':''),{method,headers:{'content-type':'application/json','x-csrf-token':csrf,'idempotency-key':saved.key,...(target?{'if-match':`"rev-${target.revision}"`}:{})},...(method==='DELETE'?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(10000)});const value=await response.json();
@@ -57,12 +61,14 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   const data:HomepageData={status:error?'error':loading&&!homes.length?'loading':homes.length?'ready':'empty',items:homes.map(p=>p.project),next_cursor:null,refreshing:loading,error};
   const pagination=(index:number,loaded:number,total:number,next:string|null,cursors:(string|null)[],move:(index:number)=>void)=><div className="hpv2-pagination"><Button size="sm" aria-label="上一页记录" disabled={index<=1||index!==loaded} onClick={()=>move(index-1)}>‹</Button><span>{index} / {Math.max(1,Math.ceil(total/9))} · {total}</span><Button size="sm" aria-label="下一页记录" disabled={!next||index!==loaded} onClick={()=>{if(index<cursors.length)move(index+1);}}>›</Button></div>;
   const draftBody=(draft:EditorDraft)=>({fields:draft.fields,milestone:draft.milestone,complete:draft.archive_after_save});
-  return <ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
-    callbacks={{onCreateDraft:draft=>write('/api/v1/projects','POST',draftBody(draft)),onUpdateDraft:(target,draft)=>write('/api/v1/projects/'+target.project_id,'PATCH',{fields:draft.fields,milestone:draft.milestone,...(draft.archive_after_save?{complete:true}:{})},target),
+  const mutations:Pick<ReferenceCallbacks,'onCreateDraft'|'onUpdateDraft'|'onDelete'|'onMembership'|'onArchive'|'onRestore'>=canWrite?{
+      onCreateDraft:draft=>write('/api/v1/projects','POST',draftBody(draft)),onUpdateDraft:(target,draft)=>write('/api/v1/projects/'+target.project_id,'PATCH',{fields:draft.fields,milestone:draft.milestone,...(draft.archive_after_save?{complete:true}:{})},target),
       onDelete:target=>write('/api/v1/projects/'+target.project_id,'DELETE',{},target),onMembership:(target,action)=>write('/api/v1/projects/'+target.project_id+'/home-membership','POST',{action},target),
-      onArchive:targets=>write('/api/v1/projects/completions','POST',{items:targets.map(t=>({project_id:t.project_id,revision:t.revision}))}),onRestore:target=>write('/api/v1/projects/'+target.project_id+'/restore','POST',{},target),onReconcile:reconcile,
+      onArchive:targets=>write('/api/v1/projects/completions','POST',{items:targets.map(t=>({project_id:t.project_id,revision:t.revision}))}),onRestore:target=>write('/api/v1/projects/'+target.project_id+'/restore','POST',{},target)}:{};
+  return <div className="projects-home-access" data-project-access={canWrite?'write':'readonly'}><ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
+    callbacks={{...mutations,onReconcile:reconcile,
       onQueryChange:(q:HomepageQuery)=>change({q:q.q,rating:q.rating,progress_stage:q.progress_stage}),onDiscoveryDateChange:day=>change({discovered_on:day??''}),onReload:reload}}
     server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,hasNext:!!main.next_cursor,summary,
       onSort:value=>change({sort:value.key,direction:value.direction}),canPage,onPage:next=>{if(canPage(next))setPage(next);},onWindow:setWindow,onDetail:id=>void openDetail(id),
-      completedPagination:pagination(completedIndex,completedLoaded,completed.total,completed.next_cursor,completedCursors.current,setCompletedIndex),otherPagination:pagination(otherIndex,otherLoaded,other.total,other.next_cursor,otherCursors.current,setOtherIndex)}}/>;
+      completedPagination:pagination(completedIndex,completedLoaded,completed.total,completed.next_cursor,completedCursors.current,setCompletedIndex),otherPagination:pagination(otherIndex,otherLoaded,other.total,other.next_cursor,otherCursors.current,setOtherIndex)}}/></div>;
 }

@@ -1,0 +1,980 @@
+{
+  "started_at": "2026-10-16T00:41:35.236105+08:00",
+  "status": "PASS",
+  "origin": "http://127.0.0.1:57315",
+  "scope": "actual received Next production build, synthetic isolated data",
+  "public_access_verified": false,
+  "workers_started": false,
+  "runtime": "/private/tmp/ikun-c0-p0-rwfjf7wr",
+  "p0_ids": [
+    "AUTH-01",
+    "AUTH-02",
+    "AUTH-03",
+    "PRO-01",
+    "PRO-02",
+    "ISO-01"
+  ],
+  "backup_restore": {
+    "auth": {
+      "restored_path": "/private/tmp/ikun-c0-p0-rwfjf7wr/restored/auth/auth.db",
+      "sha256": "dad9d7d03bd4637a90af693adc156ce86c0a901b1621aca52d611dc2bfe6553d",
+      "live_data_replaced": false
+    },
+    "projects": {
+      "restored_path": "/private/tmp/ikun-c0-p0-rwfjf7wr/restored/projects/projects.db",
+      "sha256": "1ec817087b9817adb9f3658455ffbaccd0c449af6a66258e8e8a0fc454dd2893",
+      "live_data_replaced": false
+    }
+  },
+  "build": {
+    "tested_git_head": "81f3731d0eb1ff5453713a76b3c0b002d393f4b4",
+    "next_build_id": "w9SGjMLFrpSPVn4pTahv1",
+    "lock_sha256": "0df973ec2369260cc60a75ce4f2380be37c3b600f51637f599f6f4237b1d2f8e"
+  },
+  "checks": [
+    {
+      "check": "PASSWORD10 real CLI nine rejected without account creation",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "real_first_password_change",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "real_first_password_change",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "server session role matches tested browser",
+      "result": "PASS",
+      "width": 1440,
+      "role": "admin"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "server session role matches tested browser",
+      "result": "PASS",
+      "width": 1440,
+      "role": "user"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "server session role matches tested browser",
+      "result": "PASS",
+      "width": 390,
+      "role": "admin"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 390,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "server session role matches tested browser",
+      "result": "PASS",
+      "width": 390,
+      "role": "user"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 390,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 390,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 390,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 390,
+      "surface": "genuine-empty-database"
+    },
+    {
+      "check": "AUTH-01 anonymous page",
+      "result": "PASS",
+      "path": "/"
+    },
+    {
+      "check": "AUTH-01 anonymous page",
+      "result": "PASS",
+      "path": "/hunter"
+    },
+    {
+      "check": "AUTH-01 anonymous page",
+      "result": "PASS",
+      "path": "/tracking"
+    },
+    {
+      "check": "AUTH-01 anonymous API",
+      "result": "PASS",
+      "path": "/api/v1/projects"
+    },
+    {
+      "check": "AUTH-01 anonymous API",
+      "result": "PASS",
+      "path": "/api/v1/tracking/subscriptions"
+    },
+    {
+      "check": "AUTH-01 anonymous API",
+      "result": "PASS",
+      "path": "/api/v1/auth/me"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "ISO-01 Auth operations do not change Projects",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 user write denied",
+      "result": "PASS",
+      "method": "POST"
+    },
+    {
+      "check": "AUTH-02 user write denied",
+      "result": "PASS",
+      "method": "PUT"
+    },
+    {
+      "check": "AUTH-02 user write denied",
+      "result": "PASS",
+      "method": "PATCH"
+    },
+    {
+      "check": "AUTH-02 user write denied",
+      "result": "PASS",
+      "method": "DELETE"
+    },
+    {
+      "check": "AUTH-02 forged identity rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 foreign scope rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 missing CSRF rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 cross origin rejected",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-02 web account administration absent",
+      "result": "PASS",
+      "path": "/auth/users"
+    },
+    {
+      "check": "AUTH-02 web account administration absent",
+      "result": "PASS",
+      "path": "/api/v1/auth/users"
+    },
+    {
+      "check": "protected Tracking API explicitly not implemented",
+      "result": "PASS"
+    },
+    {
+      "check": "Hunter account management remains admin only",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 actual create",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 idempotent replay",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 actual edit",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 revision conflict",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 persisted reread",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 original write accepted before response discarded",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 original receipt recovery without retry",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-01 database pagination beyond 100",
+      "result": "PASS",
+      "total": 115
+    },
+    {
+      "check": "PRO-01 server filtering before pagination",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 independent important events",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 actual completion",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 prior progress snapshot",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 actual restore",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 restores actual prior progress",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 membership removal is separate",
+      "result": "PASS"
+    },
+    {
+      "check": "PRO-02 membership removal does not complete",
+      "result": "PASS"
+    },
+    {
+      "check": "ISO-01 synthetic other-store references unchanged",
+      "result": "PASS"
+    },
+    {
+      "check": "ISO-01 Projects does not change Auth users",
+      "result": "PASS"
+    },
+    {
+      "check": "ISO-01 no login store in Projects",
+      "result": "PASS"
+    },
+    {
+      "check": "actual_quiet_sse_open",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 actual logout",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 logout revokes live SSE",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 logout revokes old API session",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "actual_quiet_sse_open",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 real CLI disable revokes API and SSE",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "actual_quiet_sse_open",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 real CLI reset revokes API and SSE",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "real_first_password_change",
+      "result": "PASS",
+      "role": "c0_user"
+    },
+    {
+      "check": "actual_quiet_sse_open",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 real CLI recovery revokes API and SSE",
+      "result": "PASS"
+    },
+    {
+      "check": "real_login",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "real_first_password_change",
+      "result": "PASS",
+      "role": "c0_admin"
+    },
+    {
+      "check": "AUTH-03 exactly one effective superadmin",
+      "result": "PASS"
+    },
+    {
+      "check": "PASSWORD10 real CLI accepted ten-character initial password",
+      "result": "PASS"
+    },
+    {
+      "check": "PASSWORD10 actual DOM bounds",
+      "result": "PASS",
+      "field": "new_password"
+    },
+    {
+      "check": "PASSWORD10 browser rejects nine characters",
+      "result": "PASS",
+      "field": "new_password"
+    },
+    {
+      "check": "PASSWORD10 actual DOM bounds",
+      "result": "PASS",
+      "field": "confirm_password"
+    },
+    {
+      "check": "PASSWORD10 browser rejects nine characters",
+      "result": "PASS",
+      "field": "confirm_password"
+    },
+    {
+      "check": "PASSWORD10 actual production API rejects nine characters",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 actual browser forced password change and rotated session",
+      "result": "PASS"
+    },
+    {
+      "check": "PASSWORD10 actual production browser accepts ten characters",
+      "result": "PASS"
+    },
+    {
+      "check": "AUTH-03 actual no-JS password form uses safe POST",
+      "result": "PASS"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "ADMIN bulk selection confirmation and cancellation retained",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "project-detail"
+    },
+    {
+      "check": "ADMIN detail removal confirmation and cancellation retained",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "completed-records"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "other-projects"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "account-menu"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "read-only search filters pagination and viewing retained",
+      "result": "PASS",
+      "width": 1440,
+      "role": "admin"
+    },
+    {
+      "check": "owner-approved tracking navigation wording",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser known cursor navigation",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser important events independent of main search",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser no whole-page overflow",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser CRUD, refresh, completion and restore",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "project-detail"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "project-detail"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "project-detail"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "project-detail"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "completed-records"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "completed-records"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "completed-records"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "completed-records"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "other-projects"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "other-projects"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "other-projects"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "other-projects"
+    },
+    {
+      "check": "READONLY membership join denied",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "account-menu"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "account-menu"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "account-menu"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "account-menu"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 1440,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "READONLY navigation emits no business write request",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "read-only search filters pagination and viewing retained",
+      "result": "PASS",
+      "width": 1440,
+      "role": "user"
+    },
+    {
+      "check": "AUTH-02 actual UI read-only write entry hidden",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "browser no page errors",
+      "result": "PASS",
+      "width": 1440
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 390,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "ADMIN bulk selection confirmation and cancellation retained",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 390,
+      "surface": "project-detail"
+    },
+    {
+      "check": "ADMIN detail removal confirmation and cancellation retained",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 390,
+      "surface": "completed-records"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 390,
+      "surface": "other-projects"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 390,
+      "surface": "account-menu"
+    },
+    {
+      "check": "ADMIN trusted write capability retained",
+      "result": "PASS",
+      "width": 390,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "read-only search filters pagination and viewing retained",
+      "result": "PASS",
+      "width": 390,
+      "role": "admin"
+    },
+    {
+      "check": "owner-approved tracking navigation wording",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser known cursor navigation",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser important events independent of main search",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser no whole-page overflow",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser CRUD, refresh, completion and restore",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 390,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 390,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 390,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 390,
+      "surface": "homepage/global-header/table"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 390,
+      "surface": "project-detail"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 390,
+      "surface": "project-detail"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 390,
+      "surface": "project-detail"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 390,
+      "surface": "project-detail"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 390,
+      "surface": "completed-records"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 390,
+      "surface": "completed-records"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 390,
+      "surface": "completed-records"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 390,
+      "surface": "completed-records"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 390,
+      "surface": "other-projects"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 390,
+      "surface": "other-projects"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 390,
+      "surface": "other-projects"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 390,
+      "surface": "other-projects"
+    },
+    {
+      "check": "READONLY membership join denied",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 390,
+      "surface": "account-menu"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 390,
+      "surface": "account-menu"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 390,
+      "surface": "account-menu"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 390,
+      "surface": "account-menu"
+    },
+    {
+      "check": "READONLY all-page business buttons disabled",
+      "result": "PASS",
+      "width": 390,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "READONLY business affordances hidden",
+      "result": "PASS",
+      "width": 390,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "READONLY no enabled business selection",
+      "result": "PASS",
+      "width": 390,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "READONLY no global business write link",
+      "result": "PASS",
+      "width": 390,
+      "surface": "search-empty-state"
+    },
+    {
+      "check": "READONLY navigation emits no business write request",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "read-only search filters pagination and viewing retained",
+      "result": "PASS",
+      "width": 390,
+      "role": "user"
+    },
+    {
+      "check": "AUTH-02 actual UI read-only write entry hidden",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "browser no page errors",
+      "result": "PASS",
+      "width": 390
+    },
+    {
+      "check": "AUTH-01 actual no-JS password uses safe POST",
+      "result": "PASS"
+    },
+    {
+      "check": "PASSWORD10 actual production accepts frozen fifteen-plus hash",
+      "result": "PASS"
+    },
+    {
+      "check": "PASSWORD10 frozen hash/version/change flag unchanged after login",
+      "result": "PASS"
+    },
+    {
+      "check": "PASSWORD10 legacy reader permissions preserved",
+      "result": "PASS"
+    },
+    {
+      "check": "PASSWORD10 existing legacy session survives actual production restart",
+      "result": "PASS"
+    },
+    {
+      "check": "ISO-01 backup integrity",
+      "result": "PASS",
+      "domain": "auth"
+    },
+    {
+      "check": "ISO-01 backup foreign keys",
+      "result": "PASS",
+      "domain": "auth"
+    },
+    {
+      "check": "ISO-01 restored logical database equals source",
+      "result": "PASS",
+      "domain": "auth"
+    },
+    {
+      "check": "ISO-01 backup integrity",
+      "result": "PASS",
+      "domain": "projects"
+    },
+    {
+      "check": "ISO-01 backup foreign keys",
+      "result": "PASS",
+      "domain": "projects"
+    },
+    {
+      "check": "ISO-01 restored logical database equals source",
+      "result": "PASS",
+      "domain": "projects"
+    }
+  ],
+  "passed_checks": 182,
+  "owned_website_stopped": true,
+  "finished_at": "2026-10-16T00:42:05.093817+08:00"
+}

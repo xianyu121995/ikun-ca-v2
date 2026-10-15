@@ -1,0 +1,30 @@
+{
+  "status": "PASS_LOCAL_READONLY_UI_FIX",
+  "authority_commit": "50ee277aed435a723aab6139bd952e709b3ad08e",
+  "baseline": "81f3731d0eb1ff5453713a76b3c0b002d393f4b4",
+  "build_id": "w9SGjMLFrpSPVn4pTahv1",
+  "build_receipt": "build-attempt-1792082486555.json",
+  "auth_tests": 68,
+  "b0_tests": 26,
+  "p0_assertions": 182,
+  "p0_receipt": "p0-1792082495236/result.json",
+  "source_hashes": {
+    "apps/website/components/projects-home.tsx": "22ede4d9cae538badf7ad2f8a9bf01d5a86073a77a2b48e0276409c1e154bd0b",
+    "apps/website/components/projects-home-access.css": "94e5ab5234eb5db11432d42d9356dde98f433c3febdb90f2b02ff3440b154a8c"
+  },
+  "runtime_code_not_yet_upgraded": true,
+  "old_user_button_native_enabled_reproduced": false,
+  "confirmed_previous_gaps": [
+    "write callbacks registered for read-only context",
+    "controller write lacks capability preflight",
+    "visually prominent disabled write affordance remains visible",
+    "old user browser assertion covered only one button"
+  ],
+  "scope": "controller capability gating and narrow presentation wrapper, frozen UI unchanged",
+  "fixture_delta": "unrated synthetic projects have separate membership removed; seed after genuine-empty-DB checks; no application schema or semantic change",
+  "public_status": "PENDING_PRE_AND_POST_UPGRADE_ROLE_DOM_VERIFICATION",
+  "heavy_receipts": [
+    "chief-review-f530f30b-bf50-4004-9e6e-3a67f4a83aa2.json",
+    "chief-review-22139c58-fcf5-42a1-b48a-6fcf65211ff0.json"
+  ]
+}

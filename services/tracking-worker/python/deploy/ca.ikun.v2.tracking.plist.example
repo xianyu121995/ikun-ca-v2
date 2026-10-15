@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>ca.ikun.v2.tracking</string>
+<key>ProgramArguments</key><array>
+<string>/ABS_NODE/bin/node</string>
+<string>/ABS_RELEASE/scripts/service.mjs</string><string>tracking</string><string>start</string>
+</array>
+<key>WorkingDirectory</key><string>/ABS_PRIVATE_JOB_CWD</string>
+<key>EnvironmentVariables</key><dict>
+<key>IKUN_TRACKING_CONFIG</key><string>/ABS_CONFIG/tracking.json</string>
+<key>IKUN_TRACKING_PYTHON</key><string>/ABS_RELEASE/services/tracking-worker/python/.venv/bin/python</string>
+<key>DATA_ROOT</key><string>/ABS_DATA</string>
+</dict>
+<key>RunAtLoad</key><true/>
+<key>KeepAlive</key><true/>
+<key>ThrottleInterval</key><integer>30</integer>
+<key>ExitTimeOut</key><integer>15</integer>
+<key>StandardOutPath</key><string>/ABS_LOGS/tracking.out.log</string>
+<key>StandardErrorPath</key><string>/ABS_LOGS/tracking.err.log</string>
+</dict></plist>

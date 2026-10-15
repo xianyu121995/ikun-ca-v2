@@ -1,0 +1,479 @@
+{
+  "record_version": 2,
+  "status": "HISTORICAL_PASS_AT_59e5286_BEFORE_CURSOR_CANCEL_FIX",
+  "generated_at_utc": "2026-10-15T19:06:38.823613+00:00",
+  "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e",
+  "base_commit": "9e2835cafc95cb15dc4b8178abacf0c604018536",
+  "source_manifest": {
+    "path": "NIGHT-SOURCE-MANIFEST-59e5286.json",
+    "sha256": "110834a716f13ea8c208d4db40c2976b7f25b7e8cffae4ee8671e03fafa88faf"
+  },
+  "source_set_sha256": "86c63afb1205e58e446a173ca7dbdba1d9207065c4c778baf0ed95426631db79",
+  "source_files": 61,
+  "preview_source_set_sha256": "3068ffaf62a0fc610ef72b86432b9e6a8f554012bbd7a15665b9363e75063f40",
+  "preview_files": 349,
+  "pins": {
+    "spec": "9699375c920465b5d802e7acff17b5421203e544",
+    "b0": "85be3bd6dce25d82033b6cb1a7157aaa39bd571e",
+    "auth": "f097bd4722155d5e689b8894956391ed7e5f2fa7",
+    "projects": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+    "ui": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "tracking_ui": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+    "homepage": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e",
+    "hunter_ui": "08065d700239b20fb4c887bbd0c85321904687f8",
+    "home_contract": "6595c4a05b736889a4649b1d0aa7405601deebc4",
+    "collections": "379c6e583e487f038629e1ca24d4b2614970ad0c",
+    "release": "9e1d1aa53d58b9ee4f23f5ec1356da0ebbf1e362",
+    "product": "50ee277aed435a723aab6139bd952e709b3ad08e",
+    "night_release": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+    "auth_review": "967f3098e84de7e299d970019d56b571ac63de94",
+    "c03_review": "0e2c86f3c00e03bcc7e9c49a5572f182d4c86b8a",
+    "view_review": "6ea8b004c368e17a123e055848f59f6370f2c29d"
+  },
+  "gateway_addendum": "8b84ee97a94bae28e98b550b2721991f30088486",
+  "pytest": {
+    "passed": 131,
+    "failed": 0,
+    "skipped": 0,
+    "by_file": {
+      "tests.test_api_store": 25,
+      "tests.test_config": 11,
+      "tests.test_feed_query": 1,
+      "tests.test_feed_retention": 38,
+      "tests.test_identity": 1,
+      "tests.test_lifecycle": 25,
+      "tests.test_node_entries": 1,
+      "tests.test_processes": 2,
+      "tests.test_schema": 25,
+      "tests.test_v1": 2
+    },
+    "wrappers": 2,
+    "nested_node_cases": {
+      "actual_B1_B2_entries": 9,
+      "query_budget_and_streaming_error": 9
+    },
+    "nested_added_to_total": false,
+    "junit": {
+      "path": "artifacts/b3/night-python-accepted-1792090923807229000.xml",
+      "sha256": "8050b9e3c3a26653fbfa635f3d817d5beed44fd299e511b085fc50afc6da805d"
+    },
+    "log": {
+      "path": "artifacts/b3/night-python-accepted-1792090923807229000.log",
+      "sha256": "f1e4cd642cb4c6fa13f8f7a2e8aa5ad869df1e2f049e669f725286457a85ad53"
+    },
+    "node_log": {
+      "path": "artifacts/b3/node-entries-pytest-1792090952333938000.log",
+      "sha256": "90f3fd406f576f1ddc84f9804fda7bac7d5febfe1f3542db9b402d0e2afb5bfb"
+    },
+    "query_log": {
+      "path": "artifacts/b3/feed-query-1792090936104919000.log",
+      "sha256": "1e6b74cd70f54e4a48c97f86229d8a00df786d6409456a2765de9e9950d273ba"
+    },
+    "warning": "one TestClient/httpx deprecation warning; no dependency change"
+  },
+  "build": {
+    "status": "PASS",
+    "serial_commands": 5,
+    "log": {
+      "path": "artifacts/b3/build-17.log",
+      "sha256": "7fc29216715351c26dab2f78e9608746538283d97aabd6ae48df2861bcd3cbf9"
+    },
+    "inputs": {
+      "path": "artifacts/b3/build-17-inputs.json",
+      "sha256": "46bbdddaff8fd65c7488c66e7fc369b400672d98a06a11b5947334ca9878b593"
+    },
+    "build_id": "u-PdBBAuTscsIT3r-HKal"
+  },
+  "actual_next": {
+    "status": "PASS",
+    "rejection_cases": 6,
+    "pages": 303,
+    "APIs": 401,
+    "quiet_SSE_revocations": 5,
+    "native_429_error_transport_cases": 1,
+    "receipt": {
+      "path": "artifacts/b3/auth-next-1792090737420/receipt.json",
+      "sha256": "63f7afdd3828402da62c94fd05e089085f757cf675a2314f8f3c4983922eed00"
+    }
+  },
+  "lifecycle": {
+    "source": "PASS",
+    "compiled": "PASS",
+    "stages": [
+      "explicit_init",
+      "SIGTERM_exit0",
+      "parent_SIGKILL_private_tree_reaped",
+      "restart"
+    ],
+    "combined_log": {
+      "path": "artifacts/b3/night-acceptance-heavy-1792090719861233000.log",
+      "sha256": "06745fc6de2d61bf3a99adc492e812e63200f5667f863afff2933fcd5ccec628"
+    },
+    "standalone_private_cwd_source_copy_test": "PASS in pytest tests.test_processes; production release preflight remains integration admission"
+  },
+  "browser": {
+    "status": "PASS",
+    "viewports": [
+      1440,
+      390
+    ],
+    "flow_groups": 15,
+    "steps": [
+      {
+        "width": 1440,
+        "step": "anonymous-page-denied"
+      },
+      {
+        "width": 1440,
+        "step": "persistent-create-pending-unknown-no-false-running"
+      },
+      {
+        "width": 1440,
+        "step": "edit-stop-resume-real-local-api"
+      },
+      {
+        "width": 1440,
+        "step": "dedup-refresh-notes-first-unknown-fields-safe-original-link"
+      },
+      {
+        "width": 1440,
+        "step": "real-next-stop-engine-continues-restart-recovers-feed"
+      },
+      {
+        "width": 1440,
+        "step": "published-profile-quotes-all-authors-server-SAB-search-counts-pagination-fallback"
+      },
+      {
+        "width": 1440,
+        "step": "same-view-ten-refreshes-and-continuous-filters-without-self-quota"
+      },
+      {
+        "width": 1440,
+        "step": "user-readonly-server-denied-revoked-cookie"
+      },
+      {
+        "width": 390,
+        "step": "anonymous-page-denied"
+      },
+      {
+        "width": 390,
+        "step": "persistent-create-pending-unknown-no-false-running"
+      },
+      {
+        "width": 390,
+        "step": "edit-stop-resume-real-local-api"
+      },
+      {
+        "width": 390,
+        "step": "dedup-refresh-notes-first-unknown-fields-safe-original-link"
+      },
+      {
+        "width": 390,
+        "step": "published-profile-quotes-all-authors-server-SAB-search-counts-pagination-fallback"
+      },
+      {
+        "width": 390,
+        "step": "same-view-ten-refreshes-and-continuous-filters-without-self-quota"
+      },
+      {
+        "width": 390,
+        "step": "user-readonly-server-denied-revoked-cookie"
+      }
+    ],
+    "page_errors": 0,
+    "authorization_full_passed": true,
+    "same_view_refresh_count_each_viewport": 10,
+    "receipt": {
+      "path": "artifacts/b3/browser-1792090754430/receipt.json",
+      "sha256": "d24d842890e0b7e5c260a4715caf172da01bb8a6a9f135d91dedbe6500bb9e93"
+    },
+    "screenshots": {
+      "tracking-1440.png": {
+        "path": "artifacts/b3/browser-1792090754430/tracking-1440.png",
+        "sha256": "8dd4fbdbf2486de6b5aa45c497fc595aed44356d13357f0eced3d6c1d10f293b"
+      },
+      "tracking-390.png": {
+        "path": "artifacts/b3/browser-1792090754430/tracking-390.png",
+        "sha256": "689b41b80a7ad3051500d05f5e7a598d1024467f5723f86bb00960d98ce8b6f9"
+      }
+    },
+    "screenshots_actually_viewed": true,
+    "page_overflow": false,
+    "network_failures": {
+      "unexpected_profile_failures": 0,
+      "intentional_Next_shutdown_SSE_disconnect": [
+        {
+          "path": "/api/v1/events/stream",
+          "query": "",
+          "method": "GET",
+          "failure": "net::ERR_INCOMPLETE_CHUNKED_ENCODING"
+        }
+      ]
+    }
+  },
+  "C03_budgets": {
+    "receipt": {
+      "path": "artifacts/b3/feed-budgets-1792090925889.json",
+      "sha256": "bcdc684e874eb9037e791c3803b61daf7ea3e24459b2a19020dce26185499d76"
+    },
+    "observed": [
+      {
+        "mode": "retry",
+        "status": 200,
+        "duration_ms": 55,
+        "attempts": 2,
+        "max_active": 2,
+        "active_after_cancel": 0,
+        "hanging_aborted": 1
+      },
+      {
+        "mode": "timeout",
+        "status": 503,
+        "duration_ms": 2022,
+        "attempts": 1,
+        "max_active": 1,
+        "active_after_cancel": 0,
+        "hanging_aborted": 1
+      },
+      {
+        "mode": "whole",
+        "status": 503,
+        "duration_ms": 8025,
+        "attempts": 1,
+        "max_active": 2,
+        "active_after_cancel": 0,
+        "hanging_aborted": 0
+      }
+    ]
+  },
+  "heavy_lock": {
+    "unique_script": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/scripts/with-heavy-lock.py",
+    "script_sha256": "2c4775d7ac0b96b8b84c9c88489c63ba116d9773e1c2b6b5fe5f12848e04c848",
+    "whole_preview_lifetime_held": true,
+    "final_receipt": {
+      "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-0e859231-cbdd-45d9-b9ad-b0491b4cabe2.json",
+      "sha256": "f167f7504ce5ba724aa0f14edccf5ea928e577899b9e165fd651d67c54514942",
+      "owner": "tracking-worker",
+      "started_at_epoch": 1792090719.8202188,
+      "ended_at_epoch": 1792090778.048841,
+      "exit_code": 0
+    },
+    "all_night_receipts": [
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-5cebc055-bef7-4957-98a1-5fbc3987efe7.json",
+        "sha256": "601f4eba0f90fc8f8a330a89540b045f745c7d6277b8bf272f2877ff666bb40f",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792085546.102299,
+        "ended_at_epoch": 1792085575.330552,
+        "exit_code": 0
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-61c427aa-b98e-4903-bad9-cf3e732d840e.json",
+        "sha256": "c2fbf6cfd3f16d268d006ce9df730047d8115a19a76ce3862ee82da7c06b8289",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792086435.010462,
+        "ended_at_epoch": 1792086467.76756,
+        "exit_code": 0
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-180399b9-4eb4-4abd-9332-76a5e7574185.json",
+        "sha256": "708a7d66d314d3c58c47c2d9e5cab39f43d420250b8a4f5c7884228f271a9435",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792088152.542559,
+        "ended_at_epoch": 1792088196.1931598,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-ac0163df-c736-400b-9cd2-ae57c4898b67.json",
+        "sha256": "30eb2a55b8d13b8775c509e91b740be3baa20dfa425cdff0784434d2fdeb3303",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792088382.446195,
+        "ended_at_epoch": 1792088455.654043,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-19bff912-32f8-4776-bc65-695e292751b6.json",
+        "sha256": "e4c101fc9e8eaeb499358dcadf24b0d9a66a28719af48d73633d982f31a0e314",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792089943.36494,
+        "ended_at_epoch": 1792090013.8670778,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-43436db6-cc9b-4bc6-b2f4-f15d240d7d81.json",
+        "sha256": "4e4ce21e2173e8ac27692e95b795e1119d01f6c968025b97286ca2d12f63e229",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792090506.894866,
+        "ended_at_epoch": 1792090588.6212711,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-0e859231-cbdd-45d9-b9ad-b0491b4cabe2.json",
+        "sha256": "f167f7504ce5ba724aa0f14edccf5ea928e577899b9e165fd651d67c54514942",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792090719.8202188,
+        "ended_at_epoch": 1792090778.048841,
+        "exit_code": 0
+      }
+    ]
+  },
+  "regressions": {
+    "R1_activation_and_restore_boundaries": "PASS",
+    "R2_atomic_retention_high_water": "PASS",
+    "R3_cancel_drain_before_retry_max2": "PASS",
+    "sidecar_lstat_TOCTOU": "PASS",
+    "view_hint_scope_and_quota_compatibility": "PASS",
+    "streamed_error_before_fix": {
+      "path": "artifacts/b3/night-stream-error-before.log",
+      "sha256": "0d076c87e3a1dca24e7f86c6fb289ab6529e095d09018867381849452327e9f0"
+    },
+    "streamed_error_after_fix": "PASS in final Node wrapper and actual Next native429",
+    "old_website_network_diagnostic": {
+      "path": "artifacts/b3/old-website-transport-diagnostic.json",
+      "sha256": "03f27c94e14f303b08c93cbd9abc6d739d7c457f489689b2ad281e683c005673"
+    },
+    "cause": "attempt abort ran before the unconsumed Worker error body was forwarded; buffered <=64KiB error body before cancellation fixes 429/503 transport",
+    "prior_failures_preserved": true
+  },
+  "matrix": {
+    "TRK-01": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "TRK-02": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "TRK-03": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "AUTH-01": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "AUTH-02": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "AUTH-03": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "ISO-01": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "OPS-01": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-D1": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-D2": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-C01": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-C03": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-C05": {
+      "status": "PASS_LOCAL_FIXTURE",
+      "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "OPS-02": {
+      "status": "NOT_DEPLOYED_BY_THIS_OWNER",
+      "production_acceptance": "integration_owner_pending"
+    },
+    "D6": {
+      "status": "CONFIRMED_NOT_IMPLEMENTED_VOICE_ADDON_AFTER_CORE_FREEZE"
+    },
+    "D7": {
+      "status": "CONFIRMED_NOT_IMPLEMENTED_VOICE_ADDON_AFTER_CORE_FREEZE"
+    },
+    "D8": {
+      "status": "CONFIRMED_NOT_IMPLEMENTED_VOICE_ADDON_AFTER_CORE_FREEZE"
+    }
+  },
+  "sql": {
+    "schemas/tracking/001_foundation.sql": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac",
+    "schemas/tracking/002_legacy_reference.sql": "9630f38f8b2bcc2eadf393301e91380d844718f35d9974d93539e486cf6ca94b",
+    "schemas/tracking/002_tracking.sql": "bfd615d27d143ff4b651d7b8158a616ae665ac4b5b81297dc16f11abfce16015",
+    "schemas/tracking/003_commands.sql": "aac6acc9c4811836e0070befeedc6a4ef93e948b353df96daa0342ff20e37a82",
+    "schemas/tracking/004_feed_retention.sql": "778af32acf082ee85210dd06000ac7cac369c6234f6f7bc18d159c7f63d01faa"
+  },
+  "runtime": {
+    "database": "DATA_ROOT/tracking/tracking.db",
+    "schema": 4,
+    "external_collection_enabled": false,
+    "dedicated_account": false,
+    "provider_token_file": "",
+    "compiled_launcher_enforces_external_IO_disabled": true,
+    "health_source_state": "unconfigured",
+    "page_banner": "未连接真实来源",
+    "fixture_banner": "本地验收夹具 · 合成数据仅供测试",
+    "read_and_superadmin_BFF": "real frozen B1 guard; no local human sessions",
+    "real_provider_calls": 0,
+    "shared_watch_mutations": 0,
+    "other_domain_DB_SQL": false
+  },
+  "observational_outbox": {
+    "B2_ingest_tracking": 501,
+    "states": "pending or expired_pending_reconciliation; no fabricated delivery receipt"
+  },
+  "deployment": {
+    "merged": false,
+    "pushed": false,
+    "deployed": false,
+    "production_jobs_installed": false,
+    "formal_alias_and_gateway_integration_pending": true
+  },
+  "unverified": [
+    "actual 6551/paid source end-to-end including quote delivery",
+    "Cloudflare/public v2 domain and production new job admission",
+    "cross-worker final event ingestion; B2 tracking ingress remains501",
+    "browser speech addon: assigned to UI after chief core freeze"
+  ],
+  "commands": {
+    "pytest": [
+      "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/tracking-worker/services/tracking-worker/python/.venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "--junitxml=..."
+    ],
+    "heavy_children": [
+      [
+        ".venv/bin/python",
+        "integration/build-b3.py"
+      ],
+      [
+        "node",
+        "integration/tests/auth-next.test.mjs"
+      ],
+      [
+        "node",
+        "integration/tests/lifecycle.test.mjs"
+      ],
+      [
+        "node",
+        "integration/tests/lifecycle.test.mjs",
+        "--source"
+      ],
+      [
+        "node",
+        "integration/tests/browser.test.mjs"
+      ]
+    ],
+    "init_migrate_restore_preflight": "NIGHT-HANDOFF.md"
+  },
+  "record_is_historical": true,
+  "superseded_by": "NIGHT-EVIDENCE.json"
+}

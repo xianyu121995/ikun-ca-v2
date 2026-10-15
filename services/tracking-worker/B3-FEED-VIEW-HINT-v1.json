@@ -1,0 +1,26 @@
+{
+  "protocol": "feed-query-view-v1",
+  "state": "pending_chief_review",
+  "public_header": "X-Tracking-Query-View",
+  "format": "qv1_UUIDv4",
+  "internal_optional_field": "query_view_id",
+  "internal_paths": [
+    "POST /internal/v1/feed/bases",
+    "POST /internal/v1/feed/pages"
+  ],
+  "scope": [
+    "authenticated_actor_hash",
+    "query_view_id"
+  ],
+  "default_without_hint": "unchanged",
+  "new_tables": 0,
+  "new_databases": 0,
+  "new_services": 0,
+  "new_tokens": 0,
+  "limits_unchanged": {
+    "snapshots": 8,
+    "ttl_ms": 60000,
+    "cache_bytes": 67108864
+  },
+  "proposal_sha256": "ea61cc02af8def679721c8544e70f8bb9c1ac7cc36f490219080a5a1c1a28286"
+}

@@ -1,0 +1,17 @@
+{
+  "db_path": "data/tracking/tracking.db",
+  "remote_enabled": false,
+  "dedicated_account": false,
+  "watch_group": "ikun-ca-v2-project-tracking",
+  "token_file": "",
+  "service_token_file": "",
+  "max_watch_slots": 600,
+  "reconcile_seconds": 10,
+  "backfill_seconds": 60,
+  "request_interval": 0.5,
+  "heartbeat_seconds": 15,
+  "heartbeat_timeout": 10,
+  "remote_fresh_seconds": 45,
+  "host": "127.0.0.1",
+  "port": 3112
+}

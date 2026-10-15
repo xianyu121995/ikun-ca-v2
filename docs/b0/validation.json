@@ -5,7 +5,7 @@
     "models": 33,
     "browser_route_sizes": 12
   },
-  "foundation_infrastructure_tests": 16,
+  "foundation_infrastructure_tests": 26,
   "root_build": "PASS",
   "root_typecheck": "PASS",
   "foundation_smoke": "PASS",
@@ -24,6 +24,9 @@
       "@ikun/tracking-worker",
       "@ikun/website"
     ],
+    "next_ui_consumption": true,
+    "ui_css_consumption": true,
+    "fixture_route_committed": false,
     "lock_sha256": "0df973ec2369260cc60a75ce4f2380be37c3b600f51637f599f6f4237b1d2f8e",
     "services_started": false,
     "source_merge": false
@@ -42,5 +45,7 @@
     "production_deployment": false
   },
   "production_deployed": false,
-  "backend_business_enabled": false
+  "backend_business_enabled": false,
+  "closeout_acceptance": "PASS_INFRASTRUCTURE_ONLY",
+  "closeout_record": "docs/b0/closeout.json"
 }

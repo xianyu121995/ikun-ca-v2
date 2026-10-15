@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -74,4 +74,29 @@ test('abrupt parent SIGKILL does not orphan the private service or its grandchil
     if (parent.exitCode === null && parent.signalCode === null) parent.kill('SIGKILL');
     rmSync(root, { recursive: true, force: true });
   }
+});
+test('entry drift after construction is rejected before spawning and cleans private directory', async () => {
+  const root = mkdtempSync('/private/tmp/ikun-b0-entry-'); const local = join(root, 'entry.mjs');
+  writeFileSync(local, readFileSync(entry));
+  const service = new ManagedProjectsIpc({ ...config, entry_path: local, args: [local] }, root);
+  writeFileSync(local, 'throw new Error("must never execute changed entry");');
+  try { await assert.rejects(() => service.start(), /PROJECTS_ENTRY_MISMATCH/); assert.equal(existsSync(join(service.identity.socketPath, '..')), false); }
+  finally { await service.stop(); rmSync(root, { recursive: true, force: true }); }
+});
+test('caller argument mutation does not change the pinned launch; invalid deadlines reject', async () => {
+  const root = mkdtempSync('/private/tmp/ikun-b0-entry-');
+  const launch = { ...config, args: [entry] }; const service = new ManagedProjectsIpc(launch, root);
+  launch.args.splice(0, 1, '/not-the-pinned-entry'); launch.build_sha = 'a'.repeat(40);
+  try { await service.start(); assert.equal(await service.ready(), true); }
+  finally { await service.stop(); rmSync(root, { recursive: true, force: true }); }
+  const other = mkdtempSync('/private/tmp/ikun-b0-deadline-'); const invalid = new ManagedProjectsIpc(config, other);
+  try { await assert.rejects(() => invalid.start(Infinity), /INVALID_STARTUP_DEADLINE/); assert.equal(await probeProjectsIpc(invalid.identity, Infinity), false); }
+  finally { await invalid.stop(); rmSync(other, { recursive: true, force: true }); }
+});
+test('private Projects child does not inherit unrelated parent credentials or environment', async () => {
+  const root = mkdtempSync('/private/tmp/ikun-b0-env-');
+  const previous = process.env.IKUN_B0_ENV_CANARY; process.env.IKUN_B0_ENV_CANARY = 'synthetic-parent-only';
+  const service = new ManagedProjectsIpc(config, root);
+  try { await service.start(); assert.equal(await service.ready(), true); }
+  finally { await service.stop(); if (previous === undefined) delete process.env.IKUN_B0_ENV_CANARY; else process.env.IKUN_B0_ENV_CANARY = previous; rmSync(root, { recursive: true, force: true }); }
 });

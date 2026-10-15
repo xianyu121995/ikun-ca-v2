@@ -2,6 +2,17 @@ import { DatabaseSync } from "node:sqlite";
 import { chmodSync, existsSync, lstatSync, mkdirSync } from "node:fs";
 import { isAbsolute, join, parse, resolve } from "node:path";
 import type { ServiceName, StoreName } from "@ikun/contracts";
+import { createHash } from 'node:crypto';
+
+const FOUNDATION_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS _schema_migrations (
+    version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL
+  ) STRICT;
+  CREATE TABLE IF NOT EXISTS _store_identity (
+    singleton INTEGER PRIMARY KEY CHECK(singleton=1), store_name TEXT NOT NULL
+  ) STRICT;
+`;
+const FOUNDATION_CHECKSUM = createHash('sha256').update(FOUNDATION_SCHEMA).digest('hex');
 
 const OWNERS: Record<ServiceName, readonly StoreName[]> = {
   website: ["projects", "auth"], hunter: ["hunter"], tracking: ["tracking"],
@@ -29,6 +40,11 @@ function verifyMetadata(db: DatabaseSync, name: StoreName, maximumVersion: numbe
   if (db.prepare('SELECT name FROM _schema_migrations WHERE version=1').get()?.name !== 'foundation') throw new Error('FOUNDATION_MIGRATION_MISMATCH');
   const version = Number(db.prepare('SELECT MAX(version) AS version FROM _schema_migrations').get()?.version);
   if (!Number.isSafeInteger(version) || version < 1 || version > maximumVersion) throw new Error('UNSUPPORTED_SCHEMA_VERSION');
+  if (Number(db.prepare('PRAGMA user_version').get()?.user_version) > maximumVersion) throw new Error('UNSUPPORTED_SCHEMA_VERSION');
+  // Legacy v1 has no checksum registry. Only explicit bootstrap may add it.
+  if (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='_migration_checksums'").get()) {
+    if (db.prepare('SELECT sha256 FROM _migration_checksums WHERE version=1').get()?.sha256 !== FOUNDATION_CHECKSUM) throw new Error('FOUNDATION_CHECKSUM_MISMATCH');
+  }
 }
 function accessStores(service: ServiceName, dataRoot: string, readOnly: boolean, options: StoreOptions): Store[] {
   if (!isAbsolute(dataRoot)) throw new Error("DATA_ROOT_MUST_BE_ABSOLUTE");
@@ -62,11 +78,9 @@ function accessStores(service: ServiceName, dataRoot: string, readOnly: boolean,
       db.exec(`
         BEGIN IMMEDIATE;
         PRAGMA application_id=${APPLICATION_IDS[name]};
-        CREATE TABLE IF NOT EXISTS _schema_migrations (
-          version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL
-        ) STRICT;
-        CREATE TABLE IF NOT EXISTS _store_identity (
-          singleton INTEGER PRIMARY KEY CHECK(singleton=1), store_name TEXT NOT NULL
+        ${FOUNDATION_SCHEMA}
+        CREATE TABLE IF NOT EXISTS _migration_checksums (
+          version INTEGER PRIMARY KEY, sha256 TEXT NOT NULL
         ) STRICT;
       `);
       db.prepare("INSERT OR IGNORE INTO _store_identity(singleton, store_name) VALUES (1, ?)").run(name);
@@ -77,6 +91,7 @@ function accessStores(service: ServiceName, dataRoot: string, readOnly: boolean,
       if (!db.prepare('SELECT version FROM _schema_migrations WHERE version=1').get()) {
         db.prepare("INSERT INTO _schema_migrations(version, name, applied_at) VALUES (1, 'foundation', ?)").run(new Date().toISOString());
       }
+      db.prepare('INSERT OR IGNORE INTO _migration_checksums(version, sha256) VALUES (1, ?)').run(FOUNDATION_CHECKSUM);
       db.exec("COMMIT");
       chmodSync(path, 0o600);
     }

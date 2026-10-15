@@ -1,7 +1,7 @@
 {
-  "record_version": 1,
+  "record_version": 2,
   "phase2_spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
-  "authorization": "User requested final UI acceptance, then start B0; keep backend business frozen, no merge or deployment",
+  "authorization": "User authorized completing and accepting B0 and committing Git; backend business remains frozen, no merge or deployment",
   "UI0": {
     "state": "accepted_frozen",
     "sources": [
@@ -32,11 +32,14 @@
     ]
   },
   "B0": {
-    "state": "in_progress",
+    "state": "accepted",
     "owner": "chief",
-    "infrastructure_candidate": "verified",
+    "infrastructure_candidate": "accepted",
     "business_acceptance": false,
-    "formal_source_receiving": "pending authorized integration"
+    "formal_source_receiving": "plan_reviewed_execution_held",
+    "acceptance_scope": "infrastructure_only",
+    "remaining_B0_blockers": [],
+    "acceptance_record": "docs/b0/closeout.json"
   },
   "backends": [
     {
@@ -73,5 +76,11 @@
   "C0": "held",
   "D0": "held",
   "merge_authorized": false,
-  "production_authorized": false
+  "production_authorized": false,
+  "previous_candidate": "29326c7c31bedf411cff5b825ec218c00b3d28ed",
+  "B1": {
+    "state": "held",
+    "development_release_requires": "explicit user authorization and AUTH-RELEASE.md startup gates",
+    "business_acceptance": false
+  }
 }

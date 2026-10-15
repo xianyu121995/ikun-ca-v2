@@ -47,3 +47,43 @@ test('actual frozen Tracking migration upgrades a temporary foundation and reope
   finally { closeStores(upgraded); }
   const reopened = openStores('tracking', root, { maximumVersion: 2 }); closeStores(reopened);
 }));
+test('legacy checksum adoption is explicit and repeatable, tampering fails without repair', () => scratch(root => {
+  const options = { names: ['auth'] };
+  const stores = openStores('website', root, options); const path = stores[0].path; closeStores(stores);
+  const legacy = new DatabaseSync(path); legacy.exec('DROP TABLE _migration_checksums'); legacy.close();
+  const readOnly = inspectStores('website', root, options);
+  try { assert.equal(readOnly[0].db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name='_migration_checksums'").get().n, 0); }
+  finally { closeStores(readOnly); }
+  const adopted = openStores('website', root, options);
+  const checksum = adopted[0].db.prepare('SELECT sha256 FROM _migration_checksums WHERE version=1').get().sha256;
+  assert.match(checksum, /^[a-f0-9]{64}$/); closeStores(adopted);
+  const repeated = openStores('website', root, options);
+  try { assert.equal(repeated[0].db.prepare('SELECT COUNT(*) AS n FROM _migration_checksums').get().n, 1); }
+  finally { closeStores(repeated); }
+  const corrupt = new DatabaseSync(path); corrupt.exec("UPDATE _migration_checksums SET sha256='corrupted' WHERE version=1"); corrupt.close();
+  const before = readFileSync(path);
+  assert.throws(() => inspectStores('website', root, options), /FOUNDATION_CHECKSUM_MISMATCH/);
+  assert.throws(() => openStores('website', root, options), /FOUNDATION_CHECKSUM_MISMATCH/);
+  assert.deepEqual(readFileSync(path), before);
+}));
+test('failed metadata upgrade rolls back and can recover without recreating business data', () => scratch(root => {
+  const initial = openStores('hunter', root); const path = initial[0].path; closeStores(initial);
+  const legacy = new DatabaseSync(path);
+  legacy.exec("DROP TABLE _migration_checksums; CREATE TABLE preserved(id INTEGER); INSERT INTO preserved VALUES(42); CREATE TRIGGER fail_init BEFORE INSERT ON _store_identity BEGIN SELECT RAISE(ABORT,'injected migration failure'); END;"); legacy.close();
+  assert.throws(() => openStores('hunter', root), /injected migration failure/);
+  const verify = new DatabaseSync(path);
+  assert.equal(verify.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name='_migration_checksums'").get().n, 0);
+  assert.equal(verify.prepare('SELECT id FROM preserved').get().id, 42);
+  verify.exec('DROP TRIGGER fail_init'); verify.close();
+  const recovered = openStores('hunter', root);
+  try { assert.equal(recovered[0].db.prepare('SELECT id FROM preserved').get().id, 42); }
+  finally { closeStores(recovered); }
+}));
+test('future SQLite user_version fails closed even when migration rows look older', () => scratch(root => {
+  const stores = openStores('hunter', root); const path = stores[0].path; closeStores(stores);
+  const future = new DatabaseSync(path); future.exec('PRAGMA user_version=99'); future.close();
+  const before = readFileSync(path);
+  assert.throws(() => inspectStores('hunter', root), /UNSUPPORTED_SCHEMA_VERSION/);
+  assert.throws(() => openStores('hunter', root, { maximumVersion: 2 }), /UNSUPPORTED_SCHEMA_VERSION/);
+  assert.deepEqual(readFileSync(path), before);
+}));

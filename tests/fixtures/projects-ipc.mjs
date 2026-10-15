@@ -1,6 +1,7 @@
 // Synthetic readiness fixture. It contains no Projects CRUD, business DB or provider IO.
 import { createServer } from 'node:http';
 import { chmodSync, writeFileSync } from 'node:fs';
+if (process.env.IKUN_B0_ENV_CANARY) throw new Error('UNEXPECTED_PARENT_ENV');
 const server = createServer((req, res) => {
   if (req.headers.authorization !== `Bearer ${process.env.IKUN_IPC_TOKEN}`) { res.writeHead(401); res.end(); return; }
   if (process.argv.includes('--stall')) return;

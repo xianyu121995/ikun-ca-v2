@@ -1,3 +1,5 @@
+> 历史交接：当前最终 HTML 基准、活跃入口和验收结果请以 `apps/website/features/homepage/FINAL_HANDOFF.md` 为准。
+
 # 主页 UI 候选交接 · v2 foundation-v0.1.0
 
 本模块仅负责主页视觉与浏览器交互原型。Worktree：`ikun-ca-v2-worktrees/homepage-ui`，分支：`codex/homepage-ui`，基线：`f89d8f55fc3e68d6360e7a1e33e23bde48591098`。

@@ -1,3 +1,5 @@
+> 历史交接：当前最终 HTML 基准、活跃入口和验收结果请以 `apps/website/features/homepage/FINAL_HANDOFF.md` 为准。
+
 # 主页 UI0 交接 · phase2-v1.0.0
 
 规范：`9699375c920465b5d802e7acff17b5421203e544` / `phase2-spec-v1.0.0`。原候选 `eed9434fb73bba6e71e2040d2db43bf2632f650a` 原样保留在历史；本次新增 phase2 视图，不 amend/reset/rebase/merge/cherry-pick。冻结规范文件 SHA256 位于本目录 `spec-pin.json`。

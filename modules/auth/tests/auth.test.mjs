@@ -325,6 +325,30 @@ test("schema SQL review copy and generated UI match executable sources",()=>{
   assert.ok(generated.includes(JSON.stringify(readFileSync(new URL("../static/auth.js",import.meta.url),"utf8"))));
 });
 
+test("P0 password forms have fixed same-origin POST even without script handlers",()=>{
+  for (const [name,id,action] of [["login.html","login-form","/api/v1/auth/login"],
+    ["password.html","password-form","/api/v1/auth/password"],["users.html","user-form","/api/v1/auth/users"]]) {
+    const html=readFileSync(new URL(`../static/${name}`,import.meta.url),"utf8");
+    const form=html.match(new RegExp(`<form\\b[^>]*id="${id}"[^>]*>`))?.[0];
+    assert.ok(form);assert.match(form,/method="post"/i);assert.ok(form.includes(`action="${action}"`));
+    assert.ok(!/formaction|formmethod/i.test(html));
+  }
+});
+
+test("P0 native form encoding is refused without echoing credentials or changing data",()=>fixture(async env=>{
+  const root=await login(env),who=actor(env,root);
+  const before=env.store.users(who);
+  for (const path of ["/api/v1/auth/login","/api/v1/auth/password","/api/v1/auth/users"]) {
+    const encoded=new URLSearchParams({username:"not-created",password,current_password:password,new_password:changed});
+    const response=await env.api.handle(new Request(origin+path,{method:"POST",headers:{host:new URL(origin).host,
+      origin,"content-type":"application/x-www-form-urlencoded",cookie:root.cookie},body:encoded.toString()}));
+    assert.equal(response.status,415);
+    const text=await response.text();assert.ok(!text.includes(password)&&!text.includes(changed));
+    assert.equal(response.headers.get("location"),null);
+  }
+  assert.deepEqual(env.store.users(who),before);
+}));
+
 test("SSE closes quiet connection on revocation and cancels upstream",()=>fixture(async env=>{
   const root=await login(env);let cancelled=false;
   const upstream=new Response(new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode("data: first\n\n"));},cancel(){cancelled=true;}}),

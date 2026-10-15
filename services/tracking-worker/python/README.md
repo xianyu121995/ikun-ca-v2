@@ -2,7 +2,7 @@
 
 只读写 `DATA_ROOT/tracking/tracking.db` 及其 WAL/SHM。`serve` 在独立 Tracking 进程中运行 API 和采集；网站退出/重启不控制该进程。默认关闭真实 6551，不复用旧版账号或 Watch。
 
-当前是本地集成候选，未合并/部署。完整构建和新浏览器验收因总管 C0-lite 资源优先安排暂停；旧轮构建/截图不证明当前源码通过。精确结果及限制见 `HANDOFF.md`、`B3-WORKLOG.md`。
+当前是本地集成候选，未合并/部署。按用户最新转达，完整构建和Chrome继续暂停，仅整理代码、证据及轻量检查。既有构建和compiled入口记录通过；既有1440/390跟踪业务流程完成，认证500仍使整批为PARTIAL，不代表最终验收放行。精确结果见 `B3-REVIEW.md`、`B3-EVIDENCE.json`；新版D1/D2/C01/C03/C05已提交协议，须先审再实现。
 
 ## 身份与接入
 
@@ -52,7 +52,7 @@ DATA_ROOT=/ABS_DATA \
 | DELETE /tracking/subscriptions/{sub_ID} | 异步移除，保留历史、不修改主页 |
 | GET /tracking/latest、/tracking/activities | 接收时间分页的脱敏动态 |
 | GET /commands/{cmd_ID} | 先查固定 Projects 网关，只有真实 NOT_FOUND 才回查 Tracking |
-| GET /tracking/events | 本地SSE候选：标准envelope/Last-Event-ID/持续撤销；统一events网关由总管集成 |
+| GET /events/stream | 冻结SSE路径上的Tracking代理候选：标准envelope/Last-Event-ID/持续撤销；多来源组合由总管集成，不替换B1 singleton |
 
 Worker `/internal/v1/commands` POST/GET 使用固定 B2 CommandEnvelopeV2；内部不额外要求公共幂等/If-Match头。command_id inbox hash 和 envelope.expected_revision 保证幂等/版本。结果固定8字段；ACK丢失查原ID；DB故障503，不能假404后重发。
 
@@ -70,7 +70,7 @@ Worker `/internal/v1/commands` POST/GET 使用固定 B2 CommandEnvelopeV2；内�
 
 ## 未决与未验证
 
-C-01全量发布时间跨页倒序、C-03全量评级组合来源/分页、C-05跨generation公共折叠仍BLOCKED。保留冻结接收时间排序，UI标明页内筛选；真实订阅备注在账号/正文前。评级只取授权Projects API实际值；媒体/互动/重要标记未知，不伪造0/false。转推/回复/引用与保留期待定，历史候选过滤不能称为产品定稿。
+product-decisions-v1.1已确认D1原创+引用（不论引用谁）显示，转推/回复/未知隐藏；D2保留15天、先备份后清理并保留永久小账本。C-01/03/05方案已批准，精确协议仍pending_protocol_review，C-03须与Projects对齐。提案为 `../B3-FEED-v1-PROPOSAL.md`，尚未实现；当前旧过滤/保留行为不是新DEC验收通过。旧latest仍按接收时间、UI标明页内筛选；真实订阅备注在账号/正文前。媒体/互动/重要标记未知，不伪造0/false。D6/D7/D8已定但语音实现继续held。
 
 真实6551、付费/Watch操作、主站合并、域名、生产launchd/Tunnel、跨worker全链路尚未验证。测试仅私有临时库及MockTransport/loopback，不接触旧资源。
 
@@ -83,13 +83,13 @@ C-01全量发布时间跨页倒序、C-03全量评级组合来源/分页、C-05�
 .venv/bin/ruff check tracking tests integration --select E4,E7,E9,F,I,UP
 ```
 
-pytest包含1个Node/B1/B2实际入口wrapper，其内部6项不再累加；进程/WSS用例需要loopback权限。新装机先用prepare-b3.py导出固定Git输入，再安装冻结依赖/构建，不merge本分支。
+pytest共89项，包含1个Node入口wrapper，其内部7项不再累加；进程/WSS用例需要loopback权限。新装机先用prepare-b3.py导出固定Git输入，再安装冻结依赖/构建，不merge本分支。
 
-优先时段明确解除后，完整构建使用主仓库同一把锁：
+当前暂停未解除，不执行完整构建或Chrome；等待项目总管或Claude明确解除后，完整构建仍使用主仓库同一把锁。以下仅为解除后的运行方式：
 
 ```sh
 python3 /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/scripts/with-heavy-lock.py \
   --owner tracking-worker --timeout 600 -- .venv/bin/python integration/build-b3.py
 ```
 
-compiled生命周期入口 `integration/tests/lifecycle.test.mjs`；浏览器批次 `integration/tests/browser.test.mjs` 的整个预览生命周期也须包在此锁内。不得复制/删除锁或因锁空闲跳过C0安排。日志/输入哈希在忽略的artifacts/b3；旧日志不代替最终源码验证。
+compiled生命周期入口 `integration/tests/lifecycle.test.mjs`；浏览器批次 `integration/tests/browser.test.mjs` 的整个预览生命周期也须包在此锁内。浏览器遇已记录认证500时会完成其余跟踪检查并以exit 2/PARTIAL交付，不能当作全通过。不得复制/删除锁或并行跑预览。日志/输入哈希在忽略的artifacts/b3；旧日志不代替最终源码验证。

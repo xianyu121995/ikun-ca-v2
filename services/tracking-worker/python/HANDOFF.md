@@ -1,71 +1,41 @@
-# B3 候选交接 · 代码与轻量证据
+# B3 当前交接 · 2026-10-16
 
-**状态：B3 本地候选；最终完整构建、compiled launcher、Chrome 验收暂停，未申请整体通过。** 用户转达上级总管 Claude 的最新通知：集成窗口正在生产构建/部署，继续暂停完整构建和 Chrome；本窗口只整理代码/证据、跑轻量测试，待明确解除。不得因锁空闲自行恢复。
+**本地PARTIAL，未整体签收。** 未受影响的跟踪业务回归及两尺寸浏览器流程已完成；认证Next组合500仍BLOCKED。新版产品已裁定，D1/D2/C01/C03/C05仅提交精确协议，待总管/Projects共同协议审查后实现，不能报新DEC通过。
 
-本分支 `codex/tracking-worker`，父基线 `9e2835cafc95cb15dc4b8178abacf0c604018536`。仅修改 services/tracking-worker 与 schemas/tracking。未合并、推送、部署、修改其他 Worktree/共享契约/根依赖；不停止旧服务、不修改旧Watch、Tunnel或生产库。
+**当前资源约束：完整构建和Chrome继续暂停。** 用户最新转达上级总管Claude，集成窗口正在生产构建/部署；本窗口只整理代码与证据、跑必要轻量检查，等待项目总管或Claude明确解除。下列构建/浏览器回执均是既有已执行记录，本轮未重跑，不代表最终验收放行。
 
-## 固定依赖
+- 原候选：`2c7ce9a36350aa438c8d197b60d41de2b4aa1c96`。
+- 协议提案：`4e0b293901c72df0c28180eb849a2d67d8c9c4c9`，`../B3-FEED-v1-PROPOSAL.md` / `.json`。
+- 本轮受测代码：`f8e8f9101dbbe6e85d20847cd10c7d3eddffbd30`；源集合SHA256 `8bc839b2aa8dd838d50560bb6e74cea6aa053eb784ab7934d8e61b85fd31c87d`。
+- 当前详细回执：B3-REVIEW.md、B3-EVIDENCE.json；认证阻断：AUTH-NEXT-BLOCKER.md。原暂停检查点保留在2c7ce9a及忽略的artifacts/b3/history，不覆盖失败日志。
 
-| 输入 | 完整 SHA |
+## 完成内容与范围
+
+只改 `services/tracking-worker/**`、`schemas/tracking/**`。独立引擎/本库/服务方向API/命令inbox/真实远端读回/600名额/恢复与既有回归保留。新增修复：前端一次活动读取加一次合并后续读取，修改后等待新revision；不会因已有刷新而丢弃请求。SSE改用冻结events/stream，Tracking不再重建B1认证singleton。UI仅最小live补丁，无公共CSS改造。
+
+未改其他Worktree、根契约/依赖、Auth/Projects源文件、共享Watch、旧服务、Tunnel或生产数据；未merge/push/deploy。仅固定Git对象导出到本模块忽略的preview；未使用浮动分支。真实provider调用为0。
+
+## 测试与证据
+
+| 项目 | 实际结果 |
 |---|---|
-| phase2 spec | 9699375c920465b5d802e7acff17b5421203e544 |
-| B0 runtime | 85be3bd6dce25d82033b6cb1a7157aaa39bd571e |
-| B1 Auth 源码 / 审阅 | 28e6aaf4141790fc74ae4ae4429be4b854460955 / c0f86bc20fc7b3ca147da863759b98acced8de44 |
-| B2 Projects 源码 / 审阅 | d0fdefab2aa230ebb8df856aed306d0184d362e2 / ad4d5df91450a735465d21142ffc3e26536e948a |
-| 公共 UI | 486294ac3255b08fdb13a307ee15f96c571020d9 |
-| Tracking UI | d90598f4bc595458ce26c5ee1c2e1618e318abc0 |
-| B3 放行 / 产品增补 | 9e1d1aa53d58b9ee4f23f5ec1356da0ebbf1e362 / c3f535b0342253a74905b65ea87bd9b819624061 |
+| pytest | 89/89；1个wrapper内7个Node子项，不能再加7 |
+| 固定B1/B2 Node实际入口 | 角色/CSRF/直接page与action、真实B2序列化relay/丢ACK、SSE/replay/撤销、公共命令回查、刷新队列7项通过 |
+| 构建 | 最终build-9串行5步通过，327文件前后核验一致；Next BUILD_ID JzEPmMz6lFoVlV1ziEm9_ |
+| source/compiled生命周期 | 显式init、SIGTERM=0、父SIGKILL私有树回收、重启通过 |
+| Chrome 1440/390 | 11组执行完，8组通过、3组因认证阻断；跟踪业务通过、pageerror=0，整体exit 2/PARTIAL |
+| 网站独立 | 真实Next退出后新推文继续进入本库，Next重启后查回，重复推文仍去重 |
+| 静态/视觉 | Ruff通过、Git hygiene通过；两截图实际查看、备注在前、无横向溢出，窄屏按冻结UI隐藏媒体栏 |
 
-其余冻结输入及哈希在 integration/prepare-b3.py、B3-EVIDENCE.json。依赖按Git对象导出到本模块忽略的 `.b3/preview`，无merge。bind-b3.py逐文件核验325个冻结/覆盖输入、选择性B2文件与固定UI补丁；不能用其他窗口HEAD代替冻结输入。
+浏览器真实验证项目创建确认、ACK假成功后unknown、实际核验成功、编辑→停止→恢复、移除不改主页、推文去重/刷新持久、只读业务写403、安全原文链接。远端为MockTransport/loopback，不是6551真实账号验收。
 
-## 已实现
+最终重任务锁receipt：主仓库 `var/coordination/tracking-worker-ef5b34a1-602e-49a1-9cd7-044f1485eb4f.json`；完整复制及哈希在本模块artifacts/b3/heavy-lock-receipts和B3-EVIDENCE。exit2明确表示浏览器认证阻断；不是构建失败或全通过。
 
-- 固定 B2 CommandEnvelopeV2、方向 Bearer、scope/actor/operation 校验；事务 inbox/hash/sub_ID/审计后202，8字段结果；并发重投同ID只一条，异body409，ACK丢失按原ID查询，数据库故障503不假404。
-- 人工 confirmed 加入、启停/恢复/移除。desired/observed/operation/connection分离；远端完整回查才成功，600名额只报错不淘汰。保留稳定sub_ID、revision/generation/baseline、ownership和重试时间；过期任务不发起远端写，外部flags变更不删除。
-- WSS ACK/pong、断线重连、REST最近100恢复、同代去重/正文补全、重启恢复；未知发生时间保留null，超窗possible_gap。网站退出后独立引擎继续采集。
-- SQL权威迁到schemas/tracking。显式init/migrate，runtime/ready不DDL；三/四列ledger兼容、独立checksums、future/name/hash/结构/唯一索引/别名检查；失败回滚。旧数据/seq/receipt与tweets_legacy保留；非空旧身份/无法映射ID停下待审。
-- B1实际Route/Page/Action guard与SSE持续撤销。Worker不接人类Cookie/登录，不保存会话，不读其他库。已退役旧静态登录、session getter、直接反代和旧smoke入口。
-- 固定UI的最小live controller/补丁、真实API、备注在前、账户管理、真实命令状态、订阅分页/动态游标、只读权限；单AppShell、批准导航名。此项源码已实现，当前源码Chrome尚未验收。
-- tracking.activity.created与标准SSE持久事件；观察outbox保持pending可查。B2 ingest/tracking=501，未发投递请求、未伪造receipt、未改Projects收件实现。
+## 当前阻断与后续
 
-## 验证口径
+1. AUTH-01/03：经过固定Projects/Tracking组合后，禁用账户/后续匿名请求出现5个认证500，预期303/401。无业务data泄露，不能算Auth通过。Tracking自己的认证重建已移除；保留固定B2/Auth字节，给owner提供隔离诊断与未应用修复方向。
+2. `product-decisions-v1.1`（50ee277a…）已确认D1原创和任意对象引用纳入、排除纯转推/回复/未知，D2十五天及账本；C01/C03/C05方案已批准。4e0b293提案精确定义profile、SAB全量计数/游标/评级方向/迁移备份恢复，当前pending_protocol_review；C03还需pending_owner_implementation，不再等待产品裁定。
+3. B2 ingest/tracking仍501；观察outbox保持可查询且pending，没有伪造receipt或代改收件。
+4. D6/D7/D8均已定，语音继续held，未增加播报/开关/队列。真实平台、跨worker、公网与生产验收均未执行。
 
-本轮精确日志/文件哈希与分组计数在 B3-EVIDENCE.json。运行说明见README；所有远端用例为MockTransport/loopback，真实provider调用为0。
-
-| 范围 | 证据与限制 |
-|---|---|
-| 后端/实际B1-B2入口全量 | pytest最终轻量日志与JUnit；1个wrapper内部6个Node测试只计一次 |
-| 实际B1入口 | 匿名/普通用户/强制改密/伪造身份、Host/Origin/CSRF、页面/Action直接guard；旧getter虽200仍不能授权业务 |
-| B2链路 | 固定B2真实Service序列化+relay，POST后ACK丢失再GET原ID；无额外内部幂等/If-Match头；Projects数据经API比对不变 |
-| SSE | 标准envelope/replay；超过普通请求握手deadline仍持续；退出后静默流取消并验证真实upstream关闭；禁用/重置/绝对7天/轮换旧Cookie业务拒绝 |
-| 生命周期 | 实际网站fixture退出后仍收推文；引擎崩溃/租约过期重启不重复；当前Node24源码入口SIGTERM=0、父SIGKILL私有树回收/重启通过；非compiled证据 |
-| 静态检查 | Ruff、TS解析、plist语法、git diff/hygiene；TS解析不等于完整类型检查 |
-| 完整构建 | 第一轮build-1通过，但源码后来变化，只保留历史；不得计为最终构建 |
-| Chrome 1440/390、compiled service.mjs | 已准备新测试入口；最新源码未执行，等待资源暂停解除 |
-
-唯一测试提示是Starlette TestClient/httpx弃用警告，无测试失败。最初普通沙箱禁止127.0.0.1 bind导致两个WSS用例环境失败，随后用私有loopback权限复跑通过；其他首轮失败与修复日志均保留，不覆盖。
-
-## 原41项覆盖迁移
-
-历史9e2835c的41是旧候选报告，不叠加到新计数。26个引擎/远端用例保留（仅WSS未知时间改为保留null）；1个进程用例改用新内部协议；2个schema用例扩为显式迁移/兼容/回滚/损坏/别名测试。旧8个API、2个身份getter、2个v1/lease覆盖由新方向API、B1实际入口、command/sub映射、public PATCH与lease测试替代。旧独立登录/模拟getter/static页面的成功用例退役，新增旧入口404与旧身份写入拒绝。旧Chrome/BFF/adapter/launcher成绩不用于本B3验收。
-
-## P0 与阻塞
-
-| 项目 | 当前结论 |
-|---|---|
-| TRK-01 | 本地远端夹具通过：ACK假成功、配额600、超时已执行/未执行、回查仍未知、重启核验；真实平台未验收 |
-| TRK-02 | 本地停止失败/noop/超时不假停止，恢复同sub/generation、竞态保护通过；UI点击待Chrome |
-| TRK-03 | 本地同代去重/补全/重放、反序发布时间/接收时间、null、跨页及跨代夹具通过；备注真实来源已接，视觉位置待Chrome |
-| AUTH-01/02/03 | 实际B1业务入口与撤销证据通过；本模块Chrome待验收，不能当全站通过 |
-| ISO-01 | Worker只写本库；经各owner API的私有集成夹具验证移除不改主页；未检查其他worker生产 |
-| OPS-01 | 本模块网站独立/源码guardian恢复通过；最终compiled入口及三服务全站恢复待总管 |
-| OPS-02 | 无部署/旧资源变更；域名与生产验收未执行 |
-| C-01 / C-03 / C-05 | BLOCKED：全量发布时间跨页倒序 / 全量评级组合来源分页 / 跨generation公共折叠未裁定；保留冻结DTO和接收时间语义，不静默改规范 |
-
-转推/回复/引用与保留期待定，历史过滤候选不是产品定稿；不新增清理。媒体/互动/重要标记缺来源保持未知，禁用虚构控制。观察收件501、真实独立账号/配额/Watch隔离、公网/生产/跨worker完整链路均未验收。
-
-## 解除资源暂停后
-
-同一主仓库with-heavy-lock.py包住最终串行build-b3.py，以及新Chrome整个预览生命周期；compiled生命周期也绑定同一最终构建。重跑失败项并保留日志，绑定最终源码/输入/构建ID/截图/锁receipt后提交总管审查。已知历史锁receipt：`ikun-ca-v2/var/coordination/tracking-worker-a11a80a1-a2ab-4200-a5cc-16e3c32bfbfb.json`，仅对应过期第一轮构建，不能冒充最终锁收据。
-
-当前无生产服务变更或后台驻留候选。配置/DB/venv/依赖/测试截图/运行日志保持忽略；不清理旧库/旧配置，不用旧二进制覆盖v3库。收到总管退修后继续前向修复，不rebase/reset/amend/force-push。
+收到协议审查后仅按批准范围前向实现；不重写引擎/页面、不amend/reset/rebase。完整构建/Chrome当前继续暂停，明确解除后仍按主仓库唯一with-heavy-lock.py串行。运行命令见README；新profile/004迁移尚未实现，不能运行提案当作已交付API。

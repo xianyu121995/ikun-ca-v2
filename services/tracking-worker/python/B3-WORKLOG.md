@@ -18,7 +18,7 @@ SQL唯一权威 schemas/tracking，显式 init/migrate，普通serve/HTTP/ready�
 - 新Node24源码入口生命周期：显式初始化、SIGTERM退出0、父SIGKILL后私有树回收、重启通过；artifacts/b3/lifecycle-source-first.log。正式compiled launcher还需最终构建后复验。
 - Chrome新B3批次尚未启动；integration/tests/browser.test.mjs已写，不能引用旧版browser成绩。
 
-## 资源与剩余任务
+## 历史暂停阶段的资源与剩余任务
 
 用户最新转达上级总管Claude：仍暂停完整构建和Chrome；集成窗口正在生产构建/部署。只整理代码和证据、跑轻量测试，待项目总管或Claude明确解除，不能因锁空闲自行恢复。当前没有本窗口驻留测试进程（只读PID检查为空）。
 
@@ -35,8 +35,20 @@ SQL唯一权威 schemas/tracking，显式 init/migrate，普通serve/HTTP/ready�
 - Ruff 28文件格式及规则检查通过；自有8个TS/TSX解析通过；plist与browser脚本语法检查通过。解析/语法不是完整构建或浏览器验收。
 - bind-b3逐文件核验325个冻结/候选输入与UI补丁；B3-EVIDENCE.json记录当前运行源码集合与日志哈希。完整构建/compiled/Chrome仍PAUSED。
 
-## 产品裁定未决
+## 历史产品裁定未决（c3时期，现由v1.1取代）
 
 TRK-01/02本地夹具保障继续补证；TRK-03同代去重/正文补全/真实订阅备注可验证。C-01全量发布时间跨页倒序、C-03全量评分复合来源/分页、C-05跨generation公开折叠仍BLOCKED。保留冻结latest接收时间语义，不用前端页内排序冒充全量。转推/回复/引用与保留期未确认，保留历史候选规则，不宣称新版定稿。媒体/互动/重要标记仍未知。
 
 B2 ingest/tracking=501，不改Projects、不伪造receipt，观察outbox保留pending可查询。真实平台/Watch/付费/凭证、正式收件/公网/生产未验证也未执行。
+
+## 既有构建与验收记录 · 2026-10-16
+
+既有重任务批次按同一主锁完成；最新build-9、source/compiled入口通过，327文件绑定一致。89 pytest通过，其中1个wrapper内7个Node项不重复计数。真实Chrome两尺寸11组完成，8通过、3组认证阻断，关联5个认证500，整体exit2/PARTIAL，pageerror0。实际Next停机后持续入库并重启查回通过。上述记录不代表当前重任务放行。
+
+修复Tracking自建Auth singleton（改用冻结events/stream）及PATCH后刷新被丢弃导致旧revision409；新增有界合并刷新/页面响应fence与回归。代码f8e8f9101dbbe6e85d20847cd10c7d3eddffbd30，源集合8bc839b2aa8dd838d50560bb6e74cea6aa053eb784ab7934d8e61b85fd31c87d。认证依赖仍500，Auth/Projects固定源码未改，见AUTH-NEXT-BLOCKER.md。
+
+最新政策product-decisions-v1.1固定50ee277aed435a723aab6139bd952e709b3ad08e：D1原创与引用任何对象显示；回复/转推/未知隐藏；D2十五天先备份清理+持久小账本；D6/D7/D8已定但语音held。C01/03/05方案已批准，不再待产品裁定。精确协议单独提交4e0b293901c72df0c28180eb849a2d67d8c9c4c9，仅proposal，尚未实现；C03需双方协议SHA冻结。当前回执以B3-REVIEW.md/B3-EVIDENCE.json为准，历史暂停/失败保留，不回写伪造成功。
+
+## 当前资源约束 · 用户最新转达
+
+上级总管Claude明确要求仍暂停完整构建和Chrome，集成窗口正在生产构建和部署。当前只整理代码与证据、跑必要轻量检查；等待项目总管或Claude通知解除后再做最终构建和浏览器验收。本轮只更新交接文档、核对既有证据与源码哈希，没有启动完整构建或Chrome。

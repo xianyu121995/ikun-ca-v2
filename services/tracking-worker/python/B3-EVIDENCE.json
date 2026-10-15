@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "LOCAL_CANDIDATE_HEAVY_VALIDATION_PAUSED",
+  "status": "LOCAL_B3_PARTIAL_AUTH_BLOCKED_PROTOCOL_REVIEW_PENDING",
   "base_commit": "9e2835cafc95cb15dc4b8178abacf0c604018536",
   "pins": {
     "spec": "9699375c920465b5d802e7acff17b5421203e544",
@@ -29,25 +29,25 @@
       "tests.test_v1": 2
     },
     "node_wrapper_count": 1,
-    "nested_node_cases": 6,
+    "nested_node_cases": 7,
     "nested_cases_added_to_total": false
   },
   "logs": {
     "pytest_log": {
-      "path": "artifacts/b3/python-final-light-1792078222428299000.log",
-      "sha256": "5a91dd21751ad1df2ef740a6c41f5889c41f1f9387f4f054d2d3ce6ed5f301fa"
+      "path": "artifacts/b3/python-b3-final-1792083352262229000.log",
+      "sha256": "6040e6930722dbea22152d04600977b27d0e0c0569ca05f50aca9ac20cef99e5"
     },
     "node_log": {
-      "path": "artifacts/b3/node-entries-pytest-1792078237245227000.log",
-      "sha256": "6b08308dcf373aa55bcd618b2f4ec0d4bbd3c06839b0ceecbf053ab235fbce08"
+      "path": "artifacts/b3/node-entries-pytest-1792083369026449000.log",
+      "sha256": "5b701203bb5e3e9a42170bc3aec2bc93461a260a30097f1c334d536f173c373b"
     },
     "lifecycle_log": {
-      "path": "artifacts/b3/lifecycle-source-1792078239457641000.log",
+      "path": "artifacts/b3/lifecycle-source-1792083372335284000.log",
       "sha256": "8b685aa20aafd91c05eb9d8ca21da7a0ebf01b9ea028c17d237eea81192f6002"
     },
     "junit": {
-      "path": "artifacts/b3/python-final-light-1792078222428299000.xml",
-      "sha256": "30668837681be5335e68131a08cba65a3c24f9e4b234aa092f621175ab134929"
+      "path": "artifacts/b3/python-b3-final-1792083352262229000.xml",
+      "sha256": "556e19908ac4b725f481bd450e230c1d308d444579c5997c5b7ac40314c29e82"
     }
   },
   "source_inputs": {
@@ -63,7 +63,7 @@
     "services/tracking-worker/python/tracking/migration.py": "c857f7415dbb39209e27d240d4c826ebdbc8baa765c373cb2755eb69d67208e7",
     "services/tracking-worker/python/tracking/commands.py": "76b963e4aeb290f43cdf2ae6c32b3a7802cd02c15ad7a8dce54c1d09ba0930bc",
     "services/tracking-worker/python/tracking/views.py": "e5997aba2a6373e7106da86564ac3435b25857c63c9516a7f65da56ac1aef0f2",
-    "services/tracking-worker/python/tests/test_node_entries.py": "6842d0e6383ae8062f88ae13fd4f9957cd5f60c211684387df42fd4bf8b60c22",
+    "services/tracking-worker/python/tests/test_node_entries.py": "195ec8a2549dce873389399efc934189288bdb7489700436210ade5e9dbf2244",
     "services/tracking-worker/python/tests/test_v1.py": "9c5bc2b2cbbc5e869b1b4405b8b7eacd738abf330cdde86ce075a4d1d4c7157c",
     "services/tracking-worker/python/tests/test_lifecycle.py": "3bfef0bf494c032ec8998fcb259776ee97543e0db62372796a44b2f86f479049",
     "services/tracking-worker/python/tests/conftest.py": "a2d816664db2f4dab726f3bc15ab7f585762ae17977ec4ab45643ba0a860b15c",
@@ -75,20 +75,22 @@
     "services/tracking-worker/python/tests/test_api_store.py": "c4391777eec59e07126a1978ff42fa9d46524b743447038704516ce3cbddbbe4",
     "services/tracking-worker/python/integration/build-b3.py": "9509f20194eccc2f4e4b0c9cee35434f18505829160d0c80089de1c3cde6fe04",
     "services/tracking-worker/python/integration/prepare-b3.py": "36d2b529e3b11870403270f5f8ff13b68a10df45186fdb377f340c9779bb714c",
-    "services/tracking-worker/python/integration/record-light-evidence.py": "0a494d52c40826dd3cba0a040f319affda9390076cdf0cfe5cefa559878b6c4d",
+    "services/tracking-worker/python/integration/record-light-evidence.py": "e13fa5d99983d49d746a12f23dfcbeeff613993a02e6f0c912738f6d698f1eb1",
     "services/tracking-worker/python/integration/bind-b3.py": "633d67ad32f6f46f0c2aef7ede780785d2e68afa24e136e4265b546d581d2346",
-    "services/tracking-worker/python/integration/sync-b3.py": "19bf22a4e3c07eaa064eedc778acb34952bfae07e4d2d2744a261c82218bf866",
-    "services/tracking-worker/python/integration/patches/tracking-live.patch": "77d3acd3b54e74fd957fc10243d7b0e3f500fc116e20a0e48c56eecd93747e9f",
+    "services/tracking-worker/python/integration/sync-b3.py": "a5509e6e3eb705bd2033c6197912f368ae73e18277d24466292666533fe33e98",
+    "services/tracking-worker/python/integration/patches/tracking-live.patch": "c974ee286c09df33e5b8f0853d6f06a7993df345e2574a9bd5099409574c4da9",
     "services/tracking-worker/python/integration/website/app/api/v1/tracking/[[...path]]/route.ts": "9a087c948dd83a4d50f07816161a7e7669208f835fe9c82bf9c44ddfc6d3fc9b",
-    "services/tracking-worker/python/integration/website/app/api/v1/commands/[id]/route.ts": "97cb808444b540d0f31558742682effd9042010586effdaedd6f63d42c7c42cd",
+    "services/tracking-worker/python/integration/website/app/api/v1/commands/[id]/route.ts": "322bf4df2b4d0a96dab1652347cf1f738f2af6d3dbe69fd146aba3d4f769823f",
+    "services/tracking-worker/python/integration/website/app/api/v1/events/stream/route.ts": "ca46f8d93cdbd20f03e9de6359e21acbc56898a9220f84d7e932423a2ac60452",
     "services/tracking-worker/python/integration/website/app/tracking/actions.ts": "bde7eb48f4b4481b7a12bf90ead331f9e14e6265ad9081f115aface25c4c5a4f",
     "services/tracking-worker/python/integration/website/app/tracking/page.tsx": "8eb96b571df7efeff38798339a145e931693e1e65bd965347344b42f93bb0e34",
     "services/tracking-worker/python/integration/website/components/tracking-shell.tsx": "ff5659d4cee1fc31dcb2c8227626527132526205ea3a5f466e72c60c56b8c6dd",
-    "services/tracking-worker/python/integration/website/components/tracking-live.tsx": "cee172abfe11d495179b4d6dcc2697b8a6a628ebf4498e5eef0bfbf597f09c24",
-    "services/tracking-worker/python/integration/website/lib/tracking.ts": "888820fca0c29991484f1c871decbba7077d720b326617def6258c96a4c7a8ec",
+    "services/tracking-worker/python/integration/website/components/tracking-live.tsx": "501ce7e2f4bf31477b12db5dd12d7b94cc11e1e3d890f484263959c53904f8b3",
+    "services/tracking-worker/python/integration/website/lib/tracking.ts": "1a7eb01ae456592b0e1f76519a36f394be75f28e1259e846d79a3725418376c0",
+    "services/tracking-worker/python/integration/website/lib/coalesced-refresh.ts": "171baff37787b01852370991c8570f6c66a03879786c81323247d4363165922c",
     "services/tracking-worker/python/integration/tests/fixture-tracking.py": "169846def375f1881131a24e0e854bd961ee1bb01e6320758b6e269f554174a8",
-    "services/tracking-worker/python/integration/tests/entries.test.mjs": "be9a9e2a57fd3f9f7b77a185f65c29436d8d1114a5c1bc894bbb468848183c68",
-    "services/tracking-worker/python/integration/tests/browser.test.mjs": "ec15129e21d0d69b8807c8ef03febf9063e7ef67443b2c7fcc52e6db02bea05b",
+    "services/tracking-worker/python/integration/tests/entries.test.mjs": "6a0d7923f369a9f4c7071efcfcd5cb0dcdfe55b35f6a384d941d0b38c5ae0d31",
+    "services/tracking-worker/python/integration/tests/browser.test.mjs": "8a934dfceb5ebf208b07b8136e6c4138877650f5a76f7e456659f201d8be95b2",
     "services/tracking-worker/python/integration/tests/lifecycle.test.mjs": "a5a309de3b367b9b9320173da5d1224447b9cfeedddf1409e67d8784c6d78fb2",
     "schemas/tracking/001_foundation.sql": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac",
     "schemas/tracking/002_tracking.sql": "bfd615d27d143ff4b651d7b8158a616ae665ac4b5b81297dc16f11abfce16015",
@@ -100,10 +102,10 @@
     "services/tracking-worker/python/pyproject.toml": "aac3eacc342371dae8082c3851fdb0bdaf14b03a5506651cb596113b68e69e35",
     "services/tracking-worker/python/deploy/ca.ikun.v2.tracking.plist.example": "2da09e5b3a4705f2957b1f03f8f031ac85576e0c9b9ec8f0a258c3e16e5c0c09"
   },
-  "source_set_sha256": "02c6f9ea8d03f07cdb89dca9b144b54de65656c43654df49e83eb94c9e9327c7",
-  "preview_source_files": 325,
-  "preview_source_set_sha256": "7b152877fd2208059e86264cc8a99fd447bc27e8d725b926ec8975c4f502f32d",
-  "ui_patch_sha256": "77d3acd3b54e74fd957fc10243d7b0e3f500fc116e20a0e48c56eecd93747e9f",
+  "source_set_sha256": "8bc839b2aa8dd838d50560bb6e74cea6aa053eb784ab7934d8e61b85fd31c87d",
+  "preview_source_files": 327,
+  "preview_source_set_sha256": "07571e7e8432596b9515915520676ffeaf90315f1ddec601ccc13cbbb1919c72",
+  "ui_patch_sha256": "c974ee286c09df33e5b8f0853d6f06a7993df345e2574a9bd5099409574c4da9",
   "allowed_paths": [
     "services/tracking-worker/",
     "schemas/tracking/"
@@ -112,15 +114,298 @@
   "real_provider_calls": 0,
   "deployed": false,
   "heavy_validation": {
-    "final_build": "PAUSED",
-    "compiled_launcher": "PAUSED",
-    "browser_1440_390": "PAUSED",
-    "historical_build_1": "STALE_SOURCE_NOT_FINAL_EVIDENCE"
+    "final_build": {
+      "status": "PASS",
+      "log": {
+        "path": "artifacts/b3/build-9.log",
+        "sha256": "f6eee3c4a6efda7c47c5d0774ddc1c46c3ef2c6851e80fb4b22e915239ec0556"
+      },
+      "inputs": {
+        "path": "artifacts/b3/build-inputs.json",
+        "sha256": "d257e030837f12ba12686fe510f1cca8016f05009ffc8c03b30910dc9607cd53"
+      },
+      "next_build_id": "JzEPmMz6lFoVlV1ziEm9_",
+      "serial_build_commands": 5
+    },
+    "compiled_launcher": {
+      "status": "PASS",
+      "log": {
+        "path": "artifacts/b3/lifecycle-compiled-1792083071195452000.log",
+        "sha256": "8b685aa20aafd91c05eb9d8ca21da7a0ebf01b9ea028c17d237eea81192f6002"
+      }
+    },
+    "browser_1440_390": {
+      "status": "PARTIAL_AUTH_BLOCKED",
+      "receipt": {
+        "path": "artifacts/b3/browser-1792083074052/receipt.json",
+        "sha256": "b59e8759dd2ef952ee8a887c79549229cd854fe87774ff827b7765f0613ce754"
+      },
+      "completed": true,
+      "tracking_flow_passed": true,
+      "flow_groups": 11,
+      "passed_flow_groups": 8,
+      "blocked_flow_groups": 3,
+      "auth_500_responses": 5,
+      "page_errors": 0,
+      "screenshots": {
+        "tracking-1440.png": {
+          "path": "artifacts/b3/browser-1792083074052/tracking-1440.png",
+          "sha256": "fb84a991e15c7c3fd2c86767d91fabb5a4600cf2d1310443cc194b669419eac7"
+        },
+        "tracking-390.png": {
+          "path": "artifacts/b3/browser-1792083074052/tracking-390.png",
+          "sha256": "242dd333ef1175dca059a1534e78a86a04268a3f3c6dd32897128cf070abecbe"
+        }
+      }
+    },
+    "shared_lock_receipts": [
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-878b93ad-12e2-4a48-9ce7-0162063aa0c4.json",
+        "sha256": "751b580b2ab6644509c4c5eb2a97770b370bf0d35dc701203de376e2f010bfe0",
+        "original_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/var/coordination/tracking-worker-878b93ad-12e2-4a48-9ce7-0162063aa0c4.json",
+        "exit_code": 0,
+        "started_at_epoch": 1792079976.95235,
+        "ended_at_epoch": 1792079996.415076
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-1595d2c5-9e4d-487c-b71e-85c4f3f48ff3.json",
+        "sha256": "a924cb73fc88fa365d839ab36a6bdeddea10fec4088fbb880c2aa042b6c8b5a9",
+        "original_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/var/coordination/tracking-worker-1595d2c5-9e4d-487c-b71e-85c4f3f48ff3.json",
+        "exit_code": 1,
+        "started_at_epoch": 1792080040.018911,
+        "ended_at_epoch": 1792080079.006436
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-5a4f5d4a-5873-4079-816d-7e8d757f852a.json",
+        "sha256": "22399de3f7735081fc0c5c42ebb2ffdcab2ba72e27082938f144119df310ff87",
+        "original_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/var/coordination/tracking-worker-5a4f5d4a-5873-4079-816d-7e8d757f852a.json",
+        "exit_code": 1,
+        "started_at_epoch": 1792080607.3675652,
+        "ended_at_epoch": 1792080665.807924
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-9eb99db6-71ca-47a9-ad26-b8c89515a08d.json",
+        "sha256": "ba1af090c2e6e3d84ea88e51239c3b142ca18967726b222d49f17088ce460e05",
+        "original_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/var/coordination/tracking-worker-9eb99db6-71ca-47a9-ad26-b8c89515a08d.json",
+        "exit_code": 1,
+        "started_at_epoch": 1792080818.8558369,
+        "ended_at_epoch": 1792080863.605846
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-99cf6065-93bb-4a83-8e55-0b219cb5fdb8.json",
+        "sha256": "7827d65407112131d412b2415bf5d827278a22da82ce177b0c6231cce1f6bd72",
+        "original_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/var/coordination/tracking-worker-99cf6065-93bb-4a83-8e55-0b219cb5fdb8.json",
+        "exit_code": 1,
+        "started_at_epoch": 1792081353.7794151,
+        "ended_at_epoch": 1792081395.601078
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-9f5bd513-eed8-4a98-aa05-6a9fc9dd806d.json",
+        "sha256": "3f1b890f4728c7eb67afd685896074fac0eab3978fe3dd4f3fb6fa8944bb5fa0",
+        "original_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/var/coordination/tracking-worker-9f5bd513-eed8-4a98-aa05-6a9fc9dd806d.json",
+        "exit_code": 1,
+        "started_at_epoch": 1792081691.631968,
+        "ended_at_epoch": 1792081732.953703
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-ef5b34a1-602e-49a1-9cd7-044f1485eb4f.json",
+        "sha256": "aab337508c3f3fdc7c08bd2815e9457b2dcef07fb5f1fbe76e632be85bc38e8e",
+        "original_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/var/coordination/tracking-worker-ef5b34a1-602e-49a1-9cd7-044f1485eb4f.json",
+        "exit_code": 2,
+        "started_at_epoch": 1792083050.102824,
+        "ended_at_epoch": 1792083090.67908
+      }
+    ],
+    "historical_build_1": "STALE_SOURCE_NOT_FINAL_EVIDENCE",
+    "execution_scope": "historical_completed_batches_not_current_resume_authorization"
   },
   "blocked_contracts": [
-    "C-01",
-    "C-03",
-    "C-05",
-    "B2_TRACKING_INGEST_501"
-  ]
+    "AUTH_NEXT_BUNDLE_REJECTION_500",
+    "B2_TRACKING_INGEST_501",
+    "C03_JOINT_PROTOCOL_PENDING"
+  ],
+  "implementation_commit": "f8e8f9101dbbe6e85d20847cd10c7d3eddffbd30",
+  "proposal_commit": "4e0b293901c72df0c28180eb849a2d67d8c9c4c9",
+  "heavy_pause_lifted": false,
+  "auth_dependency_blocker": {
+    "id": "AUTH_NEXT_BUNDLE_REJECTION_500",
+    "state": "BLOCKED",
+    "observed": [
+      {
+        "code": "AUTH_NEXT_BUNDLE_REJECTION_500",
+        "width": 1440,
+        "phase": "disabled",
+        "status": 500,
+        "error_code": "INTERNAL_ERROR",
+        "request_id": "8253caf4-1161-484b-a24b-9d799d77f2de"
+      },
+      {
+        "code": "AUTH_NEXT_BUNDLE_REJECTION_500",
+        "width": 1440,
+        "phase": "disabled-api",
+        "status": 500,
+        "error_code": "INTERNAL_ERROR",
+        "request_id": "a965afba-2f09-4658-bf26-84f8e002e194"
+      },
+      {
+        "code": "AUTH_NEXT_BUNDLE_REJECTION_500",
+        "width": 390,
+        "phase": "anonymous",
+        "status": 500,
+        "error_code": "INTERNAL_ERROR",
+        "request_id": "acb40713-cb2b-4614-ae8f-71140e98df2e"
+      },
+      {
+        "code": "AUTH_NEXT_BUNDLE_REJECTION_500",
+        "width": 390,
+        "phase": "disabled",
+        "status": 500,
+        "error_code": "INTERNAL_ERROR",
+        "request_id": "8b0a7c80-7d50-4b37-834d-244e7e98ee6e"
+      },
+      {
+        "code": "AUTH_NEXT_BUNDLE_REJECTION_500",
+        "width": 390,
+        "phase": "disabled-api",
+        "status": 500,
+        "error_code": "INTERNAL_ERROR",
+        "request_id": "ba07666b-df6d-4d42-a16c-8f6397a34ec8"
+      }
+    ],
+    "diagnostic": {
+      "path": "artifacts/b3/auth-class-diagnostic.json",
+      "sha256": "63c899b6b5c6f2adfb1535efa7ceed64893742149cfed002d33c250e68fbff1b"
+    },
+    "real_next_cause_attribution": "inference_from_fixed_source_and_two_module_diagnostic",
+    "document": "services/tracking-worker/python/AUTH-NEXT-BLOCKER.md"
+  },
+  "accepted_product_decisions": {
+    "version": "product-decisions-v1.1",
+    "commit": "50ee277aed435a723aab6139bd952e709b3ad08e",
+    "files_sha256": {
+      "DECISIONS.md": "d53123c0cd9a018474ccb711a91ce58f4f1eeeb4914ea58f7598e2286f7f5276",
+      "DECISIONS-P0.md": "0bfb31d24bda57717c0908263d703a56c02c996cf91c08a891183154344287f0",
+      "decisions-v1.json": "7e32dc34d3a6adad7b50c722b5cdc17454712c60b97c084328417de3b75f2b18"
+    },
+    "implemented_by_this_delivery": false
+  },
+  "decision_acceptance": [
+    {
+      "id": "DEC-D1",
+      "state": "pending_protocol_review",
+      "protocol_version": "tracking-feed-v1.0.0-proposal.1",
+      "protocol_commit": "4e0b293901c72df0c28180eb849a2d67d8c9c4c9",
+      "implementation_commit": null,
+      "implementation_evidence": null
+    },
+    {
+      "id": "DEC-D2",
+      "state": "pending_protocol_review",
+      "protocol_version": "tracking-feed-v1.0.0-proposal.1",
+      "protocol_commit": "4e0b293901c72df0c28180eb849a2d67d8c9c4c9",
+      "implementation_commit": null,
+      "implementation_evidence": null
+    },
+    {
+      "id": "DEC-C01",
+      "state": "pending_protocol_review",
+      "protocol_version": "tracking-feed-v1.0.0-proposal.1",
+      "protocol_commit": "4e0b293901c72df0c28180eb849a2d67d8c9c4c9",
+      "implementation_commit": null,
+      "implementation_evidence": null
+    },
+    {
+      "id": "DEC-C03",
+      "state": "pending_protocol_review",
+      "protocol_version": "tracking-feed-v1.0.0-proposal.1",
+      "protocol_commit": "4e0b293901c72df0c28180eb849a2d67d8c9c4c9",
+      "implementation_commit": null,
+      "implementation_evidence": null,
+      "owner_dependency": "pending_owner_implementation_after_joint_C03_protocol_freeze"
+    },
+    {
+      "id": "DEC-C05",
+      "state": "pending_protocol_review",
+      "protocol_version": "tracking-feed-v1.0.0-proposal.1",
+      "protocol_commit": "4e0b293901c72df0c28180eb849a2d67d8c9c4c9",
+      "implementation_commit": null,
+      "implementation_evidence": null
+    }
+  ],
+  "approved_auth_delta": {
+    "commit": "f097bd4722155d5e689b8894956391ed7e5f2fa7",
+    "review_commit": "1d56ef2f003c531574e41fe079c70510ac6ed437",
+    "adopted_into_this_fixed_baseline": false,
+    "schema_session_role_api_unchanged": true
+  },
+  "new_feed_increment_state": "pending_protocol_review_not_pending_product_decision",
+  "voice": {
+    "D6": "confirmed_implementation_held",
+    "D7": "confirmed_implementation_held",
+    "D8": "confirmed_implementation_held",
+    "implemented": false,
+    "speech_executed": false
+  },
+  "verification_notes": [
+    "89 pytest cases include one wrapper with 7 Node cases; never sum 89+7.",
+    "Browser exit 2 is intentional PARTIAL due to 5 Auth 500 responses; not a passing browser batch.",
+    "Browser legacy product_blocked field lists not-yet-implemented increments; product decisions are now approved under v1.1.",
+    "New D1/D2/C01/C03/C05 proposal has no implementation or fixture PASS claim.",
+    "Current direct user instruction keeps full builds and Chrome paused; this turn only checked existing evidence and source hashes, without rerunning builds, browsers, or tests."
+  ],
+  "commands": {
+    "pytest": [
+      ".venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "--junitxml=artifacts/b3/python-b3-final-1792083352262229000.xml"
+    ],
+    "heavy_lock_script": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/scripts/with-heavy-lock.py",
+    "heavy_lock_owner": "tracking-worker",
+    "heavy_lock_timeout": 600,
+    "sequential_heavy_children": [
+      [
+        ".venv/bin/python",
+        "integration/build-b3.py"
+      ],
+      [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node",
+        "integration/tests/lifecycle.test.mjs"
+      ],
+      [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node",
+        "integration/tests/browser.test.mjs"
+      ]
+    ],
+    "source_lifecycle": [
+      "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node",
+      "integration/tests/lifecycle.test.mjs",
+      "--source"
+    ],
+    "lint": [
+      ".venv/bin/ruff",
+      "check",
+      "tracking",
+      "tests",
+      "integration",
+      "--select",
+      "E4,E7,E9,F,I,UP"
+    ]
+  },
+  "current_resource_constraint": {
+    "source": "latest_direct_user_reply_relaying_chief_Claude",
+    "state": "PAUSED_FULL_BUILD_AND_CHROME",
+    "reason": "integration_window_production_build_and_deployment",
+    "allowed": [
+      "code_and_evidence_preparation",
+      "necessary_lightweight_checks"
+    ],
+    "resume_requires": "explicit_notice_from_project_chief_or_Claude",
+    "historical_receipts_are_resume_authorization": false
+  },
+  "current_lightweight_verification": {
+    "path": "artifacts/b3/current-evidence-integrity.json",
+    "sha256": "e8dd6a0cb2d333740c452129e77cceb2dd96602f9859384f78bc7e4e3cd70a13"
+  }
 }

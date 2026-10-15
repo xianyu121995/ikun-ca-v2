@@ -1,4 +1,4 @@
-import {test,after} from 'node:test';
+import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
@@ -27,7 +27,7 @@ test('Equivalent rating sets and UTC timestamps bind identically while limit sta
 // Private UDS transport fixtures exercise cancellation/concurrency only; business semantics use actual B2 in entries.test.mjs.
 const {createServer}=await import('node:http');
 const {mkdtempSync,chmodSync,realpathSync,writeFileSync}=await import('node:fs');
-const budgetEvidence=[];after(()=>{const path=join(moduleRoot,'artifacts/b3/feed-budgets-'+Date.now()+'.json');writeFileSync(path,JSON.stringify(budgetEvidence,null,2));writeFileSync(join(moduleRoot,'artifacts/b3/feed-budget-receipt-path.txt'),path);});
+const budgetEvidence=[],budgetPath=join(moduleRoot,'artifacts/b3/feed-budgets-'+Date.now()+'.json');function persistBudgets(){writeFileSync(budgetPath,JSON.stringify(budgetEvidence,null,2));writeFileSync(join(moduleRoot,'artifacts/b3/feed-budget-receipt-path.txt'),budgetPath);}persistBudgets();
 const {randomUUID}=await import('node:crypto');
 const {publishedFeed}=await import(pathToFileURL(join(moduleRoot,'.b3/preview/apps/website/lib/published-feed.ts')));
 async function budgetFixture(mode){
@@ -53,7 +53,7 @@ async function budgetFixture(mode){
   else if(path==='status')data={semantic_revision:1};else throw Error(path);
   return Response.json({data,request_id:id});
  }
- try{const start=Date.now(),response=await publishedFeed(request,{user_id:'usr_budget',tenant_id:'ikun-main',role:'user'},'req_budget',service);await new Promise(r=>setTimeout(r,20));const duration=Date.now()-start;budgetEvidence.push({mode,status:response.status,duration_ms:duration,attempts:attempt,max_active:maxActive,active_after_cancel:active,hanging_aborted:aborted});return{response,duration,attempts:attempt,maxActive,active,aborted};}
+ try{const start=Date.now(),response=await publishedFeed(request,{user_id:'usr_budget',tenant_id:'ikun-main',role:'user'},'req_budget',service);await new Promise(r=>setTimeout(r,20));const duration=Date.now()-start;budgetEvidence.push({mode,status:response.status,duration_ms:duration,attempts:attempt,max_active:maxActive,active_after_cancel:active,hanging_aborted:aborted});persistBudgets();return{response,duration,attempts:attempt,maxActive,active,aborted};}
  finally{server.closeAllConnections();await new Promise(r=>server.close(r));for(const[key,value]of Object.entries(previous)){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
 }
 test('Retry cancels and drains a conflicting pair before starting the next attempt',async()=>{const result=await budgetFixture('retry');assert.equal(result.response.status,200);assert.equal(result.attempts,2);assert.ok(result.maxActive<=2,JSON.stringify(result));assert.equal(result.active,0);assert.equal(result.aborted,1);});

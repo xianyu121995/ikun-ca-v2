@@ -17,7 +17,7 @@ def environment(data_root, origin):
     return result
 
 
-def cli(data_root, origin, operation, username=None, password=None):
+def cli(data_root, origin, operation, username=None, password=None, expected=0):
     import pexpect
     args = [str(ROOT / 'modules/auth/dist/src/cli.js'), operation]
     if username:
@@ -26,13 +26,13 @@ def cli(data_root, origin, operation, username=None, password=None):
                             encoding='utf-8', echo=False, timeout=30)
     try:
         if password is not None:
-            process.expect('初始密码（至少15字符）：')
+            process.expect('初始密码（至少10字符）：')
             process.sendline(password)
             process.expect('再次输入密码：')
             process.sendline(password)
         process.expect(pexpect.EOF)
         process.close()
-        if process.exitstatus != 0:
+        if process.exitstatus != expected:
             raise RuntimeError('LOCAL_ACCOUNT_CLI_FAILED: ' + operation)
     finally:
         if process.isalive():
@@ -44,7 +44,7 @@ def provision(data_root, origin, output):
     data_root.mkdir(mode=0o700, parents=True, exist_ok=False)
     accounts = {}
     for key, name in [('admin', 'c0_admin'), ('user', 'c0_user'), ('forced', 'c0_forced')]:
-        password = secrets.token_urlsafe(24)
+        password = 'test-init1' if key == 'forced' else secrets.token_urlsafe(24)
         cli(data_root, origin, 'bootstrap' if key == 'admin' else 'create', name, password)
         accounts[key] = {'username': name, 'password': password}
     fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+from verify_password10_intake import verify
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTROL = 'c30cc51f64e95c40a6ccd83b1fbed458090ef3be'
@@ -15,10 +16,7 @@ def sha(path):
 
 def main():
     intake = json.loads(subprocess.check_output(['git', 'show', CONTROL + ':docs/c0-lite/root-intake.json'], cwd=ROOT))
-    for path, item in intake['immutable_domain_and_shared_sources'].items():
-        assert sha(ROOT / path) == item['sha256'], path
-    for path, expected in intake['homepage_final_sha256'].items():
-        assert sha(ROOT / path) == expected, path
+    delta = verify()
     # All actual runtime input trees, not only the approval list. Tests/docs excluded.
     paths = set(intake['approved_root_files']) | set(intake['website_mappings']) | set(intake['homepage_final_sha256']) | set(intake['additional_exact_files'])
     for directory in ('apps/website/app', 'apps/website/lib', 'apps/website/components', 'apps/website/features',
@@ -31,6 +29,7 @@ def main():
     for directory in ('packages/contracts/dist', 'packages/runtime/dist', 'packages/ui/dist', 'modules/auth/dist', 'apps/website/.next/server', 'apps/website/.next/static'):
         outputs.update({str(p.relative_to(ROOT)): sha(p) for p in (ROOT / directory).rglob('*') if p.is_file()})
     receipt = {'control_commit': CONTROL, 'tested_merge_head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+               'approved_password10_delta': delta,
                'binding': 'Final candidate must contain these exact source bytes; tests ran on these bytes before the receiving commit.',
                'immutable_sources_verified': 77, 'homepage_sources_verified': 8,
                'build_id': (ROOT / 'apps/website/.next/BUILD_ID').read_text().strip(),

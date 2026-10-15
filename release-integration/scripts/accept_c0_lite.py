@@ -225,7 +225,16 @@ def browsers(origin, accounts, output):
             forced.locator('input[name=password]').fill(accounts['forced']['password'])
             forced.get_by_role('button',name='登录',exact=True).click()
             expect(forced.get_by_role('heading',name='首次登录：修改初始密码',exact=True)).to_be_visible()
-            changed=secrets.token_urlsafe(24)
+            check(len(accounts['forced']['password'])==10,'PASSWORD10 real CLI accepted ten-character initial password')
+            for name in ('new_password','confirm_password'):
+                field=forced.locator('input[name='+name+']')
+                check(field.get_attribute('minlength')=='10' and field.get_attribute('maxlength')=='128','PASSWORD10 actual DOM bounds',field=name)
+                field.fill('x'*9)
+                check(field.evaluate('el => el.validity.tooShort'),'PASSWORD10 browser rejects nine characters',field=name)
+            me=forced_context.request.get(origin+'/api/v1/auth/me').json()['data']
+            rejected=forced_context.request.post(origin+'/api/v1/auth/password',data={'current_password':accounts['forced']['password'],'new_password':'x'*9},headers={'Origin':origin,'X-CSRF-Token':me['csrf_token']})
+            check(rejected.status==422,'PASSWORD10 actual production API rejects nine characters')
+            changed='test-next2'
             PRIVATE_PASSWORDS.extend([accounts['forced']['password'],changed])
             forced.locator('input[name=current_password]').fill(accounts['forced']['password'])
             forced.locator('input[name=new_password]').fill(changed)
@@ -234,6 +243,7 @@ def browsers(origin, accounts, output):
             expect(forced.get_by_role('heading',name='持续跟踪项目',exact=True)).to_be_visible()
             accounts['forced']['password']=changed
             check(True,'AUTH-03 actual browser forced password change and rotated session')
+            check(len(changed)==10,'PASSWORD10 actual production browser accepts ten characters')
             fallback=browser.new_context(java_script_enabled=False)
             fallback.add_cookies(forced_context.cookies())
             no_password_js=fallback.new_page();requests=[]
@@ -329,6 +339,35 @@ def backups(data_root, work):
     return result
 
 
+def legacy_account(data_root, origin):
+    """Use frozen hash code only on this disposable DB, never on the deployed data."""
+    password=secrets.token_urlsafe(24);PRIVATE_PASSWORDS.append(password)
+    cli(data_root,origin,'create','c0_legacy',password)
+    source=subprocess.check_output(['git','show','28e6aaf4141790fc74ae4ae4429be4b854460955:modules/auth/src/security.ts'],cwd=ROOT,text=True)
+    code="""import ts from 'typescript';import {readFileSync} from 'node:fs';
+const x=JSON.parse(readFileSync(0,'utf8'));
+const js=ts.transpileModule(x.source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+const frozen=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
+process.stdout.write(await frozen.hashPassword(x.password));"""
+    hashed=subprocess.check_output([str(NODE),'--input-type=module','-e',code],cwd=ROOT,input=json.dumps({'source':source,'password':password}),text=True)
+    with sqlite3.connect(data_root/'auth/auth.db') as con:
+        con.execute('UPDATE auth_users SET password_hash=?,must_change_password=0 WHERE username=?',(hashed,'c0_legacy'))
+    return {'username':'c0_legacy','password':password}
+
+
+def legacy_login(origin,data_root,account):
+    with sqlite3.connect(data_root/'auth/auth.db') as con:
+        before=con.execute('SELECT password_hash,version,must_change_password FROM auth_users WHERE username=?',(account['username'],)).fetchone()
+    client=httpx.Client(base_url=origin,trust_env=False,timeout=12)
+    response=client.post('/api/v1/auth/login',json=account,headers={'Origin':origin})
+    check(response.status_code==200 and not response.json()['data']['must_change_password'],'PASSWORD10 actual production accepts frozen fifteen-plus hash')
+    with sqlite3.connect(data_root/'auth/auth.db') as con:
+        after=con.execute('SELECT password_hash,version,must_change_password FROM auth_users WHERE username=?',(account['username'],)).fetchone()
+    check(before==after,'PASSWORD10 frozen hash/version/change flag unchanged after login')
+    check(client.post('/api/v1/projects',json={},headers=write_headers(origin,response.json()['data']['csrf_token'])).status_code==403,'PASSWORD10 legacy reader permissions preserved')
+    return client
+
+
 def main():
     work=Path(tempfile.mkdtemp(prefix='ikun-c0-p0-',dir='/private/tmp'))
     with socket.socket() as candidate:
@@ -342,6 +381,10 @@ def main():
     out.mkdir(parents=True,exist_ok=False)
     try:
         accounts=provision(data,origin,credentials);PRIVATE_PASSWORDS.extend(x['password'] for x in accounts.values());migrate_projects(data);seed_projects(data)
+        cli(data,origin,'create','c0_rejected','x'*9,expected=1)
+        with sqlite3.connect(data/'auth/auth.db') as con:
+            check(con.execute('SELECT count(*) FROM auth_users WHERE username=?',('c0_rejected',)).fetchone()[0]==0,'PASSWORD10 real CLI nine rejected without account creation')
+        legacy=legacy_account(data,origin)
         for name in ('hunter','tracking'):(data/name).mkdir(mode=0o700)
         sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
         env={**environment(data,origin),'PROJECTS_PYTHON':str(PYTHON),'PORT':str(port),'IKUN_RELEASE_SHA':sha}
@@ -357,6 +400,21 @@ def main():
         else:raise RuntimeError('NEXT_READY_TIMEOUT')
         http_p0(origin,data,accounts)
         browsers(origin,accounts,out)
+        session=legacy_login(origin,data,legacy)
+        try:
+            process.terminate();process.wait(timeout=20)
+            process=subprocess.Popen([str(NODE),str(ROOT/'scripts/start-c0-lite.mjs')],cwd=ROOT,env=env,stdout=log,stderr=log)
+            deadline=time.monotonic()+30
+            while time.monotonic()<deadline:
+                if process.poll() is not None:raise RuntimeError('NEXT_RESTART_FAILED')
+                try:
+                    if httpx.get(origin+'/health/ready',trust_env=False).status_code==200:break
+                except httpx.HTTPError:pass
+                time.sleep(.2)
+            else:raise RuntimeError('NEXT_RESTART_TIMEOUT')
+            check(session.get('/api/v1/auth/me').status_code==200 and session.get('/api/v1/projects').status_code==200,'PASSWORD10 existing legacy session survives actual production restart')
+        finally:
+            session.close()
         report['backup_restore']=backups(data,work)
         report['build']={'tested_git_head':sha,'next_build_id':(ROOT/'apps/website/.next/BUILD_ID').read_text().strip(),
                          'lock_sha256':digest(ROOT/'pnpm-lock.yaml')}

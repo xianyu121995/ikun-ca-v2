@@ -1,0 +1,137 @@
+{
+  "record_version": 1,
+  "protocol_version": "tracking-feed-v1.0.0-proposal.1",
+  "state": "pending_protocol_review",
+  "implementation_authorized_by_this_file": false,
+  "policy_version": "product-decisions-v1.1",
+  "policy_commit": "50ee277aed435a723aab6139bd952e709b3ad08e",
+  "prior_policy_commit": "5c208ec74429c37a51f67f04558508e7f9b2538a",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "projects_baseline": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+  "public_selector": "GET /api/v1/tracking/latest?profile=published-v1",
+  "legacy_defaults_changed": false,
+  "public_query_fields": [
+    "profile",
+    "q",
+    "ratings",
+    "subscription_id",
+    "from_at",
+    "until_at",
+    "cursor",
+    "limit"
+  ],
+  "default_ratings": [
+    "S",
+    "A",
+    "B"
+  ],
+  "default_limit": 50,
+  "maximum_limit": 100,
+  "sort": [
+    "coalesce(occurred_at,first_received_at) DESC",
+    "stable_activity_id ASCII DESC"
+  ],
+  "activity_namespace_uuid": "c018deb2-7ccf-5092-8112-b5c9f71d40be",
+  "fold_key": [
+    "subscription_id",
+    "tweet_id"
+  ],
+  "ledger_key": [
+    "tweet_id"
+  ],
+  "ledger_fields": [
+    "tweet_id",
+    "first_seq",
+    "expires_at_ms",
+    "origin_subscription_id",
+    "projection_state"
+  ],
+  "ledger_contains_body_media_raw_notes": false,
+  "allowed_types": [
+    "original",
+    "quote"
+  ],
+  "excluded_types": [
+    "reply",
+    "repost",
+    "unknown"
+  ],
+  "quoted_author_scope": "any_author",
+  "quote_fixture_scopes": [
+    "self",
+    "other_tracked_account",
+    "untracked_account"
+  ],
+  "author_verification_required": true,
+  "body_based_type_guessing": false,
+  "type_adapter_state": "pending_adapter_evidence_before_implementation_acceptance",
+  "retention_ms": 1296000000,
+  "retention_origin": "earliest_reliable_nonfuture_occurred_at_else_first_received_at",
+  "expiry_can_extend": false,
+  "expired_when": "now_ms >= expires_at_ms",
+  "retention_interval_seconds": 300,
+  "retention_batch_max_tweet_ids": 1000,
+  "backup_required_before_delete": true,
+  "backup_max_generations": 2,
+  "backup_max_age_hours": 24,
+  "backup_max_total_bytes": 1073741824,
+  "backup_failure_action": "stop_delete_record_error_backoff",
+  "restore_requires_nonregressing_ledger_watermark": true,
+  "snapshot_ttl_seconds": 60,
+  "basis_prepare_ttl_seconds": 15,
+  "snapshot_max_active": 8,
+  "snapshot_max_activities": 100000,
+  "snapshot_max_projects": 10000,
+  "snapshot_total_cache_bytes": 67108864,
+  "cursor": {
+    "version": 1,
+    "authentication": "HMAC-SHA256",
+    "bind_limit": false,
+    "bind_actor_scope_profile_filters_policy_data_rating_versions": true
+  },
+  "projects_collaboration": {
+    "state": "pending_protocol_review",
+    "owner_implementation": "pending_owner_implementation",
+    "agreed_owner_protocol_sha": null,
+    "transport": "existing_ManagedProjectsIpc_UDS",
+    "proposed_operation": "ratings",
+    "proposed_contract": "tracking-ratings-v1",
+    "batch_max_ids": 200,
+    "concurrency": 2,
+    "per_rpc_timeout_ms": 2000,
+    "whole_query_timeout_ms": 8000,
+    "global_catalog_version_required": true,
+    "empty_batch_version_check": true,
+    "worker_reads_projects_database": false,
+    "worker_rating_write_authority": false
+  },
+  "internal_projection_paths": [
+    "POST /internal/v1/feed/bases",
+    "POST /internal/v1/feed/snapshots",
+    "POST /internal/v1/feed/pages"
+  ],
+  "migration": {
+    "proposed_version": 4,
+    "explicit_only": true,
+    "modify_existing_sql": false,
+    "implemented": false
+  },
+  "acceptance_ids": [
+    "DEC-D1",
+    "DEC-D2",
+    "DEC-C01",
+    "DEC-C03",
+    "DEC-C05"
+  ],
+  "voice": {
+    "D6": "confirmed_implementation_held",
+    "D7": "confirmed_implementation_held",
+    "D8": "confirmed_implementation_held",
+    "quiet_hours": "22:00-08:00",
+    "timezone": "Asia/Shanghai",
+    "implemented": false
+  },
+  "real_provider_calls": false,
+  "merge_push_deploy_authorized": false,
+  "proposal_markdown_sha256": "bf44cfe79918067a4feacaff0718218abaa71390ab8eecb9458b0314e9bfcb33"
+}

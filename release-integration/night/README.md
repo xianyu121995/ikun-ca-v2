@@ -55,3 +55,5 @@ unload只接受新根plans内的私有计划，逐字核对已安装plist的labe
 恢复旧worker代码前必须有schema向后兼容证据；否则只停该新模块并保留现场，按冻结恢复方案备份到新路径验收。不能覆盖在线库或用broad pkill/global supervisor stop。
 
 main、正式ikun.ca、真实6551/第三方REST/付费、下线旧版、已有Cloudflare/旧作业、共享Watch继续受保护。B3冻结后语音才由全站UI自有新目录交付，集成只收验收冻结addon，不自行开发第二套信息流/播报。
+
+已验收小依赖：Projects认证构造器修复 `cc95dc27852d056457ca0582cff64a88c0eab1d4`，精确helper源hash见intake.json。仅登记供下个已验worker收件，不为此单独构建/部署；C03及B3/B4核心仍待各自最终验收冻结。

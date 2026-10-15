@@ -30,5 +30,19 @@
   },
   "real_sources_enabled": false,
   "truthful_banner": "未连接真实来源",
-  "jobs_installed": false
+  "jobs_installed": false,
+  "accepted_dependencies": {
+    "projects_auth_constructor": {
+      "state": "ACCEPTED_DEPENDENCY_ONLY",
+      "source_commit": "cc95dc27852d056457ca0582cff64a88c0eab1d4",
+      "source_path": "modules/projects/integration/website/lib/projects.ts",
+      "source_sha256": "3b9924c8bde29502faf181662372da4d19213bbe76a9655994933b352a0937f5",
+      "receiving_target": "apps/website/lib/projects.ts",
+      "apply_with_next_accepted_worker": true,
+      "standalone_build_or_deployment_required": false,
+      "merged_or_received": false,
+      "acceptance_relay": "chief verified B3 actual Next six invalid-session page/API cases and five quiet SSE revocations",
+      "does_not_accept_C03_or_worker_core": true
+    }
+  }
 }

@@ -1,0 +1,38 @@
+'use client';
+import {useState,type ReactNode} from 'react';
+import {Alert,Button,Input,Select} from '@ikun/ui';
+import {HomepageDialog} from './shared-dialog';
+import {progressStages,ratings,type ProjectFieldsProjection,type ProjectView} from '../../features/homepage/types';
+import {pickFields} from '../../features/homepage/view-model';
+import {currentMilestone,referenceStageLabels,validateDraft} from '../../features/homepage/reference-model';
+import type {EditorDraft,ProjectMilestone} from '../../features/homepage/reference-types';
+
+const emptyFields:ProjectFieldsProjection={name:'',rating:'B',website_url:null,description:'',notes:'',category:null,progress_stage:'researching',progress_percent:null,token_date:null,token_date_status:'unconfirmed'};
+export function ReferenceEditor({project,milestones,mode,busy,blocked,unsettled,onClose,onSave,children}:{project?:ProjectView;milestones:readonly ProjectMilestone[];mode:'demo'|'live';busy:boolean;blocked:boolean;unsettled:boolean;onClose:()=>void;onSave:(draft:EditorDraft)=>void;children:ReactNode}){
+  const [initial]=useState<EditorDraft>(()=>({fields:project?pickFields(project.record):{...emptyFields},milestone:project?(()=>{const {project_id,...event}=currentMilestone(project,milestones);return event;})():{date:null,hour:'00',title:'',status:'unconfirmed'},archive_after_save:project?.record.progress_stage==='completed'}));
+  const [draft,setDraft]=useState(initial),[error,setError]=useState(''),[discard,setDiscard]=useState(false);
+  const dirty=JSON.stringify(draft)!==JSON.stringify(initial);
+  function field<K extends keyof ProjectFieldsProjection>(key:K,value:ProjectFieldsProjection[K]){setError('');setDraft(previous=>({...previous,fields:{...previous.fields,[key]:value},archive_after_save:key==='progress_stage'?value==='completed':previous.archive_after_save}));}
+  function close(){if(busy)return;if(dirty&&!unsettled)setDiscard(true);else onClose();}
+  return <HomepageDialog title={project?'编辑项目资料':'新增持续跟踪项目'} className="hpv2-editor" pending={busy} close={discard?()=>setDiscard(false):close}>
+    {discard?<div className="hpv2-discard"><h3>放弃未保存的修改？</h3><p>草稿尚未提交。</p><div className="hpv2-dialog-actions"><Button autoFocus data-initial-focus onClick={()=>setDiscard(false)}>继续编辑</Button><Button variant="danger" onClick={onClose}>放弃修改</Button></div></div>:
+      <form method="dialog" className="hpv2-editor-form" onSubmit={event=>{event.preventDefault();if(blocked)return;const payload={...draft,fields:{...pickFields(draft.fields),name:draft.fields.name.trim()},milestone:{...draft.milestone,hour:draft.milestone.date?draft.milestone.hour:null,title:draft.milestone.title.trim()}};const issue=validateDraft(payload);if(issue){setError(issue);return;}onSave(payload);}}>
+        <p className="hpv2-demo-note">{mode==='demo'?'演示模式 · 修改仅当前页面有效':'资料由接入方提供，服务端仍需验证权限与版本。'}</p>
+        <Input label="项目名称" aria-label="项目名称" data-initial-focus required maxLength={120} value={draft.fields.name} disabled={blocked} onChange={event=>field('name',event.target.value)}/>
+        <Select label="评分" value={draft.fields.rating||''} disabled={blocked} onChange={event=>field('rating',event.target.value?event.target.value as ProjectFieldsProjection['rating']:null)}>{ratings.map(value=><option key={value}>{value}</option>)}<option value="">未评分</option></Select>
+        <Input label="官网" type="url" placeholder="https://" value={draft.fields.website_url||''} disabled={blocked} onChange={event=>field('website_url',event.target.value||null)}/>
+        <label className="hpv2-area-label">项目简介<textarea className="ik-input" aria-label="项目简介" rows={3} maxLength={4000} disabled={blocked} value={draft.fields.description} onChange={event=>field('description',event.target.value)}/></label>
+        <Select label="研究进度" value={draft.fields.progress_stage} disabled={blocked} onChange={event=>field('progress_stage',event.target.value as ProjectFieldsProjection['progress_stage'])}>{progressStages.map(value=><option value={value} key={value}>{referenceStageLabels[value]}</option>)}</Select>
+        <div className="hpv2-event-time-fields"><Input label="近期重要时间" type="date" value={draft.milestone.date||''} disabled={blocked} onChange={event=>{setError('');setDraft(previous=>({...previous,milestone:{...previous.milestone,date:event.target.value||null,hour:event.target.value?(previous.milestone.hour||'00'):null,status:event.target.value?(previous.milestone.status==='unconfirmed'?'estimated':previous.milestone.status):'unconfirmed'}}));}}/>
+        <Select label="重要时间：小时" value={draft.milestone.hour||''} disabled={blocked||!draft.milestone.date} onChange={event=>{setError('');setDraft(previous=>({...previous,milestone:{...previous.milestone,hour:event.target.value||null}}));}}><option value="">小时未确认</option>{Array.from({length:24},(_,hour)=>String(hour).padStart(2,'0')).map(hour=><option key={hour} value={hour}>{hour}时</option>)}</Select></div>
+        <Input label="重要事件" maxLength={240} placeholder="例如：主网上线、奖励快照" value={draft.milestone.title} disabled={blocked} onChange={event=>{setError('');setDraft(previous=>({...previous,milestone:{...previous.milestone,title:event.target.value}}));}}/>
+        <Select label="事件日期状态" value={draft.milestone.status} disabled={blocked||!draft.milestone.date} onChange={event=>setDraft(previous=>({...previous,milestone:{...previous.milestone,status:event.target.value as ProjectMilestone['status']}}))}>{draft.milestone.date?<><option value="estimated">预计</option><option value="confirmed">已确认</option></>:<option value="unconfirmed">未确认</option>}</Select>
+        <label className="hpv2-area-label">备注<textarea className="ik-input" aria-label="备注" rows={3} maxLength={4000} disabled={blocked} value={draft.fields.notes} onChange={event=>field('notes',event.target.value)}/></label>
+        {draft.fields.progress_stage==='completed'&&<p className="hpv2-archive-choice">保存后移出主页，资料保留在「已完成记录」，可恢复原进度。</p>}
+        <details className="hpv2-extra-fields"><summary>更多项目字段</summary><Input label="分类" maxLength={80} value={draft.fields.category||''} disabled={blocked} onChange={event=>field('category',event.target.value||null)}/><Input label="进度百分比（未知留空）" type="number" min={0} max={100} step="any" value={draft.fields.progress_percent??''} disabled={blocked} onChange={event=>field('progress_percent',event.target.value===''?null:event.target.valueAsNumber)}/><Input label="发币日期" type="date" value={draft.fields.token_date||''} disabled={blocked} onChange={event=>setDraft(previous=>({...previous,fields:{...previous.fields,token_date:event.target.value||null,token_date_status:event.target.value?'estimated':'unconfirmed'}}))}/><Select label="发币日期状态" value={draft.fields.token_date_status} disabled={blocked||!draft.fields.token_date} onChange={event=>field('token_date_status',event.target.value as ProjectFieldsProjection['token_date_status'])}>{draft.fields.token_date?<><option value="estimated">预计</option><option value="confirmed">已确认</option></>:<option value="unconfirmed">未确认</option>}</Select></details>
+        {project&&<p className="hpv2-readonly-meta">发现时间、项目 ID 和服务端时间只读。<br/>{project.discoveredLabel} · revision {project.record.revision}<br/>{project.key}</p>}
+        {error&&<Alert tone="danger" title={error}/>}{children}
+        <div className="hpv2-editor-actions"><Button disabled={busy} onClick={close}>{blocked&&!busy?'关闭':'取消'}</Button><Button type="submit" variant="primary" pending={busy} disabled={blocked}>{busy?'提交中…':'保存资料'}</Button></div>
+      </form>}
+  </HomepageDialog>;
+}

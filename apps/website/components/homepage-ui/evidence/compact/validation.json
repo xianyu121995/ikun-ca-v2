@@ -1,0 +1,58 @@
+{
+  "baseline": "15010ec41514d60fad2e0fa168f6e8f4cf64f9c1",
+  "verification": "Live Codex browser DOM measurements after rebuilt preview reload",
+  "build": "Next build and included TypeScript check passed",
+  "layouts": [
+    {
+      "width": 1440,
+      "pageWidth": 1425,
+      "dateCards": 4,
+      "sameRow": true,
+      "dateClientWidth": 1127,
+      "dateScrollWidth": 1127,
+      "maxStatHeight": 56,
+      "maxGradeHeight": 23
+    },
+    {
+      "width": 1920,
+      "pageWidth": 1905,
+      "dateCards": 4,
+      "sameRow": true,
+      "dateClientWidth": 1607,
+      "dateScrollWidth": 1607,
+      "maxStatHeight": 56,
+      "maxGradeHeight": 23
+    },
+    {
+      "width": 2560,
+      "pageWidth": 2545,
+      "dateCards": 4,
+      "sameRow": true,
+      "dateClientWidth": 2247,
+      "dateScrollWidth": 2247,
+      "maxStatHeight": 56,
+      "maxGradeHeight": 23
+    },
+    {
+      "width": 390,
+      "pageWidth": 375,
+      "dateCards": 4,
+      "sameRow": true,
+      "dateClientWidth": 309,
+      "dateScrollWidth": 1110,
+      "maxStatHeight": 48,
+      "maxGradeHeight": 23
+    }
+  ],
+  "smoke": {
+    "s_rating_filter_rows": 2,
+    "reset_rows": 10,
+    "edit_dialog_opened_and_cancelled": true
+  },
+  "new_tests_written": false,
+  "previous_21_test_suite_rerun": false,
+  "source_sha256": {
+    "apps/website/components/homepage-ui/phase2-homepage.css": "5f3f1388b78d912c2db4ddcb6c53ee710447af508332ab56ea02bd2e41c53f89",
+    "apps/website/components/homepage-ui/phase2-homepage.tsx": "8100e278fd78daa7857734f686e13579cb0965eba27189f425ee112289857c4c"
+  }
+}

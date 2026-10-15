@@ -1,0 +1,11 @@
+{
+  "filename": "ikun_home_ui_prototype_v2.html",
+  "bytes": 33975,
+  "sha256": "bb5bc6f5005435e5618222af4f442ee32d731a11a3bd6e0b4f235ab2767b89aa",
+  "role": "user-supplied visual and interaction reference; embedded script is not executed or imported",
+  "shared_ui_commit": "5ce45fd4a4621cd8e5b04c4611c957aa379fec44",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "baseline": "9828c704f8bbe76b85323a2df03842c88b8669a6",
+  "status": "historical_input_only",
+  "superseded_by": "final-reference.json"
+}

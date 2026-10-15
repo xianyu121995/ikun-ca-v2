@@ -1,0 +1,20 @@
+{
+  "design_baseline": "ikun-home-ui-hourly-date-filter.html",
+  "input_bytes": 36784,
+  "input_sha256": "db22dd3853036c64b4c2fec633e6c16e86bd923e4e9dc5795cd6ae02800939dc",
+  "final_html": "apps/website/components/homepage-ui/prototype/ikun-home-ui-hourly-date-filter.html",
+  "final_html_sha256": "06d6d1eeb9d0b00bd86813d31caabc16cb46f9ca2865774bb439264042c389f8",
+  "fixes": [
+    "sorted visible-row selection and selection reset",
+    "original progress preserved through completion and restore",
+    "safe website validation and demo-domain handling",
+    "modal focus, Escape and hidden-state accessibility",
+    "unique demo-only IDs and current-page pager"
+  ],
+  "layout_redesigned": false,
+  "live_api_connected": false,
+  "database_modified": false,
+  "input_css_sha256": "37ce6865a7197626844cd891d517ae77d5b09fcf705fe32ac00b35f5dda97393",
+  "final_css_sha256": "37ce6865a7197626844cd891d517ae77d5b09fcf705fe32ac00b35f5dda97393",
+  "css_unchanged": true
+}

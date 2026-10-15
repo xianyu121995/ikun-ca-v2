@@ -1,0 +1,106 @@
+TAP version 13
+# Subtest: calendar arithmetic rejects invalid dates and uses an explicit supplied reference date
+ok 1 - calendar arithmetic rejects invalid dates and uses an explicit supplied reference date
+  ---
+  duration_ms: 0.578
+  type: 'test'
+  ...
+# Subtest: important events are separate from token dates and never invent missing event dates
+ok 2 - important events are separate from token dates and never invent missing event dates
+  ---
+  duration_ms: 0.149375
+  type: 'test'
+  ...
+# Subtest: upcoming events sort by date, limit to three and respect future windows and grade input
+ok 3 - upcoming events sort by date, limit to three and respect future windows and grade input
+  ---
+  duration_ms: 0.998917
+  type: 'test'
+  ...
+# Subtest: draft validation preserves field whitelist and rejects event-only or implicit completion mistakes
+ok 4 - draft validation preserves field whitelist and rejects event-only or implicit completion mistakes
+  ---
+  duration_ms: 0.178875
+  type: 'test'
+  ...
+# Subtest: reference fixtures retain demo keys, known UTC and unknown percentages without fabricated time
+ok 5 - reference fixtures retain demo keys, known UTC and unknown percentages without fabricated time
+  ---
+  duration_ms: 0.072333
+  type: 'test'
+  ...
+# Subtest: hour sorting and display preserve midnight, 23 and unknown without timezone conversion
+ok 6 - hour sorting and display preserve midnight, 23 and unknown without timezone conversion
+  ---
+  duration_ms: 0.162583
+  type: 'test'
+  ...
+# Subtest: discovery calendar filter uses Beijing dates, combines with query input and excludes unknown dates
+ok 7 - discovery calendar filter uses Beijing dates, combines with query input and excludes unknown dates
+  ---
+  duration_ms: 0.186666
+  type: 'test'
+  ...
+# Subtest: same-day upcoming events use hour order before stable IDs
+ok 8 - same-day upcoming events use hour order before stable IDs
+  ---
+  duration_ms: 0.104166
+  type: 'test'
+  ...
+# Subtest: unknown rating, time and percent stay unknown without changing progress/membership
+ok 9 - unknown rating, time and percent stay unknown without changing progress/membership
+  ---
+  duration_ms: 5.346708
+  type: 'test'
+  ...
+# Subtest: ratings include D/null, percent zero is distinct from null and is not derived from stage
+ok 10 - ratings include D/null, percent zero is distinct from null and is not derived from stage
+  ---
+  duration_ms: 35.08925
+  type: 'test'
+  ...
+# Subtest: live projection rejects demo IDs and does not invent canonical IDs
+ok 11 - live projection rejects demo IDs and does not invent canonical IDs
+  ---
+  duration_ms: 0.4345
+  type: 'test'
+  ...
+# Subtest: page requires unique stable keys and never accepts more than 100 rows
+ok 12 - page requires unique stable keys and never accepts more than 100 rows
+  ---
+  duration_ms: 0.1385
+  type: 'test'
+  ...
+# Subtest: safe projection excludes extra raw/private fields and preserves plain text
+ok 13 - safe projection excludes extra raw/private fields and preserves plain text
+  ---
+  duration_ms: 0.174
+  type: 'test'
+  ...
+# Subtest: URL and token-date validation rejects credentials/scripts/invalid dates
+ok 14 - URL and token-date validation rejects credentials/scripts/invalid dates
+  ---
+  duration_ms: 0.169375
+  type: 'test'
+  ...
+# Subtest: UTC display converts known time to Beijing, leaves missing/malformed time unknown
+ok 15 - UTC display converts known time to Beijing, leaves missing/malformed time unknown
+  ---
+  duration_ms: 0.617542
+  type: 'test'
+  ...
+# Subtest: live edit capability defaults false, user stays read-only, rejected callbacks expose no raw error
+ok 16 - live edit capability defaults false, user stays read-only, rejected callbacks expose no raw error
+  ---
+  duration_ms: 0.101292
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 173.442458

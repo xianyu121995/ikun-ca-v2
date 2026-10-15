@@ -1,0 +1,56 @@
+{
+  "status": "LOCAL_UI_ACCEPTANCE_PASSED_REAL_DATA_NOT_CONNECTED",
+  "design_baseline": "ikun-home-ui-hourly-date-filter.html",
+  "input_sha256": "db22dd3853036c64b4c2fec633e6c16e86bd923e4e9dc5795cd6ae02800939dc",
+  "final_html_sha256": "06d6d1eeb9d0b00bd86813d31caabc16cb46f9ca2865774bb439264042c389f8",
+  "branch": "codex/homepage-ui",
+  "owner_paths": [
+    "apps/website/components/homepage-ui/",
+    "apps/website/features/homepage/",
+    "apps/website/app/prototypes/homepage/"
+  ],
+  "protected_files_unchanged": 63,
+  "changes_owner_only": true,
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "shared_ui_commit": "5ce45fd4a4621cd8e5b04c4611c957aa379fec44",
+  "root_workspace_registration": "PENDING_CHIEF_B0",
+  "tests": {
+    "browser_passed": 42,
+    "browser_failed": 0,
+    "model_passed": 16,
+    "model_failed": 0,
+    "widths": [
+      1440,
+      1920,
+      2560,
+      390
+    ]
+  },
+  "typecheck": "PASS",
+  "next_build": "PASS",
+  "page_network_clients": 0,
+  "business_database_created": false,
+  "live_api_connected": false,
+  "active_source_sha256": {
+    "apps/website/components/homepage-ui/reference-homepage.tsx": "5c057873e3b72711b8f4d54e87cb3e42879c3fc886b891184435a68919a2796c",
+    "apps/website/components/homepage-ui/reference-editor.tsx": "ddc6b3d04c75084231f8ef45a93995077f168639dc2884ca3720c8e4a033a0dd",
+    "apps/website/components/homepage-ui/reference-homepage.css": "1e810366f1f93aebb06aff91cd5d52e76e58aa92cf97e2fd0fd2e751f86d76a2",
+    "apps/website/components/homepage-ui/phase2-preview.tsx": "6ee02994fc5b50a959860c28712d3530b41257812a73e78de4a2ba7ef39e40da",
+    "apps/website/components/homepage-ui/shared-dialog.tsx": "1bf8ee3c6bacaa6cc436b176a93df6c5769aff29b9db123891203cb61f2deb2e",
+    "apps/website/components/homepage-ui/prototype/ikun-home-ui-hourly-date-filter.html": "06d6d1eeb9d0b00bd86813d31caabc16cb46f9ca2865774bb439264042c389f8",
+    "apps/website/features/homepage/reference-types.ts": "2e8706afbd5203378a27d47a251c1c57b493cc89792bb6efecd4665f5243a38c",
+    "apps/website/features/homepage/reference-model.ts": "4f93b248a3d0d0c04bb754146c93505e076ac84698ab390e2f54e47519f8cba0",
+    "apps/website/features/homepage/reference-fixtures.ts": "2457fdf23e6fcbdbdefaa0e18f438f9e7a41feb9e94b25f9b0f7046ed3934b4c",
+    "apps/website/features/homepage/types.ts": "934363e6fefcd7d8c78c44e3912fdfdbf0ae736bd11bb3032d9dc46501478371",
+    "apps/website/features/homepage/view-model.ts": "93be738cb12415a693ce603021aafaa9246729feb8e92fd2372dd1d202361039",
+    "apps/website/app/prototypes/homepage/page.tsx": "409dd495775b93282c0530bb00e8a3546760e79ae2b4110c35a70ef7ba42cd76",
+    "apps/website/app/prototypes/homepage/html/route.ts": "46318494b6f49334d6613f01ee51a3d0f8beb605813508c11e86abc62f967ba1"
+  },
+  "not_verified": [
+    "fresh checkout shared dependency installation",
+    "real auth and Projects adapter",
+    "server persistence and business authorization",
+    "deployment or production integration",
+    "human final acceptance"
+  ]
+}

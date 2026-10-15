@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: unknown rating, time and percent stay unknown without changing progress/membership
+ok 1 - unknown rating, time and percent stay unknown without changing progress/membership
+  ---
+  duration_ms: 0.837333
+  type: 'test'
+  ...
+# Subtest: ratings include D/null, percent zero is distinct from null and is not derived from stage
+ok 2 - ratings include D/null, percent zero is distinct from null and is not derived from stage
+  ---
+  duration_ms: 14.102666
+  type: 'test'
+  ...
+# Subtest: live projection rejects demo IDs and does not invent canonical IDs
+ok 3 - live projection rejects demo IDs and does not invent canonical IDs
+  ---
+  duration_ms: 0.397584
+  type: 'test'
+  ...
+# Subtest: page requires unique stable keys and never accepts more than 100 rows
+ok 4 - page requires unique stable keys and never accepts more than 100 rows
+  ---
+  duration_ms: 0.139833
+  type: 'test'
+  ...
+# Subtest: safe projection excludes extra raw/private fields and preserves plain text
+ok 5 - safe projection excludes extra raw/private fields and preserves plain text
+  ---
+  duration_ms: 0.197292
+  type: 'test'
+  ...
+# Subtest: URL and token-date validation rejects credentials/scripts/invalid dates
+ok 6 - URL and token-date validation rejects credentials/scripts/invalid dates
+  ---
+  duration_ms: 0.125792
+  type: 'test'
+  ...
+# Subtest: UTC display converts known time to Beijing, leaves missing/malformed time unknown
+ok 7 - UTC display converts known time to Beijing, leaves missing/malformed time unknown
+  ---
+  duration_ms: 0.62075
+  type: 'test'
+  ...
+# Subtest: live edit capability defaults false, user stays read-only, rejected callbacks expose no raw error
+ok 8 - live edit capability defaults false, user stays read-only, rejected callbacks expose no raw error
+  ---
+  duration_ms: 0.104333
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 121.546583

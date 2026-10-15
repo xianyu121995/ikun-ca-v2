@@ -1,0 +1,6 @@
+{
+  "production_with_flag": 404,
+  "disabled_flag": 404,
+  "method": "GET http://127.0.0.1:3700/prototypes/homepage against locally built next start; own Worktree only",
+  "enabled_preview": 200
+}

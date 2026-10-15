@@ -1,0 +1,32 @@
+
+> @ikun/website@0.1.0 build /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/homepage-ui/apps/website
+> NODE_OPTIONS=--max-old-space-size=2048 next build --webpack
+
+▲ Next.js 16.4.1 (webpack)
+✓ Running next.config.ts took 16ms
+- Experiments (use with caution):
+  · cpus: 1
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1300ms
+  Running TypeScript ...
+  Finished TypeScript in 922ms ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/3) ...
+✓ Generating static pages using 1 worker (3/3) in 158ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/v1/[...path]
+├ ƒ /health/live
+├ ƒ /health/ready
+├ ƒ /internal/v1/[...path]
+├ ƒ /prototypes/homepage
+└ ƒ /prototypes/homepage/html
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

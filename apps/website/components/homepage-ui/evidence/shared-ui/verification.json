@@ -1,0 +1,80 @@
+{
+  "contract_version": "phase2-v1.0.0",
+  "spec_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "source_baseline": "eed9434fb73bba6e71e2040d2db43bf2632f650a",
+  "branch": "codex/homepage-ui",
+  "owner_paths": [
+    "apps/website/components/homepage-ui/",
+    "apps/website/features/homepage/",
+    "apps/website/app/prototypes/homepage/"
+  ],
+  "protected_files_unchanged": 63,
+  "new_changes_owner_only": true,
+  "frozen_baseline_preserved": true,
+  "shared_ui_binding": "DIRECT_PACKAGE_IMPORTS_LOCAL_NEXT_VERIFIED",
+  "shared_ui_commit": "5ce45fd4a4621cd8e5b04c4611c957aa379fec44",
+  "shared_ui_artifacts_sha256": {
+    "auth.d.ts": "4a7e9b27646ad70581bd9ee1a01c492a31bbff6c83a54372118e7da90bcde973",
+    "auth.js": "d4ca61dde605ed01e08e0eebf9a0dac76b6eb37d1e31139df69f97a82b8f7bac",
+    "auth.js.map": "802a87a57b21eeb82fd1bf24e8c132a7c583368de8d487a87ae68df3110c3460",
+    "feedback.d.ts": "573c3030fc60845c24cbfbddf96332eddac7583071d0e5b7a366f2a52891b708",
+    "feedback.js": "b3ecba06d4d88b8ac0e06215ddb910e8731f3c1828cd56438de34fc255c85d5d",
+    "feedback.js.map": "5f2ed94dfffa1f566d60dfd145c819f5e0fc041160fa8f67e015d27ccc40e2bf",
+    "icons.d.ts": "a49b1e530179dc7fbb26d46e2eccb1e26062acfd22c42a21bfb7ca350acb6134",
+    "icons.js": "d67dc2f6f18f8ff7809b829e99b9915ff70eeca4852a11e60e44710b58dca67a",
+    "icons.js.map": "8d094136a4be101bbb52fc5399e510006052423ca095e28d3cddcae4f8b9bbbd",
+    "index.d.ts": "543ae285875fd993521cb1403867c57a599c3d91b7ce601e9bc6f102de81eef2",
+    "index.js": "42687862714c942e3095fabe70f3ddb4b9f502b232583fe343c054797e6378f6",
+    "index.js.map": "6ec5a8d102976bffa107a59362962024866a10e4660da6521cae70bd01bc3067",
+    "navigation.d.ts": "11d2544bcc6be278a8c68a7f2615ceb12e0d68aa994e530016f65414ca8c359d",
+    "navigation.js": "f2ae648cac2534e399f8e2d25e75f54c2ea7441d8e023ba3ff5c496f62bdb626",
+    "navigation.js.map": "bc2356135bedac96338e08f67685295646f6b3d66df199d71aed8599c2c0dd63",
+    "primitives.d.ts": "ff576d9348b3452061bcef4e0739216a656fd91b8a9e6d2f1f62ae382b74684a",
+    "primitives.js": "710e1f670f9f8f8df9189b979ce25c9493a0f0a1f4f883e092250e254200fcfd",
+    "primitives.js.map": "cc141b906799b620f6c2c7a6d22d79d7c313c13846383cf86e6698c46ac2ed97",
+    "styles.css": "ca6e8568e2a7406f5e8b1072414e209a84af12ab353e5687a639bd5cb420c4e8",
+    "table.d.ts": "a703f5553de15d7878cc89eedf885a8efedb796ecc594f90b1eed7f0ecf328fb",
+    "table.js": "5b4965dc839ac8eddc8ee6d166bcb73af26bcb9b22fb8922c35bd8e5c8aa2916",
+    "table.js.map": "569b161e7042d404a60a7200abda52d70643297a3967c0491e41ebcdab127ae6"
+  },
+  "root_workspace_registration": "PENDING_CHIEF_B0",
+  "live_adapter": "NOT_CONNECTED",
+  "runtime_dependency_changes": false,
+  "typecheck": "pnpm --filter @ikun/website typecheck passed",
+  "build": "Next 16.4.1 website build passed, cpus=1, serial",
+  "unit": {
+    "passed": 8,
+    "failed": 0
+  },
+  "browser": {
+    "passed": 19,
+    "failed": 0,
+    "widths": [
+      1440,
+      1920,
+      2560,
+      390
+    ],
+    "duration_ms": 20561.448
+  },
+  "page_network_clients": 0,
+  "business_database_created": false,
+  "active_source_sha256": {
+    "apps/website/components/homepage-ui/phase2-homepage.tsx": "83a6a1bbe9a3f21220dfaffda5e0ef32a94c34a339d7081569232ac13ba08c70",
+    "apps/website/components/homepage-ui/phase2-preview.tsx": "9232b38f50eb9415ec9ca5fd577b78ef55ed4f83834099229708c5eb5e554ed7",
+    "apps/website/components/homepage-ui/shared-dialog.tsx": "21df22d5c6c08593f2efed27e4d525df4109de90a186e5f76cfe0d784e0c0067",
+    "apps/website/components/homepage-ui/phase2-homepage.css": "21e6d4178bbf194fa7c21eb5d74fb9a60690b3c77235176fdd68026d1aaeac97",
+    "apps/website/components/homepage-ui/prepare-shared-ui.mjs": "caf5918b77f065a35f7768ad875d80b8d6239d8afdda6fa093bfb405457a5cf8",
+    "apps/website/features/homepage/types.ts": "934363e6fefcd7d8c78c44e3912fdfdbf0ae736bd11bb3032d9dc46501478371",
+    "apps/website/features/homepage/view-model.ts": "93be738cb12415a693ce603021aafaa9246729feb8e92fd2372dd1d202361039",
+    "apps/website/features/homepage/demo-fixtures.ts": "538b215d82842429cc1f76c6225327502d6d6cb07cd7ee4f39f01b4a05b369d1",
+    "apps/website/app/prototypes/homepage/page.tsx": "409dd495775b93282c0530bb00e8a3546760e79ae2b4110c35a70ef7ba42cd76"
+  },
+  "not_verified": [
+    "clean checkout workspace frozen install",
+    "fresh shared type/dependency propagation",
+    "real auth and Projects adapter",
+    "production or platform data",
+    "deployment"
+  ]
+}

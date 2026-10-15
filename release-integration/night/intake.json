@@ -6,7 +6,7 @@
   "main_must_remain": "63e8a2857241c6a76226f21435e40db9736a1e7e",
   "workers": {
     "hunter": {
-      "state": "RECEIVED_PENDING_INTEGRATION_TESTS",
+      "state": "DEPLOYED_PROTECTED_V2_B4_PASS",
       "protocol_commit": "b16fb36a8b8269350319c02a60faa6ea2708d95a",
       "accepted_source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
       "accepted_control_commit": "7a90ec281211cc8a307692c8e420cf4b802ce452",
@@ -57,7 +57,10 @@
       "label": "ca.ikun.v2.c0lite.hunter",
       "host": "127.0.0.1",
       "port_candidate": 4011,
-      "database": "DATA_ROOT/hunter/hunter.db"
+      "database": "DATA_ROOT/hunter/hunter.db",
+      "running_release_commit": "75b81a2b5210e41bdf8522467c7fba2a6a6e693c",
+      "runtime_plan": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/plans/hunter/75b81a2b5210e41bdf8522467c7fba2a6a6e693c/worker.json",
+      "public_verified": true
     },
     "tracking": {
       "state": "WAITING_ACCEPTED_FREEZE",
@@ -73,7 +76,7 @@
   },
   "real_sources_enabled": false,
   "truthful_banner": "未连接真实来源",
-  "jobs_installed": false,
+  "jobs_installed": true,
   "startup_guard_review": {
     "state": "ACCEPTED_PREPARATION_ONLY",
     "source_commit": "69878e12aa3224e83da471859cca0ef1a4594a25",
@@ -134,7 +137,7 @@
     }
   },
   "site_gateway_wiring": {
-    "state": "RECEIVED_PENDING_INTEGRATION_TESTS",
+    "state": "DEPLOYED_B4_ONLY_TRACKING_NOT_RECEIVED",
     "protocol_version": "v2-site-gateway-v1",
     "control_commit": "8b84ee97a94bae28e98b550b2721991f30088486",
     "review_path": "docs/progress/SITE-GATEWAY-ADDENDUM.md",
@@ -157,5 +160,21 @@
     "does_not_accept_worker_core_or_deployment": true,
     "user_required_tracking_navigation_wording": "reuse existing WorkspaceLink: 猎手项目追踪",
     "gateway_review_commit": "98fc94c410c4f1a806c9c7b11f914802aaad50ae"
+  },
+  "worker_jobs_installed": [
+    "hunter"
+  ],
+  "protected_v2_release": {
+    "website_commit": "75b81a2b5210e41bdf8522467c7fba2a6a6e693c",
+    "hunter_release_commit": "75b81a2b5210e41bdf8522467c7fba2a6a6e693c",
+    "hunter_source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+    "build_id": "GEeQtBnxMYzLHcpnuweJS",
+    "local_deep_build_id": "h54nVd6ExsdavQ3VJlvEa",
+    "public_state": "PASS_PROTECTED_V2_B4_PUBLIC_ONLY",
+    "temporary_user_disabled": true,
+    "readiness_metadata_correction_deferred_to_next_B3_upgrade": true,
+    "legacy_workers_enabled_false_is_not_job_inventory": true,
+    "no_standalone_rebuild_for_this_deferred_metadata": true,
+    "temporary_user_credential_retired_and_must_not_reuse": true
   }
 }

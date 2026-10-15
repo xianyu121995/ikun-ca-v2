@@ -1,0 +1,29 @@
+{
+  "state": "PASS_B4_PROTECTED_TEST_SITE_ONLY",
+  "running_commit": "75b81a2b5210e41bdf8522467c7fba2a6a6e693c",
+  "build_id": "GEeQtBnxMYzLHcpnuweJS",
+  "hunter_source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+  "local_deep_build_id": "h54nVd6ExsdavQ3VJlvEa",
+  "local_deep_checks": 42,
+  "final_build_rebuilt_and_publicly_checked": true,
+  "source_hashes_verified": 254,
+  "compiled_hashes_verified": 240,
+  "worker_keepalive_recovered": true,
+  "external_collection_enabled": false,
+  "databases_physically_distinct": [
+    "auth",
+    "projects",
+    "hunter"
+  ],
+  "Tracking_core_job_and_database": "NOT_RECEIVED",
+  "public_user_write_methods": {
+    "POST": 403,
+    "PUT": 403,
+    "PATCH": 403,
+    "DELETE": 403
+  },
+  "temporary_user_disabled": true,
+  "full_live_source_and_Tracking_workflow": "NOT_CLAIMED",
+  "public_report": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/night-b4/public-verification.json",
+  "runtime_audit": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/night-b4/final-runtime-audit.json"
+}

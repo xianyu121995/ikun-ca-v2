@@ -19,8 +19,8 @@ from playwright.sync_api import sync_playwright
 MODULE = Path(__file__).resolve().parents[1]
 ROOT = MODULE.parents[1]
 NODE = os.environ.get("IKUN_NODE", "node")
-PASSWORD = "ui-test-initial-long-passphrase"
-CHANGED = "ui-test-changed-long-passphrase"
+PASSWORD = "test-init1"
+CHANGED = "test-next2"
 PREVIEW_MANIFEST = json.loads((MODULE / "test-results/b1-preview.json").read_text())
 PREVIEW = Path(PREVIEW_MANIFEST["preview"])
 
@@ -79,6 +79,12 @@ def login(page, origin, name, value, forced=False):
 
 def change_password(page, origin, current, new):
     page.goto(origin + "/auth/password")
+    for name in ["new_password", "confirm_password"]:
+        field = page.locator(f'input[name="{name}"]')
+        assert field.get_attribute("minlength") == "10"
+        assert field.get_attribute("maxlength") == "128"
+        field.fill("x" * 9)
+        assert field.evaluate("el => el.validity.tooShort")
     page.locator('input[name="current_password"]').fill(current)
     page.locator('input[name="new_password"]').fill(new)
     page.locator('input[name="confirm_password"]').fill(new)
@@ -139,9 +145,15 @@ def main():
             port = sock.getsockname()[1]
         origin = f"http://127.0.0.1:{port}"
         env = {**os.environ, "DATA_ROOT": str(Path(temp) / "data"), "IKUN_AUTH_DEV": "1", "IKUN_AUTH_ORIGIN": origin, "NEXT_TELEMETRY_DISABLED": "1"}
-        local_cli(env, "bootstrap", "root_admin", PASSWORD)
+        assert len(PASSWORD) == len(CHANGED) == 10
+        local_cli(env, "bootstrap", "root_admin", "x" * 9, expected=1)
+        prompt = local_cli(env, "bootstrap", "root_admin", PASSWORD)
+        assert "至少10字符" in prompt
         db_path = Path(env["DATA_ROOT"]) / "auth/auth.db"
+        local_cli(env, "create", "rejected_user", "x" * 9, expected=1)
         local_cli(env, "create", "viewer", PASSWORD)
+        local_cli(env, "reset-password", "viewer", "x" * 9, expected=1)
+        local_cli(env, "recover-admin", "root_admin", "x" * 9, expected=1)
         listing = local_cli(env, "list")
         assert "viewer" in listing and "root_admin" in listing
         assert "password_hash" not in listing and PASSWORD not in listing
@@ -279,7 +291,7 @@ def main():
                     assert not errors, errors
                     browser.close()
                 assert sorted(p.name for p in Path(env["DATA_ROOT"]).iterdir()) == ["auth"]
-                result = {"passed": True, "next_production_browser": "passed", "cli_hidden_tty_all_seven_operations": "passed", "server_action_without_proxy": "passed", "route_handler_without_proxy": "passed", "self_password_rotates_session": "passed", "seven_day_expiry": "passed", "initial_and_reset_force_change": "passed", "removed_management_endpoints": "passed", "public_ui_actual_forms": "passed", "desktop": "1440x1000", "mobile": "390x844", "fallback_cases": fallbacks, "page_errors": errors, "business_databases_created": 0, "source_inputs": PREVIEW_MANIFEST["inputs"], "artifacts": str(artifacts)}
+                result = {"password_minimum_10": "passed", "new_password_minlength_10": "passed", "cli_9_rejected_10_accepted": "passed", "passed": True, "next_production_browser": "passed", "cli_hidden_tty_all_seven_operations": "passed", "server_action_without_proxy": "passed", "route_handler_without_proxy": "passed", "self_password_rotates_session": "passed", "seven_day_expiry": "passed", "initial_and_reset_force_change": "passed", "removed_management_endpoints": "passed", "public_ui_actual_forms": "passed", "desktop": "1440x1000", "mobile": "390x844", "fallback_cases": fallbacks, "page_errors": errors, "business_databases_created": 0, "source_inputs": PREVIEW_MANIFEST["inputs"], "artifacts": str(artifacts)}
                 (artifacts / "browser-result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2))
                 (MODULE / "test-results/b1-final-v2-browser.json").write_text(json.dumps(result, ensure_ascii=False, indent=2))
                 print(json.dumps({k: v for k, v in result.items() if k != "source_inputs"}, ensure_ascii=False))

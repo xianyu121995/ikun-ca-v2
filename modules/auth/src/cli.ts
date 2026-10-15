@@ -39,7 +39,7 @@ async function main() {
     if (command==="list") {console.table(store.list());return;}
     if (command==="disable" || command==="enable") store.setEnabled(values.username!,command==="enable");
     else {
-      const value=await hidden("初始密码（至少15字符）：");
+      const value=await hidden("初始密码（至少10字符）：");
       if (value!==await hidden("再次输入密码：")) throw new Error("AUTH_PASSWORD_MISMATCH");
       if(command==="bootstrap") await store.bootstrap(values.username!,value);
       else if(command==="create") await store.create(values.username!,value);

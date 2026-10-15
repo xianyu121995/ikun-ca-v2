@@ -41,11 +41,11 @@ export function PasswordForm({forced}:{forced:boolean}) {
     }catch(error){setError(error instanceof Error?error.message:'改密未完成');}finally{setPending(false);}
   }
   return <Panel title={forced?'首次登录：修改初始密码':'修改本人密码'}>
-    <p>{forced?'必须修改初始密码后才能访问业务。':'修改后会撤销全部旧会话，并安全更新当前会话。'}使用至少 15 个字符的独立长口令。</p>
+    <p>{forced?'必须修改初始密码后才能访问业务。':'修改后会撤销全部旧会话，并安全更新当前会话。'}使用至少 10 个字符的独立长口令。</p>
     <form className="ik-form" method="post" action="/api/v1/auth/password" onSubmit={submit} aria-busy={pending}>
       <Input label="当前密码" name="current_password" type="password" autoComplete="current-password" required maxLength={128} disabled={pending} />
-      <Input label="新密码" name="new_password" type="password" autoComplete="new-password" required minLength={15} maxLength={128} disabled={pending} />
-      <Input label="确认新密码" name="confirm_password" type="password" autoComplete="new-password" required minLength={15} maxLength={128} disabled={pending} />
+      <Input label="新密码" name="new_password" type="password" autoComplete="new-password" required minLength={10} maxLength={128} disabled={pending} />
+      <Input label="确认新密码" name="confirm_password" type="password" autoComplete="new-password" required minLength={10} maxLength={128} disabled={pending} />
       {error&&<Alert title="修改未完成" tone="danger">{error}</Alert>}
       <Button type="submit" variant="primary" pending={pending}>保存新密码</Button>
     </form>

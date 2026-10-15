@@ -1,0 +1,10 @@
+{
+  "source_commit": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e",
+  "patch_sha256": "d008da704e87f48d9c39f2db9c33eacb97bbf5fa8370f6444e77453902bf59f3",
+  "git_apply_unidiff_zero_check": "passed",
+  "matches_built_preview": true,
+  "after": {
+    "apps/website/components/homepage-ui/reference-homepage.tsx": "5020b88f8c3298dca829807e19964b1c25a4ed45e2cab53d1c810f82533fe888",
+    "apps/website/features/homepage/reference-types.ts": "611146cc9a9d0c050ab27fe3404628e15e54dbab470568a181420ce5ca1aa361"
+  }
+}

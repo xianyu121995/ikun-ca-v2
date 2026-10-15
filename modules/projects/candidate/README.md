@@ -1,5 +1,7 @@
 # ikun.ca 主页项目领域候选
 
+B2 新版运行方式见 [../integration/README.md](../integration/README.md)。以下独立服务、候选凭证与 `/api/home` 说明保留作冻结基线回归；新版网站不使用这些登录或 TCP 入口。
+
 只访问独立 `projects.db`。包含真实项目 CRUD、S/A/B/未评分、简介/官网/备注/研究进度/发币日期、搜索/排序/筛选/分页、明确加入 API、稳定 ID、角色及租户校验、审计、版本冲突、导入回执。没有采集器、WSS、REST 轮询或 NEW_TWEET 任务。
 
 当前为隔离候选。主页沿用旧版已确认的三段布局和八列表格；未覆盖其他窗口的新 UI 原型，未修改主网站/认证/worker/共享 contracts，未部署。共享集成差异见 [INTEGRATION.md](docs/INTEGRATION.md)。

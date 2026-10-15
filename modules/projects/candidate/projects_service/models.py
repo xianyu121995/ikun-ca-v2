@@ -95,3 +95,19 @@ class ProjectImport(StrictModel):
 
 class SessionLogin(StrictModel):
     token: str = Field(min_length=32, max_length=256)
+
+
+# Storage adapters for the existing core; the legacy HTTP contract stays unchanged.
+CoreRating = Literal['S','A','B','C','D','unrated']
+
+
+class CoreProjectFields(ProjectFields):
+    rating: CoreRating = 'unrated'
+
+
+class CoreProjectPatch(ProjectPatch):
+    rating: CoreRating | None = None
+
+
+class CoreProjectImport(ProjectImport):
+    project: CoreProjectFields

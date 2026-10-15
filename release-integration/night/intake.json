@@ -31,6 +31,19 @@
   "real_sources_enabled": false,
   "truthful_banner": "未连接真实来源",
   "jobs_installed": false,
+  "startup_guard_review": {
+    "state": "ACCEPTED_PREPARATION_ONLY",
+    "source_commit": "69878e12aa3224e83da471859cca0ef1a4594a25",
+    "control_commit": "2a30b9682e84c9817eacfbd2c07d4e0e4bdde01d",
+    "review_path": "docs/progress/WORKER-GUARD-REVIEW.md",
+    "review_sha256": "7e08f8c180c1c09f502176c48a5a61e4f5c07ce72bf56591c9d37ce64ff8dc2d",
+    "owner_tests_passed": 31,
+    "independent_retest_passed": 31,
+    "distinct_tests": 31,
+    "independent_retest_tool_chunk": "bdd552",
+    "does_not_accept_worker_implementation_or_deployment": true,
+    "final_runtime_cli_venv_schema_intake_still_required": true
+  },
   "accepted_dependencies": {
     "projects_auth_constructor": {
       "state": "ACCEPTED_DEPENDENCY_ONLY",

@@ -94,7 +94,9 @@ export function TrackingLive({ csrf, canManage, username, fixture = false }: {
     useEffect(() => {
         const timer = setInterval(() => void refresh(), 15000);
         const events = new EventSource('/api/v1/events/stream');
+        let eventTimer:ReturnType<typeof setTimeout>|undefined;
         const reload = (event: Event) => {
+            if(event.type.startsWith('tracking.feed.activity.')){try{if(JSON.parse((event as MessageEvent).data).data?.replay===true)return;}catch{return;}}
             if (event.type === 'command.updated') {
                 try {
                     const value = JSON.parse((event as MessageEvent).data).data;
@@ -102,11 +104,11 @@ export function TrackingLive({ csrf, canManage, username, fixture = false }: {
                 }
                 catch { }
             }
-            void refresh();
+            clearTimeout(eventTimer);eventTimer=setTimeout(()=>void refresh(),250);
         };
-        for (const type of ['tracking.activity.created','tracking.feed.activity.created.v1','tracking.feed.activity.updated.v1', 'tracking.subscription.updated', 'command.updated'])
+        for (const type of ['tracking.feed.activity.created.v1','tracking.feed.activity.updated.v1', 'tracking.subscription.updated', 'command.updated'])
             events.addEventListener(type, reload);
-        return () => { clearInterval(timer); events.close(); };
+        return () => { clearInterval(timer);clearTimeout(eventTimer); events.close(); };
     }, [refresh]);
     async function operate(row: Subscription, operation: string) {
         if (busy)

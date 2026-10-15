@@ -48,7 +48,8 @@ try{
   });
   await denied(session,name);await alternate(admin);
  }
- const result={passed:true,checks,quiet_sse_revocation_cases:5,pins:binding.pins,preview_source_set_sha256:binding.preview_source_set_sha256,build_id:readFileSync(join(preview,'apps/website/.next/BUILD_ID'),'utf8').trim(),real_provider_calls:0};
+ for(let index=0;index<8;index++){const r=await http('/api/v1/tracking/latest?profile=published-v1&q=capacity'+index,admin);assert.equal(r.status,200);await r.arrayBuffer();}const exhausted=await http('/api/v1/tracking/latest?profile=published-v1&q=capacity9',admin);assert.equal(exhausted.status,429);assert.equal((await exhausted.json()).error.code,'RATE_LIMITED');assert.equal(exhausted.headers.get('retry-after'),'1');
+ const result={passed:true,checks,error_transport_cases:1,quiet_sse_revocation_cases:5,pins:binding.pins,preview_source_set_sha256:binding.preview_source_set_sha256,build_id:readFileSync(join(preview,'apps/website/.next/BUILD_ID'),'utf8').trim(),real_provider_calls:0};
  writeFileSync(join(logs,'receipt.json'),JSON.stringify(result,null,2));writeFileSync(join(moduleRoot,'artifacts/b3/auth-next-receipt-path.txt'),logs);console.log('B3_AUTH_NEXT_PASS '+logs);
 }catch(error){writeFileSync(join(logs,'failure.json'),JSON.stringify({checks,message:String(error.stack||error)},null,2));throw error;}
 finally{await website?.stop();await engine?.stop();await manager?.stop();local?.close();}

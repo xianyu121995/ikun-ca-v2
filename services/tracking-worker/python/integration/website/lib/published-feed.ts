@@ -29,5 +29,5 @@ export async function publishedFeed(request:Request,principal:Principal,id:strin
    }catch(error){attemptController.abort();if(error instanceof FeedFailure&&error.response.status===409&&attempt===0)continue;throw error;}finally{attemptController.abort();}
   }
   throw Error('UPSTREAM');
- }catch(error){return error instanceof FeedFailure?error.response:upstream();}finally{clearTimeout(timer);}
+ }catch(error){if(error instanceof FeedFailure){const response=error.response;return new Response(response.body,{status:response.status,headers:{'content-type':response.headers.get('content-type')??'application/json','cache-control':'no-store','x-request-id':id,...(response.headers.has('retry-after')?{'retry-after':response.headers.get('retry-after')!}:{})}});}return upstream();}finally{clearTimeout(timer);}
 }

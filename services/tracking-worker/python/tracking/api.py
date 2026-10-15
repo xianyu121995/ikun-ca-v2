@@ -168,7 +168,7 @@ def create_app(cfg: Config, store: Store | None = None):
             raise DomainError(404, "NOT_FOUND", "feed path not found")
         model, handler = handlers[operation]
         value = model.model_validate(await body(request, maximum=2 * 1024 * 1024))
-        return reply(request, handler(store, value))
+        return reply(request, await asyncio.to_thread(handler, store, value))
 
     @app.post("/internal/v1/commands", dependencies=[Depends(service)])
     async def accept(request: Request):

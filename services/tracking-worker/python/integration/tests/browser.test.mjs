@@ -49,6 +49,7 @@ try{
   const context=await browser.newContext({viewport:{width,height:960}});const page=await context.newPage();currentPage=page;
   context.on('page',popup=>popup.on('pageerror',e=>errors.push(e.message)));
   page.on('pageerror',e=>errors.push(e.message));
+  page.on('requestfailed',request=>{const url=new URL(request.url());if(url.pathname.startsWith('/api/'))network.push({path:url.pathname,query:url.search,method:request.method(),failure:request.failure()?.errorText});});
   page.on('response',r=>{const url=new URL(r.url());if(url.pathname.startsWith('/api/v1/tracking')||url.pathname==='/api/v1/events/stream')network.push({path:url.pathname,query:url.search,method:r.request().method(),status:r.status()});});
   await context.route('https://x.com/**',r=>r.fulfill({status:200,body:'Synthetic original-link navigation; no external request'}));
   const anonymous=await page.goto(origin+'/tracking');const redirected=await deniedPage(page,anonymous,width,'anonymous');steps.push({width,step:redirected?'anonymous-page-denied':'anonymous-page-fails-closed-BLOCKED-500'});if(!redirected)await page.goto(origin+'/login?next=/tracking');

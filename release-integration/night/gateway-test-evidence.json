@@ -1,0 +1,20 @@
+{
+  "status": "PASS_SYNTHETIC_UPSTREAM_TESTS",
+  "tests": 12,
+  "failed": 0,
+  "tool_chunk": "e753a9",
+  "source_sha256": {
+    "apps/website/lib/service-gateway/commands.ts": "13e9b0068abf87c669cd422f20b1c6c2c1aff800261c18ca8f22cfa5a5d3b808",
+    "release-integration/tests/command-gateway.test.mjs": "8a9ab6fed4d4b001e6ce6017c463cd96125e37967d2473f7e166789d4dce9828"
+  },
+  "actual_Next_or_provider_calls": false,
+  "cases": [
+    "stale-running-succeeded-rejected-after-Tracking-404",
+    "full-CommandResultV2-validation",
+    "Projects-503-preserved-without-fallback",
+    "bad-envelope-no-leak",
+    "direct-Tracking-with-Hunter-down-or-hung",
+    "three-sources-confirmed-NOT_FOUND",
+    "canonical-scope-match"
+  ]
+}

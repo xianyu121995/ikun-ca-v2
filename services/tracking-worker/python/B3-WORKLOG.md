@@ -1,4 +1,4 @@
-# B3 开发记录（尚未交付验收）
+# B3 开发记录（历史与当前分段）
 
 基线 9e2835cafc95cb15dc4b8178abacf0c604018536；放行 9e1d1aa53d58b9ee4f23f5ec1356da0ebbf1e362；产品增补 c3f535b0342253a74905b65ea87bd9b819624061。只在 services/tracking-worker 与 schemas/tracking 修改，未合并/推送/部署。B0/B1/B2/UI 按 integration/prepare-b3.py 的完整 SHA 导出到忽略的 .b3/preview，未改其他 Worktree。
 
@@ -58,3 +58,9 @@ B2 ingest/tracking=501，不改Projects、不伪造receipt，观察outbox保留p
 579a57f夜间批准及967f309认证依赖、0e2c86f C03冻结审查取代暂停。固定Auth f097与Projects aa51；先真实Next6种303/401、5种SSE撤销通过，再实现v4协议。R1/R2/R3按总管独立复现直接修复；旧失败（含TOCTOU 121/122）全保留。侧车改一次lstat；永久账本/过期回拨/分批清理/新路径恢复均有回归。本轮最终轻量127通过，2 wrapper内14 Node不额外累加。整个最终重任务批次仍使用原唯一heavy lock。
 
 接线增量8b84ee97a94bae28e98b550b2721991f30088486由集成在core freeze后保留Projects全局SSE并加Tracking专用alias；本窗口按原候选路径验收，不重复改UI或做语音。当前交接以NIGHT-HANDOFF/NIGHT-EVIDENCE为准。
+
+## 最终夜间交付 · 当前候选
+
+源码c4de379a67bd9b154bab87ce81d4645b53102ea0，P2修复69f2609845ad751f46bc17a5cc060bb9122f9c3a。旧59e全部通过证据独立保留；新增三项cursor取消用例先失败后通过。131 pytest（2 wrapper内9+12 Node不重复加总）、新生产构建/真实Next6+5+1、新两尺寸定向6组通过。构建后只有独立browser测试readiness/截图等待变化，349运行输入hash 98fedb7d612e3fecaf86e1d4db86c81be6b63dc21e32a712e5838c7c706203de不变，compiled135项绑定。最终截图已查看，六卡已加载。此前分页/readiness失败、第一次截图仍在加载的中间记录保留，当前仅以NIGHT-EVIDENCE为准。
+
+本夜总管已明确解除资源暂停；唯一共享锁、集成优先。只复验本P2定向范围，不重跑旧完整15组。当前不再加业务/测试机制，不自宣freeze或部署；正式alias/多源command由集成接收，语音由UI接手。

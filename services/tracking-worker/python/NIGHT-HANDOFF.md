@@ -1,8 +1,14 @@
-# B3 夜间交接（验收进行中）
+# B3 Tracking 交接（待总管冻结与正式接线）
 
 权威：579a57f2e3e470525eb53f9f1f85ba75d25f3728，认证审查967f3098e84de7e299d970019d56b571ac63de94，C03冻结审查0e2c86f3c00e03bcc7e9c49a5572f182d4c86b8a。B1固定f097bd4722155d5e689b8894956391ed7e5f2fa7，B2固定aa51a640a159e4c8f6cdd841a25f4279e73075ba（继承cc95认证修复）。不合入协调分支。
 
 当前实现：published-v1显式profile；服务端全量S/A/B筛选/计数/排序/分页；跨代稳定活动、独立QUOTE/结构分类、15天保留/永久小账本、验证备份/显式恢复。旧默认latest/activities保留字段和方向。真实来源关闭；只有私有本地夹具验收，未合并/推送/部署。
+
+候选源码提交：c4de379a67bd9b154bab87ce81d4645b53102ea0；最小游标取消修复提交69f2609845ad751f46bc17a5cc060bb9122f9c3a。`59e5286f605313b20a3ec0c7e976341f3ee6104e`的完整验收另存NIGHT-EVIDENCE-59e5286.json及对应manifest，包含131个pytest、真实Next六类303/401与五类静默SSE撤销、原生429、1440/390共15组完整浏览器流程。该旧版通过不冒充当前源码的全量浏览器验收。当前131个pytest通过（2个wrapper内部9+12=21个Node项不重复累加），新生产Next六类303/401、五类静默SSE撤销、原生429通过；新1440/390定向feed共6组通过，最终截图已查看。62个源码输入、349个运行输入、135个compiled文件、产物及锁回执见NIGHT-EVIDENCE.json和NIGHT-SOURCE-MANIFEST.json。构建后仅定向浏览器脚本readiness/截图等待改变，349个运行输入逐字节一致，未重复全构建。
+
+游标取消修复仅改变自有BFF：错误正文超过64KiB或提前读取失败时取消reader，再释放锁；所有分支finally中止总controller。正常429先完整缓冲再返回，避免取消尚未消费的响应正文。新增三项回归先在旧实现复现失败，再验证超限取消、提前失败取消、延迟游标429正文及Retry-After保留。Python/业务SQL/权限/评分协议不改。
+
+资源约束：本夜项目总管已解除此前完整构建/Chrome暂停，统一使用唯一主锁，集成优先。本P2按总管要求仅重做生产build/bind、实际Next429及关键feed浏览器回归；测试脚本单独调整且运行字节不变时，只在锁内复跑该定向浏览器，不重复全构建。语音仍由UI在总管冻结核心后接手。
 
 R1：目标新路径的第一次身份提交即ready=0；最新ledger合并、清理及完整性验证后才ready=1。复制、inactivate、ledger、cleanup、activation前的中断均应拒绝启动；恢复后旧SSE锚点422，不将恢复包自身作为当前ledger来源。需要独立当前库（停止源worker）或更新且单独验证的备份，以及外部已知expected watermark。无法证明去重水位时拒绝恢复，不宣称任意丢盘零RPO。
 
@@ -39,7 +45,7 @@ init/migrate是唯一DDL入口。v3升级先成功备份再事务迁移004；001
 
 语音未实施。可供后续addon消费的已审基础：SSE tracking.feed.activity.created.v1的稳定event_id/activity_id/subscription_id、is_live_new/replay；初连与Last-Event-ID历史帧强制replay。真实notes与S/A/B来自该活动在published-v1投影的权威结果；订阅备注空或评分非S/A/B不播。UI owner在B3冻结后按总管门禁接手，本模块未加入播放器、开关或队列。
 
-B2 ingest/tracking仍501，outbox仅pending/可查询，过期正文清除后为expired_pending_reconciliation，不伪造投递成功；commands、审计和最小去重账本保留。实际6551/付费/共享Watch/跨worker公网/生产新作业与域名接线未执行，正式接收由总管/集成负责。最终source SHA、精确映射、SQL/锁/入口hash和回执将在通过最终批次后补入NIGHT-EVIDENCE.json。
+B2 ingest/tracking仍501，outbox仅pending/可查询，过期正文清除后为expired_pending_reconciliation，不伪造投递成功；commands、审计和最小去重账本保留。实际6551/付费/共享Watch/跨worker公网/生产新作业与域名接线未执行，正式接收由总管/集成负责。NIGHT-EVIDENCE.json记录source SHA、精确映射、SQL/锁/入口hash与实际回执；只证明本地隔离候选，不证明线上接线。
 
 补充：恢复前先用entry.py status读取已知ledger_high_water，停源worker后以外部已知非退回水位执行恢复；entry.py backup创建新的成功验证副本。若旧包与当前projects/commands/public_receipts/receipts/audit控制状态不同，拒绝恢复旧包，先刷新备份，避免覆盖人工备注或恢复旧命令。
 

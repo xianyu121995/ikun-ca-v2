@@ -1,0 +1,567 @@
+{
+  "record_version": 3,
+  "status": "LOCAL_BASELINE_PLUS_P2_DELTA_PASS_PENDING_CHIEF_FREEZE",
+  "generated_at_utc": "2026-10-15T19:25:07.240038+00:00",
+  "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+  "base_commit": "9e2835cafc95cb15dc4b8178abacf0c604018536",
+  "source_manifest": {
+    "path": "NIGHT-SOURCE-MANIFEST.json",
+    "sha256": "e95eadb528becd748263ac3811853dc9d2e33b5fba58d418aaa67b860af5a03d"
+  },
+  "source_set_sha256": "695dcbdbc2f169d9e27f6f05679c72029249cdf0f619201e9e201f0965b03dbd",
+  "source_files": 62,
+  "preview_source_set_sha256": "98fedb7d612e3fecaf86e1d4db86c81be6b63dc21e32a712e5838c7c706203de",
+  "preview_files": 349,
+  "pins": {
+    "spec": "9699375c920465b5d802e7acff17b5421203e544",
+    "b0": "85be3bd6dce25d82033b6cb1a7157aaa39bd571e",
+    "auth": "f097bd4722155d5e689b8894956391ed7e5f2fa7",
+    "projects": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+    "ui": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "tracking_ui": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+    "homepage": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e",
+    "hunter_ui": "08065d700239b20fb4c887bbd0c85321904687f8",
+    "home_contract": "6595c4a05b736889a4649b1d0aa7405601deebc4",
+    "collections": "379c6e583e487f038629e1ca24d4b2614970ad0c",
+    "release": "9e1d1aa53d58b9ee4f23f5ec1356da0ebbf1e362",
+    "product": "50ee277aed435a723aab6139bd952e709b3ad08e",
+    "night_release": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+    "auth_review": "967f3098e84de7e299d970019d56b571ac63de94",
+    "c03_review": "0e2c86f3c00e03bcc7e9c49a5572f182d4c86b8a",
+    "view_review": "6ea8b004c368e17a123e055848f59f6370f2c29d"
+  },
+  "gateway_addendum": "8b84ee97a94bae28e98b550b2721991f30088486",
+  "pytest": {
+    "passed": 131,
+    "failed": 0,
+    "skipped": 0,
+    "by_file": {
+      "tests.test_api_store": 25,
+      "tests.test_config": 11,
+      "tests.test_feed_query": 1,
+      "tests.test_feed_retention": 38,
+      "tests.test_identity": 1,
+      "tests.test_lifecycle": 25,
+      "tests.test_node_entries": 1,
+      "tests.test_processes": 2,
+      "tests.test_schema": 25,
+      "tests.test_v1": 2
+    },
+    "wrappers": 2,
+    "nested_node_cases": {
+      "actual_B1_B2_entries": 9,
+      "query_budget_error_and_cursor_cancel": 12
+    },
+    "nested_added_to_total": false,
+    "junit": {
+      "path": "artifacts/b3/cursor-cancel-final-pytest-1792091660500445000.xml",
+      "sha256": "d75e80e754e3dcb9eb740e54444594be915692e51f2a6fde2596c926c5864b81"
+    },
+    "log": {
+      "path": "artifacts/b3/cursor-cancel-final-pytest-1792091660500445000.log",
+      "sha256": "65dbf791208bb9391a4e5297878531c97bf16a2dae64a38fe0cbb210afb83974"
+    },
+    "node_log": {
+      "path": "artifacts/b3/node-entries-pytest-1792091687674618000.log",
+      "sha256": "703dfd568741ae392f84fcc60342ffea22c10b328e6415991481f3cf56295d12"
+    },
+    "query_log": {
+      "path": "artifacts/b3/feed-query-1792091672664044000.log",
+      "sha256": "2ed93c1ea182ffe939b5c25c0a69b7b7c1157b5f8d5c5a2485cd806abab0c2c3"
+    },
+    "warning": "one TestClient/httpx deprecation warning; no dependency change",
+    "execution_commit": "69f2609845ad751f46bc17a5cc060bb9122f9c3a",
+    "covered_inputs_identical_at_final": true,
+    "only_subsequent_source_change": "standalone feed browser regression script, not imported by pytest"
+  },
+  "build": {
+    "status": "PASS",
+    "serial_commands": 5,
+    "source_commit": "ff5514c4de2c63a7054b4c0900026bd8ef38372e",
+    "source_set_sha256": "2c7fd453aefa032ec7f817b64d52a6209511ce5c4c71d446841a7c13aee93974",
+    "log": {
+      "path": "artifacts/b3/build-18.log",
+      "sha256": "5bc0afa374dadd1f3d62e3814977e6ec0b300ab372cea2b7aea97bd6cda80e41"
+    },
+    "inputs": {
+      "path": "artifacts/b3/build-18-inputs.json",
+      "sha256": "2d8af7c2bc51f88a1d09d97c1603681389b9dafced36d7f6bee5d47867db2c5b"
+    },
+    "build_id": "XnOBDY6DmSFksnq4CFN-P",
+    "post_build_test_only_changes": [
+      "services/tracking-worker/python/integration/tests/feed-browser.test.mjs"
+    ],
+    "runtime_349_input_hashes_match_final": true,
+    "compiled_files": {
+      "path": "artifacts/b3/cursor-cancel-compiled-files.json",
+      "sha256": "37fbda7c72248fe43afe25292ed12f2532c350a354a1b0738e91b5863f83559e"
+    },
+    "compiled_file_count": 135
+  },
+  "actual_next": {
+    "status": "PASS",
+    "rejection_cases": 6,
+    "pages": 303,
+    "APIs": 401,
+    "quiet_SSE_revocations": 5,
+    "native_429_error_transport_cases": 1,
+    "receipt": {
+      "path": "artifacts/b3/auth-next-1792091747669/receipt.json",
+      "sha256": "a11b023b74af1f6134e3c57f0157507c72cc79cfb2cd5315c607ca1b280f260f"
+    },
+    "build_id": "XnOBDY6DmSFksnq4CFN-P"
+  },
+  "lifecycle": {
+    "source": "PASS",
+    "compiled": "PASS",
+    "stages": [
+      "explicit_init",
+      "SIGTERM_exit0",
+      "parent_SIGKILL_private_tree_reaped",
+      "restart"
+    ],
+    "combined_log": {
+      "path": "artifacts/b3/night-acceptance-heavy-1792090719861233000.log",
+      "sha256": "06745fc6de2d61bf3a99adc492e812e63200f5667f863afff2933fcd5ccec628"
+    },
+    "standalone_private_cwd_source_copy_test": "PASS in pytest tests.test_processes; production release preflight remains integration admission",
+    "status": "BASELINE_PASS_UNCHANGED_ENTRY_BYTES",
+    "executed_at_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e",
+    "rerun_after_P2": false,
+    "node_compiled_sha256": "b9275375891c1b3ba02a123ea09afb0a8233fb27a2918b7b9c925cce997265eb",
+    "source_and_compiled_entries_identical_to_baseline": true
+  },
+  "browser": {
+    "status": "TARGETED_PASS",
+    "scope": "feed-only; previous full 15 groups remain a distinct baseline",
+    "viewports": [
+      1440,
+      390
+    ],
+    "flow_groups": 6,
+    "steps": [
+      {
+        "width": 1440,
+        "step": "published-feed-dedup-quote-and-cursor-page"
+      },
+      {
+        "width": 1440,
+        "step": "SAB-and-Unicode-server-search-after-cursor"
+      },
+      {
+        "width": 1440,
+        "step": "ten-refreshes-same-view-without-429-or-horizontal-overflow"
+      },
+      {
+        "width": 390,
+        "step": "published-feed-dedup-quote-and-cursor-page"
+      },
+      {
+        "width": 390,
+        "step": "SAB-and-Unicode-server-search-after-cursor"
+      },
+      {
+        "width": 390,
+        "step": "ten-refreshes-same-view-without-429-or-horizontal-overflow"
+      }
+    ],
+    "page_errors": 0,
+    "network_failures": [],
+    "same_view_refresh_count_each_viewport": 10,
+    "response_DOM_settled_checks": 6,
+    "receipt": {
+      "path": "artifacts/b3/feed-browser-1792092220729/receipt.json",
+      "sha256": "cf39c1498c35e09be401e4ea9fea3a639a527a95935eda91dbce252d6cbd36a5"
+    },
+    "test_source_sha256": "c80b3d48439fd6bbd8a3a5a01b81d11ad7ba9c443f3d79c5e86a6bc791e95f73",
+    "screenshots": {
+      "feed-1440.png": {
+        "path": "artifacts/b3/feed-browser-1792092220729/feed-1440.png",
+        "sha256": "85a4f33cb2ebd92438e334e52eba63727004cfdf7764232e95c7948c890599d7"
+      },
+      "feed-390.png": {
+        "path": "artifacts/b3/feed-browser-1792092220729/feed-390.png",
+        "sha256": "b18dbe86cd06e7080e37a3df179a848adb8abf5a5ce48686b2840011cf98fe25"
+      }
+    },
+    "screenshots_actually_viewed": true,
+    "page_overflow": false,
+    "build_id": "XnOBDY6DmSFksnq4CFN-P",
+    "screenshots_visual_result": "both final screenshots show six loaded cards, notes first, fixture/source-off banners and no horizontal overflow"
+  },
+  "C03_budgets": {
+    "receipt": {
+      "path": "artifacts/b3/feed-budgets-1792091662408.json",
+      "sha256": "b822b7839adf92dbf1c7ea8dee8a6eef0c3686f45dcfe926b47fb702ecafb4af"
+    },
+    "observed": [
+      {
+        "mode": "retry",
+        "status": 200,
+        "duration_ms": 53,
+        "attempts": 2,
+        "max_active": 2,
+        "active_after_cancel": 0,
+        "hanging_aborted": 1
+      },
+      {
+        "mode": "timeout",
+        "status": 503,
+        "duration_ms": 2028,
+        "attempts": 1,
+        "max_active": 1,
+        "active_after_cancel": 0,
+        "hanging_aborted": 1
+      },
+      {
+        "mode": "whole",
+        "status": 503,
+        "duration_ms": 8024,
+        "attempts": 1,
+        "max_active": 2,
+        "active_after_cancel": 0,
+        "hanging_aborted": 0
+      }
+    ]
+  },
+  "heavy_lock": {
+    "unique_script": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/scripts/with-heavy-lock.py",
+    "script_sha256": "2c4775d7ac0b96b8b84c9c88489c63ba116d9773e1c2b6b5fe5f12848e04c848",
+    "whole_preview_lifetime_held": true,
+    "final_receipt": {
+      "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-8a808a1c-6a03-4085-9b3f-a451b2a2d18c.json",
+      "sha256": "b112716ea4e6275ec3662d1ba5d45b211c5d0ff0295fa437997c73d0d6aaba13",
+      "owner": "tracking-worker",
+      "started_at_epoch": 1792092220.111517,
+      "ended_at_epoch": 1792092234.146801,
+      "exit_code": 0
+    },
+    "all_night_receipts": [
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-5cebc055-bef7-4957-98a1-5fbc3987efe7.json",
+        "sha256": "601f4eba0f90fc8f8a330a89540b045f745c7d6277b8bf272f2877ff666bb40f",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792085546.102299,
+        "ended_at_epoch": 1792085575.330552,
+        "exit_code": 0
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-61c427aa-b98e-4903-bad9-cf3e732d840e.json",
+        "sha256": "c2fbf6cfd3f16d268d006ce9df730047d8115a19a76ce3862ee82da7c06b8289",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792086435.010462,
+        "ended_at_epoch": 1792086467.76756,
+        "exit_code": 0
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-180399b9-4eb4-4abd-9332-76a5e7574185.json",
+        "sha256": "708a7d66d314d3c58c47c2d9e5cab39f43d420250b8a4f5c7884228f271a9435",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792088152.542559,
+        "ended_at_epoch": 1792088196.1931598,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-ac0163df-c736-400b-9cd2-ae57c4898b67.json",
+        "sha256": "30eb2a55b8d13b8775c509e91b740be3baa20dfa425cdff0784434d2fdeb3303",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792088382.446195,
+        "ended_at_epoch": 1792088455.654043,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-19bff912-32f8-4776-bc65-695e292751b6.json",
+        "sha256": "e4c101fc9e8eaeb499358dcadf24b0d9a66a28719af48d73633d982f31a0e314",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792089943.36494,
+        "ended_at_epoch": 1792090013.8670778,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-43436db6-cc9b-4bc6-b2f4-f15d240d7d81.json",
+        "sha256": "4e4ce21e2173e8ac27692e95b795e1119d01f6c968025b97286ca2d12f63e229",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792090506.894866,
+        "ended_at_epoch": 1792090588.6212711,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-0e859231-cbdd-45d9-b9ad-b0491b4cabe2.json",
+        "sha256": "f167f7504ce5ba724aa0f14edccf5ea928e577899b9e165fd651d67c54514942",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792090719.8202188,
+        "ended_at_epoch": 1792090778.048841,
+        "exit_code": 0
+      }
+    ],
+    "P2_receipts": [
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-8a808a1c-6a03-4085-9b3f-a451b2a2d18c.json",
+        "sha256": "b112716ea4e6275ec3662d1ba5d45b211c5d0ff0295fa437997c73d0d6aaba13",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792092220.111517,
+        "ended_at_epoch": 1792092234.146801,
+        "exit_code": 0
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-4b5b5af6-5286-49a3-b04c-36369eb9ef9a.json",
+        "sha256": "644502f5cbb2876be934ad95831c4ad66bff1dcc44ea4985cc965b2b9fddca8a",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792092076.227534,
+        "ended_at_epoch": 1792092089.2877162,
+        "exit_code": 0
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-c043eeb0-77eb-464d-8a24-a7499dbfd0b4.json",
+        "sha256": "034cab11af36178ba11ffc8969f1b0f498ad0605eab4067852a417b203509107",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792092148.1457658,
+        "ended_at_epoch": 1792092161.150592,
+        "exit_code": 0
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-bab6a0b1-a76e-4a7f-9565-d89855500e91.json",
+        "sha256": "1afad854c2d97711046d237865cf2f2222fa881dff0032108be88946d99e53f8",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792091991.860107,
+        "ended_at_epoch": 1792092014.185663,
+        "exit_code": 1
+      },
+      {
+        "path": "artifacts/b3/heavy-lock-receipts/tracking-worker-7b02d9b3-9d7a-4ce7-9a80-4529edbd2b31.json",
+        "sha256": "580b48960f7ff0c45a2dba763bb796d24265adf5916de19d483dcae88169d209",
+        "owner": "tracking-worker",
+        "started_at_epoch": 1792091730.560294,
+        "ended_at_epoch": 1792091784.442389,
+        "exit_code": 1
+      }
+    ],
+    "combined_first_build_auth_browser_log": {
+      "path": "artifacts/b3/cursor-cancel-heavy-1792091730511324000.log",
+      "sha256": "a388045632bd4bfa6c8e34fba3dc5f7b251b6d94c397ee3636c5d0ca69e42711"
+    },
+    "accepted_browser_log": {
+      "path": "artifacts/b3/cursor-cancel-browser-accepted-1792092220064341000.log",
+      "sha256": "322e0ff9d723bfd9194bcf5156ba8ad15aebda6cb78f1f7f6d78d2b018fbe0b8"
+    },
+    "first_P2_browser_failure_exit": 1
+  },
+  "regressions": {
+    "R1_activation_and_restore_boundaries": "PASS",
+    "R2_atomic_retention_high_water": "PASS",
+    "R3_cancel_drain_before_retry_max2": "PASS",
+    "sidecar_lstat_TOCTOU": "PASS",
+    "view_hint_scope_and_quota_compatibility": "PASS",
+    "streamed_error_before_fix": {
+      "path": "artifacts/b3/night-stream-error-before.log",
+      "sha256": "0d076c87e3a1dca24e7f86c6fb289ab6529e095d09018867381849452327e9f0"
+    },
+    "streamed_error_after_fix": "PASS in final Node wrapper and actual Next native429",
+    "old_website_network_diagnostic": {
+      "path": "artifacts/b3/old-website-transport-diagnostic.json",
+      "sha256": "03f27c94e14f303b08c93cbd9abc6d739d7c457f489689b2ad281e683c005673"
+    },
+    "cause": "attempt abort ran before the unconsumed Worker error body was forwarded; buffered <=64KiB error body before cancellation fixes 429/503 transport",
+    "prior_failures_preserved": true,
+    "cursor_error_cancellation": {
+      "status": "PASS",
+      "fix_commit": "69f2609845ad751f46bc17a5cc060bb9122f9c3a",
+      "before_fix": {
+        "path": "artifacts/b3/cursor-cancel-before-local-http.log",
+        "sha256": "e87a721421ba7e1f4624ec129759afb9effec6965c095a8916746937e4bb53b4"
+      },
+      "cases": 3,
+      "cases_names": [
+        "oversized cursor body cancels stream/signal",
+        "early read failure aborts signal/releases reader",
+        "delayed cursor429 stays readable with Retry-After"
+      ],
+      "after_fix_query_log": {
+        "path": "artifacts/b3/feed-query-1792091672664044000.log",
+        "sha256": "2ed93c1ea182ffe939b5c25c0a69b7b7c1157b5f8d5c5a2485cd806abab0c2c3"
+      },
+      "implementation": "reader.cancel on failed/oversized error body, unified finally deadline.abort after buffered response",
+      "runtime_changed_files_since_59e": [
+        "services/tracking-worker/python/integration/website/lib/published-feed.ts"
+      ]
+    },
+    "targeted_browser_readiness": {
+      "status": "PASS",
+      "runtime_controller_changed": false,
+      "failure_receipts": [
+        {
+          "path": "artifacts/b3/feed-browser-1792091759375/failure.json",
+          "sha256": "ff465747a9e8a5c50cf3347cbb0cd5fc45c1469746a1335cf00d1bbac2652092"
+        },
+        {
+          "path": "artifacts/b3/feed-browser-1792091992106/failure.json",
+          "sha256": "fe9e39a9e991f5a10d38b6885ada14df402e9e5cbc4000759dbad859f34c321a"
+        }
+      ],
+      "correction": "wait for subscription/feed request completion, initial 250ms SSE refresh drain and response IDs equal DOM; assert actual page2 HTTP200 and disjoint IDs, then await final refresh before screenshot",
+      "pagination_assertion_not_weakened": true
+    }
+  },
+  "matrix": {
+    "TRK-01": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "TRK-02": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "TRK-03": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "AUTH-01": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "AUTH-02": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "AUTH-03": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "ISO-01": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "OPS-01": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-D1": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-D2": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-C01": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-C03": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "DEC-C05": {
+      "status": "BASELINE_PASS_WITH_P2_TARGETED_DELTA",
+      "implementation_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "baseline_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e"
+    },
+    "OPS-02": {
+      "status": "NOT_DEPLOYED_BY_THIS_OWNER",
+      "production_acceptance": "integration_owner_pending"
+    },
+    "D6": {
+      "status": "CONFIRMED_NOT_IMPLEMENTED_VOICE_ADDON_AFTER_CORE_FREEZE"
+    },
+    "D7": {
+      "status": "CONFIRMED_NOT_IMPLEMENTED_VOICE_ADDON_AFTER_CORE_FREEZE"
+    },
+    "D8": {
+      "status": "CONFIRMED_NOT_IMPLEMENTED_VOICE_ADDON_AFTER_CORE_FREEZE"
+    }
+  },
+  "sql": {
+    "schemas/tracking/001_foundation.sql": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac",
+    "schemas/tracking/002_legacy_reference.sql": "9630f38f8b2bcc2eadf393301e91380d844718f35d9974d93539e486cf6ca94b",
+    "schemas/tracking/002_tracking.sql": "bfd615d27d143ff4b651d7b8158a616ae665ac4b5b81297dc16f11abfce16015",
+    "schemas/tracking/003_commands.sql": "aac6acc9c4811836e0070befeedc6a4ef93e948b353df96daa0342ff20e37a82",
+    "schemas/tracking/004_feed_retention.sql": "778af32acf082ee85210dd06000ac7cac369c6234f6f7bc18d159c7f63d01faa"
+  },
+  "runtime": {
+    "database": "DATA_ROOT/tracking/tracking.db",
+    "schema": 4,
+    "external_collection_enabled": false,
+    "dedicated_account": false,
+    "provider_token_file": "",
+    "compiled_launcher_enforces_external_IO_disabled": true,
+    "health_source_state": "unconfigured",
+    "page_banner": "未连接真实来源",
+    "fixture_banner": "本地验收夹具 · 合成数据仅供测试",
+    "read_and_superadmin_BFF": "real frozen B1 guard; no local human sessions",
+    "real_provider_calls": 0,
+    "shared_watch_mutations": 0,
+    "other_domain_DB_SQL": false
+  },
+  "observational_outbox": {
+    "B2_ingest_tracking": 501,
+    "states": "pending or expired_pending_reconciliation; no fabricated delivery receipt"
+  },
+  "deployment": {
+    "merged": false,
+    "pushed": false,
+    "deployed": false,
+    "production_jobs_installed": false,
+    "formal_alias_and_gateway_integration_pending": true
+  },
+  "unverified": [
+    "actual 6551/paid source end-to-end including quote delivery",
+    "Cloudflare/public v2 domain and production new job admission",
+    "cross-worker final event ingestion; B2 tracking ingress remains501",
+    "browser speech addon: assigned to UI after chief core freeze"
+  ],
+  "commands": {
+    "pytest": [
+      "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/tracking-worker/services/tracking-worker/python/.venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "--junitxml=..."
+    ],
+    "heavy_children": [
+      [
+        ".venv/bin/python",
+        "integration/build-b3.py"
+      ],
+      [
+        "node",
+        "integration/tests/auth-next.test.mjs"
+      ],
+      [
+        "node",
+        "integration/tests/feed-browser.test.mjs"
+      ]
+    ],
+    "init_migrate_restore_preflight": "NIGHT-HANDOFF.md"
+  },
+  "resource_gate": {
+    "state": "NIGHT_RESUMED_BY_CHIEF",
+    "source_thread_id": "01a13c4a-3a35-7132-a8e4-88b32cc50b01",
+    "scope": "production build/bind, actual Next429 and targeted feed browser; integration has priority; all heavyweight lifetimes use the unique shared lock",
+    "test_only_followups": "chief explicitly required browser-only reruns without rebuilding unchanged production runtime bytes"
+  },
+  "prior_full_acceptance": {
+    "implementation_commit": "59e5286f605313b20a3ec0c7e976341f3ee6104e",
+    "evidence": {
+      "path": "NIGHT-EVIDENCE-59e5286.json",
+      "sha256": "f7e487bf7dc7097dea36c589425eb385b01a40e05c7e4d0d52ba5d31e0765f4b"
+    },
+    "manifest": {
+      "path": "NIGHT-SOURCE-MANIFEST-59e5286.json",
+      "sha256": "110834a716f13ea8c208d4db40c2976b7f25b7e8cffae4ee8671e03fafa88faf"
+    },
+    "full_browser_groups": 15,
+    "not_recounted_as_current_full_run": true
+  }
+}

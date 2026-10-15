@@ -1221,8 +1221,8 @@
       "baseline_path": null,
       "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "patch_path": "release-integration/night/patches/site-6.patch",
-      "patch_sha256": "34170a3030ec1a468da93cd9305d8a5374b7903e369a77b9eb3d5468aa87756d",
-      "target_sha256": "c5f13986922b5ce9b4abaa5a58e6682d10f562fbfc9b1e2d298ce453d485f77a"
+      "patch_sha256": "1eeead7a3953600103df1ae5c26ef05d7308b1338344ca2039b24f5241c2aec3",
+      "target_sha256": "13e9b0068abf87c669cd422f20b1c6c2c1aff800261c18ca8f22cfa5a5d3b808"
     },
     "apps/website/lib/service-gateway/relay.ts": {
       "baseline_commit": null,

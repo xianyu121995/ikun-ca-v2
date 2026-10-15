@@ -148,7 +148,7 @@
       "apps/website/app/api/v1/commands/[id]/route.ts": "f90f70f1036ee62534181e6d4e5359206392007b308e39de9c06fb73ddcbb5f0",
       "apps/website/app/api/v1/hunter/events/route.ts": "31bbf8b387c5f5743615b25bece044274af209b2837e38280c83378a79336fe4",
       "apps/website/app/api/v1/tracking/events/route.ts": "2183413bd7a9aebe748469c4040e494bcf2554b58091d0d15569a0712a2c887f",
-      "apps/website/lib/service-gateway/commands.ts": "34170a3030ec1a468da93cd9305d8a5374b7903e369a77b9eb3d5468aa87756d",
+      "apps/website/lib/service-gateway/commands.ts": "1eeead7a3953600103df1ae5c26ef05d7308b1338344ca2039b24f5241c2aec3",
       "apps/website/lib/service-gateway/relay.ts": "32dc73b022f5656574b84145f753dd8c67fefe893c0e19cb000df18e864301d0",
       "apps/website/instrumentation.ts": "411a66256373d96d93cef9b3c6168b1144fa962d730d3cb45562e305a38de909"
     },

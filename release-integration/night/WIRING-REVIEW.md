@@ -25,6 +25,7 @@
 - Projects经既有`operation=command`查询canonical映射/持久outbox投影；未映射时委托Hunter已有命令投影，允许project_id/subscription_id为null。
 - 有Projects canonical后查询Tracking同一cmd的实际投影，不因Projects先返回200/pending而短路。直接Tracking命令也必须可查询，不能只保留Hunter来源分支。
 - 仅确切的`404 + NOT_FOUND`可作为该来源未找到；401/403、超时、503、错误scope/投影不匹配均不能当404。可确认归属的成功投影不应被无关worker不可用拖垮；无法确认的结果保留unknown/不可用，不能编造NOT_FOUND或running。
+- 执行顺序明确为：Projects非404错误直接保留；Projects确证不存在后，Hunter与直接Tracking是独立归属探测，已核实的直接Tracking可先返回，不等待无关Hunter超时。完整CommandResultV2和canonical作用域必须匹配；额外/缺失字段、错误ID/时间/revision/envelope均503。旧Projects running/succeeded在Tracking确证404时也503，不能当当前运行事实。
 - Tracking尚未接收而Projects已持久排队时，只报告实际pending；读取gateway不重新确认、不分配新cmd，也不为查询触发新的投递机制。accepted/ACK与真实running/connected分别保留。
 
 当前站route仅委托Projects。Tracking候选是“Projects明确404再查Tracking”，因此漏Hunter待映射，而且Projects200时未查Tracking实际状态；Hunter预览单来源commands挂载同样不能覆盖全局route。所需变更是全局gateway的小范围组合，不是重写领域命令状态机。超时预算、各来源错误与canonical一致性按最终冻结handler签名形成精确接收delta。

@@ -161,3 +161,13 @@ test('Actual B1 + frozen B2 UDS rating catalog + Tracking profile globally filte
  const current=await route.GET(req(path,'GET',admin));assert.equal(current.status,200);assert.deepEqual((await current.json()).data.activity_counts_by_rating,{S:1,A:2,B:3});
  await local.create('feedreader',initial);const login=await local.login('feedreader',initial);await local.changePassword(login.actor,initial,password);const user=await session('feedreader');assert.equal((await route.GET(req(path,'GET',user))).status,200);
 });
+
+test('Same authenticated view handles ten refreshes and filters during real WSS burst without self-exhaustion',async()=>{
+ const admin=await session('admin'),view='qv1_'+randomUUID();
+ for(let index=0;index<10;index++)await fixture('emit',{username:'c03fixture0',content:{id:String(200000+index),text:'C03 burst '+index,createdAt:new Date().toISOString(),userScreenName:'c03fixture0',isReply:false,isQuote:false}});
+ for(let index=0;index<10;index++){
+  const path='/api/v1/tracking/latest?profile=published-v1&limit=1&q=C03%20fixture&ratings='+['S,A,B','S','A','B'][index%4];
+  const response=await route.GET(req(path,'GET',admin,undefined,{'x-tracking-query-view':view}));assert.equal(response.status,200);assert.ok((await response.json()).data.matched_total>=1);
+ }
+ assert.equal((await route.GET(req('/api/v1/tracking/latest?profile=published-v1','GET',admin,undefined,{'x-tracking-query-view':'invalid'}))).status,422);
+});

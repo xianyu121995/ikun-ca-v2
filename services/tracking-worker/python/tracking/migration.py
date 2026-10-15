@@ -75,8 +75,8 @@ def structure(db, *, version=4, allow_recovery=False):
             "tweet_ledger": "first_seq tweet_id expires_at_ms first_received_at_ms origin_subscription_id state",
             "tracking_outbox": "original_hash original_receipt_hash",
             "feed_meta": "singleton semantic_revision cursor_key snapshot_epoch database_path last_retention_now_ms clock_anomaly recovery_ready",
-            "feed_bases": "basis_id actor_hash query_hash query_json semantic_revision snapshot_epoch as_of_ms expires_at_ms prepared_until_ms candidate_ids subscription_ids project_ids",
-            "feed_snapshots": "snapshot_id actor_hash query_hash semantic_revision snapshot_epoch as_of_ms expires_at_ms catalog_version ordered_ids ratings_json counts_json",
+            "feed_bases": "basis_id actor_hash query_view_id query_hash query_json semantic_revision snapshot_epoch as_of_ms expires_at_ms prepared_until_ms candidate_ids subscription_ids project_ids",
+            "feed_snapshots": "snapshot_id actor_hash query_view_id query_hash semantic_revision snapshot_epoch as_of_ms expires_at_ms catalog_version ordered_ids ratings_json counts_json",
             "retention_jobs": "job_id state created_at_ms updated_at_ms high_water backup_path backup_sha256 error retry_at_ms attempts deleted_count",
         }.items():
             if not set(required.split()) <= {r[1] for r in db.execute(f"PRAGMA table_info({table})")}:

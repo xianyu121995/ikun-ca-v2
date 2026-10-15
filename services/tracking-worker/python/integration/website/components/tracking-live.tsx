@@ -24,6 +24,8 @@ export function TrackingLive({ csrf, canManage, username, fixture = false }: {
     username: string;
     fixture?:boolean;
 }) {
+    const queryView=useRef<string|null>(null);
+    useEffect(()=>{queryView.current??='qv1_'+crypto.randomUUID();},[]);
     const pull = useRef<() => Promise<void>>(async () => { });
     const refreshRef = useRef<ReturnType<typeof coalescedRefresh> | null>(null);
     if (!refreshRef.current)
@@ -43,7 +45,7 @@ export function TrackingLive({ csrf, canManage, username, fixture = false }: {
     const latestView = useRef(viewKey);
     latestView.current = viewKey;
     async function api(path: string, method = 'GET', body?: unknown, row?: Subscription) {
-        const response = await fetch('/api/v1/' + path, { method, credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(12000), headers: { 'content-type': 'application/json', 'x-csrf-token': csrf, ...(method === 'GET' ? {} : { 'idempotency-key': crypto.randomUUID() }), ...(row ? { 'if-match': `"rev-${row.revision}"` } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
+        const response = await fetch('/api/v1/' + path, { method, credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(12000), headers: { 'content-type': 'application/json', 'x-csrf-token': csrf,...(path.startsWith('tracking/latest?')&&queryView.current?{'x-tracking-query-view':queryView.current}:{}), ...(method === 'GET' ? {} : { 'idempotency-key': crypto.randomUUID() }), ...(row ? { 'if-match': `"rev-${row.revision}"` } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
         const value = await response.json();
         if (!response.ok) {
             if (response.status === 401)

@@ -30,6 +30,7 @@ PINS = dict(
     night_release="579a57f2e3e470525eb53f9f1f85ba75d25f3728",
     auth_review="967f3098e84de7e299d970019d56b571ac63de94",
     c03_review="0e2c86f3c00e03bcc7e9c49a5572f182d4c86b8a",
+    view_review="6ea8b004c368e17a123e055848f59f6370f2c29d",
 )
 
 

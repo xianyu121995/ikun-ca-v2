@@ -44,3 +44,7 @@ B2 ingest/tracking仍501，outbox仅pending/可查询，过期正文清除后为
 补充：恢复前先用entry.py status读取已知ledger_high_water，停源worker后以外部已知非退回水位执行恢复；entry.py backup创建新的成功验证副本。若旧包与当前projects/commands/public_receipts/receipts/audit控制状态不同，拒绝恢复旧包，先刷新备份，避免覆盖人工备注或恢复旧命令。
 
 正式SSE接线遵循8b84ee97a94bae28e98b550b2721991f30088486：候选/app/api/v1/events/stream/route.ts处理函数由集成映射到正式/api/v1/tracking/events，controller EventSource URL做精确alias补丁；保留原Projects全局SSE，不覆盖。该接线由集成owner在核心freeze后执行，本候选不为alias重复重建。
+
+## feed-query-view-v1（6ea8b004c368e17a123e055848f59f6370f2c29d已批准）
+
+published-v1可选X-Tracking-Query-View:qv1_UUIDv4；BFF严格校验后仅传bases/pages的query_view_id。非null时只回收同actor_hash+view的缓存，页请求不回收；其他标签/用户、无hint旧客户端不变。无hint仍受全站8槽配额，第9个活跃查询429。两张现有缓存表仅加nullable列，不加新表/DB/service/token。带hint的签名cursor加入w，无hint保持原形状；主动刷新撤销本视图旧cursor(409)/basis(404)，不续期旧查询。controller每次挂载用useRef保存新UUID，历史versioned重放不刷新，live SSE合并250ms。所有版本/2秒8秒/并发2/60秒/64MiB门禁保持。

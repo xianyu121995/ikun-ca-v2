@@ -657,3 +657,129 @@ def test_expired_receipt_payload_is_removed_but_reconcile_identifiers_remain(sto
     with store.connect() as db:
         receipt, original = db.execute("SELECT receipt,original_receipt_hash FROM tracking_outbox").fetchone()
         assert json.loads(receipt) == {"receipt_id": "fixture-receipt"} and len(original) == 64
+
+
+def view_page(store, view, *, actor=None, **query):
+    actor = actor or ACTOR
+    base = feed.basis(
+        store,
+        feed.BasisRequest.model_validate(
+            {
+                "schema_version": 1,
+                "actor": actor,
+                "profile": "published-v1",
+                "query": QUERY | query,
+                "query_view_id": view,
+            }
+        ),
+    )
+    result = feed.snapshot(
+        store,
+        feed.SnapshotRequest.model_validate(
+            {
+                "schema_version": 1,
+                "actor": actor,
+                "basis_id": base["basis_id"],
+                "query_hash": base["query_hash"],
+                "limit": 1,
+                "ratings_snapshot": project_ratings(base),
+            }
+        ),
+    )
+    return result
+
+
+def test_same_view_ten_refreshes_live_arrivals_and_filters_do_not_self_exhaust(store):
+    row = target(store)
+    view = "qv1_" + str(uuid.uuid4())
+    observe(store, row, "960")
+    observe(store, row, "961")
+    previous = view_page(store, view)
+    for index in range(10):
+        observe(store, row, str(1000 + index), text="burst " + str(index))
+        result = view_page(
+            store, view, q="" if index % 2 == 0 else "burst", ratings=["A"] if index % 3 else ["S", "A", "B"]
+        )
+        assert result["snapshot"]["snapshot_id"] != previous["snapshot"]["snapshot_id"]
+        previous = result
+        with store.connect() as db:
+            assert db.execute("SELECT COUNT(*) FROM feed_snapshots").fetchone()[0] == 1
+            assert db.execute("SELECT COUNT(*) FROM feed_bases").fetchone()[0] == 0
+
+
+def test_view_reclaim_is_scoped_to_actor_and_tab_and_pages_do_not_reclaim(store):
+    row = target(store)
+    for identifier in ("970", "971", "972"):
+        observe(store, row, identifier)
+    view1 = "qv1_" + str(uuid.uuid4())
+    view2 = "qv1_" + str(uuid.uuid4())
+    other = ACTOR | {"user_id": "usr_other"}
+    first = view_page(store, view1)
+    second = view_page(store, view2)
+    foreign = view_page(store, view1, actor=other)
+    refreshed = view_page(store, view1, q="body")
+    with pytest.raises(DomainError) as invalidated:
+        next_page(store, first["next_cursor"], query_view_id=view1)
+    assert invalidated.value.status == 409
+    assert len(next_page(store, second["next_cursor"], query_view_id=view2, limit=1)["items"]) == 1
+    assert len(next_page(store, foreign["next_cursor"], query_view_id=view1, actor=other)["items"]) == 2
+    with store.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM feed_snapshots").fetchone()[0] == 3
+    with pytest.raises(DomainError) as mismatch:
+        next_page(store, refreshed["next_cursor"], query_view_id=view2)
+    assert mismatch.value.status == 422
+
+
+def test_reclaimed_basis_returns404_and_invalid_hint_has_no_cache_side_effect(cfg, store):
+    view = "qv1_" + str(uuid.uuid4())
+    value = {
+        "schema_version": 1,
+        "actor": ACTOR,
+        "profile": "published-v1",
+        "query": QUERY,
+        "query_view_id": view,
+    }
+    old = feed.basis(store, feed.BasisRequest.model_validate(value))
+    feed.basis(store, feed.BasisRequest.model_validate(value))
+    with pytest.raises(DomainError) as missing:
+        feed.snapshot(
+            store,
+            feed.SnapshotRequest.model_validate(
+                {
+                    "schema_version": 1,
+                    "actor": ACTOR,
+                    "basis_id": old["basis_id"],
+                    "query_hash": old["query_hash"],
+                    "limit": 2,
+                    "ratings_snapshot": project_ratings(old),
+                }
+            ),
+        )
+    assert missing.value.status == 404
+    with TestClient(create_app(cfg, store)) as client:
+        response = client.post(
+            "/internal/v1/feed/bases",
+            headers={"authorization": "Bearer b3-tracking-direction-credential-xxxxxxxx"},
+            json=value | {"query_view_id": "qv1_NOT_A_UUID"},
+        )
+        assert response.status_code == 422
+    with store.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM feed_bases").fetchone()[0] == 1
+
+
+def test_no_hint_cursor_shape_and_capacity_remain_compatible(store):
+    import base64
+
+    row = target(store)
+    observe(store, row, "980")
+    observe(store, row, "981")
+    result = make_page(store, limit=1)
+    raw = result["next_cursor"].split(".")[0]
+    payload = json.loads(base64.urlsafe_b64decode(raw + "=" * (-len(raw) % 4)))
+    assert "w" not in payload
+    assert len(next_page(store, result["next_cursor"])["items"]) == 1
+    for _ in range(7):
+        make_page(store)
+    with pytest.raises(DomainError) as exhausted:
+        make_page(store)
+    assert exhausted.value.status == 429

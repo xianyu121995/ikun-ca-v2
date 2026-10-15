@@ -64,3 +64,9 @@ test('Worker query failures preserve explicit errors while dropping upstream tra
  const response=await publishedFeed(new Request(root),{user_id:'usr_proxy',tenant_id:'ikun-main',role:'user'},'req_proxy',async()=>new Response(JSON.stringify({error:{code:'RATE_LIMITED',message:'capacity',retryable:true},request_id:'req_proxy'}),{status:429,headers:{'content-type':'application/json','content-length':'99999','connection':'keep-alive','retry-after':'1'}}));
  assert.equal(response.status,429);assert.equal(response.headers.get('retry-after'),'1');assert.equal(response.headers.has('content-length'),false);assert.equal(response.headers.has('connection'),false);assert.equal((await response.json()).error.code,'RATE_LIMITED');
 });
+
+test('Malformed query view hints are rejected before any resource request',async()=>{
+ for(const value of ['','qv1_NOT_A_UUID','qv1_550E8400-e29b-41d4-a716-446655440001','qv1_550e8400-e29b-41d4-a716-446655440001,qv1_550e8400-e29b-41d4-a716-446655440001']){
+  let calls=0;const response=await publishedFeed(new Request(root,{headers:{'x-tracking-query-view':value}}),{user_id:'usr_view',tenant_id:'ikun-main',role:'user'},'req_view',async()=>{calls++;throw Error('MUST_NOT_CALL');});assert.equal(response.status,422);assert.equal(calls,0);
+ }
+});

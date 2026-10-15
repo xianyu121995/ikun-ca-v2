@@ -23,3 +23,5 @@
 恢复只写不存在的新路径。目标第一次身份提交与ready=0同事务；复制期间旧物理路径也拒绝启动。独立当前库或较新已验证备份提供非回退ledger horizon，不能以恢复包自身为源；源worker须停止，旧控制状态/未决命令/人工备注比当前落后则拒绝旧包并要求刷新备份。合并账本、清理和最终验证后才ready=1；中断目标不能开API。旧ID快照失效，旧SSE anchor清掉并返回422。不能证明水位时拒绝，不承诺任意丢盘零RPO。CLI和接线见本模块python/NIGHT-HANDOFF.md。
 
 订阅移除需实际远端absent且命令成功后排除，失败不假移除；停止历史仍受15天窗口。无跨库外键/ATTACH/级联，不改主页/猎手或旧共享Watch。
+
+feed-query-view-v1经6ea8b004c368e17a123e055848f59f6370f2c29d批准：两张现有查询缓存仅增nullable query_view_id，非null只回收同actor_hash+view，不影响其他标签/用户；页读取不回收，无hint维持旧行为和8槽429。hint不是权限凭据，actor/scope仍由B1/BFF/服务方向验证。生命周期/容量/语义与评分版本约束不放宽。

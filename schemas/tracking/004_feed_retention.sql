@@ -16,13 +16,13 @@ CREATE TABLE feed_meta (
  clock_anomaly INTEGER NOT NULL DEFAULT 0, recovery_ready INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE feed_bases (
- basis_id TEXT PRIMARY KEY, actor_hash TEXT NOT NULL, query_hash TEXT NOT NULL,
+ basis_id TEXT PRIMARY KEY, actor_hash TEXT NOT NULL, query_view_id TEXT, query_hash TEXT NOT NULL,
  query_json TEXT NOT NULL, semantic_revision INTEGER NOT NULL, snapshot_epoch TEXT NOT NULL,
  as_of_ms INTEGER NOT NULL, expires_at_ms INTEGER NOT NULL, prepared_until_ms INTEGER NOT NULL,
  candidate_ids TEXT NOT NULL, subscription_ids TEXT NOT NULL, project_ids TEXT NOT NULL
 );
 CREATE TABLE feed_snapshots (
- snapshot_id TEXT PRIMARY KEY, actor_hash TEXT NOT NULL, query_hash TEXT NOT NULL,
+ snapshot_id TEXT PRIMARY KEY, actor_hash TEXT NOT NULL, query_view_id TEXT, query_hash TEXT NOT NULL,
  semantic_revision INTEGER NOT NULL, snapshot_epoch TEXT NOT NULL, as_of_ms INTEGER NOT NULL,
  expires_at_ms INTEGER NOT NULL, catalog_version TEXT, ordered_ids TEXT NOT NULL,
  ratings_json TEXT NOT NULL, counts_json TEXT NOT NULL

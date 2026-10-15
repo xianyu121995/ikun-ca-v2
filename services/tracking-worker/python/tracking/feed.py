@@ -87,6 +87,7 @@ class FeedRequest(Strict):
 
 
 class BasisRequest(FeedRequest):
+    query_view_id: str | None = Field(default=None, pattern="^qv1_" + UUID4 + "$")
     profile: Literal["published-v1"]
     query: Query
 
@@ -113,6 +114,7 @@ class SnapshotRequest(FeedRequest):
 
 
 class PageRequest(FeedRequest):
+    query_view_id: str | None = Field(default=None, pattern="^qv1_" + UUID4 + "$")
     cursor: str = Field(min_length=1, max_length=4096)
     limit: StrictInt = Field(ge=1, le=100)
     verified_catalog_version: str | None = Field(min_length=1, max_length=128)
@@ -204,6 +206,12 @@ def basis(store, request: BasisRequest):
                 f"DELETE FROM {table} WHERE semantic_revision!=? OR snapshot_epoch!=?",
                 (meta["semantic_revision"], meta["snapshot_epoch"]),
             )
+        if request.query_view_id is not None:
+            for table in ("feed_bases", "feed_snapshots"):
+                db.execute(
+                    f"DELETE FROM {table} WHERE actor_hash=? AND query_view_id=?",
+                    (actor_hash(request.actor), request.query_view_id),
+                )
         capacity(db)
         subs = visible_subscriptions(db)
         sub_map = {r["subscription_id"]: r for r in subs}
@@ -224,7 +232,7 @@ def basis(store, request: BasisRequest):
         ]
         capacity(db, sum(len(value.encode()) for value in encoded), reserve=False)
         db.execute(
-            "INSERT INTO feed_bases(basis_id,actor_hash,query_hash,query_json,semantic_revision,snapshot_epoch,as_of_ms,expires_at_ms,prepared_until_ms,candidate_ids,subscription_ids,project_ids) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO feed_bases(basis_id,actor_hash,query_hash,query_json,semantic_revision,snapshot_epoch,as_of_ms,expires_at_ms,prepared_until_ms,candidate_ids,subscription_ids,project_ids,query_view_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 identifier,
                 actor_hash(request.actor),
@@ -236,6 +244,7 @@ def basis(store, request: BasisRequest):
                 now + 60000,
                 now + 15000,
                 *encoded[1:],
+                request.query_view_id,
             ),
         )
         db.execute("COMMIT")
@@ -259,20 +268,21 @@ def _check_snapshot(meta, row, now):
 
 
 def _cursor(meta, row, offset):
-    payload = canonical(
-        {
-            "v": 1,
-            "s": row["snapshot_id"],
-            "a": row["actor_hash"],
-            "q": row["query_hash"],
-            "p": PROFILE,
-            "r": row["semantic_revision"],
-            "c": row["catalog_version"],
-            "e": row["expires_at_ms"],
-            "x": row["snapshot_epoch"],
-            "n": offset,
-        }
-    ).encode()
+    value = {
+        "v": 1,
+        "s": row["snapshot_id"],
+        "a": row["actor_hash"],
+        "q": row["query_hash"],
+        "p": PROFILE,
+        "r": row["semantic_revision"],
+        "c": row["catalog_version"],
+        "e": row["expires_at_ms"],
+        "x": row["snapshot_epoch"],
+        "n": offset,
+    }
+    if row["query_view_id"] is not None:
+        value["w"] = row["query_view_id"]
+    payload = canonical(value).encode()
 
     def encode(b):
         return base64.urlsafe_b64encode(b).decode().rstrip("=")
@@ -294,11 +304,20 @@ def _decode(meta, value):
             raise ValueError()
         result = json.loads(payload)
         if (
-            set(result) != {"v", "s", "a", "q", "p", "r", "c", "e", "x", "n"}
+            set(result)
+            not in (
+                {"v", "s", "a", "q", "p", "r", "c", "e", "x", "n"},
+                {"v", "s", "a", "q", "p", "r", "c", "e", "x", "n", "w"},
+            )
             or result["v"] != 1
             or result["p"] != PROFILE
             or type(result["n"]) is not int
             or result["n"] < 0
+        ):
+            raise ValueError()
+        result.setdefault("w", None)
+        if result["w"] is not None and (
+            not isinstance(result["w"], str) or not re.fullmatch("qv1_" + UUID4, result["w"])
         ):
             raise ValueError()
         return result
@@ -446,6 +465,7 @@ def snapshot(store, request: SnapshotRequest):
         row = {
             "snapshot_id": "fsn_" + str(uuid.uuid4()),
             "actor_hash": base["actor_hash"],
+            "query_view_id": base["query_view_id"],
             "query_hash": base["query_hash"],
             "semantic_revision": base["semantic_revision"],
             "snapshot_epoch": base["snapshot_epoch"],
@@ -477,6 +497,8 @@ def page(store, request: PageRequest):
         value = _decode(meta, request.cursor)
         if value["a"] != actor_hash(request.actor):
             raise DomainError(404, "NOT_FOUND", "feed snapshot not found")
+        if value["w"] != request.query_view_id:
+            raise DomainError(422, "VALIDATION_ERROR", "cursor view binding mismatch")
         row = db.execute("SELECT * FROM feed_snapshots WHERE snapshot_id=?", (value["s"],)).fetchone()
         if row is None:
             raise conflict()
@@ -489,6 +511,7 @@ def page(store, request: PageRequest):
             ("c", "catalog_version"),
             ("e", "expires_at_ms"),
             ("x", "snapshot_epoch"),
+            ("w", "query_view_id"),
         ]:
             if value[key] != row[column]:
                 raise DomainError(422, "VALIDATION_ERROR", "cursor binding mismatch")

@@ -55,7 +55,39 @@
       "standalone_build_or_deployment_required": false,
       "merged_or_received": false,
       "acceptance_relay": "chief verified B3 actual Next six invalid-session page/API cases and five quiet SSE revocations",
-      "does_not_accept_C03_or_worker_core": true
+      "does_not_accept_C03_or_worker_core": true,
+      "next_receiving_superseded_by": "projects_c03_ratings"
+    },
+    "projects_c03_ratings": {
+      "state": "ACCEPTED_DEPENDENCY_ONLY",
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "direct_parent_auth_dependency_commit": "cc95dc27852d056457ca0582cff64a88c0eab1d4",
+      "control_commit": "0e2c86f3c00e03bcc7e9c49a5572f182d4c86b8a",
+      "review_path": "docs/progress/c03-ratings-review.json",
+      "review_sha256": "2f2cf63f64303644d8e5d8e6d82d7de37cf02096129ac6f13943c772060aa297",
+      "review_document_path": "docs/progress/C03-RATINGS-REVIEW.md",
+      "review_document_sha256": "27af216eb2a69d4cb11ce879d1eab37bd48edf21facb090c4d6f30cbb6e62518",
+      "source_manifest_path": "modules/projects/integration/evidence/c03-ratings-check.json",
+      "source_manifest_sha256": "9cd463bb586e833454b49354c7d6043cef21b90d8cf20d2ce2d2ab24874c0dd7",
+      "source_set_sha256": "6fc9ef0895ea8d4e95709477d49d3852581d7893e5f9e6704fafb4a10533eee1",
+      "git_input_hashes_verified_here": 52,
+      "changed_files": 14,
+      "allowed_prefix": "modules/projects/",
+      "source_path": "modules/projects/integration/website/lib/projects.ts",
+      "source_sha256": "013ca12ed02a8e0c476b6e20563282f583b30497c366590378b8dafebf98616c",
+      "receiving_target": "apps/website/lib/projects.ts",
+      "chief_distinct_tests_passed_as_reviewed": 46,
+      "nested_subtests_and_reruns_not_added": true,
+      "initial_sandbox_uds_timeout_preserved_in_chief_review": true,
+      "local_test_rerun_performed_for_dependency_registration": false,
+      "new_schema": false,
+      "new_services": false,
+      "apply_with_next_accepted_worker": true,
+      "standalone_build_or_deployment_required": false,
+      "merged_or_received": false,
+      "does_not_accept_worker_core": true,
+      "final_worker_feed_next_browser_acceptance_still_required": true,
+      "receiving_requires_explicit_intake_delta": true
     }
   }
 }

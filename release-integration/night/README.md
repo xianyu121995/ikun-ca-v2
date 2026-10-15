@@ -62,4 +62,6 @@ unload只接受新根plans内的私有计划，逐字核对已安装plist的labe
 
 main、正式ikun.ca、真实6551/第三方REST/付费、下线旧版、已有Cloudflare/旧作业、共享Watch继续受保护。B3冻结后语音才由全站UI自有新目录交付，集成只收验收冻结addon，不自行开发第二套信息流/播报。
 
-已验收小依赖：Projects认证构造器修复 `cc95dc27852d056457ca0582cff64a88c0eab1d4`，精确helper源hash见intake.json。仅登记供下个已验worker收件，不为此单独构建/部署；C03及B3/B4核心仍待各自最终验收冻结。
+已验收依赖：Projects认证构造器修复 `cc95dc27852d056457ca0582cff64a88c0eab1d4`；其直接子提交C03只读评分 `aa51a640a159e4c8f6cdd841a25f4279e73075ba`也已获域依赖验收，审查Git对象为 `0e2c86f3c00e03bcc7e9c49a5572f182d4c86b8a`。本窗口逐项核对52个输入hash、两份协议及14个变更的Projects范围，无schema/新服务变更。总管独立覆盖46项，保留初次受限沙箱UDS超时及同wrapper重跑通过记录；不累加owner/嵌套/重跑数量，本次仅登记，不另跑测试。
+
+下个已验worker收件使用C03 helper源hash `013ca12ed02a8e0c476b6e20563282f583b30497c366590378b8dafebf98616c`；旧认证helper hash保留为历史依赖，标记由C03继承，避免同一接收目标出现两个候选hash。intake.json固定审查文件和源码清单hash；实际接收仍须获批的精确intake增量，不能直接覆盖当前77/8校验。仅登记供下个已验worker收件，不为此单独合并/构建/部署；B3/B4核心及组合feed/Next/浏览器仍待各自最终验收冻结。

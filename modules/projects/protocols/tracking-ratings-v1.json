@@ -1,0 +1,62 @@
+{
+  "record_version": 1,
+  "protocol": "tracking-ratings-v1",
+  "state": "implementation_candidate_pending_chief_review",
+  "authority_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "b3_wire_commit": "4e0b293901c72df0c28180eb849a2d67d8c9c4c9",
+  "auth_dependency_commit": "cc95dc27852d056457ca0582cff64a88c0eab1d4",
+  "auth_dependency_review_commit": "967f3098e84de7e299d970019d56b571ac63de94",
+  "operation": "ratings",
+  "contract": "tracking-ratings-v1",
+  "transport": "existing_website_B2_UDS",
+  "path": "/v1/rpc",
+  "body_exact_keys": [
+    "project_ids",
+    "expected_catalog_version"
+  ],
+  "batch_min": 0,
+  "batch_max": 200,
+  "unique_canonical_ids": true,
+  "data_exact_keys": [
+    "contract",
+    "catalog_version",
+    "checked_at",
+    "items"
+  ],
+  "item_exact_keys": [
+    "project_id",
+    "state",
+    "rating",
+    "revision"
+  ],
+  "states": [
+    "found",
+    "missing"
+  ],
+  "ratings": [
+    "S",
+    "A",
+    "B",
+    "C",
+    "D",
+    null
+  ],
+  "missing_rating_revision": [
+    null,
+    null
+  ],
+  "catalog_version": "scope_change_sequence_boot_nonce_and_existing_transport_credential_digest",
+  "catalog_version_length": 64,
+  "version_conflict": {
+    "status": 409,
+    "code": "VERSION_CONFLICT"
+  },
+  "lookup_timeout_ms": 2000,
+  "whole_feed_timeout_ms_owned_by_b3": 8000,
+  "public_profile_owned_by_b3": "GET /api/v1/tracking/latest?profile=published-v1",
+  "new_http_routes": [],
+  "new_direction_credentials": [],
+  "projects_migrations": [],
+  "legacy_c02_semantics_unchanged": true,
+  "document_sha256": "c7b79a8f73d678949c347638d9fe9978f8f22db97e9d6d481873828b4036fde8"
+}

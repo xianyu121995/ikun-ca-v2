@@ -53,6 +53,18 @@ test('Actual page guard and Server Action bypassing Proxy validate B1 identity',
   await assert.rejects(context(req('/','POST',admin),()=>action('wrong',randomUUID(),fields)));
   const result=await context(req('/','POST',admin),()=>action(admin.csrf,randomUUID(),{...fields,name:'Action entry'}));assert.equal(result.status,201);
 });
+test('Real B1 user principal reads the exact ratings UDS wire; stale batches fail without data',async()=>{
+  const admin=await session('admin'),user=await session('user');
+  const created=await route.POST(req('/api/v1/projects','POST',admin,{...fields,name:'C03 ratings'}));assert.equal(created.status,201);
+  const project=(await created.json()).data;const principal=auth.principal(req('/api/v1/tracking/latest?profile=published-v1','GET',user));assert.equal(principal.role,'user');
+  const query=(ids,expected=null)=>projects.ipc({operation:'ratings',contract:'tracking-ratings-v1',principal,request_id:randomUUID(),body:{project_ids:ids,expected_catalog_version:expected}});
+  const response=await query([project.project_id]);assert.equal(response.status,200);const value=(await response.json()).data;
+  assert.deepEqual(Object.keys(value).sort(),['contract','catalog_version','checked_at','items'].sort());assert.equal(value.contract,'tracking-ratings-v1');
+  assert.deepEqual(value.items,[{project_id:project.project_id,state:'found',rating:'A',revision:1}]);
+  const patch=req('/api/v1/projects/'+project.project_id,'PATCH',admin,{rating:'S'});patch.headers.set('if-match','"rev-1"');assert.equal((await route.PATCH(patch)).status,200);
+  const stale=await query([],value.catalog_version);assert.equal(stale.status,409);const error=await stale.json();assert.equal(error.error.code,'VERSION_CONFLICT');assert.equal('data' in error,false);
+  assert.equal((await route.GET(req('/api/v1/projects?view=tracking-ratings-v1','GET',user))).status,422);
+});
 test('Actual Next SSE data envelope, safe DTO, Last-Event-ID replay and upstream cancellation',async()=>{
   const {GET}=await import(new URL('apps/website/app/api/v1/events/stream/route.ts',preview));
   const admin=await session('admin'),user=await session('user');

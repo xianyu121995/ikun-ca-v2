@@ -4,6 +4,7 @@ import os
 import re
 import secrets
 import sqlite3
+import stat
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -42,11 +43,13 @@ def project_path(value):
     path = Path(value).expanduser().absolute()
     if path.name != 'projects.db':
         raise ValueError('数据库必须是独立的 projects.db 普通文件')
-    for candidate in (*path.parents, path, Path(str(path) + '-wal'), Path(str(path) + '-shm')):
-        if candidate.is_symlink() or (candidate.is_file() and candidate.stat().st_nlink != 1):
+    files=(path,Path(str(path)+'-wal'),Path(str(path)+'-shm'))
+    for candidate in (*path.parents,*files):
+        try:info=candidate.lstat()
+        except FileNotFoundError:continue # SQLite can remove an idle WAL/SHM between connections.
+        if stat.S_ISLNK(info.st_mode) or (stat.S_ISREG(info.st_mode) and info.st_nlink!=1):
             raise ValueError('数据库路径及 sidecar 不允许符号链接或硬链接')
-    for candidate in (path,Path(str(path)+'-wal'),Path(str(path)+'-shm')):
-        if candidate.exists() and not candidate.is_file():
+        if candidate in files and not stat.S_ISREG(info.st_mode):
             raise ValueError('数据库及 sidecar 必须是普通文件')
     return path
 

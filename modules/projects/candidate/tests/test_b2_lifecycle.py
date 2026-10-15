@@ -36,6 +36,11 @@ def test_real_b0_ipc_lifecycle_and_restart(tmp_path,failure):
             assert client.get('/health/ready',headers={'authorization':'Bearer '+identity['token']}).status_code==200
             assert client.get('/health/ready',headers={'authorization':'Bearer wrong'}).status_code==401
             assert client.post('/v1/rpc',headers={'authorization':'Bearer '+identity['token'],'x-ikun-build-sha':'f'*40},json={}).status_code==403
+            ratings={'operation':'ratings','contract':'tracking-ratings-v1','principal':ADMIN,'request_id':uid(),
+                     'body':{'project_ids':[p['project_id']],'expected_catalog_version':None}}
+            rated=client.post('/v1/rpc',headers={'authorization':'Bearer '+identity['token'],'x-ikun-build-sha':identity['buildSha']},json=ratings)
+            assert rated.status_code==200 and rated.json()['data']['items'][0]['rating']=='A'
+            catalog=rated.json()['data']['catalog_version']
         if failure=='child_kill':os.kill(identity['child'],signal.SIGKILL)
         if failure=='parent_kill':proc.kill()
         else:proc.terminate()
@@ -55,4 +60,10 @@ def test_real_b0_ipc_lifecycle_and_restart(tmp_path,failure):
         with httpx.Client(transport=httpx.HTTPTransport(uds=second['socketPath']),base_url='http://ipc') as client:
             response=client.post('/v1/rpc',headers={'authorization':'Bearer '+second['token'],'x-ikun-build-sha':second['buildSha']},json={'operation':'get','principal':ADMIN,'target':p['project_id'],'request_id':uid()})
             assert response.status_code==200 and response.json()['data']['project_id']==p['project_id']
+            ratings['body']['expected_catalog_version']=catalog
+            stale=client.post('/v1/rpc',headers={'authorization':'Bearer '+second['token'],'x-ikun-build-sha':second['buildSha']},json=ratings)
+            assert stale.status_code==409 and stale.json()['error']['code']=='VERSION_CONFLICT'
+            ratings['body']['expected_catalog_version']=None
+            current=client.post('/v1/rpc',headers={'authorization':'Bearer '+second['token'],'x-ikun-build-sha':second['buildSha']},json=ratings)
+            assert current.status_code==200 and current.json()['data']['catalog_version']!=catalog
     finally:restarted.terminate();restarted.wait(timeout=15);log.close()

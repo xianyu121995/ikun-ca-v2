@@ -38,7 +38,7 @@ class IpcConfig:
 
 def create_ipc_app(config:IpcConfig):
     database=FormalDatabase(config.database)
-    service=Service(database)
+    service=Service(database,catalog_context=config.token)
 
     @asynccontextmanager
     async def lifespan(app):

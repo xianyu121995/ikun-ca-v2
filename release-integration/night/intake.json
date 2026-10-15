@@ -71,7 +71,11 @@
       "label": "ca.ikun.v2.c0lite.tracking",
       "host": "127.0.0.1",
       "port_candidate": 4012,
-      "database": "DATA_ROOT/tracking/tracking.db"
+      "database": "DATA_ROOT/tracking/tracking.db",
+      "preparation_plan": "release-integration/night/tracking-plan.pending.json",
+      "preparation_report": "release-integration/night/B3-PREPARATION.md",
+      "preparation_evidence": "release-integration/night/tracking-preparation-evidence.json",
+      "view_hint_approval_commit": "6ea8b004c368e17a123e055848f59f6370f2c29d"
     }
   },
   "real_sources_enabled": false,

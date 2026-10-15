@@ -1,0 +1,22 @@
+{
+  "state": "PASS_TRACKING_PREPARATION_ONLY",
+  "plan_sha256": "3c2bfcc33a92a2a747d62d22330f0e4fa16603bc02f709f1781f0037c597a0a8",
+  "guard_unchanged_from_accepted_review": true,
+  "render_exit": 0,
+  "plist_lint_exit": 0,
+  "pending_commands_exit": {
+    "check": 2,
+    "run": 2
+  },
+  "source_commit": null,
+  "control_commit": null,
+  "runtime_hashes": {},
+  "worker_runtime_received": false,
+  "live_database_accessed": false,
+  "live_config_or_job_written": false,
+  "service_restarted_or_deployed": false,
+  "private_file_previewed": false,
+  "audio_emitted": false,
+  "existing_Hunter_untouched": true,
+  "pending_plan_runtime": "/Users/lvlei/Documents/ChatGPT/ikun.ca\u5f00\u53d1/ikun-ca-v2-worktrees/integration/release-integration/.runtime/night-tracking-prep/1792091867514555000"
+}

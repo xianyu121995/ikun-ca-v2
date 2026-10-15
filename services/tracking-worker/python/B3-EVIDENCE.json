@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "status": "LOCAL_CANDIDATE_HEAVY_VALIDATION_PAUSED",
+  "base_commit": "9e2835cafc95cb15dc4b8178abacf0c604018536",
+  "pins": {
+    "spec": "9699375c920465b5d802e7acff17b5421203e544",
+    "b0": "85be3bd6dce25d82033b6cb1a7157aaa39bd571e",
+    "auth": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+    "projects": "d0fdefab2aa230ebb8df856aed306d0184d362e2",
+    "ui": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "tracking_ui": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+    "homepage": "eb93ac7739e0ce9d74fa9859f838a7bca294ce3e",
+    "hunter_ui": "08065d700239b20fb4c887bbd0c85321904687f8",
+    "home_contract": "6595c4a05b736889a4649b1d0aa7405601deebc4",
+    "collections": "379c6e583e487f038629e1ca24d4b2614970ad0c",
+    "release": "9e1d1aa53d58b9ee4f23f5ec1356da0ebbf1e362",
+    "product": "c3f535b0342253a74905b65ea87bd9b819624061"
+  },
+  "pytest": {
+    "passed": 89,
+    "by_file": {
+      "tests.test_api_store": 25,
+      "tests.test_config": 10,
+      "tests.test_identity": 1,
+      "tests.test_lifecycle": 26,
+      "tests.test_node_entries": 1,
+      "tests.test_processes": 1,
+      "tests.test_schema": 23,
+      "tests.test_v1": 2
+    },
+    "node_wrapper_count": 1,
+    "nested_node_cases": 6,
+    "nested_cases_added_to_total": false
+  },
+  "logs": {
+    "pytest_log": {
+      "path": "artifacts/b3/python-final-light-1792078222428299000.log",
+      "sha256": "5a91dd21751ad1df2ef740a6c41f5889c41f1f9387f4f054d2d3ce6ed5f301fa"
+    },
+    "node_log": {
+      "path": "artifacts/b3/node-entries-pytest-1792078237245227000.log",
+      "sha256": "6b08308dcf373aa55bcd618b2f4ec0d4bbd3c06839b0ceecbf053ab235fbce08"
+    },
+    "lifecycle_log": {
+      "path": "artifacts/b3/lifecycle-source-1792078239457641000.log",
+      "sha256": "8b685aa20aafd91c05eb9d8ca21da7a0ebf01b9ea028c17d237eea81192f6002"
+    },
+    "junit": {
+      "path": "artifacts/b3/python-final-light-1792078222428299000.xml",
+      "sha256": "30668837681be5335e68131a08cba65a3c24f9e4b234aa092f621175ab134929"
+    }
+  },
+  "source_inputs": {
+    "services/tracking-worker/python/tracking/worker.py": "2af7a3303643058cea1b4bea58f7f7a6f9c74e48df0f9919e46d12ccb485c742",
+    "services/tracking-worker/python/tracking/store.py": "6d52a6cd87fadedd7020da6bdf259e5ead698c24e13e5ae293bc04e3877ecad9",
+    "services/tracking-worker/python/tracking/config.py": "1d3d8ad0f031d337b76512e147e53f29a894ecde508fa3bfb2460e2b025d1944",
+    "services/tracking-worker/python/tracking/remote.py": "d3fd5826f3bfe37b188e71c301de897e874e1770c5c7211b0fb88f3efa8763b1",
+    "services/tracking-worker/python/tracking/events.py": "d3921fb11dfef4706ce841c405e31a2b0de199338d3436ceba77dde18f0a3a78",
+    "services/tracking-worker/python/tracking/protocol.py": "ea8f87909c3e9276fbb2ee98263ca59f5cad1d8ee1b343042ea2f89ab7a90e7a",
+    "services/tracking-worker/python/tracking/__init__.py": "a8dde1cbde68d7c3926374666b24588c92609ac9c88d0e567e1555652c717bf1",
+    "services/tracking-worker/python/tracking/api.py": "03a1e24a94f0846beeee49b35825251061e77f6cd0e336bda21d00783f44a1fc",
+    "services/tracking-worker/python/tracking/cli.py": "2f9e00d2eb8a9238d056f9f7fac744412a76dfa099fadea690e20b686807487b",
+    "services/tracking-worker/python/tracking/migration.py": "c857f7415dbb39209e27d240d4c826ebdbc8baa765c373cb2755eb69d67208e7",
+    "services/tracking-worker/python/tracking/commands.py": "76b963e4aeb290f43cdf2ae6c32b3a7802cd02c15ad7a8dce54c1d09ba0930bc",
+    "services/tracking-worker/python/tracking/views.py": "e5997aba2a6373e7106da86564ac3435b25857c63c9516a7f65da56ac1aef0f2",
+    "services/tracking-worker/python/tests/test_node_entries.py": "6842d0e6383ae8062f88ae13fd4f9957cd5f60c211684387df42fd4bf8b60c22",
+    "services/tracking-worker/python/tests/test_v1.py": "9c5bc2b2cbbc5e869b1b4405b8b7eacd738abf330cdde86ce075a4d1d4c7157c",
+    "services/tracking-worker/python/tests/test_lifecycle.py": "3bfef0bf494c032ec8998fcb259776ee97543e0db62372796a44b2f86f479049",
+    "services/tracking-worker/python/tests/conftest.py": "a2d816664db2f4dab726f3bc15ab7f585762ae17977ec4ab45643ba0a860b15c",
+    "services/tracking-worker/python/tests/test_processes.py": "6a1782671dd06da7ea5067be5cc57e9b0638a93b2faadd7164d869c3cffde459",
+    "services/tracking-worker/python/tests/process_runner.py": "688dae5251b2e7fc18639573c438bf34719dffc0820ccb042e0d9b89c26715bf",
+    "services/tracking-worker/python/tests/test_schema.py": "56c10cf72c4a56dbd7f0b150b6a30845d714bf729e4a8b85ea11913dd8578ddf",
+    "services/tracking-worker/python/tests/test_identity.py": "b7ce92901203ba536391ce59a92d7399da86de55c88ff566042465bf0ab5e88e",
+    "services/tracking-worker/python/tests/test_config.py": "adff072dffa69183d04bbce08b9514402a76b10873f7e2532838ba026dcaa810",
+    "services/tracking-worker/python/tests/test_api_store.py": "c4391777eec59e07126a1978ff42fa9d46524b743447038704516ce3cbddbbe4",
+    "services/tracking-worker/python/integration/build-b3.py": "9509f20194eccc2f4e4b0c9cee35434f18505829160d0c80089de1c3cde6fe04",
+    "services/tracking-worker/python/integration/prepare-b3.py": "36d2b529e3b11870403270f5f8ff13b68a10df45186fdb377f340c9779bb714c",
+    "services/tracking-worker/python/integration/record-light-evidence.py": "0a494d52c40826dd3cba0a040f319affda9390076cdf0cfe5cefa559878b6c4d",
+    "services/tracking-worker/python/integration/bind-b3.py": "633d67ad32f6f46f0c2aef7ede780785d2e68afa24e136e4265b546d581d2346",
+    "services/tracking-worker/python/integration/sync-b3.py": "19bf22a4e3c07eaa064eedc778acb34952bfae07e4d2d2744a261c82218bf866",
+    "services/tracking-worker/python/integration/patches/tracking-live.patch": "77d3acd3b54e74fd957fc10243d7b0e3f500fc116e20a0e48c56eecd93747e9f",
+    "services/tracking-worker/python/integration/website/app/api/v1/tracking/[[...path]]/route.ts": "9a087c948dd83a4d50f07816161a7e7669208f835fe9c82bf9c44ddfc6d3fc9b",
+    "services/tracking-worker/python/integration/website/app/api/v1/commands/[id]/route.ts": "97cb808444b540d0f31558742682effd9042010586effdaedd6f63d42c7c42cd",
+    "services/tracking-worker/python/integration/website/app/tracking/actions.ts": "bde7eb48f4b4481b7a12bf90ead331f9e14e6265ad9081f115aface25c4c5a4f",
+    "services/tracking-worker/python/integration/website/app/tracking/page.tsx": "8eb96b571df7efeff38798339a145e931693e1e65bd965347344b42f93bb0e34",
+    "services/tracking-worker/python/integration/website/components/tracking-shell.tsx": "ff5659d4cee1fc31dcb2c8227626527132526205ea3a5f466e72c60c56b8c6dd",
+    "services/tracking-worker/python/integration/website/components/tracking-live.tsx": "cee172abfe11d495179b4d6dcc2697b8a6a628ebf4498e5eef0bfbf597f09c24",
+    "services/tracking-worker/python/integration/website/lib/tracking.ts": "888820fca0c29991484f1c871decbba7077d720b326617def6258c96a4c7a8ec",
+    "services/tracking-worker/python/integration/tests/fixture-tracking.py": "169846def375f1881131a24e0e854bd961ee1bb01e6320758b6e269f554174a8",
+    "services/tracking-worker/python/integration/tests/entries.test.mjs": "be9a9e2a57fd3f9f7b77a185f65c29436d8d1114a5c1bc894bbb468848183c68",
+    "services/tracking-worker/python/integration/tests/browser.test.mjs": "ec15129e21d0d69b8807c8ef03febf9063e7ef67443b2c7fcc52e6db02bea05b",
+    "services/tracking-worker/python/integration/tests/lifecycle.test.mjs": "a5a309de3b367b9b9320173da5d1224447b9cfeedddf1409e67d8784c6d78fb2",
+    "schemas/tracking/001_foundation.sql": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac",
+    "schemas/tracking/002_tracking.sql": "bfd615d27d143ff4b651d7b8158a616ae665ac4b5b81297dc16f11abfce16015",
+    "schemas/tracking/002_legacy_reference.sql": "9630f38f8b2bcc2eadf393301e91380d844718f35d9974d93539e486cf6ca94b",
+    "schemas/tracking/003_commands.sql": "aac6acc9c4811836e0070befeedc6a4ef93e948b353df96daa0342ff20e37a82",
+    "services/tracking-worker/src/main.ts": "38e8c0da8313b151fddce0e238ec2544326f20d182263b60c1c9324878789813",
+    "services/tracking-worker/python/config.example.json": "c318c43c0c58359cbc564ad148feaaab23bc2eb845f568c1f19d86c686a222a9",
+    "services/tracking-worker/python/requirements.lock.txt": "89cb0cca8c57c2e4a12d9947a9c6e5924ce10aefa163554640cf74f09c6e3287",
+    "services/tracking-worker/python/pyproject.toml": "aac3eacc342371dae8082c3851fdb0bdaf14b03a5506651cb596113b68e69e35",
+    "services/tracking-worker/python/deploy/ca.ikun.v2.tracking.plist.example": "2da09e5b3a4705f2957b1f03f8f031ac85576e0c9b9ec8f0a258c3e16e5c0c09"
+  },
+  "source_set_sha256": "02c6f9ea8d03f07cdb89dca9b144b54de65656c43654df49e83eb94c9e9327c7",
+  "preview_source_files": 325,
+  "preview_source_set_sha256": "7b152877fd2208059e86264cc8a99fd447bc27e8d725b926ec8975c4f502f32d",
+  "ui_patch_sha256": "77d3acd3b54e74fd957fc10243d7b0e3f500fc116e20a0e48c56eecd93747e9f",
+  "allowed_paths": [
+    "services/tracking-worker/",
+    "schemas/tracking/"
+  ],
+  "runtime_database": "DATA_ROOT/tracking/tracking.db",
+  "real_provider_calls": 0,
+  "deployed": false,
+  "heavy_validation": {
+    "final_build": "PAUSED",
+    "compiled_launcher": "PAUSED",
+    "browser_1440_390": "PAUSED",
+    "historical_build_1": "STALE_SOURCE_NOT_FINAL_EVIDENCE"
+  },
+  "blocked_contracts": [
+    "C-01",
+    "C-03",
+    "C-05",
+    "B2_TRACKING_INGEST_501"
+  ]
+}

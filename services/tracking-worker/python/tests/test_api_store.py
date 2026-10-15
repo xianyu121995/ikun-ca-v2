@@ -1,239 +1,432 @@
-import json
-import os
-import sqlite3
+import concurrent.futures
 import time
+import uuid
 
 import pytest
-from conftest import add
 from fastapi.testclient import TestClient
 
-from tracking.api import Actor, create_app
-from tracking.config import Config
-from tracking.store import Store
+from tracking.api import create_app
+from tracking.commands import accept, query
+from tracking.protocol import Command
 
-ADMIN = {"Authorization": "Bearer test-admin-credential-xxxxxxxxxxxxxxxxx"}
-READER = {"Authorization": "Bearer test-reader-credential-xxxxxxxxxxxxxxxx"}
-NEW = {
-    "project_id": "prj_550e8400-e29b-41d4-a716-446655440001",
-    "name": "项目一",
-    "handle": "@Project1",
-    "confirmed": True,
-}
+PID = "prj_550e8400-e29b-41d4-a716-446655440001"
+TOKEN = "b3-tracking-direction-credential-xxxxxxxx"
+HEAD = {"Authorization": "Bearer " + TOKEN, "Content-Type": "application/json"}
+
+
+def envelope(**changes):
+    body = {
+        "schema_version": 1,
+        "command_id": "cmd_" + str(uuid.uuid4()),
+        "tenant_id": "ikun-main",
+        "actor": {"user_id": "fixture-admin", "tenant_id": "ikun-main", "role": "superadmin"},
+        "operation": "tracking.create",
+        "project_id": PID,
+        "subscription_id": None,
+        "expected_revision": None,
+        "payload": {
+            "name": "本地项目",
+            "x_user_id": None,
+            "x_handle": "project1",
+            "notes": "",
+            "confirmed": True,
+        },
+        "issued_at": "2026-10-15T00:00:00.000Z",
+    }
+    return body | changes
 
 
 @pytest.fixture
-def client(cfg, store):
-    with TestClient(create_app(cfg, store)) as client:
-        yield client
+def client(cfg, store, monkeypatch):
+    monkeypatch.setenv("TRACKING_API_TOKEN", TOKEN)
+    with TestClient(create_app(cfg, store)) as c:
+        yield c
 
 
-def test_auth_and_superadmin_confirmation(client, store):
-    assert client.get("/api/tracking/projects").status_code == 401
-    assert client.get("/api/tracking/projects", headers={"X-Role": "superadmin"}).status_code == 401
-    headers = {**READER, "Idempotency-Key": "create-key"}
-    assert client.post("/api/tracking/projects", json=NEW, headers=headers).status_code == 403
-    headers = {**ADMIN, "Idempotency-Key": "create-key"}
+def submit(client, body):
+    return client.post("/internal/v1/commands", json=body, headers=HEAD)
+
+
+def test_no_human_login_or_browser_identity(client, store):
     assert (
-        client.post("/api/tracking/projects", json={**NEW, "confirmed": False}, headers=headers).status_code
+        client.get(
+            "/internal/v1/subscriptions", headers={"Cookie": "tracking_session=fake", "X-Role": "superadmin"}
+        ).status_code
+        == 401
+    )
+    assert client.post("/api/tracking/session", json={"token": TOKEN}).status_code == 404
+    assert client.get("/api/v1/tracking/subscriptions", headers=HEAD).status_code == 404
+    with store.connect() as db:
+        assert not db.execute(
+            "SELECT name FROM sqlite_master WHERE name IN ('sessions','login_limits')"
+        ).fetchall()
+
+
+def test_b2_exact_wire_ack_result_idempotency_and_lost_ack(client, store):
+    body = envelope()
+    response = submit(client, body)
+    assert response.status_code == 202
+    value = response.json()["data"]
+    assert set(value) == {
+        "command_id",
+        "state",
+        "project_id",
+        "subscription_id",
+        "revision",
+        "updated_at",
+        "error_code",
+        "request_id",
+    }
+    assert value["state"] == "accepted" and value["subscription_id"].startswith("sub_")
+    assert value["project_id"] == PID
+    assert query(store, body["command_id"], "query-001")["subscription_id"] == value["subscription_id"]
+    assert submit(client, body).json()["data"]["subscription_id"] == value["subscription_id"]
+    assert submit(client, body | {"payload": body["payload"] | {"name": "different"}}).status_code == 409
+    fetched = client.get("/internal/v1/commands/" + body["command_id"], headers=HEAD)
+    assert fetched.status_code == 200 and fetched.headers["cache-control"] == "no-store"
+    assert (
+        client.get("/internal/v1/commands/cmd_" + str(uuid.uuid4()), headers=HEAD).json()["error"]["code"]
+        == "NOT_FOUND"
+    )
+    with store.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM commands").fetchone()[0] == 1
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"tenant_id": "foreign"},
+        {"actor": {"user_id": "admin", "tenant_id": "foreign", "role": "superadmin"}},
+        {"actor": {"user_id": "reader", "tenant_id": "ikun-main", "role": "user"}},
+        {"operation": "tracking.exploit"},
+        {"schema_version": True},
+        {"project_id": "demo-id"},
+        {"actor": {"user_id": "fake", "tenant_id": "ikun-main", "role": "admin"}},
+    ],
+)
+def test_wire_scope_and_actor_rejection(client, change):
+    assert submit(client, envelope(**change)).status_code in (403, 422)
+
+
+def test_foreign_service_or_provider_credential_rejected(client):
+    for token in ("hunter-direction", "provider-credential"):
+        assert (
+            client.get("/internal/v1/subscriptions", headers={"Authorization": "Bearer " + token}).status_code
+            == 401
+        )
+    assert client.get("/internal/v1/subscriptions?tenant_id=foreign", headers=HEAD).status_code == 403
+
+
+def test_subscription_status_requires_fresh_heartbeat_pong_and_remote(client, store):
+    sid = submit(client, envelope()).json()["data"]["subscription_id"]
+    store.observe(store.get(PID), remote_state="active", observed_at=time.time(), status="running")
+    path = "/internal/v1/subscriptions/" + sid
+    assert client.get(path, headers=HEAD).json()["data"]["connection"] == "disconnected"
+    store.runtime(heartbeat=time.time(), connection="connected", pong_at=time.time())
+    current = client.get(path, headers=HEAD).json()["data"]
+    assert current["connection"] == "connected" and current["observed_state"] == "running"
+    store.observe(store.get(PID), observed_at=time.time() - 100)
+    assert client.get(path, headers=HEAD).json()["data"]["observed_state"] == "unknown"
+    store.runtime(pong_at=time.time() - 100)
+    assert client.get(path, headers=HEAD).json()["data"]["connection"] == "disconnected"
+    store.runtime(pong_at=time.time(), heartbeat=time.time() - 100)
+    assert client.get(path, headers=HEAD).json()["data"]["connection"] == "disconnected"
+
+
+async def test_remote_result_commands_and_same_subscription_generation(client, worker, store, vendor):
+    body = envelope()
+    receipt = submit(client, body).json()["data"]
+    sid = receipt["subscription_id"]
+    assert client.get("/internal/v1/subscriptions/" + PID, headers=HEAD).status_code == 422
+    await worker.reconcile()
+    assert query(store, body["command_id"], "query-001")["state"] == "succeeded"
+    row = store.get(PID)
+    assert row["baseline_ready"] == 1
+    stop = envelope(
+        command_id="cmd_" + str(uuid.uuid4()),
+        operation="tracking.stop",
+        subscription_id=sid,
+        expected_revision=row["revision"],
+        payload={},
+    )
+    assert submit(client, stop).status_code == 202
+    assert query(store, stop["command_id"], "query-001")["state"] == "accepted"
+    await worker.reconcile()
+    assert query(store, stop["command_id"], "query-001")["state"] == "succeeded"
+    row = store.get(PID)
+    resume = envelope(
+        operation="tracking.resume", subscription_id=sid, expected_revision=row["revision"], payload={}
+    )
+    assert submit(client, resume).json()["data"]["subscription_id"] == sid
+    assert store.get(PID)["generation"] == 2 and store.get(PID)["baseline_ready"] == 0
+    await worker.reconcile()
+    assert store.get(PID)["baseline_ready"] == 1
+    assert (
+        submit(
+            client, envelope(operation="tracking.stop", subscription_id=sid, expected_revision=1, payload={})
+        ).status_code
+        == 409
+    )
+
+
+def test_duplicate_concurrent_inbox_is_one_intent(store):
+    cmd = Command.model_validate(envelope())
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        values = list(pool.map(lambda i: accept(store, cmd, "concurrent-" + str(i)), range(16)))
+    assert len({v["subscription_id"] for v in values}) == 1
+    with store.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM commands").fetchone()[0] == 1
+
+
+def test_platform_id_enrichment_preserves_subscription_and_rejects_collision(client, store):
+    first = envelope()
+    sid = submit(client, first).json()["data"]["subscription_id"]
+    enriched = envelope(payload=first["payload"] | {"x_user_id": "12345", "notes": "not an edit"})
+    assert submit(client, enriched).json()["data"]["subscription_id"] == sid
+    assert store.get(PID)["x_user_id"] == "12345" and store.get(PID)["notes"] == ""
+    other_id = "prj_" + str(uuid.uuid4())
+    other = envelope(project_id=other_id, payload=first["payload"] | {"x_handle": "otherproject"})
+    other_sid = submit(client, other).json()["data"]["subscription_id"]
+    assert (
+        submit(
+            client, envelope(project_id=other_id, payload=other["payload"] | {"x_user_id": "12345"})
+        ).status_code
+        == 409
+    )
+    assert store.get(other_id)["subscription_id"] == other_sid and store.get(other_id)["x_user_id"] is None
+
+
+async def test_unknown_write_then_read_failure_no_false_success(client, worker, store, vendor):
+    body = envelope()
+    submit(client, body)
+    original = worker.remote.add
+
+    async def uncertain(username):
+        await original(username)
+        vendor.list_fails = True
+        from tracking.remote import RemoteError
+
+        raise RemoteError("request_uncertain")
+
+    worker.remote.add = uncertain
+    await worker.reconcile()
+    assert query(store, body["command_id"], "check-001")["state"] == "unknown"
+    before = sum(e == "twitter_watch_add" for e, _ in vendor.calls)
+    vendor.list_fails = False
+    store.observe(store.get(PID), next_retry=0)
+    await worker.reconcile()
+    assert query(store, body["command_id"], "check-001")["state"] == "succeeded"
+    assert sum(e == "twitter_watch_add" for e, _ in vendor.calls) == before
+
+
+async def test_stale_stop_cannot_mutate_superseding_resume(client, worker, store, vendor):
+    sid = submit(client, envelope()).json()["data"]["subscription_id"]
+    await worker.reconcile()
+    submit(client, envelope(operation="tracking.stop", subscription_id=sid, expected_revision=1, payload={}))
+    old = store.get(PID)
+    submit(
+        client, envelope(operation="tracking.resume", subscription_id=sid, expected_revision=2, payload={})
+    )
+    before = len(vendor.calls)
+    await worker.reconcile_one(old, dict(vendor.rows))
+    assert len(vendor.calls) == before and "project1" in vendor.rows
+    await worker.reconcile()
+    assert store.get(PID)["desired"] == "running" and store.get(PID)["remote_state"] == "active"
+
+
+async def test_stop_does_not_delete_externally_changed_event_flags(client, worker, store, vendor):
+    sid = submit(client, envelope()).json()["data"]["subscription_id"]
+    await worker.reconcile()
+    vendor.rows["project1"]["newFlwBol"] = True
+    submit(client, envelope(operation="tracking.stop", subscription_id=sid, expected_revision=1, payload={}))
+    await worker.reconcile()
+    assert store.get(PID)["error"] == "remote_flags_conflict" and "project1" in vendor.rows
+    assert not any(endpoint == "twitter_watch_delete" for endpoint, _ in vendor.calls)
+
+
+def test_bound_cursor_empty_and_cross_filter(client, store):
+    submit(client, envelope())
+    for i in range(2):
+        submit(
+            client,
+            envelope(
+                project_id="prj_" + str(uuid.uuid4()),
+                payload={
+                    "name": "p",
+                    "x_user_id": None,
+                    "x_handle": "test" + str(i),
+                    "notes": "",
+                    "confirmed": True,
+                },
+            ),
+        )
+    first = client.get("/internal/v1/subscriptions?limit=1", headers=HEAD).json()["data"]
+    cursor = first["next_cursor"]
+    assert cursor
+    assert client.get("/internal/v1/subscriptions?cursor=", headers=HEAD).status_code == 422
+    assert (
+        client.get("/internal/v1/subscriptions?cursor=" + cursor + "&q=other", headers=HEAD).status_code
         == 422
     )
-    response = client.post("/api/tracking/projects", json=NEW, headers=headers)
-    assert response.status_code == 202 and response.json()["status"] == "pending"
-    assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["confirmed_by"] == "superadmin"
-    assert client.post("/api/tracking/projects", json=NEW, headers=headers).status_code == 202
-    assert (
-        client.post("/api/tracking/projects", json={**NEW, "name": "其他"}, headers=headers).status_code
-        == 409
-    )
-    assert client.get("/api/tracking/projects", headers=READER).json()["items"][0]["handle"] == "project1"
+    second = client.get("/internal/v1/subscriptions?cursor=" + cursor + "&limit=1", headers=HEAD).json()[
+        "data"
+    ]
+    assert second["items"][0]["subscription_id"] != first["items"][0]["subscription_id"]
 
 
-def test_api_full_commands_and_expected_revision(client, store):
-    add(store)
+def test_patch_revision_idempotency_and_identity_immutable(client, store):
+    sid = submit(client, envelope()).json()["data"]["subscription_id"]
+    body = {
+        "actor": {"user_id": "fixture-admin", "tenant_id": "ikun-main", "role": "superadmin"},
+        "expected_revision": 1,
+        "patch": {"name": "edited", "notes": "notes"},
+    }
+    headers = HEAD | {"Idempotency-Key": str(uuid.uuid4())}
+    response = client.patch("/internal/v1/subscriptions/" + sid, json=body, headers=headers)
+    assert response.status_code == 200 and response.headers["etag"] == '"rev-2"'
+    assert client.patch("/internal/v1/subscriptions/" + sid, json=body, headers=headers).status_code == 200
     assert (
         client.patch(
-            "/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001",
-            json={"expected_revision": 1, "name": "新名称"},
-            headers={**ADMIN, "Idempotency-Key": "edit-key"},
+            "/internal/v1/subscriptions/" + sid,
+            json=body | {"patch": {"x_handle": "steal"}},
+            headers=HEAD | {"Idempotency-Key": str(uuid.uuid4())},
         ).status_code
-        == 202
+        == 422
     )
+
+
+def test_storage_failure_not_reported_as_missing(client, store, monkeypatch):
+    import sqlite3
+    from contextlib import contextmanager
+
+    @contextmanager
+    def failed():
+        raise sqlite3.OperationalError("injected")
+        yield
+
+    monkeypatch.setattr(store, "connect", failed)
+    response = client.get("/internal/v1/commands/cmd_" + str(uuid.uuid4()), headers=HEAD)
+    assert response.status_code == 503 and response.json()["error"]["code"] == "DB_UNAVAILABLE"
+
+
+async def test_600_capacity_does_not_evict_or_add(client, worker, store, vendor):
+    for i in range(600):
+        vendor.rows["watch" + str(i)] = vendor.watch("watch" + str(i), "other-independent-owner")
+    body = envelope()
+    submit(client, body)
+    await worker.reconcile()
+    assert store.get(PID)["error"] == "quota_exhausted"
+    assert len(vendor.rows) == 600
+    assert all(name == "twitter_watch" for name, _ in vendor.calls)
+
+
+async def test_stop_noop_ack_and_timeout_do_not_report_stopped(client, worker, store, vendor):
+    body = envelope()
+    sid = submit(client, body).json()["data"]["subscription_id"]
+    await worker.reconcile()
+    vendor.delete_noop = True
+    stop = envelope(operation="tracking.stop", subscription_id=sid, expected_revision=1, payload={})
+    submit(client, stop)
+    await worker.reconcile()
+    dto = client.get("/internal/v1/subscriptions/" + sid, headers=HEAD).json()["data"]
+    assert dto["observed_state"] == "unknown" and dto["operation_state"] == "unknown"
+    assert vendor.rows.get("project1")
+    vendor.delete_noop = False
+    store.observe(store.get(PID), next_retry=0)
+    await worker.reconcile()
+    assert query(store, stop["command_id"], "stop-checked")["state"] == "succeeded"
     assert (
-        client.post(
-            "/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001/stop",
-            json={"expected_revision": 1},
-            headers={**ADMIN, "Idempotency-Key": "stop-key"},
-        ).status_code
-        == 409
-    )
-    assert (
-        client.post(
-            "/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001/stop",
-            json={"expected_revision": 2},
-            headers={**ADMIN, "Idempotency-Key": "stop-key"},
-        ).status_code
-        == 202
-    )
-    assert (
-        client.post(
-            "/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001/resume",
-            json={"expected_revision": 3},
-            headers={**ADMIN, "Idempotency-Key": "resume-key"},
-        ).status_code
-        == 202
-    )
-    response = client.request(
-        "DELETE",
-        "/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001",
-        json={"expected_revision": 4},
-        headers={**ADMIN, "Idempotency-Key": "remove-key"},
-    )
-    assert response.status_code == 202 and response.json()["desired"] == "removed"
-    assert response.json()["status"] != "removed"
-    assert (
-        client.get(
-            "/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001", headers=READER
-        ).status_code
-        == 200
-    )
-    assert client.get("/api/tracking/projects/missing", headers=ADMIN).status_code == 404
-
-
-def test_status_remote_and_heartbeat_must_both_be_fresh(client, store):
-    row = add(store)
-    store.observe(row, remote_state="active", status="running", claim="owned", observed_at=time.time())
-    assert (
-        client.get("/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001", headers=READER).json()[
-            "status"
-        ]
-        == "recovering"
-    )
-    store.runtime(heartbeat=time.time(), connection="connected", pong_at=time.time())
-    assert client.get("/api/tracking/status", headers=READER).json()["monitoring"] == 1
-    store.observe(row, observed_at=time.time() - 100)
-    assert (
-        client.get("/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001", headers=READER).json()[
-            "remote_state"
-        ]
-        == "unknown"
-    )
-    assert client.get("/api/tracking/status", headers=READER).json()["monitoring"] == 0
-    store.runtime(heartbeat=time.time() - 100)
-    assert client.get("/api/tracking/status", headers=READER).json()["engine"]["alive"] is False
-
-
-def test_latest_and_cursor_no_duplicates(client, store):
-    row = add(store)
-    for i in range(3):
-        store.insert_tweet(row, {"tweet_id": str(i + 1), "text": "测试", "created_at": time.time()}, "wss")
-    first = client.get("/api/tracking/activities?limit=2", headers=READER).json()
-    assert len(first["items"]) == 2 and first["next_cursor"] == 2
-    second = client.get("/api/tracking/activities?after=2", headers=READER).json()
-    assert len(second["items"]) == 1
-    latest = client.get(
-        "/api/tracking/latest?limit=1&project_id=prj_550e8400-e29b-41d4-a716-446655440001", headers=READER
-    ).json()
-    assert latest["items"][0]["tweet_id"] == "3"
-    assert latest["items"][0]["url"] == "https://x.com/project1/status/3"
-    assert (
-        client.get(
-            "/api/tracking/projects/prj_550e8400-e29b-41d4-a716-446655440001/activities", headers=READER
-        ).status_code
-        == 200
+        client.get("/internal/v1/subscriptions/" + sid, headers=HEAD).json()["data"]["observed_state"]
+        == "absent"
     )
 
 
-def test_cookie_login_csrf_logout_and_rate_limit(client):
-    response = client.post("/api/tracking/session", json={"token": ADMIN["Authorization"][7:]})
-    assert response.status_code == 200
-    assert (
-        "HttpOnly" in response.headers["set-cookie"] and "SameSite=strict" in response.headers["set-cookie"]
+async def test_crash_after_remote_apply_reconciles_without_second_add(client, worker, store, vendor, cfg):
+    import asyncio
+
+    from tracking.worker import Worker
+
+    body = envelope()
+    submit(client, body)
+    original = worker.remote.add
+
+    async def crash(username):
+        await original(username)
+        raise asyncio.CancelledError()
+
+    worker.remote.add = crash
+    with pytest.raises(asyncio.CancelledError):
+        await worker.reconcile()
+    store.lease("restart", acquire=True)
+    assert query(store, body["command_id"], "crash-unknown")["state"] == "unknown"
+    replacement = Worker(cfg, store, worker.remote)
+    await replacement.reconcile()
+    assert query(store, body["command_id"], "crash-checked")["state"] == "succeeded"
+    assert sum(name == "twitter_watch_add" for name, _ in vendor.calls) == 1
+
+
+def test_retention_and_new_path_backup_preserve_pending_inbox(client, store, tmp_path):
+    import sqlite3
+
+    from tracking.store import Store
+
+    body = envelope()
+    receipt = submit(client, body).json()["data"]
+    with store.connect() as db:
+        db.execute("UPDATE commands SET created_at=?", (time.time() - 8 * 86400,))
+    target = tmp_path / "restored/tracking/tracking.db"
+    target.parent.mkdir(parents=True)
+    with sqlite3.connect(store.path) as src, sqlite3.connect(target) as dst:
+        src.backup(dst)
+    restored = Store(target)
+    assert query(restored, body["command_id"], "restored")["subscription_id"] == receipt["subscription_id"]
+    assert query(restored, body["command_id"], "restored")["state"] == "accepted"
+
+
+async def test_same_generation_cross_source_completion_and_cross_generation_blocked(client, worker, store):
+    from conftest import event, tweet
+
+    from tracking.views import page
+
+    body = envelope()
+    sid = submit(client, body).json()["data"]["subscription_id"]
+    await worker.reconcile()
+    base = store.get(PID)["generation_at"]
+    t = tweet(tweet_id="101", text="", at=base + (time.time() - base) * 0.8)
+    assert worker.ingest(event(t))
+    row = store.get(PID)
+    assert store.insert_tweet(
+        row, {"tweet_id": "101", "created_at": t["createdAt"], "text": "completed"}, "rest_recovery"
     )
-    assert client.get("/api/tracking/me").json()["role"] == "superadmin"
-    assert (
-        client.post("/api/tracking/projects", json=NEW, headers={"Idempotency-Key": "create-key"}).status_code
-        == 403
+    assert len(store.activities()) == 1
+    # Published and received order are intentionally opposite. Frozen latest remains received descending.
+    newer = tweet(tweet_id="102", at=base + (t["createdAt"] - base) * 0.25)
+    worker.ingest(event(newer))
+    worker.ingest(event({"id": "103", "text": "unknown time"}))
+    first = page(store, "latest", {"limit": "1"})
+    assert first["items"][0]["tweet_id"] == "103" and first["items"][0]["occurred_at"] is None
+    second = page(store, "latest", {"limit": "1", "cursor": first["next_cursor"]})
+    assert second["items"][0]["tweet_id"] == "102"
+    assert page(store, "activities", {})["items"][0]["text"] == "completed"
+    assert worker.ingest(event({"id": "104", "text": "cross-generation"}))
+    row = store.get(PID)
+    submit(
+        client,
+        envelope(
+            operation="tracking.stop", subscription_id=sid, expected_revision=row["revision"], payload={}
+        ),
     )
-    assert (
-        client.post(
-            "/api/tracking/projects",
-            json=NEW,
-            headers={
-                "Idempotency-Key": "create-key",
-                "X-Tracking-CSRF": "1",
-                "Origin": "https://attacker.invalid",
-            },
-        ).status_code
-        == 403
+    await worker.reconcile()
+    row = store.get(PID)
+    submit(
+        client,
+        envelope(
+            operation="tracking.resume", subscription_id=sid, expected_revision=row["revision"], payload={}
+        ),
     )
-    assert (
-        client.post(
-            "/api/tracking/projects",
-            json=NEW,
-            headers={"Idempotency-Key": "create-key", "X-Tracking-CSRF": "1"},
-        ).status_code
-        == 202
-    )
-    assert client.delete("/api/tracking/session", headers={"X-Tracking-CSRF": "1"}).status_code == 200
-    assert client.get("/api/tracking/me").status_code == 401
-    for _ in range(9):
-        assert client.post("/api/tracking/session", json={"token": "bad"}).status_code == 401
-    assert client.post("/api/tracking/session", json={"token": "bad"}).status_code == 429
-
-
-def test_trusted_auth_adapter_and_page_security(cfg, store):
-    with TestClient(
-        create_app(cfg, store, authorize=lambda request: Actor("verified-root", "superadmin"))
-    ) as c:
-        assert (
-            c.post("/api/tracking/projects", json=NEW, headers={"Idempotency-Key": "create-key"}).status_code
-            == 202
-        )
-        assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["confirmed_by"] == "verified-root"
-        response = c.get("/tracking")
-        assert response.status_code == 200 and "项目监控" in response.text
-        assert "script-src 'self'" in response.headers["content-security-policy"]
-        assert "test-admin" not in response.text
-        assert c.get("/tracking-assets/app.js").status_code == 200
-
-
-def test_refuse_symlink_hardlink_foreign_and_protected_db(tmp_path):
-    protected = tmp_path / "hunter.db"
-    with sqlite3.connect(protected) as db:
-        db.execute("CREATE TABLE existing(data TEXT)")
-    before = protected.read_bytes()
-    with pytest.raises(ValueError):
-        Store(protected)
-    target = tmp_path / "tracking.db"
-    target.symlink_to(protected)
-    with pytest.raises(ValueError):
-        Store(target)
-    target.unlink()
-    os.link(protected, target)
-    with pytest.raises(ValueError):
-        Store(target)
-    target.unlink()
-    target.write_bytes(before)
-    with pytest.raises(ValueError, match="foreign database"):
-        Store(target)
-    assert protected.read_bytes() == before
-
-
-def test_config_local_paths_permissions_and_unknown_options(tmp_path, monkeypatch):
-    secret = tmp_path / "secret"
-    secret.write_text("secret")
-    secret.chmod(0o600)
-    path = tmp_path / "config.json"
-    path.write_text(json.dumps({"token_file": "secret", "db_path": "data/tracking.db"}))
-    cfg = Config.load(str(path))
-    assert cfg.secret("token") == "secret"
-    assert cfg.db_path == tmp_path / "data/tracking.db"
-    secret.chmod(0o644)
-    with pytest.raises(ValueError):
-        cfg.secret("token")
-    path.write_text(json.dumps({"remote_enabled": "false"}))
-    with pytest.raises(ValueError):
-        Config.load(str(path))
-    path.write_text(json.dumps({"unknown_secret": "bad"}))
-    with pytest.raises(ValueError):
-        Config.load(str(path))
+    await worker.reconcile()
+    assert worker.ingest(event({"id": "104", "text": "cross-generation"}))
+    observations = [r for r in store.activities() if r["tweet_id"] == "104"]
+    assert len(observations) == 2 and observations[0]["activity_id"] != observations[1]["activity_id"]
+    # Product cross-generation public folding is C-05 BLOCKED; never pretend this is one public item.
+    assert len(page(store, "latest", {})["items"]) == 5

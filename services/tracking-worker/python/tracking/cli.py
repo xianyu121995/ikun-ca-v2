@@ -63,7 +63,7 @@ async def serve(cfg, *, worker=None, log_level="warning"):
 
 def main():
     parser = argparse.ArgumentParser(description="Independent ikun.ca NEW_TWEET monitoring")
-    parser.add_argument("command", choices=("serve", "api", "worker", "init"))
+    parser.add_argument("command", choices=("serve", "api", "worker", "init", "migrate"))
     parser.add_argument("--config", default="config.local.json")
     args = parser.parse_args()
     cfg = Config.load(args.config)
@@ -78,7 +78,7 @@ def main():
     elif args.command == "worker":
         asyncio.run(run_worker(cfg))
     else:
-        Store(cfg.db_path)
+        Store(cfg.db_path, initialize=True)
         print("tracking.db initialized; no remote requests made")
 
 

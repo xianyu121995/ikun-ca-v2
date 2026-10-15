@@ -1,16 +1,22 @@
-# Tracking schema ownership
+# Tracking storage authority · B3
 
-仅 tracking-worker 打开 DATA_ROOT/tracking/tracking.db（本地路径可配置，文件名必须 tracking.db）。application_id 为 foundation 0x494b0202；沿用 _store_identity=tracking。
+唯一物理库 `DATA_ROOT/tracking/tracking.db`，拒绝软/硬链接、外库身份及其他文件名。服务不打开 hunter.db/projects.db/auth.db；测试通过固定owner API/CLI创建私有夹具。
 
-业务迁移来源：`services/tracking-worker/python/tracking/schema.sql`。启动/init 在自己的库执行事务迁移，在 `_schema_migrations` 记录版本 2、名称 tracking_new_tweet_v1、SHA-256 checksum。已有 foundation 版本 1 保留。checksum 不符拒绝启动，不自动覆盖或降级。测试覆盖 foundation→业务升级与身份/校验和拒绝。
+本目录为SQL唯一权威。001保留固定B0三列STRICT ledger原文，application_id=0x494b0202、_store_identity=tracking。002_tracking为无本地人类会话的业务基线；003添加稳定订阅/命令inbox/事件/观察outbox。002_legacy_reference仅校验原候选v2 checksum，不在新库执行。
+
+仅显式init/migrate事务升级；启动/HTTP/ready不DDL、不清库。沿用三/四列 `_schema_migrations(version,name,applied_at[,checksum])`，显式列INSERT；独立 `_migration_checksums(version,sha256)`。future/version/name/hash、缺表/列/必要唯一索引均拒绝。失败回滚；已是v3仅校验，不修补损坏结构。
+
+旧v2保留ledger/receipts/推文/seq及tweets_legacy，为canonical项目补稳定sub_UUID。无法映射的旧ID/generation或非空sessions/login_limits停下待人工审查，不丢弃或搬到其他库。新库不创建、不使用人类会话表。
 
 | 表 | 数据 |
 |---|---|
-| projects | 项目 canonical ID 引用、人工确认、期望/远端状态、ownership reservation、revision、generation、重试与补采窗口 |
-| tweets | NEW_TWEET 归一字段，handle+tweet_id 唯一，seq cursor，来源/接收时间 |
-| runtime | 单 worker 30 秒租约、进程心跳、WSS ACK/pong 状态 |
-| receipts | 按 principal/route 作用域持久幂等结果，无自动清理 |
-| audit | 本模块管理操作，不含 secrets/原始猎手事件 |
-| sessions / login_limits | 仅 standalone 调试页面的 session hash/限流；主站模式不允许本地登录 |
+| projects | canonical/sub_ID/X ID、人工确认、desired/remote/claim/revision/generation、baseline/重试/恢复窗口 |
+| tweets | 最小动态、nullable occurred、received、source；唯一sub/generation/tweet_id |
+| commands | command_id/hash/envelope/核验状态；远端写前持久remote_attempted |
+| changes | 稳定evt_ID、脱敏SSE/replay seq |
+| tracking_outbox | 观察envelope、pending/error/receipt；B2收件未实现，不假称投递 |
+| runtime | 30秒租约、worker心跳、WSS ACK/pong |
+| public_receipts / receipts | 新PATCH与旧幂等结果，不自动清理 |
+| audit | 本模块审计，不含凭据或原始Hunter事件 |
 
-不建立跨库外键，不读写 hunter.db/projects.db/auth.db；project_id 只从人工确认后的业务输入接收。正式迁移前由部署 owner 在线备份自己的 tracking.db，回滚代码须与迁移兼容；不拷贝运行中 DB/WAL、不删除业务表或历史。
+订阅移除保留历史，不改主页。没有跨库外键/ATTACH/级联。备份用本库SQLite backup API，不复制运行中的单个DB/WAL；迁移前备份，旧代码回滚只用兼容库/独立恢复副本，不自动降级v3。

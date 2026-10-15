@@ -119,7 +119,7 @@ async def test_website_shutdown_restart_and_worker_crash_recovery(tmp_path, cfg,
                 )
 
             await until(healthy)
-            assert (await client.get(site_url + "/tracking")).status_code == 200
+            assert (await client.get(site_url + "/health/live")).status_code == 200
             await stop(site)
             t = tweet(tweet_id="777")
             for peer in list(peers):
@@ -133,10 +133,10 @@ async def test_website_shutdown_restart_and_worker_crash_recovery(tmp_path, cfg,
             site = await spawn("website", str(site_config), engine_url)
             await until(healthy)
             response = await client.get(
-                site_url + "/api/tracking/latest",
-                headers={"Authorization": "Bearer " + os.environ["IKUN_TRACKING_READ_TOKEN"]},
+                site_url + "/internal/v1/latest",
+                headers={"Authorization": "Bearer " + os.environ["TRACKING_API_TOKEN"]},
             )
-            assert response.json()["items"][0]["tweet_id"] == "777"
+            assert response.json()["data"]["items"][0]["tweet_id"] == "777"
             await stop(engine, crash=True)
             # Production launchd's 30s throttle outlasts the 30s SQLite lease. Simulate expiry, no wall-clock wait.
             store.runtime(heartbeat=time.time() - 31)

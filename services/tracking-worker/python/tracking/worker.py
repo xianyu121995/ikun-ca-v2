@@ -65,10 +65,12 @@ class Worker:
         if watch and not self.owned(row, watch):
             raise RemoteError("ownership_conflict", 300)
         desired_running = row["desired"] == "running"
-        if desired_running and watch and not self.pure_tweet(watch):
+        if watch and not self.pure_tweet(watch):
             # An external edit is never silently overwritten, even in our namespace.
             raise RemoteError("remote_flags_conflict", 300)
         if desired_running and not watch:
+            if sum(item.get("newTweetBol") is True for item in snapshot.values()) >= self.cfg.max_watch_slots:
+                raise RemoteError("quota_exhausted", 60)
             if not self.store.observe(row, claim="reserved", status="starting"):
                 return snapshot
             row = {**row, "claim": "reserved"}
@@ -79,6 +81,10 @@ class Worker:
             mutation = None
         if mutation:
             self.ensure_owner()
+            from .commands import executing
+
+            if not executing(self.store, row):
+                return snapshot
             error = None
             try:
                 await mutation(row["handle"])
@@ -125,7 +131,7 @@ class Worker:
                 coverage = "possible_gap"  # Later success cannot prove a previously lost window.
             for tweet in sorted(valid, key=lambda x: x["created_at"]):
                 self.store.insert_tweet(row, tweet, "rest_recovery")
-            self.store.observe(row, last_backfill=time.time(), coverage=coverage)
+            self.store.observe(row, last_backfill=time.time(), coverage=coverage, baseline_ready=1)
         except RemoteError:
             self.store.observe(
                 row,

@@ -53,11 +53,12 @@ class Vendor:
 
 @pytest.fixture
 def cfg(tmp_path, monkeypatch):
+    monkeypatch.setenv("TRACKING_API_TOKEN", "b3-tracking-direction-credential-xxxxxxxx")
     monkeypatch.setenv("IKUN_TRACKING_6551_TOKEN", "test-vendor-credential-xxxxxxxxxxxxxxxx")
     monkeypatch.setenv("IKUN_TRACKING_ADMIN_TOKEN", "test-admin-credential-xxxxxxxxxxxxxxxxx")
     monkeypatch.setenv("IKUN_TRACKING_READ_TOKEN", "test-reader-credential-xxxxxxxxxxxxxxxx")
     return Config(
-        db_path=tmp_path / "tracking.db",
+        db_path=tmp_path / "tracking" / "tracking.db",
         remote_enabled=True,
         dedicated_account=True,
         request_interval=0,
@@ -70,7 +71,7 @@ def cfg(tmp_path, monkeypatch):
 
 @pytest.fixture
 def store(cfg):
-    return Store(cfg.db_path)
+    return Store(cfg.db_path, initialize=True)
 
 
 @pytest.fixture

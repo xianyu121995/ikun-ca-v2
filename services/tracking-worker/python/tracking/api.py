@@ -1,324 +1,310 @@
+"""Tracking service-only API. Website B1 guards own all human authentication."""
+
+import asyncio
+import hashlib
 import hmac
+import json
+import re
 import secrets
+import sqlite3
 import time
-from collections.abc import Callable
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, Header, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import ValidationError
+from starlette.exceptions import HTTPException
 
+from . import commands
 from .config import Config
-from .identity import SessionVerifier
-from .store import Conflict, Missing, Store
+from .migration import inspect
+from .protocol import UUID4, Command, DomainError, Principal, canonical
+from .store import Store
+from .views import page, subscription
 
 
-@dataclass(frozen=True)
-class Actor:
-    subject: str
-    role: Literal["superadmin", "reader"]
-    csrf_token: str = ""
-
-
-class Body(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-
-class Create(Body):
-    project_id: str = Field(
-        pattern=r"^prj_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-    )
-    name: str = Field(min_length=1, max_length=200)
-    handle: str = Field(min_length=1, max_length=16)
-    notes: str = Field(default="", max_length=4000)
-    confirmed: Literal[True]
-
-
-class Command(Body):
-    expected_revision: int = Field(ge=1)
-
-
-class Update(Command):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    notes: str | None = Field(default=None, max_length=4000)
-
-
-class Login(Body):
-    token: str = Field(min_length=1, max_length=1024)
-
-
-def create_app(
-    cfg: Config,
-    store: Store | None = None,
-    authorize: Callable[[Request], Actor] | None = None,
-    session_verifier: SessionVerifier | None = None,
-) -> FastAPI:
+def create_app(cfg: Config, store: Store | None = None):
     store = store or Store(cfg.db_path)
-    app = FastAPI(title="ikun.ca Project Tracking", version="0.1.0")
+    app = FastAPI(title="Tracking service", docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store = store
-    verifier = session_verifier or SessionVerifier(cfg)
-    static = Path(__file__).parent / "static"
 
-    def credentials():
-        admin, reader = cfg.secret("admin_token"), cfg.secret("read_token")
-        if (admin and len(admin) < 32) or (reader and len(reader) < 32) or (admin and admin == reader):
-            raise HTTPException(503, "invalid authentication configuration")
-        return admin, reader
-
-    def role_for(token):
-        admin, reader = credentials()
-        if token and admin and hmac.compare_digest(token, admin):
-            return "superadmin"
-        if token and reader and hmac.compare_digest(token, reader):
-            return "reader"
-        return None
-
-    def same_origin(request: Request):
-        origin = request.headers.get("origin")
-        if origin and origin != str(request.base_url).rstrip("/"):
-            raise HTTPException(403, "cross origin request rejected")
-
-    async def actor(request: Request):
-        if authorize:
-            result = authorize(request)
-            if not isinstance(result, Actor) or result.role not in ("reader", "superadmin"):
-                raise HTTPException(403, "trusted authorization rejected")
-            return result
-        if cfg.auth_session_url:
-            user, csrf = await verifier.verify(request)
-            return Actor(user["id"], "superadmin" if user["role"] == "superadmin" else "reader", csrf)
-        auth = request.headers.get("authorization", "")
-        role = role_for(auth[7:]) if auth.startswith("Bearer ") else None
-        if role is None and request.cookies.get("tracking_session"):
-            role = store.session(request.cookies["tracking_session"])
-            # Disabling configured credentials also revokes corresponding local sessions.
-            admin, reader = credentials()
-            if (role == "superadmin" and not admin) or (role == "reader" and not reader):
-                role = None
-            if request.method not in ("GET", "HEAD"):
-                same_origin(request)
-                if request.headers.get("x-tracking-csrf") != "1":
-                    raise HTTPException(403, "CSRF header required")
-        if role is None:
-            raise HTTPException(401, "authentication required")
-        return Actor(cfg.admin_subject if role == "superadmin" else "reader", role)
-
-    def admin(user: Annotated[Actor, Depends(actor)]):
-        if user.role != "superadmin":
-            raise HTTPException(403, "superadmin required")
-        return user
-
-    def key(idempotency_key: Annotated[str, Header(min_length=8, max_length=128)]):
-        return idempotency_key
-
-    def engine():
-        state = store.runtime()
-        alive = bool(state["heartbeat"] and time.time() - state["heartbeat"] < 10)
-        connected = bool(
-            alive
-            and state["connection"] == "connected"
-            and state["pong_at"]
-            and time.time() - state["pong_at"] < cfg.heartbeat_seconds + cfg.heartbeat_timeout + 5
+    def reply(request, data, status=200, etag=None):
+        return JSONResponse(
+            {"data": data, "request_id": request.state.request_id},
+            status_code=status,
+            headers={"ETag": f'"rev-{etag}"'} if etag else {},
         )
-        return {
-            "alive": alive,
-            "connection": "connected"
-            if connected
-            else ("connecting" if alive and state["connection"] == "connecting" else "disconnected"),
-            "last_heartbeat": state["heartbeat"],
-            "last_pong": state["pong_at"],
-            "error": state["error"],
-        }
 
-    def project(row):
-        state = engine()
-        fresh = bool(row["observed_at"] and time.time() - row["observed_at"] <= cfg.remote_fresh_seconds)
-        remote = row["remote_state"] if fresh else "unknown"
-        status = row["status"]
-        if status == "running":
-            status = (
-                "monitoring" if remote == "active" and state["connection"] == "connected" else "recovering"
-            )
-        elif status in ("stopped", "removed") and remote != "absent":
-            status = "unverified"
-        result = {
-            k: row[k]
-            for k in (
-                "project_id",
-                "name",
-                "handle",
-                "notes",
-                "desired",
-                "revision",
-                "generation",
-                "error",
-                "observed_at",
-                "next_retry",
-                "coverage",
-                "confirmed_at",
-                "created_at",
-                "updated_at",
-            )
-        }
-        return {
-            **result,
-            **store.tweet_stats(row["project_id"]),
-            "remote_state": remote,
-            "status": status,
-            "engine": state,
-        }
-
-    @app.exception_handler(Conflict)
-    async def conflict_handler(request, exc):
-        return JSONResponse({"detail": str(exc)}, status_code=409)
-
-    @app.exception_handler(Missing)
-    async def missing_handler(request, exc):
-        return JSONResponse({"detail": "project not found"}, status_code=404)
-
-    @app.exception_handler(ValueError)
-    async def value_handler(request, exc):
-        return JSONResponse({"detail": "invalid request or local configuration"}, status_code=422)
-
-    @app.exception_handler(RequestValidationError)
-    async def validation_handler(request, exc):
-        return JSONResponse({"detail": "invalid request fields"}, status_code=422)
+    async def service(request: Request):
+        try:
+            token = cfg.secret("service_token")
+            provider = cfg.secret("token")
+        except (ValueError, OSError):
+            raise DomainError(
+                503, "AUTH_NOT_CONFIGURED", "tracking credential configuration invalid"
+            ) from None
+        if not token or len(token) < 32:
+            raise DomainError(503, "AUTH_NOT_CONFIGURED", "tracking service credential not configured")
+        if token == provider:
+            raise DomainError(503, "AUTH_NOT_CONFIGURED", "direction credential must be independent")
+        if not hmac.compare_digest(
+            request.headers.get("authorization", "").encode(), ("Bearer " + token).encode()
+        ):
+            raise DomainError(401, "UNAUTHENTICATED", "direction credential required")
+        for name in ("x-tenant", "x-tenant-id", "x-scope"):
+            if request.headers.get(name) not in (None, "ikun-main"):
+                raise DomainError(403, "FORBIDDEN", "scope rejected")
+        if any(len(request.query_params.getlist(key)) != 1 for key in request.query_params):
+            raise DomainError(422, "VALIDATION_ERROR", "duplicate query fields")
+        if "tenant_id" in request.query_params:
+            raise DomainError(403, "FORBIDDEN", "scope is server owned")
 
     @app.middleware("http")
-    async def headers(request, call_next):
-        response = await call_next(request)
+    async def transport(request, next_call):
+        candidate = request.headers.get("x-request-id", "")
+        request.state.request_id = (
+            candidate if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", candidate) else secrets.token_hex(16)
+        )
+        try:
+            response = await next_call(request)
+        except (sqlite3.Error, OSError, ValueError):
+            response = JSONResponse(
+                {
+                    "error": {
+                        "code": "DB_UNAVAILABLE",
+                        "message": "tracking storage unavailable",
+                        "retryable": True,
+                    },
+                    "request_id": request.state.request_id,
+                },
+                status_code=503,
+            )
+        response.headers["X-Request-ID"] = request.state.request_id
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["Referrer-Policy"] = "same-origin"
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self'; "
-            "style-src 'self'; connect-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'"
-        )
         return response
 
-    @app.get("/healthz")
-    def health():
-        return {"status": "ok"}
+    @app.exception_handler(DomainError)
+    @app.exception_handler(RequestValidationError)
+    @app.exception_handler(ValidationError)
+    @app.exception_handler(sqlite3.Error)
+    @app.exception_handler(HTTPException)
+    async def error(request, exc):
+        status, code, message = (
+            (exc.status, exc.code, exc.message)
+            if isinstance(exc, DomainError)
+            else (503, "DB_UNAVAILABLE", "tracking storage unavailable")
+            if isinstance(exc, sqlite3.Error)
+            else (exc.status_code, "NOT_FOUND", "route not found")
+            if isinstance(exc, HTTPException)
+            else (422, "VALIDATION_ERROR", "invalid request fields")
+        )
+        return JSONResponse(
+            {
+                "error": {"code": code, "message": message, "retryable": code == "DB_UNAVAILABLE"},
+                "request_id": request.state.request_id,
+            },
+            status_code=status,
+        )
+
+    async def body(request):
+        if request.headers.get("content-type", "").split(";")[0] != "application/json":
+            raise DomainError(415, "VALIDATION_ERROR", "JSON required")
+        data = bytearray()
+        try:
+            async with asyncio.timeout(5):
+                async for chunk in request.stream():
+                    data.extend(chunk)
+                    if len(data) > 65536:
+                        raise DomainError(413, "VALIDATION_ERROR", "request too large")
+            value = json.loads(data)
+            if not isinstance(value, dict):
+                raise ValueError()
+            return value
+        except (ValueError, TimeoutError):
+            raise DomainError(422, "VALIDATION_ERROR", "invalid request JSON") from None
+
+    def checked_id(value, prefix):
+        if not re.fullmatch(prefix + UUID4, value):
+            raise DomainError(422, "VALIDATION_ERROR", "invalid resource ID")
+        return value
+
+    def by_sub(sub, db):
+        row = db.execute(
+            "SELECT * FROM projects WHERE subscription_id=?", (checked_id(sub, "sub_"),)
+        ).fetchone()
+        if row is None:
+            raise DomainError(404, "NOT_FOUND", "subscription not found")
+        return dict(row)
 
     @app.get("/health/live")
+    @app.get("/healthz")
+    def live(request: Request):
+        return reply(request, {"service": "tracking", "status": "alive"})
+
     @app.get("/health/ready")
-    def service_health():
-        store.runtime()
-        return {"data": {"service": "tracking", "status": "ready"}, "request_id": secrets.token_hex(16)}
+    def ready(request: Request):
+        inspect(cfg.db_path)
+        return reply(request, {"service": "tracking", "status": "ready"})
 
-    @app.get("/api/tracking/auth-mode")
-    def auth_mode():
-        return {"mode": "site" if cfg.auth_session_url else "standalone"}
+    @app.post("/internal/v1/commands", dependencies=[Depends(service)])
+    async def accept(request: Request):
+        value = Command.model_validate(await body(request))
+        return reply(request, commands.accept(store, value, request.state.request_id), 202)
 
-    @app.post("/api/tracking/session")
-    def login(body: Login, request: Request, response: Response):
-        if cfg.auth_session_url or authorize:
-            raise HTTPException(403, "use main-site login")
-        same_origin(request)
-        if not store.login_allowed(request.client.host if request.client else "local"):
-            raise HTTPException(429, "try again in ten minutes")
-        role = role_for(body.token)
-        if role is None:
-            raise HTTPException(401, "invalid access key")
-        session = secrets.token_urlsafe(32)
-        store.session(session, role)
-        response.set_cookie(
-            "tracking_session",
-            session,
-            httponly=True,
-            samesite="strict",
-            secure=request.url.scheme == "https",
-            max_age=3600,
-            path="/api/tracking",
+    @app.get("/internal/v1/commands/{command_id}", dependencies=[Depends(service)])
+    def command(command_id: str, request: Request):
+        return reply(request, commands.query(store, checked_id(command_id, "cmd_"), request.state.request_id))
+
+    @app.get("/internal/v1/subscriptions", dependencies=[Depends(service)])
+    def subscriptions(request: Request):
+        return reply(request, page(store, "subscriptions", dict(request.query_params)))
+
+    @app.get("/internal/v1/subscriptions/{subscription_id}", dependencies=[Depends(service)])
+    def detail(subscription_id: str, request: Request):
+        with store.connect() as db:
+            row = by_sub(subscription_id, db)
+            return reply(
+                request,
+                subscription(store, row, db=db, fresh_seconds=cfg.remote_fresh_seconds),
+                etag=row["revision"],
+            )
+
+    @app.patch("/internal/v1/subscriptions/{subscription_id}", dependencies=[Depends(service)])
+    async def patch(subscription_id: str, request: Request, idempotency_key: str = Header()):
+        checked_id(idempotency_key, "")
+        value = await body(request)
+        if set(value) != {"actor", "expected_revision", "patch"}:
+            raise DomainError(422, "VALIDATION_ERROR", "patch envelope required")
+        actor = Principal.model_validate(value["actor"])
+        if actor.role != "superadmin":
+            raise DomainError(403, "FORBIDDEN", "superadmin required")
+        patch = value["patch"]
+        rev = value["expected_revision"]
+        if (
+            not isinstance(patch, dict)
+            or not patch
+            or patch.keys() - {"name", "notes"}
+            or type(rev) is not int
+        ):
+            raise DomainError(422, "VALIDATION_ERROR", "invalid patch")
+        for key, text in patch.items():
+            if (
+                not isinstance(text, str)
+                or len(text) > (120 if key == "name" else 4000)
+                or (key == "name" and not text.strip())
+            ):
+                raise DomainError(422, "VALIDATION_ERROR", "invalid patch")
+        hashed = hashlib.sha256(canonical(value).encode()).hexdigest()
+        route = "PATCH /subscriptions/" + subscription_id
+        with store.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            previous = db.execute(
+                "SELECT * FROM public_receipts WHERE actor_id=? AND route=? AND key=?",
+                (actor.user_id, route, idempotency_key),
+            ).fetchone()
+            if previous:
+                if previous["body_hash"] != hashed:
+                    raise DomainError(409, "IDEMPOTENCY_CONFLICT", "idempotency conflict")
+                data = json.loads(previous["response"])
+                db.execute("COMMIT")
+                return reply(request, data, etag=data["revision"])
+            row = by_sub(subscription_id, db)
+            if row["revision"] != rev:
+                raise DomainError(409, "VERSION_CONFLICT", "revision changed")
+            db.execute(
+                "UPDATE projects SET name=?,notes=?,revision=revision+1,updated_at=? WHERE subscription_id=?",
+                (
+                    patch.get("name", row["name"]),
+                    patch.get("notes", row["notes"]),
+                    time.time(),
+                    subscription_id,
+                ),
+            )
+            data = subscription(store, by_sub(subscription_id, db), db=db)
+            commands.change(db, "tracking.subscription.updated", data)
+            db.execute(
+                "INSERT INTO public_receipts(actor_id,route,key,body_hash,response,created_at) VALUES(?,?,?,?,?,?)",
+                (actor.user_id, route, idempotency_key, hashed, canonical(data), time.time()),
+            )
+            db.execute("COMMIT")
+            return reply(request, data, etag=data["revision"])
+
+    @app.get("/internal/v1/latest", dependencies=[Depends(service)])
+    def latest(request: Request):
+        return reply(request, page(store, "latest", dict(request.query_params)))
+
+    @app.get("/internal/v1/activities", dependencies=[Depends(service)])
+    def activities(request: Request):
+        return reply(request, page(store, "activities", dict(request.query_params)))
+
+    @app.get("/internal/v1/outbox", dependencies=[Depends(service)])
+    def outbox(request: Request):
+        with store.connect() as db:
+            rows = [
+                {
+                    "event_id": r["event_id"],
+                    "state": r["state"],
+                    "error_code": r["error_code"],
+                    "updated_at": r["updated_at"],
+                }
+                for r in db.execute("SELECT * FROM tracking_outbox ORDER BY updated_at LIMIT 100")
+            ]
+        return reply(request, {"items": rows, "next_cursor": None})
+
+    @app.get("/internal/v1/status", dependencies=[Depends(service)])
+    def status(request: Request):
+        runtime = store.runtime()
+        return reply(
+            request,
+            {
+                "service": "tracking",
+                "alive": bool(runtime["heartbeat"] and time.time() - runtime["heartbeat"] < 10),
+                "connection": runtime["connection"]
+                if runtime["heartbeat"] and time.time() - runtime["heartbeat"] < 10
+                else "disconnected",
+            },
         )
-        return {"role": role}
 
-    @app.delete("/api/tracking/session")
-    def logout(request: Request, response: Response, user=Depends(actor)):
-        store.logout(request.cookies.get("tracking_session", ""))
-        response.delete_cookie("tracking_session", path="/api/tracking")
-        return {"ok": True}
+    @app.get("/internal/v1/events", dependencies=[Depends(service)])
+    async def events(request: Request):
+        previous = request.headers.get("last-event-id")
+        after = 0
+        if previous:
+            with store.connect() as db:
+                old = db.execute("SELECT seq FROM changes WHERE event_id=?", (previous,)).fetchone()
+                if old is None:
+                    raise DomainError(422, "VALIDATION_ERROR", "unknown event cursor")
+                after = old[0]
 
-    @app.get("/api/tracking/me")
-    def me(user=Depends(actor)):
-        return {"role": user.role, "subject": user.subject, "csrf_token": user.csrf_token}
+        async def frames():
+            nonlocal after
+            heartbeat = 0
+            while not await request.is_disconnected():
+                with store.connect() as db:
+                    rows = db.execute(
+                        "SELECT * FROM changes WHERE seq>? ORDER BY seq LIMIT 100", (after,)
+                    ).fetchall()
+                for row in rows:
+                    after = row["seq"]
+                    yield (
+                        "id: "
+                        + row["event_id"]
+                        + "\nevent: "
+                        + row["event_type"]
+                        + "\ndata: "
+                        + canonical({"data": json.loads(row["data"]), "request_id": request.state.request_id})
+                        + "\n\n"
+                    )
+                if time.monotonic() - heartbeat >= 15:
+                    heartbeat = time.monotonic()
+                    yield (
+                        "event: heartbeat\ndata: "
+                        + canonical({"data": {"scope": "ikun-main"}, "request_id": request.state.request_id})
+                        + "\n\n"
+                    )
+                await asyncio.sleep(0.25)
 
-    @app.get("/api/tracking/status")
-    def status(user=Depends(actor)):
-        rows = [project(r) for r in store.projects()]
-        return {
-            "engine": engine(),
-            "projects": len(rows),
-            "monitoring": sum(r["status"] == "monitoring" for r in rows),
-            "pending_or_failed": sum(r["status"] not in ("monitoring", "stopped", "removed") for r in rows),
-            "remote_enabled": cfg.remote_enabled and cfg.dedicated_account,
-        }
+        return StreamingResponse(frames(), media_type="text/event-stream")
 
-    @app.get("/api/tracking/projects")
-    def listing(include_removed: bool = False, user=Depends(actor)):
-        return {"items": [project(r) for r in store.projects(include_removed)]}
-
-    @app.post("/api/tracking/projects", status_code=202)
-    def create(body: Create, user=Depends(admin), idem=Depends(key)):
-        return project(store.mutate("create", body.project_id, body.model_dump(), user.subject, idem))
-
-    @app.get("/api/tracking/projects/{project_id}")
-    def detail(project_id: str, user=Depends(actor)):
-        return project(store.get(project_id))
-
-    @app.patch("/api/tracking/projects/{project_id}", status_code=202)
-    def update(project_id: str, body: Update, user=Depends(admin), idem=Depends(key)):
-        return project(
-            store.mutate("update", project_id, body.model_dump(exclude_none=True), user.subject, idem)
-        )
-
-    @app.post("/api/tracking/projects/{project_id}/{action}", status_code=202)
-    def command(
-        project_id: str,
-        action: Literal["start", "stop", "resume"],
-        body: Command,
-        user=Depends(admin),
-        idem=Depends(key),
-    ):
-        return project(store.mutate(action, project_id, body.model_dump(), user.subject, idem))
-
-    @app.delete("/api/tracking/projects/{project_id}", status_code=202)
-    def remove(project_id: str, body: Command, user=Depends(admin), idem=Depends(key)):
-        return project(store.mutate("remove", project_id, body.model_dump(), user.subject, idem))
-
-    @app.get("/api/tracking/activities")
-    def activities(
-        project_id: str | None = None,
-        after: int = Query(0, ge=0),
-        limit: int = Query(50, ge=1, le=200),
-        user=Depends(actor),
-    ):
-        rows = store.activities(project_id, after, limit)
-        return {"items": rows, "next_cursor": rows[-1]["seq"] if rows else after}
-
-    @app.get("/api/tracking/latest")
-    def latest(project_id: str | None = None, limit: int = Query(50, ge=1, le=200), user=Depends(actor)):
-        return {"items": store.latest(project_id, limit)}
-
-    @app.get("/api/tracking/projects/{project_id}/activities")
-    def project_activities(
-        project_id: str,
-        after: int = Query(0, ge=0),
-        limit: int = Query(50, ge=1, le=200),
-        user=Depends(actor),
-    ):
-        return activities(project_id, after, limit, user)
-
-    @app.get("/tracking", include_in_schema=False)
-    def page():
-        return FileResponse(static / "index.html")
-
-    from .v1 import install
-
-    install(app, store, actor, admin, project, engine)
-    app.mount("/tracking-assets", StaticFiles(directory=static), name="tracking-assets")
     return app

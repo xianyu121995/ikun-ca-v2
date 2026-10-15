@@ -6,6 +6,7 @@ __pycache__/
 data/
 config.local.json
 artifacts/
+.b3/
 *.db
 *.db-wal
 *.db-shm

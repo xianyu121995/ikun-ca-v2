@@ -278,7 +278,8 @@ async def test_ingestion_filters_restart_dedup_and_empty_body_completion(worker,
     assert len(store.activities()) == 1 and store.activities()[0]["text"] == "正文补全"
     assert not worker.ingest(event(tweet("foreign")))
     assert not worker.ingest(event(tweet(at=time.time() - 86400, tweet_id="999")))
-    assert not worker.ingest(event({"id": "998", "text": "missing timestamp"}))
+    assert worker.ingest(event({"id": "998", "text": "missing timestamp"}))
+    assert store.activities()[-1]["created_at"] is None
     row = store.get("prj_550e8400-e29b-41d4-a716-446655440001")
     store.mutate(
         "stop",

@@ -3,7 +3,6 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
-import os
 import re
 import sqlite3
 import time
@@ -29,64 +28,31 @@ def handle(value: str) -> str:
 
 
 class Store:
-    def __init__(self, path: Path):
-        self.path = Path(path).absolute()
-        if self.path.name != "tracking.db":
-            raise ValueError("only tracking.db may be opened")
-        if self.path != self.path.resolve():
-            raise ValueError("symlink database paths are forbidden")
-        if any(Path(str(self.path) + suffix).is_symlink() for suffix in ("-wal", "-shm")):
-            raise ValueError("symlink database sidecars are forbidden")
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        # O_NOFOLLOW also closes the final-component symlink race.
-        fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-        try:
-            if os.fstat(fd).st_nlink != 1:
-                raise ValueError("hardlinked databases are forbidden")
-        finally:
-            os.close(fd)
-        with self.connect() as db:
-            identity = db.execute("PRAGMA application_id").fetchone()[0]
-            tables = db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-            if identity not in (0, APP_ID) or (identity == 0 and tables):
-                raise ValueError("foreign database rejected")
-            db.execute(f"PRAGMA application_id={APP_ID}")
-            db.execute("PRAGMA journal_mode=WAL")
-            schema = Path(__file__).with_name("schema.sql").read_text()
-            checksum = hashlib.sha256(schema.encode()).hexdigest()
-            names = {r[0] for r in tables}
-            if "_store_identity" in names:
-                owner = db.execute("SELECT store_name FROM _store_identity WHERE singleton=1").fetchone()
-                if not owner or owner[0] != "tracking":
-                    raise ValueError("tracking store owner mismatch")
-            if "_schema_migrations" in names:
-                columns = {r[1] for r in db.execute("PRAGMA table_info(_schema_migrations)")}
-                if "checksum" in columns:
-                    prior = db.execute("SELECT checksum FROM _schema_migrations WHERE version=2").fetchone()
-                    if prior and prior[0] != checksum:
-                        raise ValueError("tracking migration checksum mismatch")
-            db.executescript("BEGIN IMMEDIATE;\n" + schema)
-            columns = {r[1] for r in db.execute("PRAGMA table_info(_schema_migrations)")}
-            if "checksum" not in columns:
-                db.execute("ALTER TABLE _schema_migrations ADD COLUMN checksum TEXT")
-            db.execute("INSERT OR IGNORE INTO _store_identity VALUES(1,'tracking')")
-            db.execute(
-                "INSERT OR IGNORE INTO _schema_migrations VALUES(2,'tracking_new_tweet_v1',datetime('now'),?)",
-                (checksum,),
-            )
-            db.execute("PRAGMA user_version=2")
-            db.execute("COMMIT")
+    def __init__(self, path: Path, *, initialize=False):
+        from .migration import inspect, migrate, safe_path
+
+        self.path = safe_path(path)
+        if initialize:
+            migrate(self.path)
+        else:
+            inspect(self.path)
 
     @contextlib.contextmanager
     def connect(self):
-        if self.path.is_symlink() or self.path.stat().st_nlink != 1:
-            raise ValueError("unsafe database path")
-        db = sqlite3.connect(self.path, timeout=5, isolation_level=None)
+        from .migration import safe_path
+
+        path = safe_path(self.path)
+        db = sqlite3.connect(path.as_uri() + "?mode=rw", uri=True, timeout=5, isolation_level=None)
         db.row_factory = sqlite3.Row
-        db.execute("PRAGMA foreign_keys=ON")
-        db.execute("PRAGMA busy_timeout=5000")
-        db.execute("PRAGMA synchronous=FULL")
         try:
+            if db.execute("PRAGMA application_id").fetchone()[0] != APP_ID:
+                raise ValueError("tracking database identity changed")
+            owner = db.execute("SELECT store_name FROM _store_identity WHERE singleton=1").fetchone()
+            if not owner or owner[0] != "tracking":
+                raise ValueError("tracking database identity changed")
+            db.execute("PRAGMA foreign_keys=ON")
+            db.execute("PRAGMA busy_timeout=5000")
+            db.execute("PRAGMA synchronous=FULL")
             yield db
         finally:
             db.close()
@@ -190,13 +156,21 @@ class Store:
                                 project_id,
                             ),
                         )
+                if action == "create":
+                    import uuid
+
+                    db.execute(
+                        "UPDATE projects SET subscription_id=? WHERE project_id=?",
+                        ("sub_" + str(uuid.uuid4()), project_id),
+                    )
                 result = self.get(project_id, db)
                 db.execute(
                     "INSERT INTO audit(project_id,actor,action,at,detail) VALUES(?,?,?,?,?)",
                     (project_id, actor, action, now, json.dumps({"revision": result["revision"]})),
                 )
                 db.execute(
-                    "INSERT INTO receipts VALUES(?,?,?,?)", (key, fingerprint, json.dumps(result), now)
+                    "INSERT INTO receipts(key,fingerprint,result,at) VALUES(?,?,?,?)",
+                    (key, fingerprint, json.dumps(result), now),
                 )
                 db.execute("COMMIT")
                 return result
@@ -206,6 +180,9 @@ class Store:
                 raise
 
     def observe(self, row: dict, **changes) -> bool:
+        from .commands import change, observed
+        from .views import subscription
+
         allowed = {
             "remote_state",
             "observed_at",
@@ -216,11 +193,14 @@ class Store:
             "next_retry",
             "last_backfill",
             "coverage",
+            "baseline_ready",
         }
         if not changes or changes.keys() - allowed:
             raise ValueError("invalid observation fields")
         with self.connect() as db:
-            return (
+            db.execute("BEGIN IMMEDIATE")
+            before = self.get(row["project_id"], db)
+            updated = (
                 db.execute(
                     "UPDATE projects SET "
                     + ",".join(f"{k}=?" for k in changes)
@@ -229,6 +209,13 @@ class Store:
                 ).rowcount
                 == 1
             )
+            if updated:
+                observed(db, before, changes)
+                after = self.get(row["project_id"], db)
+                if any(before[k] != after[k] for k in ("remote_state", "status", "error")):
+                    change(db, "tracking.subscription.updated", subscription(self, after, db=db))
+            db.execute("COMMIT")
+            return updated
 
     def runtime(self, **changes) -> dict:
         if changes.keys() - {"worker_id", "heartbeat", "connection", "pong_at", "error"}:
@@ -253,6 +240,10 @@ class Store:
                         "UPDATE runtime SET worker_id=?,heartbeat=?,connection='disconnected',pong_at=NULL,error=NULL WHERE id=1",
                         (owner, now),
                     )
+                    db.execute(
+                        "UPDATE commands SET state='unknown',error_code='UPSTREAM_TIMEOUT',updated_at=? WHERE state='running' AND remote_attempted=1",
+                        (now,),
+                    )
             elif release:
                 accepted = row["worker_id"] == owner
                 if accepted:
@@ -267,33 +258,78 @@ class Store:
             return bool(accepted)
 
     def insert_tweet(self, row: dict, tweet: dict, source: str) -> bool:
+        import uuid
+
+        from .commands import activity, change
+        from .protocol import SCOPE, canonical
+
+        source = "rest" if source == "rest_recovery" else source
         with self.connect() as db:
-            # Recheck the command revision within the write transaction; no post-stop events can leak in.
             db.execute("BEGIN IMMEDIATE")
             current = self.get(row["project_id"], db)
             if current["revision"] != row["revision"] or current["desired"] != "running":
                 db.execute("ROLLBACK")
                 return False
-            if tweet["created_at"] < current["generation_at"]:
+            created = tweet["created_at"]
+            if (created is not None and created < current["generation_at"]) or (
+                created is None and source != "wss"
+            ):
                 db.execute("ROLLBACK")
                 return False
-            result = db.execute(
-                """INSERT INTO tweets(project_id,handle,tweet_id,text,created_at,received_at,source,generation)
-                VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(handle,tweet_id) DO UPDATE SET text=excluded.text
-                WHERE tweets.text='' AND excluded.text!=''""",
-                (
-                    row["project_id"],
-                    row["handle"],
-                    tweet["tweet_id"],
-                    tweet["text"],
-                    tweet["created_at"],
-                    time.time(),
-                    source,
-                    current["generation"],
-                ),
+            aid = "act_" + str(
+                uuid.uuid5(
+                    uuid.NAMESPACE_URL,
+                    f"{current['subscription_id']}:{current['generation']}:{tweet['tweet_id']}",
+                )
             )
+            prior = db.execute("SELECT 1 FROM tweets WHERE activity_id=?", (aid,)).fetchone()
+            changed = (
+                db.execute(
+                    """INSERT INTO tweets(activity_id,project_id,subscription_id,handle,tweet_id,text,created_at,received_at,source,generation)
+                VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(subscription_id,generation,tweet_id) DO UPDATE SET text=excluded.text
+                WHERE tweets.text='' AND excluded.text!=''""",
+                    (
+                        aid,
+                        current["project_id"],
+                        current["subscription_id"],
+                        current["handle"],
+                        tweet["tweet_id"],
+                        tweet["text"],
+                        created,
+                        time.time(),
+                        source,
+                        current["generation"],
+                    ),
+                ).rowcount
+                == 1
+            )
+            if changed and not prior:
+                record = dict(
+                    db.execute(
+                        "SELECT t.*,p.name AS project_name FROM tweets t JOIN projects p USING(project_id) WHERE activity_id=?",
+                        (aid,),
+                    ).fetchone()
+                )
+                dto = activity(record)
+                eid = change(db, "tracking.activity.created", dto)
+                envelope = {
+                    "schema_version": 1,
+                    "event_id": eid,
+                    "source": "tracking",
+                    "event_type": "tracking.activity.created",
+                    "occurred_at": dto["occurred_at"],
+                    "received_at": dto["received_at"],
+                    "tenant_id": SCOPE,
+                    "project_id": current["project_id"],
+                    "correlation_id": aid,
+                    "payload": dto,
+                }
+                db.execute(
+                    "INSERT INTO tracking_outbox(event_id,envelope,state,updated_at) VALUES(?,?,?,?)",
+                    (eid, canonical(envelope), "pending", time.time()),
+                )
             db.execute("COMMIT")
-            return result.rowcount == 1
+            return changed
 
     def activities(self, project_id: str | None = None, after: int = 0, limit: int = 50) -> list[dict]:
         with self.connect() as db:
@@ -335,34 +371,11 @@ class Store:
             )
             return [{**dict(r), "url": f"https://x.com/{r['handle']}/status/{r['tweet_id']}"} for r in rows]
 
-    def session(self, token: str, role: str | None = None):
-        digest = hashlib.sha256(token.encode()).hexdigest()
-        with self.connect() as db:
-            if role:
-                db.execute("DELETE FROM sessions WHERE expires<?", (time.time(),))
-                db.execute("INSERT INTO sessions VALUES(?,?,?)", (digest, role, time.time() + 3600))
-                return role
-            row = db.execute(
-                "SELECT role FROM sessions WHERE digest=? AND expires>?", (digest, time.time())
-            ).fetchone()
-            return row[0] if row else None
+    def session(self, *args, **kwargs):
+        raise ValueError("Human sessions belong exclusively to auth.db")
 
-    def logout(self, token: str):
-        with self.connect() as db:
-            db.execute("DELETE FROM sessions WHERE digest=?", (hashlib.sha256(token.encode()).hexdigest(),))
+    def logout(self, *args, **kwargs):
+        raise ValueError("Human sessions belong exclusively to auth.db")
 
-    def login_allowed(self, identity: str) -> bool:
-        now = time.time()
-        with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            db.execute("DELETE FROM login_limits WHERE window_at<?", (now - 600,))
-            db.execute(
-                """INSERT INTO login_limits VALUES(?,?,1) ON CONFLICT(identity)
-                DO UPDATE SET attempts=attempts+1""",
-                (identity, now),
-            )
-            count = db.execute("SELECT attempts FROM login_limits WHERE identity=?", (identity,)).fetchone()[
-                0
-            ]
-            db.execute("COMMIT")
-            return count <= 10
+    def login_allowed(self, *args, **kwargs):
+        raise ValueError("Human login limits belong exclusively to auth.db")

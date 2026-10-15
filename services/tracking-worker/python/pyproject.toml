@@ -14,9 +14,6 @@ test = ["pytest>=8,<10", "pytest-asyncio>=0.24,<2", "ruff>=0.9,<1"]
 [project.scripts]
 ikun-tracking = "tracking.cli:main"
 
-[tool.setuptools.package-data]
-tracking = ["static/*", "schema.sql"]
-
 [tool.setuptools.packages.find]
 include = ["tracking*"]
 

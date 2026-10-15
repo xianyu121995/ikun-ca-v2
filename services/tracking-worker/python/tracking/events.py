@@ -54,7 +54,11 @@ def normalize(content: dict, username: str, require_author=False) -> dict | None
     tweet_id = str(content.get("id", content.get("id_str", "")))
     created = timestamp(content.get("createdAt", content.get("created_at")))
     text = content.get("text", content.get("full_text", ""))
-    if not re.fullmatch(r"[0-9]{1,30}", tweet_id) or created is None or not isinstance(text, str):
+    if (
+        not re.fullmatch(r"[0-9]{1,30}", tweet_id)
+        or (created is None and require_author)
+        or not isinstance(text, str)
+    ):
         return None
     return {"tweet_id": tweet_id, "created_at": created, "text": text[:50000]}
 

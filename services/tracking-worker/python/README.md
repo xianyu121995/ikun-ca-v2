@@ -1,73 +1,95 @@
-# ikun.ca 独立项目 NEW_TWEET 引擎
+# ikun.ca 独立 NEW_TWEET 引擎 · B3
 
-本模块在 `codex/tracking-worker`，只写自己的 `tracking.db` 及其 SQLite WAL/SHM。没有 hunter/projects/auth 数据库路径、跨库 SQL、旧版账号导入或共享 Watch 修改。默认关闭真实远端调用。`serve` 将业务 API 与引擎放在同一个 tracking 服务进程，网站独立运行；没有新增正式服务。
+只读写 `DATA_ROOT/tracking/tracking.db` 及其 WAL/SHM。`serve` 在独立 Tracking 进程中运行 API 和采集；网站退出/重启不控制该进程。默认关闭真实 6551，不复用旧版账号或 Watch。
 
-## 运行
+当前是本地集成候选，未合并/部署。完整构建和新浏览器验收因总管 C0-lite 资源优先安排暂停；旧轮构建/截图不证明当前源码通过。精确结果及限制见 `HANDOFF.md`、`B3-WORKLOG.md`。
 
-Python 3.11+。在本目录：
+## 身份与接入
+
+人类登录、页面、Route Handler、Server Action 和 SSE 撤销使用固定 B1 实际 guard。仅 superadmin 写，user 只读，强制改密会话不能进入业务。Worker 仅接受独立方向 `TRACKING_API_TOKEN`（至少32字符，不能等于 provider token），不接收人类 Cookie、不提供本地登录、不读取 auth.db。旧 `/api/tracking`、静态登录、session getter 和直连 Worker 的 Nginx 模板已退役。
+
+网站候选在 `integration/website/`；UI 固定 `d90598f4bc595458ce26c5ee1c2e1618e318abc0`，最小补丁为 `integration/patches/tracking-live.patch`，不改公共组件/CSS 或其他 Worktree。直接加入先经固定 B2 IPC 校验 canonical `prj_UUIDv4`；Hunter→Projects→Tracking 使用 B2 真实序列化 outbox，不直接打开其他库。
+
+## 独立运行
+
+Python 3.11+、Node24、固定 B0 runtime；发布必须包含仓库 `schemas/tracking`，不支持丢失 SQL 的单独 wheel。依赖安装/完整构建遵守同一重任务锁，当前优先时段未解除前不执行。
 
 ```sh
 uv venv --python python3.11 .venv
 uv pip install --python .venv/bin/python -r requirements.lock.txt
 uv pip install --python .venv/bin/python --no-deps -e .
 cp config.example.json config.local.json
-.venv/bin/python -m tracking.cli init --config config.local.json
-.venv/bin/python -m tracking.cli serve --config config.local.json
 ```
 
-本地页面 `/tracking`。独立测试模式使用 `IKUN_TRACKING_ADMIN_TOKEN` / `IKUN_TRACKING_READ_TOKEN` 两个不同的至少 32 字符随机值，或配置 0600 的凭证文件；不在聊天填写。页面只存 HttpOnly session，凭证不进 localStorage、HTML、日志。
+首次创建可复制示例；已有配置先检查，不覆盖。填写 `db_path` 为自己的绝对 `DATA_ROOT/tracking/tracking.db`，配置0600的 `token_file`（独立6551账号）和 `service_token_file`（Tracking方向凭据）。网站通过服务端环境提供相同方向凭据及 `TRACKING_API_URL=http://127.0.0.1:<本窗口端口>`；不得使用 NEXT_PUBLIC_* 或交给浏览器。
 
-正式主站接入使用 `auth_session_url` 指向认证服务的 loopback `/api/auth/session`、`auth_origin` 为网站真实 Origin、`auth_cookie_name` 为其 session cookie。每次业务请求通过认证 API 检查用户、撤销、强制改密；superadmin 可写、user 只读。写请求验证主站 Origin 和 CSRF。此模式禁止独立 tracking 登录，不读取 auth.db。
+```sh
+.venv/bin/python -m tracking.cli init --config /ABS_CONFIG/tracking.json
+.venv/bin/python -m tracking.cli serve --config /ABS_CONFIG/tracking.json
+```
 
-Node 正式入口保持原基础模式；明确设置 `IKUN_TRACKING_CONFIG` 为绝对路径时，`pnpm start:tracking` 启动本实现。`IKUN_TRACKING_PYTHON` 可指定绝对 Python 路径。开发 Worktree 使用自己的 3412 端口和数据目录；生产配置另行审核，默认示例的 3112 不应与其他 Worktree 共用。
+`init/migrate` 是唯一迁移入口；`api/worker/serve` 和 ready 仅校验。`api` 只运行 HTTP、`worker` 只运行采集，常规选择 serve。loopback 示例端口3112，开发窗口须另配独立端口。固定 B0 集成后：
+
+```sh
+IKUN_TRACKING_CONFIG=/ABS_CONFIG/tracking.json \
+IKUN_TRACKING_PYTHON=/ABS_RELEASE/services/tracking-worker/python/.venv/bin/python \
+DATA_ROOT=/ABS_DATA \
+/ABS_NODE/bin/node /ABS_RELEASE/scripts/service.mjs tracking start
+```
+
+入口使用 B0 spawnManaged guardian，裁剪子进程环境、协调 SIGTERM、回收父进程异常退出的私有树。`deploy/ca.ikun.v2.tracking.plist.example` 仅待审，未安装。缺 IKUN_TRACKING_CONFIG 时仍是基础 idle，不代表监控运行。
 
 ## API
 
-正式接入候选为 `/api/v1/tracking`，所有成功/失败带 request_id，写入 UUID Idempotency-Key，变更使用 `If-Match: "rev-N"`；ID 必须为项目领域提供的 `prj_<UUIDv4>`。时间返回 UTC ISO 8601。创建表示本地确认已持久化，监控启用须查看远端核验状态。
+公开候选前缀 `/api/v1`；标准 `{data,request_id}`、错误code/no-store。写入需要 B1 Origin/Host/CSRF 和 UUID Idempotency-Key；修改/状态操作需要 `If-Match: "rev-N"`。路径用 sub_ID，不能拿 project_id 代替。
 
-| 方法 / 路径 | 用途 |
+| 方法 / 路径 | 行为 |
 |---|---|
-| GET /subscriptions | 分页查询，limit≤100，opaque cursor |
-| POST /subscriptions | 超级管理员人工确认项目与账号后加入；201、远端仍待确认 |
-| GET /subscriptions/{project_id} | 详情、ETag、远端状态、累计条数及最新推文时间 |
-| PATCH /subscriptions/{project_id} | 编辑名称/备注；账号与项目 ID 不可静默替换 |
-| POST /subscriptions/{project_id}/start、stop、resume | 持久化异步命令；202 |
-| DELETE /subscriptions/{project_id} | 请求远端移除；202，保留历史，核验前不隐藏失败项 |
-| GET /status | 独立进程与真实来源心跳状态 |
-| GET /latest | 最新入库动态，可按 project_id 查询 |
-| GET /activities | seq cursor 增量读取，不重复消费 |
+| GET /tracking/subscriptions | 订阅分页及 desired/observed/operation/connection 四种状态 |
+| POST /tracking/subscriptions | project_id/name/x_user_id/x_handle/notes/confirmed:true；202仅持久受理 |
+| GET/PATCH /tracking/subscriptions/{sub_ID} | 查询、编辑本订阅名称/备注；账号不可静默替换 |
+| POST /tracking/subscriptions/{sub_ID}/{start,stop,resume} | 异步命令202 |
+| DELETE /tracking/subscriptions/{sub_ID} | 异步移除，保留历史、不修改主页 |
+| GET /tracking/latest、/tracking/activities | 接收时间分页的脱敏动态 |
+| GET /commands/{cmd_ID} | 先查固定 Projects 网关，只有真实 NOT_FOUND 才回查 Tracking |
+| GET /tracking/events | 本地SSE候选：标准envelope/Last-Event-ID/持续撤销；统一events网关由总管集成 |
 
-`/api/tracking/*` 是独立页面适配接口：操作使用 body.expected_revision；不作为共享 v1 契约的替代。`/health/live`、`/health/ready` 仅检查进程/本库，不证明远端采集成功。
+Worker `/internal/v1/commands` POST/GET 使用固定 B2 CommandEnvelopeV2；内部不额外要求公共幂等/If-Match头。command_id inbox hash 和 envelope.expected_revision 保证幂等/版本。结果固定8字段；ACK丢失查原ID；DB故障503，不能假404后重发。
 
-## 远端状态与恢复
+内部还提供 subscriptions/latest/activities/events/status/outbox。`/health/live` 只证明进程存在，ready只证明本库兼容。观察 outbox 保持 pending/可查询：固定 B2 ingest/tracking=501，未发送或伪造回执。
 
-- 请求状态 desired、远端查询结果 remote_state、WSS 连接状态分别保存。订阅 ACK 与有效 pong、worker 心跳和 Watch 回查均有效时，页面才显示“正在接收”。过期结果显示 unknown/recovering。
-- 启停/移除调用后重新查询完整 Watch；超时也先回查。成功 ACK 但实际未改变，进入重试。停止通过删除本模块拥有的远端条目释放名额，恢复重新添加。
-- 写入前持久化 ownership reservation；仅操作本模块已声明且 groupName 精确匹配的账号。发现旧配置、未知分组、缺字段、分页不完整、外部事件开关变化均阻止覆盖。不会为了腾名额删除其他账号。
-- 名额不足、429、5xx、断线持久化重试时间，指数退避和抖动，尊重 Retry-After。外部 HTTP 串行限速，WSS 有界消息大小/队列、ACK/pong 超时和重连。
-- SQLite 单 worker 租约、revision 检查和原子去重；崩溃后由独立 supervisor 恢复，30 秒租约失效后接管。正常 SIGTERM 协调 API/引擎退出并释放租约。暂停/重新加入产生新 generation，旧推文不能伪装为新动态。
-- 本地严格筛选 NEW_TWEET、作者和发布时间，排除 reply/quote/retweet。`handle+tweet_id` 唯一，空正文后续补全不产生第二条动态。
-- 初次、重连后及周期性 REST 恢复采集最多最近 100 条。超过窗口显示 possible_gap，失败显示 recovery_failed；不承诺任意长断线都能补齐历史。服务端没有已验证的无限分页/重放协议。
+## 远端与恢复
 
-真实远端启用同时要求 `remote_enabled=true`、`dedicated_account=true` 和独立凭证。独立分组不能隔离同一个 6551 账号的配额/权限；正式环境必须使用独立账号。6551 没有条件更新/CAS 的已验证契约，不能对同一账号的其他人工写入提供原子隔离保证。当前没有借用旧版 Token，也没有发起真实 Watch 增删。
+- confirmed 后先事务持久命令/订阅/审计再202；add/delete后完整回查 Watch。ACK、超时、本地desired不当成功；停止确认absent后才显示已停止。
+- 每个项目最多一个sub_ID；恢复沿用ID、递增generation并重建baseline。X稳定ID只补缺值，冲突409，不覆盖人工名称/备注。
+- ownership reservation、revision fence、单worker租约持久化；重启先回查，不确定写入不盲重发。600名额满额只报错/退避，用户手动移除，不自动淘汰。
+- 仅操作本模块已声明、groupName/全部flags匹配的记录；外部编辑、未知归属、列表不完整均阻止变更。分组不等于账号隔离，真实启用仍需独立账号与明确授权。
+- HTTP超时/串行限速、429/Retry-After、退避抖动；WSS ACK/pong超时、断线重连、REST恢复。connected需要新鲜worker心跳和来源pong。
+- 同代按 `(subscription_id,generation,tweet_id)` 去重；WSS/REST/重放及空正文补全不新增动态。WSS未知发生时间保留null；REST缺可靠时间不作为恢复新推文。
+- REST仅最近100条，超窗标记possible_gap；不承诺无限历史、不新增定时清理。
 
-## 页面与集成边界
+## 未决与未验证
 
-`static/` 是已接真实本地 API 的运行页面；`integration/next/` 是网站 owner 可审阅的同源 BFF 候选，`deploy/nginx-tracking.conf` 为另一种路由方式，二选一。均未安装或部署。
+C-01全量发布时间跨页倒序、C-03全量评级组合来源/分页、C-05跨generation公共折叠仍BLOCKED。保留冻结接收时间排序，UI标明页内筛选；真实订阅备注在账号/正文前。评级只取授权Projects API实际值；媒体/互动/重要标记未知，不伪造0/false。转推/回复/引用与保留期待定，历史候选过滤不能称为产品定稿。
 
-`integration/monitor-adapter.mjs` 对接 tracking-ui 的 presentation contract，真实接口驱动 start/stop/resume/remove，不使用模拟状态定时器。当前 UI 原型只接受 mode=demo、缺 canonical project_id、包含模拟/已读/分类/操作日志控件；正式切换必须由 UI owner 接受 mode=live、传入人工确认项目回调并关闭不支持的控件。分类、已读与面板日志没有虚构数据；分类显示“未分类”。累计推文数量来自本库真实 COUNT。
+真实6551、付费/Watch操作、主站合并、域名、生产launchd/Tunnel、跨worker全链路尚未验证。测试仅私有临时库及MockTransport/loopback，不接触旧资源。
 
-主站原型/BFF 文件归其他窗口，本次只交付本模块内的接入候选，不改其文件。生产接通需总管完成接口审阅、正式 UI/认证组合验收和批准部署。详见 HANDOFF.md；不把候选测试等同已上线。
-
-## 测试
+## 验证
 
 ```sh
+.venv/bin/python integration/sync-b3.py
+.venv/bin/python integration/bind-b3.py
 .venv/bin/python -m pytest -q
-.venv/bin/ruff check tracking tests --select E4,E7,E9,F,I,UP
-node scripts/browser-smoke.mjs
-node scripts/bff-smoke.mjs
-node scripts/adapter-smoke.mjs
-node scripts/launcher-smoke.mjs
+.venv/bin/ruff check tracking tests integration --select E4,E7,E9,F,I,UP
 ```
 
-浏览器脚本需要 Playwright（PLAYWRIGHT_MODULE 可指定）和 Chrome（CHROMIUM_EXECUTABLE 可指定），仅启动临时本机服务，远端关闭。所有 vendor 用例均为 MockTransport 或 loopback 模拟，不消耗真实 6551 名额。
+pytest包含1个Node/B1/B2实际入口wrapper，其内部6项不再累加；进程/WSS用例需要loopback权限。新装机先用prepare-b3.py导出固定Git输入，再安装冻结依赖/构建，不merge本分支。
+
+优先时段明确解除后，完整构建使用主仓库同一把锁：
+
+```sh
+python3 /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/scripts/with-heavy-lock.py \
+  --owner tracking-worker --timeout 600 -- .venv/bin/python integration/build-b3.py
+```
+
+compiled生命周期入口 `integration/tests/lifecycle.test.mjs`；浏览器批次 `integration/tests/browser.test.mjs` 的整个预览生命周期也须包在此锁内。不得复制/删除锁或因锁空闲跳过C0安排。日志/输入哈希在忽略的artifacts/b3；旧日志不代替最终源码验证。

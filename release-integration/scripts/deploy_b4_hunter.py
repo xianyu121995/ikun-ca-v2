@@ -85,11 +85,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--candidate', required=True)
     parser.add_argument('--website-from', required=True)
+    parser.add_argument('--seed-local-fixture', action='store_true')
     args = parser.parse_args()
     assert run(['git', 'rev-parse', 'HEAD']).strip() == args.candidate
     assert run(['git', 'rev-parse', 'main']).strip() == MAIN
     assert not run(['git', 'status', '--porcelain']).strip()
     verify()
+    guard = json.loads((ROOT / 'release-integration/night/guard-hardening-evidence.json').read_text())
+    assert digest(ROOT / 'release-integration/scripts/night_worker_ops.py') == guard['source_sha256']['release-integration/scripts/night_worker_ops.py']
     owner = private_json(TARGET / 'owner.json')
     assert owner['thread'] == '01a13c4c-039a-7713-98f4-47c694ed1a9e' and owner['candidate_sha'] == args.website_from
     binding = json.loads((ROOT / 'release-integration/c0-lite/evidence/build-binding.json').read_text())
@@ -133,6 +136,11 @@ def main():
         init_env = {**values, 'HOME': str(Path.home()), 'PATH': '/usr/bin:/bin', 'PYTHONNOUSERSITE': '1',
                     'PYTHONPATH': str(release / 'services/hunter-worker/python'), 'PYTHONDONTWRITEBYTECODE': '1'}
         run([venv / 'bin/python', '-m', 'hunterradar', 'init'], env=init_env)
+        if args.seed_local_fixture:
+            # Authorized offline fixture only, before this new job has ever been loaded.
+            code = 'import sys;from pathlib import Path;sys.path.insert(0,sys.argv[1]);from accept_b4_site import seed_hunter;seed_hunter(Path(sys.argv[2]))'
+            run([venv / 'bin/python', '-c', code, release / 'release-integration/scripts', TARGET / 'data'], env=init_env)
+            report['fixture'] = 'offline synthetic discovery named 本地验收夹具 C0 Hunter; no provider or HTTP fixture endpoint'
         manifest = json.loads((ROOT / 'services/hunter-worker/python/integration/RECEIVING-B4.json').read_text())
         runtime = {row['source']: row['sha256'] for row in manifest['files'] if row['kind'] in ('runtime', 'explicit_migration', 'dependency_lock')}
         runtime['services/hunter-worker/package.json'] = digest(ROOT / 'services/hunter-worker/package.json')

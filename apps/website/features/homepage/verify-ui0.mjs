@@ -28,9 +28,9 @@ if(pin.spec_commit!==spec)throw Error('Specification pin mismatch');
 for(const [name,digest] of Object.entries(pin.spec_files_sha256))if(sha(git('show',`${spec}:docs/phase2/${name}`))!==digest)throw Error(`Spec hash changed: ${name}`);
 const release=JSON.parse(git('show',`${spec}:docs/phase2/releases.json`).toString());
 if(!release.immediately_released.includes('homepage-ui')||release.merge_authorized||release.production_authorized)throw Error('Release boundary mismatch');
-const stats=JSON.parse(readFileSync(join(module,'evidence/shared-ui/test-results.json'),'utf8')).stats;
-if(stats.expected!==19||stats.unexpected||stats.skipped)throw Error('Browser acceptance incomplete');
-const unit=readFileSync(join(module,'evidence/shared-ui/view-model-tests.tap'),'utf8');
+const stats=JSON.parse(readFileSync(join(module,'evidence/reference/test-results.json'),'utf8')).stats;
+if(stats.expected!==21||stats.unexpected||stats.skipped)throw Error('Browser acceptance incomplete');
+const unit=readFileSync(join(module,'evidence/reference/view-model-tests.tap'),'utf8');
 if(!unit.includes('# tests 8')||!unit.includes('# pass 8')||!unit.includes('# fail 0'))throw Error('View model tests incomplete');
 const sources=[...['phase2-homepage.tsx','phase2-preview.tsx','shared-dialog.tsx','phase2-homepage.css','prepare-shared-ui.mjs'].map(name=>join(module,name)),...['types.ts','view-model.ts','demo-fixtures.ts'].map(name=>join(feature,name)),join(root,'apps/website/app/prototypes/homepage/page.tsx')];
 for(const file of sources){const text=readFileSync(file,'utf8');if(/\b(fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/.test(text))throw Error('Page network client detected');if(/from\s+['"]\/|crypto\.randomUUID/.test(text))throw Error('Absolute import or page ID generation detected');}
@@ -51,5 +51,5 @@ const proof={contract_version:'phase2-v1.0.0',spec_commit:spec,source_baseline:b
   page_network_clients:0,business_database_created:false,
   active_source_sha256:Object.fromEntries(sources.map(file=>[relative(root,file),sha(readFileSync(file))])),
   not_verified:['clean checkout workspace frozen install','fresh shared type/dependency propagation','real auth and Projects adapter','production or platform data','deployment']};
-writeFileSync(join(module,'evidence/shared-ui/verification.json'),JSON.stringify(proof,null,2)+'\n');
+writeFileSync(join(module,'evidence/reference/verification.json'),JSON.stringify(proof,null,2)+'\n');
 process.stdout.write(JSON.stringify({owner_only:true,protected_files:protectedCount,unit_passed:8,browser_passed:stats.expected})+'\n');

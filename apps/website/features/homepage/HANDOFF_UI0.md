@@ -90,9 +90,17 @@ node apps/website/features/homepage/verify-ui0.mjs
 
 构建串行、cpus=1、heap=2048MB。未添加真实账号或密码字段，no-JS 密码项不适用于此页。
 
-已通过：8 项纯视图测试、19 项浏览器交互、website typecheck / Next build；1440/1920/2560/390px 无整页横向溢出、13px 表格、390px 容器内部滚动。浏览器请求记录无外部/API 请求；63 个非本窗口基线文件未变化，未创建业务数据库。
+已通过：8 项纯视图测试、21 项浏览器交互、website typecheck / Next build；1440/1920/2560/390px 无整页横向溢出、13px 表格、390px 容器内部滚动。浏览器请求记录无外部/API 请求；63 个非本窗口基线文件未变化，未创建业务数据库。
 
-最新证据为 `components/homepage-ui/evidence/shared-ui/`；之前 `evidence/phase2/` 与旧原型证据保持原样。最新验收结果在 verification.json / test-results.json / view-model-tests.tap，包含四个宽度截图、手机编辑、刷新失败保留。首轮回归发现旧测试精确标签定位不适配 required 标记，以及弹窗条件卸载晚于原生焦点回退；已分别补明确 aria-label 和卸载生命周期适配，没有绕过焦点断言。
+最新证据为 `components/homepage-ui/evidence/reference/`；之前 `evidence/shared-ui/`、`evidence/phase2/` 与旧原型证据保持原样。最新验收结果在 verification.json / test-results.json / view-model-tests.tap，包含四个宽度截图、手机编辑、刷新失败保留。首轮回归发现旧测试精确标签定位不适配 required 标记，以及弹窗条件卸载晚于原生焦点回退；已分别补明确 aria-label 和卸载生命周期适配，没有绕过焦点断言。
+
+## 用户参考图适配
+
+按用户提供的深色宽屏参考图调整：标题右侧搜索/添加，6 个紧凑概览卡片，4 个近期时间卡片，评分/发现时间/名称优先的高密度表格。概览和 S/A/B 快捷筛选可点，行内增加查看资料；搜索支持 `/`、⌘K/Ctrl+K。演示设置默认折叠，保留持续可见的演示标记。
+
+概览只统计当前页已加载的 active 项目，不是全库总量；参与中/已暂停直接按 progress_stage 计数。时间卡片仅来自 token_date/status，不新增事件模型，不补未知日期或制造倒计时。虚构 fixture 补充两个明确的预计日期，便于测试四卡布局。预计与确认始终区分；没有模拟 WSS/REST/数据库/Telegram 在线状态。
+
+视觉仍使用唯一公共组件和冻结 tokens；未改侧栏/全站公共包，仅改本页布局与样式。1440px 可在本页表格内横向滚动，1920/2560px 操作按钮留在自己的单元格内，390px 概览两列/日期单列。最新浏览器测试增加概览筛选、日期查看与双向排序回归。
 
 ## 给主页功能窗口的接入点
 

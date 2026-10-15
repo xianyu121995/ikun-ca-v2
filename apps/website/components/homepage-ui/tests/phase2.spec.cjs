@@ -1,10 +1,10 @@
 const {test,expect}=require('../.tools/node_modules/@playwright/test');
 const path=require('node:path');
-const artifact=name=>path.join(__dirname,'../evidence/shared-ui',name);
+const artifact=name=>path.join(__dirname,'../evidence/reference',name);
 const row=(page,name)=>page.locator('tbody tr').filter({has:page.locator('.hp2-project-name strong',{hasText:name})});
 const dialog=page=>page.getByRole('dialog');
 const add=async page=>{await page.getByRole('button',{name:'添加项目',exact:true}).click();await dialog(page).getByLabel('项目名称',{exact:true}).fill('UI0 New Project');};
-test.beforeEach(async({page})=>{await page.goto('/prototypes/homepage');await expect(page.locator('tbody tr')).toHaveCount(10);});
+test.beforeEach(async({page})=>{await page.goto('/prototypes/homepage');await expect(page.locator('tbody tr')).toHaveCount(10);await page.locator('.hp2-demo-settings>summary').click();});
 
 test('DTO display, scoped demo labels, unknown data and required width matrix',async({page})=>{
   const requests=[],errors=[];page.on('request',r=>requests.push(r.url()));page.on('pageerror',e=>errors.push(e.message));
@@ -18,6 +18,7 @@ test('DTO display, scoped demo labels, unknown data and required width matrix',a
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(width);
     expect(await page.locator('.hp2-root .ik-table').evaluate(e=>getComputedStyle(e.querySelector('td')).fontSize)).toBe('13px');
     if(width===390)expect(await page.locator('.hp2-root .ik-table-scroll').evaluate(e=>e.scrollWidth>e.clientWidth)).toBe(true);
+    if(width>=1920)expect(await page.locator('.hp2-actions').first().evaluate(e=>e.lastElementChild.getBoundingClientRect().right<=e.closest('td').getBoundingClientRect().right)).toBe(true);
     await page.screenshot({path:artifact(`home-${width}.png`),fullPage:true});
   }
   expect(requests.filter(url=>new URL(url).origin!=='http://127.0.0.1:3700'||new URL(url).pathname.startsWith('/api/'))).toEqual([]);expect(errors).toEqual([]);
@@ -139,4 +140,22 @@ test('rating and fractional progress persist only after save; estimated dates re
   await expect(row(page,'Orbit Layer')).toContainText('72%');await dialog(page).getByRole('button',{name:'保存修改'}).click();
   await expect(row(page,'Orbit Layer')).toContainText('42.5%');await expect(row(page,'Orbit Layer')).toContainText('未评分');await expect(row(page,'Orbit Layer')).toContainText('预计');
   const payload=JSON.parse(await page.getByTestId('callback-log').textContent()).payload.fields;expect(payload.rating).toBeNull();expect(payload.progress_percent).toBe(42.5);expect(payload.token_date_status).toBe('estimated');
+});
+
+
+test('reference overview uses loaded active projects and cards filter the existing table',async({page})=>{
+  const overview=page.locator('.hp2-overview');await expect(overview.locator('.hp2-stat')).toHaveCount(6);
+  await expect(overview.getByRole('button',{name:'项目总数 10 个，筛选项目'})).toBeVisible();
+  await overview.getByRole('button',{name:'S 级项目 2 个，筛选项目'}).click();await expect(page.locator('tbody tr')).toHaveCount(2);await expect(page.getByLabel('评分筛选')).toHaveValue('S');
+  await overview.getByRole('button',{name:'已暂停 1 个，筛选项目'}).click();await expect(row(page,'Prism Social')).toHaveCount(1);await expect(page.getByLabel('进度筛选')).toHaveValue('paused');
+  await page.locator('.hp2-grade-filters').getByRole('button',{name:/^全部/}).click();await page.getByRole('button',{name:'清除筛选'}).click();await expect(page.locator('tbody tr')).toHaveCount(10);
+  const headers=await page.locator('thead th').allTextContents();expect(headers.slice(0,3)).toEqual(['评分','发现时间 · 北京','项目名称']);
+  await page.keyboard.press('Meta+k');await expect(page.getByRole('searchbox',{name:'搜索项目'})).toBeFocused();
+});
+test('reference date strip uses explicit token dates, opens details and labels estimates without fake countdowns',async({page})=>{
+  const cards=page.locator('.hp2-date-grid .hp2-date-card');await expect(cards).toHaveCount(4);
+  await expect(cards.first()).toContainText('Nexa Compute');await expect(cards.first()).toContainText('2026-10-18');await expect(cards.first()).toContainText('预计');
+  await cards.first().click();await expect(dialog(page)).toContainText('Nexa Compute');await expect(dialog(page)).toContainText('未知');await page.keyboard.press('Escape');await expect(cards.first()).toBeFocused();
+  await page.getByRole('button',{name:'查看全部'}).click();await expect(dialog(page)).toHaveAccessibleName('项目时间');await expect(dialog(page).locator('.hp2-time-list>div')).toHaveCount(4);await expect(dialog(page)).toContainText('预计时间不代表已确认事件');
+  await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'查看全部'})).toBeFocused();
 });

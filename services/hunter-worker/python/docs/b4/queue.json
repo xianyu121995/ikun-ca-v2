@@ -1,0 +1,14 @@
+{
+  "initial_attempt": {
+    "timeout_seconds": 600,
+    "exit_code": 75,
+    "message": "HEAVY_LOCK_BUSY: command not started",
+    "heavy_child_started": false
+  },
+  "first_acquired_build": {
+    "exit_code": 1,
+    "reason": "preview-local offline store missing tslib",
+    "receipt": "hunter-worker-862eb998-1e93-4188-8bbf-b68ad8e102d6.json"
+  },
+  "resumed_build": "queued under the same shared lock; no bypass"
+}

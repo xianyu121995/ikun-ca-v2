@@ -1,0 +1,10 @@
+
+> @ikun/hunter-worker@0.1.0 build /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker/services/hunter-worker
+> tsc -p tsconfig.json
+
+Scope: all 7 workspace projects
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +32
+++++++++++++++++++++++++++++++++
+ ERR_PNPM_NO_OFFLINE_TARBALL  A package is missing from the store but cannot download it in offline mode. The missing package may be downloaded from https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz.

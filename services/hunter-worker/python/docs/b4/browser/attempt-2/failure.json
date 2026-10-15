@@ -1,0 +1,8 @@
+{
+  "passed": [
+    "匿名页面与API拒绝，真实B1首次改密"
+  ],
+  "errors": [],
+  "external": [],
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n5 !== 10\n"
+}

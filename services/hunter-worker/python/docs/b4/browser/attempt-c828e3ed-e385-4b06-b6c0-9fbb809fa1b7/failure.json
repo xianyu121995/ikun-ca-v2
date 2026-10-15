@@ -1,0 +1,11 @@
+{
+  "passed": [
+    "匿名页面与API拒绝，真实B1首次改密",
+    "唯一公共组件与全宽默认表，C-04真实保存入口",
+    "真实服务端搜索、评分筛选与跨100条游标分页",
+    "未保存资料取消/放弃及焦点恢复"
+  ],
+  "errors": [],
+  "external": [],
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'B4 Research FixtureResearch persisted <script>inert()</script>'\n- 'B4 Research Fixture'\n"
+}

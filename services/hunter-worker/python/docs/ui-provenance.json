@@ -1,0 +1,8 @@
+{
+  "source": "prototypes/hunter-discovery",
+  "copied_files": {
+    "index.html": "c79f3a744a2ee87360739fa846697faff0cc3ee1e3d174167012b9981e7d0495",
+    "styles.css": "755c19d102c5de711085d7851f16d7de1056699e071a25b99cf774068c9bf882"
+  },
+  "scope": "UI markup and styles copied into isolated module; prototype files unchanged; app.js implemented against real API"
+}

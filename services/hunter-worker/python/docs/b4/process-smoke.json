@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "starts": 3,
+  "entry": "Node24 execve -> Python",
+  "graceful_restart": true,
+  "sigkill_lease_recovery": true,
+  "same_account_id": true,
+  "website_process_required": false,
+  "provider_calls": 0,
+  "process_ids": [
+    47692,
+    47694,
+    47744
+  ]
+}

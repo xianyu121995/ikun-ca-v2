@@ -1,0 +1,169 @@
+{
+  "record_version": 1,
+  "protocol_version": "hunter-research-retention-v1.0.0",
+  "recorded_at_utc": "2026-10-15T16:41:12.620952+00:00",
+  "state": "approved_implemented_pending_chief_freeze",
+  "product_recommendation": "approved",
+  "implementation_state": "local_fixture_validation_complete",
+  "runtime_acceptance": false,
+  "runtime_tests_run_for_this_increment": 0,
+  "baseline_commit": "bd69bbd0bba6fdc4f7c66191a839612dd53989d6",
+  "policy_version": "product-decisions-v1.1",
+  "product_commit": "50ee277aed435a723aab6139bd952e709b3ad08e",
+  "amends_product_commit": "5c208ec74429c37a51f67f04558508e7f9b2538a",
+  "source_files_sha256": {
+    "5c208ec74429c37a51f67f04558508e7f9b2538a": {
+      "docs/product/DECISIONS.md": "4eca64f8a7442f8211e9a69703d3a3545bc8d00961a97ffe4f71c12c5e28436b",
+      "docs/product/DECISIONS-P0.md": "fde180d85dd07ce6481d72379cc959e2af87657e7996b2512476dc5ee4f01382",
+      "docs/product/decisions-v1.json": "a29c2d6794adb67454f08b8a4ccb521b6ddf03db6a539f9d5b57641489c0ea5b"
+    },
+    "50ee277aed435a723aab6139bd952e709b3ad08e": {
+      "docs/product/DECISIONS.md": "d53123c0cd9a018474ccb711a91ce58f4f1eeeb4914ea58f7598e2286f7f5276",
+      "docs/product/DECISIONS-P0.md": "0bfb31d24bda57717c0908263d703a56c02c996cf91c08a891183154344287f0",
+      "docs/product/decisions-v1.json": "7e32dc34d3a6adad7b50c722b5cdc17454712c60b97c084328417de3b75f2b18"
+    }
+  },
+  "protocol_file": "services/hunter-worker/B4-C04-PROPOSAL.md",
+  "protocol_file_sha256": "59689794cb45b24a26380cce70deb753955db514e1f9b89a0d1373d305636a13",
+  "proposed_wire": {
+    "method": "PATCH",
+    "path": "/api/v1/hunter/discoveries/{discovery_id}",
+    "version_selection": "/api/v1 path plus PATCH method; no query/header profile",
+    "request_fields": [
+      "name",
+      "rating",
+      "description",
+      "notes",
+      "website_url",
+      "category",
+      "progress_stage",
+      "progress_percent",
+      "token_date",
+      "token_date_status"
+    ],
+    "success_status": 200,
+    "success_data_fields": [
+      "discovery_id",
+      "revision",
+      "saved_at"
+    ],
+    "full_read_dto": "existing GET HunterDiscoveryV2",
+    "response_refinement_requires_chief_review": true,
+    "idempotency_retention_seconds": 604800,
+    "discovery_ttl_seconds": 604800,
+    "window_seconds": 259200,
+    "cleanup_interval_seconds": 60,
+    "cleanup_batch_max": 500,
+    "backup_max_count": 3,
+    "backup_max_age_seconds": 172800,
+    "migration_candidate": "004_research_retention.sql (not implemented)",
+    "canonical_side_effects": false,
+    "monitoring_side_effects": false
+  },
+  "coverage": {
+    "DEC-D3": {
+      "protocol_version": "hunter-research-retention-v1.0.0",
+      "implementation_commit": null,
+      "command": null,
+      "runtime_count": 0,
+      "status": "PASS_local_fixture_pending_chief_freeze",
+      "evidence": "night-receipt.json; python-night-final.xml; final-batch.json"
+    },
+    "DEC-D4": {
+      "protocol_version": "hunter-research-retention-v1.0.0",
+      "implementation_commit": null,
+      "command": null,
+      "runtime_count": 0,
+      "status": "PASS_local_fixture_pending_chief_freeze",
+      "evidence": "night-receipt.json; python-night-final.xml; final-batch.json"
+    },
+    "DEC-D5": {
+      "protocol_version": "hunter-research-retention-v1.0.0",
+      "implementation_commit": null,
+      "command": null,
+      "runtime_count": 0,
+      "status": "PASS_local_fixture_pending_chief_freeze",
+      "evidence": "night-receipt.json; python-night-final.xml; final-batch.json"
+    },
+    "DEC-C04": {
+      "protocol_version": "hunter-research-retention-v1.0.0",
+      "implementation_commit": null,
+      "command": null,
+      "runtime_count": 0,
+      "status": "PASS_local_fixture_pending_chief_freeze",
+      "evidence": "night-receipt.json; python-night-final.xml; final-batch.json"
+    }
+  },
+  "planned_case_groups": [
+    "C04-01",
+    "C04-02",
+    "C04-03",
+    "C04-04",
+    "C04-05",
+    "C04-06",
+    "D3-01",
+    "D3-02",
+    "D3-03",
+    "D3-04",
+    "D3-05",
+    "D3-06",
+    "D4-01",
+    "D4-02",
+    "D4-03",
+    "D5-01",
+    "D5-02",
+    "D5-03",
+    "MIG-01",
+    "AUTH/PRO/ISO/OPS"
+  ],
+  "checks": {
+    "upstream_product_objects_and_hashes": "PASS",
+    "protected_ui_sha256": "PASS (12/12)",
+    "proposal_json_example_and_coverage_structure": "PASS",
+    "empty_index_before_protocol_staging": "PASS"
+  },
+  "protected_ui_files_sha256": {
+    "services/hunter-worker/ui/.gitignore": "7ab8f938cc68ea4ea75ae1802827b357c251acf914a96750131c7285e67d2ba7",
+    "services/hunter-worker/ui/package.json": "598689c764fa7b813920222a95534d598da21f71ae55e7958ff2a313664f0125",
+    "services/hunter-worker/ui/scripts/build.mjs": "8d19f4f01e37eaf3a121bda7cdfe755686f9aa95fa45a9750d90bc647370fa77",
+    "services/hunter-worker/ui/scripts/preview.mjs": "45ede4b73d97c75452b95df463cdff9b5e014c834380a7efd441b3d8353fb6d6",
+    "services/hunter-worker/ui/scripts/shared-ui.mjs": "8499eaf8acabbdb3645624b23c313c70bbe624f67c0ee89190835d5602a75180",
+    "services/hunter-worker/ui/scripts/typecheck.mjs": "70a606013ed1049b174a7bc6b250174c9e1b201efc034dc25d48fda217991c23",
+    "services/hunter-worker/ui/src/DiscoveryDemo.tsx": "357a9b55c7e22665d838c22151409f367d834fabc8f8a6186777746fb6c3f5be",
+    "services/hunter-worker/ui/src/assets.d.ts": "31a5e495b9d12154b1f370374b8d3970a2bdef0c59c00a6a52424b49a4284dc2",
+    "services/hunter-worker/ui/src/browser.tsx": "d5216fb274c648bfa128724796877ee72f13414bcf04a7f965b7d5fc45d38c2b",
+    "services/hunter-worker/ui/src/fixtures.ts": "02483c7518579d48febd71d8b64fdf2bace9df9c36345510a995e28b5f1ee227",
+    "services/hunter-worker/ui/src/model.ts": "8aa326172755060f847798d17c65f576716d110042c59d3190e4ffa46a4f3c75",
+    "services/hunter-worker/ui/src/styles.css": "85a063eb9f6a93adc0a3b15ac3f91c8c0326bb94054f05ddfe29ee4759c4e6c7"
+  },
+  "preservation": {
+    "existing_uncommitted_b4_not_staged": true,
+    "failed_evidence_not_overwritten": true,
+    "protected_ui_not_modified": true,
+    "shared_files_not_modified": true,
+    "other_business_databases_not_opened": true
+  },
+  "external_provider_calls": 0,
+  "heavy_work_launched_for_protocol_increment": false,
+  "merge_push_deploy": false,
+  "blocking": [
+    "chief exact implementation review/freeze required",
+    "real provider and C0 cross-worker/production acceptance not performed",
+    "missing reliable follow timestamp policy remains undecided"
+  ],
+  "notes": [
+    "Only documentation and boundary checks are PASS; no runtime test result is claimed.",
+    "Existing B4 runtime work and failures remain outside this documentation-only commit.",
+    "D1/D8 confirmed; voice implementation held until separate release."
+  ],
+  "approval_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "approved_protocol_commit": "b16fb36a8b8269350319c02a60faa6ea2708d95a",
+  "local_fixture_results": {
+    "python": 227,
+    "node": 10,
+    "formal_browser_groups": 14,
+    "legacy_browser_groups": 11,
+    "main_process_starts": 3,
+    "restore_sigkill_cases": 5
+  }
+}

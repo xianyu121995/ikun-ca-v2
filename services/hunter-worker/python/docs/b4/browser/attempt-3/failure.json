@@ -1,0 +1,6 @@
+{
+  "passed": [],
+  "errors": [],
+  "external": [],
+  "error": "TimeoutError: locator.waitFor: Timeout 10000ms exceeded.\nCall log:\n  - waiting for locator('.ik-table tbody tr .account').first() to be visible\n"
+}

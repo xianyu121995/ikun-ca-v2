@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "kill_cases": 5,
+  "before_publication_rejected": 4,
+  "after_publication_safe": 1,
+  "provider_calls": 0,
+  "cases": [
+    {
+      "phase": "after_copy",
+      "signal": "SIGKILL",
+      "activation": "rejected"
+    },
+    {
+      "phase": "before_merge_commit",
+      "signal": "SIGKILL",
+      "activation": "rejected"
+    },
+    {
+      "phase": "after_merge_commit",
+      "signal": "SIGKILL",
+      "activation": "rejected"
+    },
+    {
+      "phase": "after_reservation",
+      "signal": "SIGKILL",
+      "activation": "rejected"
+    },
+    {
+      "phase": "after_publish",
+      "signal": "SIGKILL",
+      "activation": "complete_fences_no_duplicate"
+    }
+  ]
+}

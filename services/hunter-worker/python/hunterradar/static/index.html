@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>猎手监控 · ikun.ca 独立服务</title>
+  <link rel="stylesheet" href="/api/hunterradar/v1/assets/style.css">
+
+  <script defer src="/api/hunterradar/v1/assets/app.js"></script>
+</head>
+<body>
+  <svg class="icon-definitions" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12 19 5M12 3v2M3 12h2M12 19v2M19 12h2"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M6 7a8 8 0 0 1 13 1M18 17a8 8 0 0 1-13-1"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M14 3h7v7M21 3 10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l4-1L20 7a2 2 0 0 0-3-3L5 16z"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  </defs></svg>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" data-action="discover" aria-label="ikun.ca 原型首页"><span class="brand-mark">i<span>k</span></span><span>ikun<span class="brand-domain">.ca</span></span></a>
+      <span class="workspace-label">WORKSPACE <span>V2</span></span>
+      <nav aria-label="主导航">
+        <button data-action="other-page" data-page="主页"><svg><use href="#i-grid"/></svg><span>主页</span></button>
+        <button class="active" data-action="discover"><svg><use href="#i-radar"/></svg><span>猎手监控</span><span class="nav-indicator"></span></button>
+        <button data-action="other-page" data-page="猎手项目监控"><svg><use href="#i-activity"/></svg><span>猎手项目监控</span></button>
+      </nav>
+      <div class="sidebar-bottom"><div class="environment"><span class="dot"></span><span>后台采集</span><span class="mono">LOCAL</span></div><button class="account-button" data-action="account-info"><span class="user-avatar">K</span><span><strong>当前账号</strong><small>权限验证中</small></span><svg><use href="#i-chevron"/></svg></button></div>
+    </aside>
+    <div class="page-shell">
+      <header class="topbar"><div class="breadcrumb">工作台 <span>/</span> <strong>猎手监控</strong></div><div class="topbar-right"><span class="prototype-label">LIVE MODULE</span><span class="timezone mono">UTC+8</span><button class="icon-button" data-action="account-info" aria-label="查看账号信息"><span class="mini-avatar">K</span></button></div></header>
+      <main>
+        <section class="page-heading"><div><div class="eyebrow">DISCOVERY TERMINAL</div><h1>猎手监控 <span>HunterRadar</span></h1><p>从关注信号中发现项目，整理资料并加入持续监控。</p></div><button class="button secondary" data-action="manage"><svg><use href="#i-users"/></svg>猎手管理<span class="button-count" id="hunter-count">0</span></button></section>
+        <div class="demo-strip"><span class="dot amber"></span><span>正在读取独立 HunterRadar 服务状态…</span><span id="live-note">真实数据</span></div>
+        <section class="stats-strip" aria-label="项目概览"><div><span>发现项目</span><strong id="stat-total">—</strong><small>已入库累计</small></div><div><span>近 24H 新发现</span><strong class="accent" id="stat-new">—</strong><small>72H 内 ≥ 2 位猎手</small></div><div><span>待研究</span><strong id="stat-pending">—</strong><small>等待人工整理</small></div><div><span>已接收加入任务</span><strong id="stat-tracking">—</strong><small>接收回执确认</small></div><div class="stats-note"><svg><use href="#i-radar"/></svg><span>捕获信号 → 人工研究 → 持续监控</span></div></section>
+        <section class="workspace">
+          <div class="workspace-tabs" role="tablist" aria-label="猎手监控视图"><button id="tab-discover" role="tab" aria-selected="true" data-action="discover">项目发现 <span id="discovery-count">0</span></button><button id="tab-manage" role="tab" aria-selected="false" data-action="manage">猎手管理 <span id="management-count">0</span></button><span class="tab-end"><span class="dot"></span>真实数据</span></div>
+          <div id="discovery-view" role="tabpanel" aria-labelledby="tab-discover">
+            <div class="filter-bar"><label class="search-box"><svg><use href="#i-search"/></svg><input id="search" type="search" placeholder="搜索项目、X 账号、简介或备注" aria-label="搜索项目"><kbd>/</kbd></label><label class="filter"><span>发现时间</span><select id="time-filter"><option value="all">全部时间</option><option value="24">近 24 小时</option><option value="72">近 72 小时</option><option value="168">近 7 天</option><option value="custom">自定义</option></select></label><label class="filter"><span>评分</span><select id="score-filter"><option value="all">全部评分</option><option>S</option><option>A</option><option>B</option><option>C</option><option value="unrated">未评分</option></select></label><label class="filter"><span>状态</span><select id="status-filter"><option value="all">全部状态</option><option value="pending">待研究</option><option value="reviewed">已整理</option><option value="tracking">已加入</option><option value="ignored">已忽略</option></select></label><button class="icon-button refresh-button" data-action="refresh" aria-label="刷新项目"><svg><use href="#i-refresh"/></svg></button></div>
+            <div class="custom-dates" id="custom-dates" hidden><label>开始日期 <input id="date-start" type="date"></label><span>至</span><label>结束日期 <input id="date-end" type="date"></label><span id="date-error" class="error-text"></span></div>
+            <div class="results-toolbar"><div><strong id="result-count">—</strong><span>个项目</span><button class="text-button" id="reset-filters" data-action="reset-filters" hidden>清除筛选</button></div><div><span class="muted small">按</span><select id="sort" aria-label="项目排序"><option value="newest">发现时间 ↓</option><option value="oldest">发现时间 ↑</option><option value="score">评分优先</option><option value="signals">关注数量 ↓</option></select><span class="toolbar-divider"></span><span id="updated-at" class="muted small mono"></span></div></div>
+            <div id="content-grid" class="content-grid"><div class="table-region"><div id="table-container" class="table-container"></div><div class="table-footer"><span id="page-summary"></span><div><select id="page-size" aria-label="每页数量"><option value="20">20 条 / 页</option><option value="50">50 条 / 页</option></select><button class="pagination-button" data-action="prev" aria-label="上一页">‹</button><span id="page-label" class="mono">1 / 2</span><button class="pagination-button" data-action="next" aria-label="下一页">›</button></div></div></div><aside id="project-panel" class="project-panel" aria-labelledby="panel-title" hidden></aside></div>
+          </div>
+          <div id="management-view" role="tabpanel" aria-labelledby="tab-manage" hidden><div class="management-heading"><div><h2>猎手账号</h2><p>查看账号资料与监控状态，管理猎手名单。</p></div><button class="button primary" data-action="add-hunter"><svg><use href="#i-plus"/></svg>添加猎手</button></div><div class="management-filters"><label class="search-box"><svg><use href="#i-search"/></svg><input id="hunter-search" type="search" placeholder="搜索猎手账号或备注" aria-label="搜索猎手"></label><span class="muted small">粉丝信息由后台查询 · 本地管理不修改共享 Watch</span></div><div id="hunters-table" class="table-container"></div></div>
+        </section>
+        <footer class="page-footer"><span>ikun.ca <span class="muted">/</span> HunterRadar</span><span>独立存储 hunter.db <span class="muted">·</span> <span>受控任务 · 人工确认</span></span></footer>
+      </main>
+    </div>
+  </div>
+  <dialog id="action-dialog" aria-labelledby="dialog-title"></dialog>
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

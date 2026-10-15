@@ -1,0 +1,217 @@
+{
+  "record_version": 1,
+  "state": "candidate_pending_chief_freeze",
+  "pins": {
+    "release": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+    "spec": "9699375c920465b5d802e7acff17b5421203e544",
+    "b0": "85be3bd6dce25d82033b6cb1a7157aaa39bd571e",
+    "auth": "f097bd4722155d5e689b8894956391ed7e5f2fa7",
+    "auth_increment_review": "1d56ef2f003c531574e41fe079c70510ac6ed437",
+    "projects": "cc95dc27852d056457ca0582cff64a88c0eab1d4",
+    "projects_constructor_review": "967f3098e84de7e299d970019d56b571ac63de94",
+    "ui": "486294ac3255b08fdb13a307ee15f96c571020d9",
+    "hunter_ui": "08065d700239b20fb4c887bbd0c85321904687f8"
+  },
+  "protocol_approval_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "files": [
+    {
+      "source": "services/hunter-worker/python/hunterradar/__init__.py",
+      "sha256": "9125527b3900dec0b2af401dbd7f6f006e546a78fee240c965db3a6a9df546ea",
+      "target": "services/hunter-worker/python/hunterradar/__init__.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/__main__.py",
+      "sha256": "683bc85e574b376c588538fa5857ebe92f3765ac1c29815273d145e1b5c7e0bc",
+      "target": "services/hunter-worker/python/hunterradar/__main__.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/api.py",
+      "sha256": "387f04114db075719293a65c3485aa52491b56febd13270628f8be1680f9407f",
+      "target": "services/hunter-worker/python/hunterradar/api.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/config.py",
+      "sha256": "0c04de886af9577e3fcb3dbdd22016ea116134098cdbff8215c25547cc0aad0a",
+      "target": "services/hunter-worker/python/hunterradar/config.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/engine.py",
+      "sha256": "64aa831b41b65f99e14c72f0b0f405668ac4cb901e62b61cabd739823cfdd5c0",
+      "target": "services/hunter-worker/python/hunterradar/engine.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/formal.py",
+      "sha256": "b877cceb9437a32b7ebf529f13c1c3e445d8a01b429c1899a6364b3c38a443e2",
+      "target": "services/hunter-worker/python/hunterradar/formal.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/formal_api.py",
+      "sha256": "ce38dc184158cb49891d96aea0abee1a68017c08e3115acb75a17b01df960943",
+      "target": "services/hunter-worker/python/hunterradar/formal_api.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/gateway.py",
+      "sha256": "ad90dd7dd1f7dd32657bfac8a14229b291e7413df910f8f60802b32c6b75a4fe",
+      "target": "services/hunter-worker/python/hunterradar/gateway.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/migration.py",
+      "sha256": "ca9d6fc482dbef30c6036fca1e9c1e702fb3348424a7289c7f524d5583dedd78",
+      "target": "services/hunter-worker/python/hunterradar/migration.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/parsers.py",
+      "sha256": "ed9e1cd43621dc30b63786c23d22c9187059ef3a1a8970a51a0b59b10c96b524",
+      "target": "services/hunter-worker/python/hunterradar/parsers.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/protocol.py",
+      "sha256": "fea240320843e19cc6ba9d262f8eff5f4b984b63920e069464ce395de9610c70",
+      "target": "services/hunter-worker/python/hunterradar/protocol.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/providers.py",
+      "sha256": "43e0e2ec65b104377fc9eb2fc43ace3b367ee548aedf6c4d8d9bfd5b12801a82",
+      "target": "services/hunter-worker/python/hunterradar/providers.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/retention.py",
+      "sha256": "a939f182257d0a56bb2ece3e57b922a3f5e3787553f7d724c1f2849d5df3ea67",
+      "target": "services/hunter-worker/python/hunterradar/retention.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "services/hunter-worker/python/hunterradar/store.py",
+      "sha256": "06c8686a89e16fe069f1b9681691037fed1e99ce9489abf1d18f39cabcddd4da",
+      "target": "services/hunter-worker/python/hunterradar/store.py",
+      "kind": "runtime"
+    },
+    {
+      "source": "schemas/hunter/001_foundation.sql",
+      "sha256": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac",
+      "target": "schemas/hunter/001_foundation.sql",
+      "kind": "explicit_migration"
+    },
+    {
+      "source": "schemas/hunter/002_hunterradar.sql",
+      "sha256": "de5e3e97b9423d60cad112c5b7ec1d103a910253aee9e4c1f0770dd303bd3cac",
+      "target": "schemas/hunter/002_hunterradar.sql",
+      "kind": "explicit_migration"
+    },
+    {
+      "source": "schemas/hunter/003_b4_protocol.sql",
+      "sha256": "9de43fcdb7c288794ac8509d3dd70dbb6f6ca195527f85933dc30ec8f3574fbe",
+      "target": "schemas/hunter/003_b4_protocol.sql",
+      "kind": "explicit_migration"
+    },
+    {
+      "source": "schemas/hunter/004_research_retention.sql",
+      "sha256": "bdc1b3a24dbd18ad4088cd71578d8144600e0606aed636a3234d29162d506d22",
+      "target": "schemas/hunter/004_research_retention.sql",
+      "kind": "explicit_migration"
+    },
+    {
+      "source": "services/hunter-worker/src/main.ts",
+      "sha256": "14f2bb69b1c288b465bffd2971f59cf0abedea3880c997fa505de726ab878327",
+      "target": "services/hunter-worker/src/main.ts -> dist/main.js",
+      "kind": "compiled_entry"
+    },
+    {
+      "source": "services/hunter-worker/python/integration/website/app/api/v1/hunter/[...path]/route.ts",
+      "sha256": "2647193116d12027e97c98355c58e016d355bbb091983780b9ef1d9251f20854",
+      "target": "apps/website/app/api/v1/hunter/[...path]/route.ts",
+      "kind": "website_candidate"
+    },
+    {
+      "source": "services/hunter-worker/python/integration/website/app/hunter/actions.ts",
+      "sha256": "163885d4db8b39448eea7f7d764d007a70f95541fcd752ec5f4eb1d8705fa677",
+      "target": "apps/website/app/hunter/actions.ts",
+      "kind": "website_candidate"
+    },
+    {
+      "source": "services/hunter-worker/python/integration/website/app/hunter/page.tsx",
+      "sha256": "043baa7080b13dea2694b6bf0f4c86c26866b7f9676adc2f61a501c1019d5bf2",
+      "target": "apps/website/app/hunter/page.tsx",
+      "kind": "website_candidate"
+    },
+    {
+      "source": "services/hunter-worker/python/integration/website/components/hunter-controller.tsx",
+      "sha256": "02be49982ffd8cfc46d9311424d0bf023ad6900bfd286aa0624bc7c744a96f4f",
+      "target": "apps/website/components/hunter-controller.tsx",
+      "kind": "website_candidate"
+    },
+    {
+      "source": "services/hunter-worker/python/integration/website/components/hunter-host.css",
+      "sha256": "ef701341c264cb36cd2a40818ade7510d6a08cced8722225c6252f9261525a03",
+      "target": "apps/website/components/hunter-host.css",
+      "kind": "website_candidate"
+    },
+    {
+      "source": "services/hunter-worker/python/integration/website/lib/hunter.ts",
+      "sha256": "151165438072d62a55e4f647e7910977344783c7e90daeee4d733670edc17bda",
+      "target": "apps/website/lib/hunter.ts",
+      "kind": "website_candidate"
+    },
+    {
+      "source": "services/hunter-worker/python/integration/patches/hunter-live.patch",
+      "sha256": "9bac82b9a1d1f2b5791ea4eecb71c580a59d364ea6896b95376f9432a8c1f93f",
+      "target": "apply --check against Hunter UI 08065d7; App.tsx + model.ts only",
+      "kind": "reviewed_patch"
+    },
+    {
+      "source": "services/hunter-worker/python/requirements-lock.txt",
+      "sha256": "b88b719169f16814ef81609f8507ce17d77b7a96c2af55a42b8098d562b10ffb",
+      "target": "private Python>=3.11 venv dependency installation only",
+      "kind": "dependency_lock"
+    }
+  ],
+  "schema_version": 4,
+  "sql_sha256": {
+    "schemas/hunter/001_foundation.sql": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac",
+    "schemas/hunter/002_hunterradar.sql": "de5e3e97b9423d60cad112c5b7ec1d103a910253aee9e4c1f0770dd303bd3cac",
+    "schemas/hunter/003_b4_protocol.sql": "9de43fcdb7c288794ac8509d3dd70dbb6f6ca195527f85933dc30ec8f3574fbe",
+    "schemas/hunter/004_research_retention.sql": "bdc1b3a24dbd18ad4088cd71578d8144600e0606aed636a3234d29162d506d22"
+  },
+  "ui_patch_base_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+  "ui_patch_sha256": "9bac82b9a1d1f2b5791ea4eecb71c580a59d364ea6896b95376f9432a8c1f93f",
+  "patched_ui_output_sha256": {
+    "apps/website/features/hunter-discovery/v3/App.tsx": "0704ed3f2cb3f2fe5479a6bd1e013ff4d21cbab229d0275b5aca1ca8966dcd2c",
+    "apps/website/features/hunter-discovery/v3/model.ts": "37307d0dc8f7d17641792f2cfc47f6a96b47df5e8566581dbd6611e08a2c43c5"
+  },
+  "projects_helper_sha256": "3b9924c8bde29502faf181662372da4d19213bbe76a9655994933b352a0937f5",
+  "python_requirements_lock_sha256": "b88b719169f16814ef81609f8507ce17d77b7a96c2af55a42b8098d562b10ffb",
+  "pnpm_lock_sha256": "b6d8c15890754ada75986e3edd5c0be3db182e43654175e5bf58450eb8d5f106",
+  "hunter_package_sha256": "ba30a75bd81b6dcf7ed2db03a53323bdfdeeae3df0b87e7e23ce5773d968fb02",
+  "compiled_entry_sha256": "81499cd9d9d84d26131e111f9bbd8cf4c4a3776d4452a11b547ec178bb080206",
+  "external_io_required": false,
+  "internal_project_delivery_separate": true,
+  "requires_private_cwd_without_dotenv": true,
+  "excluded": [
+    "services/hunter-worker/ui/**",
+    "var/**",
+    ".env",
+    "node_modules",
+    "venv",
+    ".next",
+    "preview-only action probe",
+    "fixture accounts/databases",
+    "test-only gateway mounts"
+  ],
+  "shared_gateway_contributions_only": [
+    "hunterCommandRoute",
+    "hunterEventsRoute"
+  ],
+  "runbook": "README-B4.md"
+}

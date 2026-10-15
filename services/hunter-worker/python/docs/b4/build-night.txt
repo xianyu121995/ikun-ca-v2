@@ -1,0 +1,70 @@
+
+> @ikun/hunter-worker@0.1.0 build /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker/services/hunter-worker
+> tsc -p tsconfig.json
+
+Scope: all 7 workspace projects
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 926ms using pnpm v10.33.1
+
+> ikun-ca-v2@0.1.0 build:shared /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker/services/hunter-worker/python/var/b4/preview
+> pnpm --filter @ikun/contracts build && pnpm --filter @ikun/runtime build
+
+
+> @ikun/contracts@0.1.0 build /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker/services/hunter-worker/python/var/b4/preview/packages/contracts
+> tsc -p tsconfig.json
+
+
+> @ikun/runtime@0.1.0 build /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker/services/hunter-worker/python/var/b4/preview/packages/runtime
+> tsc -p tsconfig.json
+
+
+> @ikun/ui@0.1.0 build /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker/services/hunter-worker/python/var/b4/preview/packages/ui
+> tsc -p tsconfig.json && node scripts/copy-styles.mjs
+
+
+> @ikun/website@0.1.0 build /Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker/services/hunter-worker/python/var/b4/preview/apps/website
+> NODE_OPTIONS=--max-old-space-size=2048 next build --webpack
+
+▲ Next.js 16.4.1 (webpack)
+✓ Running next.config.ts took 92ms
+- Experiments (use with caution):
+  · cpus: 1
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1877ms
+  Running TypeScript ...
+  Finished TypeScript in 1257ms ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/4) ...
+  Generating static pages using 1 worker (1/4)
+  Generating static pages using 1 worker (2/4)
+  Generating static pages using 1 worker (3/4)
+✓ Generating static pages using 1 worker (4/4) in 124ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/session
+├ ƒ /api/v1/[...path]
+├ ƒ /api/v1/auth/[[...path]]
+├ ƒ /api/v1/commands/[id]
+├ ƒ /api/v1/events/stream
+├ ƒ /api/v1/hunter/[...path]
+├ ƒ /auth
+├ ƒ /auth/password
+├ ƒ /health/live
+├ ƒ /health/ready
+├ ƒ /hunter
+├ ƒ /internal/v1/[...path]
+├ ƒ /internal/v1/hunter-action-probe
+└ ƒ /login
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

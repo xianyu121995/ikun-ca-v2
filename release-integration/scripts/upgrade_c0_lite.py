@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Upgrade only the owned new C0-lite label; preserve its previous release and DBs."""
+import argparse
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import plistlib
+import shutil
+import subprocess
+import time
+import urllib.request
+from deploy_c0_lite import ROOT, TARGET, LABEL, MAIN, command, digest, write_private
+
+
+def atomic(path, value):
+    temporary = path.with_name(path.name + '.new-' + str(os.getpid()))
+    write_private(temporary, value)
+    os.replace(temporary, path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--candidate', required=True)
+    parser.add_argument('--from-sha', required=True)
+    args = parser.parse_args()
+    assert command(['git', 'rev-parse', 'HEAD'], cwd=ROOT) == args.candidate
+    assert command(['git', 'branch', '--show-current'], cwd=ROOT) == 'codex/integration'
+    assert not command(['git', 'status', '--porcelain'], cwd=ROOT)
+    assert command(['git', 'rev-parse', 'main'], cwd=ROOT) == MAIN
+    binding = json.loads((ROOT / 'release-integration/c0-lite/evidence/build-binding.json').read_text())
+    for path, expected in {**binding['sources'], **binding['compiled']}.items():
+        assert digest(ROOT / path) == expected, path
+    owner_path = TARGET / 'owner.json'
+    owner = json.loads(owner_path.read_text())
+    assert owner['thread'] == '01a13c4c-039a-7713-98f4-47c694ed1a9e' and owner['candidate_sha'] == args.from_sha
+    env_path = TARGET / 'config/web.environment.json'
+    env = json.loads(env_path.read_text())
+    assert env['DATA_ROOT'] == str(TARGET / 'data') and env['IKUN_RELEASE_SHA'] == args.from_sha
+    assert env['IKUN_AUTH_ORIGIN'] == 'https://v2.ikun.ca' and 'IKUN_AUTH_DEV' not in env
+    plist = Path.home() / 'Library/LaunchAgents' / (LABEL + '.plist')
+    job = plistlib.loads(plist.read_bytes())
+    assert job['Label'] == LABEL and str(TARGET / 'releases' / args.from_sha) == job['WorkingDirectory']
+    release = TARGET / 'releases' / args.candidate
+    assert not release.exists(), 'NEW_RELEASE_ONLY'
+    release.mkdir(mode=0o700)
+    archive = subprocess.check_output(['git', 'archive', args.candidate], cwd=ROOT)
+    subprocess.run(['/usr/bin/tar', '-x', '-C', str(release)], input=archive, check=True)
+    for relative in ('modules/auth/integration/preview-only', 'packages/ui/preview', 'packages/ui/review'):
+        if (release / relative).exists(): shutil.rmtree(release / relative)
+    for relative in ('node_modules', 'packages/contracts/dist', 'packages/contracts/node_modules', 'packages/runtime/dist',
+                     'packages/runtime/node_modules', 'packages/ui/dist', 'packages/ui/node_modules', 'modules/auth/dist',
+                     'apps/website/.next', 'apps/website/node_modules'):
+        source = ROOT / relative
+        if source.is_dir():
+            shutil.copytree(source, release / relative, symlinks=True,
+                            ignore=(lambda path, names: ['cache'] if Path(path) == source and 'cache' in names else []) if relative.endswith('/.next') else None)
+    for path in release.rglob('*'):
+        if path.is_symlink(): assert release in path.resolve().parents, 'CROSS_CHECKOUT_DEPENDENCY'
+    rollback = TARGET / 'rollbacks' / (args.from_sha + '-' + time.strftime('%Y%m%d-%H%M%S'))
+    rollback.mkdir(parents=True, mode=0o700)
+    originals = {plist: plist.read_bytes(), env_path: env_path.read_bytes(), owner_path: owner_path.read_bytes()}
+    for path, data in originals.items(): write_private(rollback / path.name, data)
+    receipt_path = ROOT / 'release-integration/.runtime/c0-lite/deployment.json'
+    receipt = json.loads(receipt_path.read_text())
+    write_private(rollback / 'deployment.json', receipt)
+    domain = 'gui/' + str(os.getuid())
+    service = domain + '/' + LABEL
+    command(['/bin/launchctl', 'bootout', service])
+    for _ in range(80):
+        if subprocess.run(['/bin/launchctl', 'print', service], capture_output=True).returncode: break
+        time.sleep(.1)
+    else: raise RuntimeError('OWNED_NEW_LABEL_DID_NOT_EXIT')
+    try:
+        env['IKUN_RELEASE_SHA'] = args.candidate
+        job['WorkingDirectory'] = str(release)
+        job['ProgramArguments'] = ['/usr/bin/env', '-i', *[k + '=' + v for k, v in env.items()],
+                                   str(TARGET / 'toolchains/node24/bin/node'), str(release / 'scripts/start-c0-lite.mjs')]
+        owner['candidate_sha'] = args.candidate
+        atomic(env_path, env); atomic(owner_path, owner); atomic(plist, plistlib.dumps(job))
+        command(['/usr/bin/plutil', '-lint', plist]); command(['/bin/launchctl', 'bootstrap', domain, plist])
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        deadline = time.monotonic() + 40
+        while time.monotonic() < deadline:
+            try:
+                with opener.open('http://127.0.0.1:' + env['PORT'] + '/health/ready', timeout=2) as response:
+                    if response.status == 200 and json.load(response)['data']['profile'] == 'c0-lite': break
+            except (OSError, ValueError): pass
+            time.sleep(.3)
+        else: raise RuntimeError('NEW_CANDIDATE_NOT_READY')
+        artifact = {'candidate_sha': args.candidate, 'build_id': binding['build_id'], 'lock_sha256': binding['lock_sha256'],
+                    'node_sha256': digest(TARGET / 'toolchains/node24/bin/node'),
+                    'files': {p: h for p, h in binding['compiled'].items()}}
+        write_private(release / 'c0-artifact.json', artifact)
+        receipt.update(candidate_sha=args.candidate, release=str(release), build_id=binding['build_id'],
+                       artifact_sha256=digest(release / 'c0-artifact.json'), previous_candidate=args.from_sha,
+                       rollback=str(rollback), upgraded_at=datetime.now(timezone.utc).isoformat())
+        atomic(receipt_path, receipt)
+        print(json.dumps({'status': 'UPGRADED_LOCAL_ONLY', 'candidate_sha': args.candidate, 'receipt': str(receipt_path)}))
+    except Exception:
+        subprocess.run(['/bin/launchctl', 'bootout', service], capture_output=True)
+        for _ in range(80):
+            if subprocess.run(['/bin/launchctl', 'print', service], capture_output=True).returncode: break
+            time.sleep(.1)
+        for path, data in originals.items(): atomic(path, data)
+        command(['/bin/launchctl', 'bootstrap', domain, plist])
+        raise
+
+
+if __name__ == '__main__':
+    main()

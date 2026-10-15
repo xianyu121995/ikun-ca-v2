@@ -1,0 +1,43 @@
+{
+  "started_at": "2026-10-15T15:34:28.267Z",
+  "commands": [
+    {
+      "argv": [
+        "pnpm",
+        "install",
+        "--frozen-lockfile"
+      ],
+      "exit_code": 0,
+      "duration_ms": 830
+    },
+    {
+      "argv": [
+        "pnpm",
+        "build"
+      ],
+      "exit_code": 0,
+      "duration_ms": 17446
+    },
+    {
+      "argv": [
+        "pnpm",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "duration_ms": 5179
+    },
+    {
+      "argv": [
+        "pnpm",
+        "exec",
+        "node",
+        "release-integration/scripts/c0_regression.mjs"
+      ],
+      "exit_code": 0,
+      "duration_ms": 50799
+    }
+  ],
+  "result": "PASS",
+  "finished_at": "2026-10-15T15:35:42.529Z",
+  "log_sha256": "c81ecf89d430245b54f3b915a74d0935515dcafebec2220246ae326066aae789"
+}

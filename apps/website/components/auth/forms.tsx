@@ -1,6 +1,14 @@
 'use client';
-import { useState, useEffect, type FormEvent } from 'react';
-import { Alert, Button, Input, LoginPanel, Panel } from '@ikun/ui';
+import { Children, cloneElement, isValidElement, useState, useEffect, type FormEvent, type ReactNode } from 'react';
+import { Alert, Button, Input, LoginPanel, Panel, type NavigationLinkProps } from '@ikun/ui';
+
+/** Receiving-only wording approved by the owner; preserve the frozen shared UI. */
+export function WorkspaceLink({children,...props}:NavigationLinkProps) {
+  if(props.href!=='/tracking')return <a {...props}>{children}</a>;
+  return <a {...props} aria-label="猎手项目追踪" title="猎手项目追踪">{Children.map(children,child=>
+    isValidElement<{children?:ReactNode}>(child)&&child.type==='span'
+      ?cloneElement(child,undefined,'猎手项目追踪'):child)}</a>;
+}
 
 async function call(path:string,data:object,csrf?:string) {
   const response=await fetch(path,{method:'POST',credentials:'same-origin',cache:'no-store',

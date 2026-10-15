@@ -3,29 +3,29 @@
   "auth_tests": 54,
   "b0_tests": 26,
   "actual_entry_tests": 9,
-  "p0_assertions": 80,
+  "p0_assertions": 82,
   "public_verified": false,
   "full_hunter_chain_verified": false,
   "receipts": {
     "build": {
       "schema_version": 1,
       "owner": "chief-review",
-      "wrapper_pid": 26065,
+      "wrapper_pid": 37213,
       "lock_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca\u5f00\u53d1/ikun-ca-v2/var/coordination/heavy.lock",
-      "started_at_epoch": 1792075911.2651808,
-      "child_pid": 26075,
-      "ended_at_epoch": 1792075981.1847,
-      "exit_code": 1,
+      "started_at_epoch": 1792078468.0471559,
+      "child_pid": 37223,
+      "ended_at_epoch": 1792078542.5813818,
+      "exit_code": 0,
       "interrupted_signal": null
     },
     "regression": {
       "schema_version": 1,
       "owner": "chief-review",
-      "wrapper_pid": 32140,
+      "wrapper_pid": 37213,
       "lock_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca\u5f00\u53d1/ikun-ca-v2/var/coordination/heavy.lock",
-      "started_at_epoch": 1792077596.975082,
-      "child_pid": 32151,
-      "ended_at_epoch": 1792077655.999398,
+      "started_at_epoch": 1792078468.0471559,
+      "child_pid": 37223,
+      "ended_at_epoch": 1792078542.5813818,
       "exit_code": 0,
       "interrupted_signal": null
     },
@@ -43,16 +43,17 @@
     "p0": {
       "schema_version": 1,
       "owner": "chief-review",
-      "wrapper_pid": 29671,
+      "wrapper_pid": 37825,
       "lock_path": "/Users/lvlei/Documents/ChatGPT/ikun.ca\u5f00\u53d1/ikun-ca-v2/var/coordination/heavy.lock",
-      "started_at_epoch": 1792076947.632525,
-      "child_pid": 29681,
-      "ended_at_epoch": 1792076966.407843,
+      "started_at_epoch": 1792078622.2347698,
+      "child_pid": 37835,
+      "ended_at_epoch": 1792078642.1282508,
       "exit_code": 0,
       "interrupted_signal": null
     }
   },
-  "regression_receipt": "regression-attempt-1792077655954.json",
-  "p0_receipt": "p0-1792076947722/result.json",
-  "entry_receipt": "entries-1792076678170.json"
+  "regression_receipt": "regression-attempt-1792078542515.json",
+  "p0_receipt": "p0-1792078622372/result.json",
+  "entry_receipt": "entries-1792076678170.json",
+  "production_build_receipt": "build-attempt-1792078542530.json"
 }

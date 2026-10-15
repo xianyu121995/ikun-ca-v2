@@ -1,0 +1,31 @@
+--- a/apps/website/components/hunter-controller.tsx
++++ b/apps/website/components/hunter-controller.tsx
+@@ -40,6 +40,28 @@
+   finally{if(version===generation.current){setLoading(false);setRefreshing(false);}}
+  }
+  useEffect(()=>{void load(cursor,records.length===0);return()=>active.current?.abort();},[cursor,query]);
++ useEffect(()=>{
++  if(revoked)return;
++  const source=new EventSource('/api/v1/hunter/events'),abort=new AbortController();
++  let closed=false,busy=false,again=false,checking=false,timer:ReturnType<typeof setTimeout>|undefined;
++  const refresh=()=>{
++   if(closed)return;
++   if(busy){again=true;return;}
++   if(timer)return;
++   timer=setTimeout(()=>{timer=undefined;if(closed)return;busy=true;void load().finally(()=>{busy=false;if(again){again=false;refresh();}});},250);
++  };
++  source.addEventListener('hunter.discovery.updated',refresh);source.addEventListener('command.updated',refresh);
++  source.onerror=()=>{
++   if(closed||checking)return;checking=true;
++   void fetch('/api/v1/auth/me',{cache:'no-store',signal:AbortSignal.any([abort.signal,AbortSignal.timeout(5000)])}).then(async response=>{
++    const sessionNow=response.ok?(await response.json()).data:null;
++    if(response.status===401||response.status===403||sessionNow&&(sessionNow.role!==session.role||sessionNow.must_change_password)){
++     source.close();setRevoked(true);setRecords([]);
++    }else if(!closed)setError('事件流暂不可用，当前保留上次结果；来源仍未连接。');
++   }).catch(()=>{if(!closed)setError('事件流暂不可用，当前保留上次结果。');}).finally(()=>{checking=false;});
++  };
++  return()=>{closed=true;source.close();abort.abort();clearTimeout(timer);};
++ },[cursor,query,revoked,session.role]);
+  const manageable=!revoked&&session.role==='superadmin'&&!session.must_change_password&&session.capabilities.can_manage_hunter;
+  async function save(project:Project):Promise<Outcome>{
+   if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};

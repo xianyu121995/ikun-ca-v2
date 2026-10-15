@@ -1,0 +1,1245 @@
+{
+  "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+  "control_commit": "7a90ec281211cc8a307692c8e420cf4b802ce452",
+  "wiring_control_commit": "8b84ee97a94bae28e98b550b2721991f30088486",
+  "projects_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+  "ui_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+  "frozen_domain_inputs": {
+    "schemas/hunter/001_foundation.sql": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "cb3878b56fb3ea66c2a21668e1720381ea39f7f240fc2f39fd13238534cf02ac"
+    },
+    "schemas/hunter/002_hunterradar.sql": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "de5e3e97b9423d60cad112c5b7ec1d103a910253aee9e4c1f0770dd303bd3cac"
+    },
+    "schemas/hunter/003_b4_protocol.sql": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9de43fcdb7c288794ac8509d3dd70dbb6f6ca195527f85933dc30ec8f3574fbe"
+    },
+    "schemas/hunter/004_research_retention.sql": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "bdc1b3a24dbd18ad4088cd71578d8144600e0606aed636a3234d29162d506d22"
+    },
+    "schemas/hunter/README.md": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "230fcdeb05e122ffb89585706f803b2a20a9726131f813d1c985936bf30637fa"
+    },
+    "services/hunter-worker/B4-C04-PROPOSAL.md": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "59689794cb45b24a26380cce70deb753955db514e1f9b89a0d1373d305636a13"
+    },
+    "services/hunter-worker/B4-REPORT.md": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "e655e9b22667a377e300adb7b566e00717a763fdf0b83555f71a7e758f3f8820"
+    },
+    "services/hunter-worker/FREEZE.md": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "49784bc50872de54d4f189d7ee6fbccc3734c2f6d668352f0f280bada3827b82"
+    },
+    "services/hunter-worker/package.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ba30a75bd81b6dcf7ed2db03a53323bdfdeeae3df0b87e7e23ce5773d968fb02"
+    },
+    "services/hunter-worker/python/.env.example": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "4ddbdfbd10b7f1c84a82205d24d42469b9af1e9ac305642e771591b6ac123a59"
+    },
+    "services/hunter-worker/python/.gitignore": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9cdd0e56a8bb8385d791a48971f0ced65f655f36800ae198375ca5aed4d6206d"
+    },
+    "services/hunter-worker/python/README.md": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "94d9b43a6154505a7ba6ccf4537952a27e04a637e9ab6f19aa0adb970f4cd348"
+    },
+    "services/hunter-worker/python/docs/b4/auth-route-night.tap": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "976e51c03b5d6e34643c1ab5880585b43150a65b64da051b21b7de358fbbf6bf"
+    },
+    "services/hunter-worker/python/docs/b4/auth-route.tap": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "49bbeebd7f257ba90da220153f751e63e3425391e08050f21ee5d7d535e53d7d"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-1/failure.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "337615c65de889cda863147128a6592cfd9031bd2f18eea2c19819abc0859ead"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-1/failure.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "eced4598c376af8e637e373481938204c75a3914fa9ee3fb6f7557dc74547137"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-2/failure.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "c42d6e3d188fa4be075e2908889a15b473b172607526f2fd7cf2f9d5d7765150"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-2/failure.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "90697a247db17ac18a6dcc4066afb9f97a439bfc14885847d4d9ea2fc1003b6a"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-3/failure.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "cb5887e764c0a0a337978212b7989e71bfc3ab31c5fcdfa810b7399d3bca103d"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-3/failure.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "e5f0ff32bc6efe30bed0fd84bc30c7c31fac7defd588c391829fcc62bf8f7b09"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-63802ce0-5b6d-49ce-89e8-b24b1ac77f9f/failure.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "cb5887e764c0a0a337978212b7989e71bfc3ab31c5fcdfa810b7399d3bca103d"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-63802ce0-5b6d-49ce-89e8-b24b1ac77f9f/failure.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "e5f0ff32bc6efe30bed0fd84bc30c7c31fac7defd588c391829fcc62bf8f7b09"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-78650cb8-6864-4bdf-9968-5e474e6f308f/failure.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "826f3fb544205bafdc1e3906c7d46a45d693d0f8fc7af93e3c91673a299cc032"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-78650cb8-6864-4bdf-9968-5e474e6f308f/failure.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "efc59df1282b979845eee036904d724a59b4da2e4d501a823cc70d8a1b8873b5"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-c828e3ed-e385-4b06-b6c0-9fbb809fa1b7/failure.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "86e073f55cdde3b3b74a47a6abe45f51b8a5648c65848e7efdee8ecd75f545e1"
+    },
+    "services/hunter-worker/python/docs/b4/browser/attempt-c828e3ed-e385-4b06-b6c0-9fbb809fa1b7/failure.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "df1037b0a399133f227fe1f912d9e50a37654bf59af569f17e7243561cf5182f"
+    },
+    "services/hunter-worker/python/docs/b4/browser/fullwidth-1440.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "0e402b2dc58e46a55b8f879a90d65886709d75ed0486a8c79035e3cabc830320"
+    },
+    "services/hunter-worker/python/docs/b4/browser/fullwidth-390.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "dd47d7ce777ada37b206aec19dd72d0cb4f00352aa5f8670a53c76798820f030"
+    },
+    "services/hunter-worker/python/docs/b4/browser/research-1440.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "a80d114d60bdc055c27a41e762c86fbec9261d419c7d908f04aba14b172ffaec"
+    },
+    "services/hunter-worker/python/docs/b4/browser/research-390.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "eee23a58dc48a22b0f5ea40c5bd8ea5b2f0a77c2a8e3ba6599ba391b159ebe67"
+    },
+    "services/hunter-worker/python/docs/b4/browser/results.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "63b7b075673cd262983db4065a20ffc081c796097d22bebb0065aded5e803f52"
+    },
+    "services/hunter-worker/python/docs/b4/build-historical-original.log.gz": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "8413fcc1c66dec8080584b853bd149a2cf62d4dcb9e47c307be1c6e031d58fe3"
+    },
+    "services/hunter-worker/python/docs/b4/build-night-original.log.gz": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "4a28896ce7c1c5390cb0801913fa5df2a32a022d14414d4f4d5e4301329aa23b"
+    },
+    "services/hunter-worker/python/docs/b4/build-night.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "6d8fafe3476aeaf75f702fd882867b979c536e79133c67128414102bc7a99e92"
+    },
+    "services/hunter-worker/python/docs/b4/build-night.txt": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "fae1058b37c45d7064113676dfb4dccb7061238db126446e9263a7a61974a7bf"
+    },
+    "services/hunter-worker/python/docs/b4/build-offline-first-failure.txt": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "94a2242e424c64bee8f96bcaee1fee56de41bbe9a63589582801d0d195197a6f"
+    },
+    "services/hunter-worker/python/docs/b4/build.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "da81a01f3fb6f15607ddffdfd6150944ccbe052a7969daa09b927235b3fb5eca"
+    },
+    "services/hunter-worker/python/docs/b4/build.txt": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "52f744b232bde898030d5b5b1e71332878dab5d216233304f8a5950e6b56b1d8"
+    },
+    "services/hunter-worker/python/docs/b4/final-batch.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "c6ea29ebfc5333a37476c5e9b988c7b4f6838e87f77b869386cb9b02745bed2d"
+    },
+    "services/hunter-worker/python/docs/b4/integration-light-history.md": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "4087460dd947d282375e5d68eb8d6dd0bd01960a7476d379fee162de59c2e404"
+    },
+    "services/hunter-worker/python/docs/b4/legacy-browser/desktop.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "dd5779d8f27cf1c8b497d1fd64849ec1d6350dea0495858bd1a960659b5721d8"
+    },
+    "services/hunter-worker/python/docs/b4/legacy-browser/editor.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "c897f30feeb423e70e142a12341084c07944e1c2c2555da624eca930c7a7f40f"
+    },
+    "services/hunter-worker/python/docs/b4/legacy-browser/hunters.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "73b6d4accf80e0b1d7b212f7391f18e55a548c0bbe0c1106381b7941e7fd8587"
+    },
+    "services/hunter-worker/python/docs/b4/legacy-browser/mobile.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "7f4b3e22e20715fd1fe2e1433dac79dcd162ed1e1675b305a989f3a2e563cf4c"
+    },
+    "services/hunter-worker/python/docs/b4/legacy-browser/results.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "30dc154f72bbbad339e8271b56872fc5225dad4daefb95af848197c0bdfe6267"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-000ca722-3744-4853-a5c3-2dd72570f653.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "7be5e06eef368d9c10cf09d0f563e744398d841dd01c80c1c307a5d4edbf5e4a"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-01558267-3cac-412e-bb65-7eb0504cf662.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "3d5055a27a8109c68fe667fae32c16e07ec8f0ea8ac938da93dbb251b74ec9c5"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-016922a4-1d16-4c3e-a361-0f8c05d3bc99.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "543fb5cd20fe1a664926cd85fa5c9fa6e8c9f2fe6a41c84846d88068cfaa6f74"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-0a5a4ba0-550b-4779-81c7-0d537bd5dfae.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "12804803de052e2b19d49c37d5947f192d98f831036ac28e54db8bf348c415e0"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-10856436-6610-4faf-b206-f788549c9b10.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "80a2e958acfd762c56321d33b92028a512e6984837de0529085971d41e7f1096"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-36ec8629-878d-4655-95fd-409e8d7afac2.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "c1fb3bb0b29ef7cb3dcd1d771bcf146cd4be24faf683943fe38910153f8618a8"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-37b5430d-212a-4128-ba6b-a9db7ec86e14.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "8cb2e215bebe8e2d9bd5120b9234c791824947c11b862535ea30c094f4083433"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-3f88dac5-09e1-474b-8fa2-71e095ff9b73.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "6c80cf473db797a5b0c9bc0e87066b96ec9277b684c640105d5dc1d3e9e4556d"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-4fb710c9-a7c1-4ebd-bbc8-272cfd9593b1.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "aeb0a834bfe4839e29587dd86f486efd69d8d6b6112d652fce4943dcba838188"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-7bf12c81-3c15-4a2d-8fba-db6a36fab459.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "eaeecdc20b064807c3eb6207a12993c881b2f5756d7e66c30e1cb88e3394138f"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-86059ca1-e984-4ab3-94fe-69d7795428b6.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "d7e2065c5a46de4143fd8c25fbbcc05ba87dea92a1155ebfe050d5f39117c42f"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-862eb998-1e93-4188-8bbf-b68ad8e102d6.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "fbd0c1de1793d16d00882ab669ea5c685c3e99ddcfa5fe4a7613bf8e305e00a3"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-8b4d2007-fd8c-45c1-b792-3de8416d1fdc.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "5b400d2358cb6f7dfc16f9278126005f412b4bbfe35f8894709cd578635b3929"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-8ba8c5ff-87c7-4cbb-9332-dbe500801f48.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "b3401fc516e07a3471806610cbab83219f5eb59afa819a87313e55563c2fdfb3"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-93a87f14-64b2-496c-98e5-470ce5e12fe0.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "1082508b403b260fa4766ca456d58a499a9356904ab2ff9ea856f586399e3a74"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-98eced97-c863-4f75-856e-0f86b994306b.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "934ad520b296ce4ef9fe64fb25f6be565975ca79286ca5896d0f6523418d6a42"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-a52d4de7-10c1-4e64-9c28-7cb6436dd615.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "947d64ffd708080a059d82d90caebed6e65b990503285580f0a6593268f2a4a2"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-abc4f0fa-88dc-4b37-976b-a109123c856d.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9bff2b1a35ed698ea20c2209db50554e1c83ac5a1cf90e75ee1b9132f05d8056"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-aff079f7-a0dc-49c4-82a0-ca3bb9a03bfc.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "c820b209aa7dd37311d74566b52eb1e3204b8be2c90622f3b29b1c84708041ef"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-bc3e44aa-ef93-4176-ae3c-4d5458d2b6ff.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "136a64c9d8be8983279a7ba60f029d7a2c68df6547162f5010eed1cdc9a101c7"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-c4db818d-73f0-44db-a94b-b43a35879ac1.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "a3ebfc8f6e2e204e01117f163f6b98a2a227060b58dc911782099f24fd0edb97"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-cb4156d2-b6e4-4579-8f4d-529399ee622a.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "aefaf57578099625b4e9e951d832fa04b95e4106d8743583a69c071f77cdb0aa"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-d464ff3a-a9f4-46e1-8960-aad55d11b352.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "c749e40b950b7575f28eea3093d0341406a7bad07317cb59d0406405f8963637"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-d9cd0a6f-f233-4e72-96fe-2c50045f3ed7.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "3e254ea6a933254e974715fbd71ef8412a5fd55f374c4df89c4a2ab4f1167d79"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-ea277267-a4e6-4a51-a1da-541fdcf390cc.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "412b504cc3a0aa53d9ff625a18caefd2377fc9007fbcc3be380d7321ffe11ab4"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-ed2e2829-6ad9-4063-9230-238a4f2b791d.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "f0a8298391ea18f7490dc66e61f4a608f8c821cf83ff1d4c2a52ff9a80d0e386"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-f98a263c-4835-4b23-ad67-530d6571c1f0.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "b2b82ee0cfbc9094df236daf47bc03aac868928acaf69128ee254f9c0ec0a41f"
+    },
+    "services/hunter-worker/python/docs/b4/locks/hunter-worker-f9f6d645-d597-476d-b1ad-8ed7b1a9b4a6.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "aad1ed30d895e1bb5a2a62c18e6f80eb6137f7f16a80708070c3c2c82c976619"
+    },
+    "services/hunter-worker/python/docs/b4/night-receipt.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "3b0adf13884c6aa870d44025cf749240329b1318fb052ca4aa420de90933b04e"
+    },
+    "services/hunter-worker/python/docs/b4/process-smoke-night.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "25ba2ecd82ee32dbef527be60afc8d9ce45690d9b90b36f70b394df095c2bec6"
+    },
+    "services/hunter-worker/python/docs/b4/process-smoke.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "5af00ff869748146ac1269e893135347aaf47a3df9f3133ec79182ae9dc156a7"
+    },
+    "services/hunter-worker/python/docs/b4/product-protocol-check.txt": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "e26ef57fee9b099852bf70a46cdfbd55cb9070e5fd391164b0f6d19b3a62554d"
+    },
+    "services/hunter-worker/python/docs/b4/product-protocol-review.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9c4db6d736d31ff2e727eb4f899644b827224824142bcc5d75df470ca87f022f"
+    },
+    "services/hunter-worker/python/docs/b4/python-chief-fix.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "51e6f5a23fbef4be355ff01d599648705884f94955b82e80e91233b8e9e3ba11"
+    },
+    "services/hunter-worker/python/docs/b4/python-night-backup-age-failure.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "01cfa37e563b30756f4173858b952a76b85d157b0c035b92aeb22f0486a0ab1d"
+    },
+    "services/hunter-worker/python/docs/b4/python-night-base.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "cc57baa1dd09f2d46ce0b0cbdea16ba236737b581ef6bd9c7e7de4ae6ef6f3ec"
+    },
+    "services/hunter-worker/python/docs/b4/python-night-final.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "f8abc2c797082db0385a4fdeb5a6083a0b3f9b0d510d420925c10315d82f1591"
+    },
+    "services/hunter-worker/python/docs/b4/python-night-first.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "3523a39402cf983790234eaf393e8789b722fd997db740af1700222b20f94841"
+    },
+    "services/hunter-worker/python/docs/b4/python-night-increment-first.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "3f6c2b51de0876cc2fbcd42a42248133b5a13788f44092489293f5a2d06d308f"
+    },
+    "services/hunter-worker/python/docs/b4/python-night-increment.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "0e9630a1e59a9be7f103a19f1ef7cea528a5e8cda2e3db28480365db4462af58"
+    },
+    "services/hunter-worker/python/docs/b4/python-r4-isolation-old-assertion.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ad8e6adb4455e2aac946b99d996bcfad5e84f65206416b4ba49786c40b316dc0"
+    },
+    "services/hunter-worker/python/docs/b4/python.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "6f1735df3dec23990da7916554c75f5d72550c3084f53e1cad81aa10c0b61559"
+    },
+    "services/hunter-worker/python/docs/b4/queue.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "30462f0254cc2cfb8d3dc1f58be83eb836377cdc55fae1fecf21ca60a8e230f7"
+    },
+    "services/hunter-worker/python/docs/b4/receipt.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "e70ce18205713ec223a748459535e3b48e7c904aa5d8784b3a607ef4ad14f00c"
+    },
+    "services/hunter-worker/python/docs/b4/release-preflight.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "104d1e4fd54720a692a2a7db5b8f97884db2e6f6c9e74bc0cbc14379720adbe5"
+    },
+    "services/hunter-worker/python/docs/b4/report-light-history.md": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "2096a6df1c923a8e7ea6f0d16747ac5ecf42035caf8e2cb4a6ae13ebefbe96ea"
+    },
+    "services/hunter-worker/python/docs/b4/restore-kill.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9ffe5807427201bbda4291273bcd1272dadd015ae933fbe96d543e6b25ee1d4e"
+    },
+    "services/hunter-worker/python/docs/b4/typecheck-night.txt": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "062987701a67b64e6ef3d6c4bad3d184dd9420504fa47343ad52ccd033fa4bbc"
+    },
+    "services/hunter-worker/python/docs/b4/typecheck.txt": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "062987701a67b64e6ef3d6c4bad3d184dd9420504fa47343ad52ccd033fa4bbc"
+    },
+    "services/hunter-worker/python/docs/browser/desktop.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "dfe0280a1eeba2d3d3f9fd63350c426c9e208d89207b08b40272e447ec93df50"
+    },
+    "services/hunter-worker/python/docs/browser/editor.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "b26e8698212583509a2561e30f3b1cde8f77e014db2122d9cb6be4fda6f1c791"
+    },
+    "services/hunter-worker/python/docs/browser/failure.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "fdfba4ec3c73a738fd2313c125652f72e0fed5dce3203dc6a43370b4479b1d6e"
+    },
+    "services/hunter-worker/python/docs/browser/hunters.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "b8806179fa88fd18b060766e63ae14471e9893284f499cc606c9e02551055752"
+    },
+    "services/hunter-worker/python/docs/browser/mobile.png": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "a449e3be9b63d81b274081b24d1a3a2a373543e91e2ad9d62f934ff2f78d1fe0"
+    },
+    "services/hunter-worker/python/docs/browser/results.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "30dc154f72bbbad339e8271b56872fc5225dad4daefb95af848197c0bdfe6267"
+    },
+    "services/hunter-worker/python/docs/process-smoke.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "f4686305049fe38cc6490ea43cab37b21cc171d41f5999b9ec1269db4c7290bd"
+    },
+    "services/hunter-worker/python/docs/test-results.xml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "6d8b7aa5705230d96ead519ff5b8a9fe4516cab1acb923adafb6279ce27c1162"
+    },
+    "services/hunter-worker/python/docs/ui-provenance.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "bb9d3b87900d92dfe057e7a1cfcf4fd208ff660e11454447ee777d83b274aa83"
+    },
+    "services/hunter-worker/python/hunterradar/__init__.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9125527b3900dec0b2af401dbd7f6f006e546a78fee240c965db3a6a9df546ea"
+    },
+    "services/hunter-worker/python/hunterradar/__main__.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "683bc85e574b376c588538fa5857ebe92f3765ac1c29815273d145e1b5c7e0bc"
+    },
+    "services/hunter-worker/python/hunterradar/api.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "387f04114db075719293a65c3485aa52491b56febd13270628f8be1680f9407f"
+    },
+    "services/hunter-worker/python/hunterradar/config.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "0c04de886af9577e3fcb3dbdd22016ea116134098cdbff8215c25547cc0aad0a"
+    },
+    "services/hunter-worker/python/hunterradar/engine.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "64aa831b41b65f99e14c72f0b0f405668ac4cb901e62b61cabd739823cfdd5c0"
+    },
+    "services/hunter-worker/python/hunterradar/formal.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "b877cceb9437a32b7ebf529f13c1c3e445d8a01b429c1899a6364b3c38a443e2"
+    },
+    "services/hunter-worker/python/hunterradar/formal_api.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ce38dc184158cb49891d96aea0abee1a68017c08e3115acb75a17b01df960943"
+    },
+    "services/hunter-worker/python/hunterradar/gateway.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ad90dd7dd1f7dd32657bfac8a14229b291e7413df910f8f60802b32c6b75a4fe"
+    },
+    "services/hunter-worker/python/hunterradar/migration.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ca9d6fc482dbef30c6036fca1e9c1e702fb3348424a7289c7f524d5583dedd78"
+    },
+    "services/hunter-worker/python/hunterradar/parsers.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ed9e1cd43621dc30b63786c23d22c9187059ef3a1a8970a51a0b59b10c96b524"
+    },
+    "services/hunter-worker/python/hunterradar/protocol.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "fea240320843e19cc6ba9d262f8eff5f4b984b63920e069464ce395de9610c70"
+    },
+    "services/hunter-worker/python/hunterradar/providers.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "43e0e2ec65b104377fc9eb2fc43ace3b367ee548aedf6c4d8d9bfd5b12801a82"
+    },
+    "services/hunter-worker/python/hunterradar/retention.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "a939f182257d0a56bb2ece3e57b922a3f5e3787553f7d724c1f2849d5df3ea67"
+    },
+    "services/hunter-worker/python/hunterradar/schema.sql": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "de5e3e97b9423d60cad112c5b7ec1d103a910253aee9e4c1f0770dd303bd3cac"
+    },
+    "services/hunter-worker/python/hunterradar/static/app.js": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "79d1c6abf4fba242c22d4714a9203b95601a178b2319971a27f12711c0dc72a4"
+    },
+    "services/hunter-worker/python/hunterradar/static/index.html": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9502ff2b9e61b2da2ad33f48a338d2335ddfdc053c9a80b8266e1cb5bdcfef52"
+    },
+    "services/hunter-worker/python/hunterradar/static/style.css": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "3016771dc32a7af1aef6ebcfad41b41e406ad61c64f200e65af2f2f2a068bd7b"
+    },
+    "services/hunter-worker/python/hunterradar/store.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "06c8686a89e16fe069f1b9681691037fed1e99ce9489abf1d18f39cabcddd4da"
+    },
+    "services/hunter-worker/python/integration/README-B4.md": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "979d7d3c35d54c180b62e244cf5a45759f81aec21d256fe24dec80603881573c"
+    },
+    "services/hunter-worker/python/integration/RECEIVING-B4.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "1f7286367aa1d02258c4cc5aec8fa00bc57163b96756b3c57ec099abe001297f"
+    },
+    "services/hunter-worker/python/integration/build-preview.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "7379bd9eccd5490e0c7c6673aa32085b2f259981041c759ea4ccaa49dc7d0f8c"
+    },
+    "services/hunter-worker/python/integration/make-receipt.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "d01386596701f4fa9507b98d67d8e9d1a7fd8957323438ae8a0009377f53d31d"
+    },
+    "services/hunter-worker/python/integration/next/gateway.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "1b9f25a61b6a97b4d5012b54b79040d7a07d47483572288127ab7cb8cc440eab"
+    },
+    "services/hunter-worker/python/integration/next/page.tsx": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "a01a41568c2bec51866822e6c8b118453c70db03a90dec0e1a2de88afd29c74a"
+    },
+    "services/hunter-worker/python/integration/patches/hunter-live.patch": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9bac82b9a1d1f2b5791ea4eecb71c580a59d364ea6896b95376f9432a8c1f93f"
+    },
+    "services/hunter-worker/python/integration/prepare-preview.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "0e03925daaa40b16e21ce98f50af0425f53708a22c82435932bcfdb852730bd7"
+    },
+    "services/hunter-worker/python/integration/prepare-ui-patch.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "d03917a3dd3c1019c866c11bc04014d3c094d86a9f87f3966457dd1167e5f667"
+    },
+    "services/hunter-worker/python/integration/receiver_contract.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "58d432ffc8479429fa8bd2df44d91b4838be4f04d6aff63ca72bdb81c884ea64"
+    },
+    "services/hunter-worker/python/integration/tests/browser.cjs": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "10d40cf5cbba0309634ae1917842e35a4bbbcb05a918d9339508c2b40cad5ce4"
+    },
+    "services/hunter-worker/python/integration/tests/fixtures/action-probe.tsx": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "3bf2a3fc94003fd508f4d1a4e0080d2c1305596ddd3c9b122e7b73b28a24031e"
+    },
+    "services/hunter-worker/python/integration/tests/guards.test.mjs": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ff00282353dfbd1f27a8b0fa0380c7b83b25393397caf257379b180381f12043"
+    },
+    "services/hunter-worker/python/integration/tests/prepare-light.mjs": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ba16b1b8ffc52441dcebe07959ea4da3b0d7099e8118bf0611c9a1ca6e6a3b15"
+    },
+    "services/hunter-worker/python/integration/tests/provision-browser.mjs": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "64175ed418e5e277ecef5362e32fec4c95bb69f73cb0738d17f1685dcf6b6754"
+    },
+    "services/hunter-worker/python/integration/tests/typecheck-light.mjs": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ea395c25758244ad15c04cb67a3183ebeef5c50fa5c55d40259f682919236b54"
+    },
+    "services/hunter-worker/python/integration/website/app/api/v1/hunter/[...path]/route.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "2647193116d12027e97c98355c58e016d355bbb091983780b9ef1d9251f20854"
+    },
+    "services/hunter-worker/python/integration/website/app/hunter/actions.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "163885d4db8b39448eea7f7d764d007a70f95541fcd752ec5f4eb1d8705fa677"
+    },
+    "services/hunter-worker/python/integration/website/app/hunter/page.tsx": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "043baa7080b13dea2694b6bf0f4c86c26866b7f9676adc2f61a501c1019d5bf2"
+    },
+    "services/hunter-worker/python/integration/website/components/hunter-controller.tsx": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "02be49982ffd8cfc46d9311424d0bf023ad6900bfd286aa0624bc7c744a96f4f"
+    },
+    "services/hunter-worker/python/integration/website/components/hunter-host.css": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "ef701341c264cb36cd2a40818ade7510d6a08cced8722225c6252f9261525a03"
+    },
+    "services/hunter-worker/python/integration/website/lib/hunter.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "151165438072d62a55e4f647e7910977344783c7e90daeee4d733670edc17bda"
+    },
+    "services/hunter-worker/python/ops/com.ikun.hunterradar.plist.example": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "6221b6fa425c2cfd941f6ec8c79022e6263ee94fcf02175172a4855ec9f94646"
+    },
+    "services/hunter-worker/python/pyproject.toml": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9cc0b7af32172842c21e4012d4ec96ba8c7f8a32e6ee2875295bba465ef70aed"
+    },
+    "services/hunter-worker/python/requirements-lock.txt": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "b88b719169f16814ef81609f8507ce17d77b7a96c2af55a42b8098d562b10ffb"
+    },
+    "services/hunter-worker/python/scripts/browser_batch_b4.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "d2df945c109b155f82603f2f0a1973b7d5f62718f18fdcff720bb5db45e9db3d"
+    },
+    "services/hunter-worker/python/scripts/final_batch_b4.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "9c96223642a9603c2ced15c26fae6006c3ffb60f01c21fac454d6ad9fb7faa3c"
+    },
+    "services/hunter-worker/python/scripts/preview_fixture.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "77c89ce6ce25685eb8236d836e6a18c0a704ef7deab34da28eceb52bef958110"
+    },
+    "services/hunter-worker/python/scripts/process_smoke.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "e1f029f10be95cc61ca302f5ef8a0e565177264a56c24cbc545704cdad00f9e7"
+    },
+    "services/hunter-worker/python/scripts/process_smoke_b4.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "39e65420da7214eab8dc4b5c786cf859ed47479d5855fa645bad0f480ecaec68"
+    },
+    "services/hunter-worker/python/scripts/restore_kill_b4.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "b4ac9d385fe5b23abde75eae7b98fe90eb639e4aa558ff4ea8640a1bd4e08d68"
+    },
+    "services/hunter-worker/python/tests/browser.cjs": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "f38ab6ebfb6eb0bcd6df6bd670c2afb0511d865e0c7480cfc108f21b5e7c1c1b"
+    },
+    "services/hunter-worker/python/tests/conftest.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "85c1ee5794168441fc5e53a946d1ae56f76f91d286627c72362711d7fbe8ad77"
+    },
+    "services/hunter-worker/python/tests/test_b4.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "4c5eca45363197b555ae112653b1faaf450c0458d53cd8c8d6d4a75553f67ee8"
+    },
+    "services/hunter-worker/python/tests/test_core.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "15480c85456a93eb8f0d99eeaf81cd12a12d470d7ad5b0cbe69019c2768fd227"
+    },
+    "services/hunter-worker/python/tests/test_retention.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "f507ccfb108e4d3a08d5094369003dff988c9a3230c4cdd0119cf4c02807e53a"
+    },
+    "services/hunter-worker/python/tests/test_service.py": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "e74aac993bb051bc758f24e0f9e6b37808216b1c751b48d59210ba846d83bc15"
+    },
+    "services/hunter-worker/src/main.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "14f2bb69b1c288b465bffd2971f59cf0abedea3880c997fa505de726ab878327"
+    },
+    "services/hunter-worker/tsconfig.json": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "sha256": "f0b29eb4cf66109ddaa38cf326692a9db2a6109e68a2709ec214f9a3fb700a2c"
+    },
+    "modules/projects/.gitignore": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "047cc8a020245110ec5b7a1e9dc53e3ef9b510a72742d4f7a00349ac68de89e6"
+    },
+    "modules/projects/AUTH-CONSTRUCTOR-REPORT.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "4576f93ca4a196b6c1ed7be8cb42b63d0b3b722ca38c55024e5e919edd1fa007"
+    },
+    "modules/projects/B2-CONTRACT-PROPOSAL.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "18291ad12ff7c78f9e06374094d8b4284a88a401f307e9f7f414f4c2b445af45"
+    },
+    "modules/projects/B2-REPORT.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "4d03c8648860858b042db8258010ae42882e6eb9bfdcc035e5a7d39bacbccc9b"
+    },
+    "modules/projects/B2-REV1-REPORT.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "1ac97a43dc4c4f768e55ffc08cc01dda911c3894cfb0739a6a853459eb202282"
+    },
+    "modules/projects/C03-RATINGS-REPORT.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "cfdfb6b68ca52f8cfc3381c4970e040b58d6b8b7e95c3fe88489fe1ba39b661a"
+    },
+    "modules/projects/HANDOFF.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "ea0ea2e4c1e61b561432753b42630e137d237bc8ff96d4f755a0e45ce8c37afd"
+    },
+    "modules/projects/README.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "acb4ba52fc70fe561c4f52795ec019a052669c42c73c920d7cdb8d2ea2c02fb8"
+    },
+    "modules/projects/candidate/.gitignore": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "b73457ac7a72618dd5c4cbb4e4eeddcd21290f61799b939078d7e0ccb9ea4e0f"
+    },
+    "modules/projects/candidate/README.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "a0925fc0ed7419f951e70d49c67b80ea9eb0060ab7e57ed22ff36039c25ec59e"
+    },
+    "modules/projects/candidate/docs/INTEGRATION.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "0f16e00a93e17d49c69ef391caa861899c0f05e3056a791ff3fd3b7356dc2cb5"
+    },
+    "modules/projects/candidate/docs/homepage-fixture-1440.png": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "3916c1d40543947d3354d4a06badb4e2491275c6025e1367d2e9e36f78f06a7d"
+    },
+    "modules/projects/candidate/docs/test-results.xml": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "9cb675203e3b661c7eed66b90f2998db9dff8b0bec3e6326248b494d52605558"
+    },
+    "modules/projects/candidate/docs/validation.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "c428d778f10673ec6263e86163c959db74dc72ed8325e3bcc22c6b805e25c1e2"
+    },
+    "modules/projects/candidate/integration/check_next_proxy.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "23730a3fbda7fed50d1d9d5bb6f03de341208e62ced983c0980c80b77dfb816c"
+    },
+    "modules/projects/candidate/integration/next-proxy.js": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "2b73cbfed5235c90b1255397206316fc757c51477c4f8059124e82ba883ca553"
+    },
+    "modules/projects/candidate/projects_service/__init__.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "d8efbc53eeeed61e04cb809c04a60faca764e8a248e4e3bfb83276acdec4be32"
+    },
+    "modules/projects/candidate/projects_service/__main__.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "6f3eca34eb8e885ddb0c3ef53d6932130054a09b792de2fc1614f06d892cc8c5"
+    },
+    "modules/projects/candidate/projects_service/api.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "ace5506b8713c9eb9e5fdd91fe2966ec1ebca8cd2df995245037ad25c2f9ab32"
+    },
+    "modules/projects/candidate/projects_service/db.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "43bddfe898c357153da00e1e7ce43647b8c66dcdb6efae19248902e3b6e6c0a0"
+    },
+    "modules/projects/candidate/projects_service/home.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "72daaeda92eeecf0235b22364af8a7d0b00f6a09f60d8a819524fc02ae952d8d"
+    },
+    "modules/projects/candidate/projects_service/ipc.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "cfc9093e11c9f28ffc6de26ad5fb73455b9f6f18a292b2aea6f0e9f1e8be06fe"
+    },
+    "modules/projects/candidate/projects_service/migration.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "c29dbe767ba2f15fceb4b4b9656391268c0cb79f180f003c497e25d42360bb83"
+    },
+    "modules/projects/candidate/projects_service/migrations/001_projects.sql": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "c12d968f0cadf2804aa9beee7664d68b3a62ab700edd7c40b540de872a993d3d"
+    },
+    "modules/projects/candidate/projects_service/migrations/002_tenant_queries.sql": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "fe43dbbaa551c2bff512bfd984ed27162ffd4231952de2237366b1f17fef9276"
+    },
+    "modules/projects/candidate/projects_service/models.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "7d5721e951d31c37cd0a10104cbf41560c69ab830d25e5cbd5cebbbee69a5c0f"
+    },
+    "modules/projects/candidate/projects_service/queries.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "7b16ed3fe227bc7f4b1ffd215ffd53ca73d850cccb54779f4bf179544442d23e"
+    },
+    "modules/projects/candidate/projects_service/ratings.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "2389937c30660f18c766f9994be26505651855c4bbfa7825eb37ecc1500c4676"
+    },
+    "modules/projects/candidate/projects_service/service.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "f0fffc2642459ad65302e6f134d973cf6b623ff777c9de68996a9b296b0dbef2"
+    },
+    "modules/projects/candidate/projects_service/static/home.css": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "d65fb5276223e4acb09f0dc703d8d8a0097e754ecfc202203945007b1b8dd24b"
+    },
+    "modules/projects/candidate/projects_service/static/home.js": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "204eee78851179678f44dc5e645737e2a98ced131822663f8c761e8a0a6c87d8"
+    },
+    "modules/projects/candidate/projects_service/static/index.html": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "cf1878a400cd85aa4044ac6e381c99a2c083beb8746f6518c32f5ece92894f53"
+    },
+    "modules/projects/candidate/projects_service/transport.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "39e28cd0f73f758cb55032def6c5df7f714916d8ee040f24dcb908bbdb41e05a"
+    },
+    "modules/projects/candidate/pyproject.toml": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "02a8e4d1c37b35eda2ab8c43d207358014a2a767016d42d110db1469970b1b07"
+    },
+    "modules/projects/candidate/run-local.sh": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "f8ae82a1c1708d52400f2090787ec282f78422dd48526ea7d56c0d2e8ad26178"
+    },
+    "modules/projects/candidate/tests/conftest.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "cef9d81b95ed52d65a13972ed6240ea1d382a5faf0b2f33d60e9e0df14ccf7db"
+    },
+    "modules/projects/candidate/tests/test_b2_browser.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "11fee7b1d2d161940599fca2d8053c685ca4241758f67ad29dc961a69a2af963"
+    },
+    "modules/projects/candidate/tests/test_b2_domain.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "da7077abf823bd439bb43ffb9311aad3572f2ff920dfd2e68e6c053451fa4e68"
+    },
+    "modules/projects/candidate/tests/test_b2_home.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "a38f290d9948831be65c488b7e3eb553606d27b64d2952d37a7ee953b671ccca"
+    },
+    "modules/projects/candidate/tests/test_b2_lifecycle.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "3c49a4f316b0feab7e3e40767a291976c2f0fc11568103d01f5e4bb0a54041d5"
+    },
+    "modules/projects/candidate/tests/test_browser.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "f7d70b90ebc626f94fca1a4bffe34b629fa487e3c0cad32d41e69b0478194fc5"
+    },
+    "modules/projects/candidate/tests/test_projects.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "01191f72ac24202c63b574342144ede06e48c0dfddbbda0e093bc5828b600eb6"
+    },
+    "modules/projects/candidate/tests/test_tracking_ratings.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "66724ea29238ff452ce70ee63122a0475595540da77fb98090a121e702b69548"
+    },
+    "modules/projects/integration/.env.example": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "7229d1f24df32a2135a9d26428a516d71aa6a8f47916c945e43a1a2484591ad9"
+    },
+    "modules/projects/integration/README.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "fbfc8f9b73a79de70e87b184f9adb61766f5f6e9b88980eba9974bcc1f8a3e7c"
+    },
+    "modules/projects/integration/build-preview.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "cfaa0935f1bf25146cb4453b7ebd2b8c266a224ae2770ec49d3c2ea0539b43bc"
+    },
+    "modules/projects/integration/evidence/auth-constructor-check.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "44a2836c4a1bdf3e41173f9708a4caf919b55c28e9c99ea9d2b8b55fd5e89ed4"
+    },
+    "modules/projects/integration/evidence/build-inputs.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "f3d1e31bd87126d14447717d0b83533e640da532b70e6c1f1841429abc533822"
+    },
+    "modules/projects/integration/evidence/c03-ratings-check.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "9cd463bb586e833454b49354c7d6043cef21b90d8cf20d2ce2d2ab24874c0dd7"
+    },
+    "modules/projects/integration/evidence/frozen-inputs.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "dbf4da45e28db4b6e8aefd4df4aba81ece7a5271e54f8755925326e07b657aca"
+    },
+    "modules/projects/integration/evidence/homepage-1440.png": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "9808244f22a1b39abfd753d52c7c702ba365216a4d7e541ace84c601310aa885"
+    },
+    "modules/projects/integration/evidence/homepage-390.png": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "fd9c52aafa253bfbb38923fc1498f410beed72a77a5290f261a55e5ae5360cdd"
+    },
+    "modules/projects/integration/evidence/review-f89c58e/build-inputs.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "a4bd24033a2e1f3df5a9deaae2cadda5be2f0ed9916bf5642f47e4feb9b0fb58"
+    },
+    "modules/projects/integration/evidence/review-f89c58e/homepage-1440.png": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "71741bf36659b1ca60a49b56523029099c3923c21b8783ec35e005de96faf493"
+    },
+    "modules/projects/integration/evidence/review-f89c58e/homepage-390.png": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "35ca355012315a4f25a49adfb3418a2237546360204e3c2c6a78d4f4fb0b8b09"
+    },
+    "modules/projects/integration/evidence/review-f89c58e/test-receipt.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "763d70111c4cfe59c3fe09c8499aabbf4ca39dc57bf850cb196277a681698f1f"
+    },
+    "modules/projects/integration/evidence/review-f89c58e/ui-patch-check.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "f29980032430ae7910f38c1a9d9755191c8225799b629aa06bf85154c6b9328c"
+    },
+    "modules/projects/integration/evidence/test-receipt.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "c9db0b6f9e5ce5c8f760ebff2b795f9d8768969c433a8ee1b1ed93790b4090bc"
+    },
+    "modules/projects/integration/evidence/ui-patch-check.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "f327eba2365c7a69a880cc4e5b3d4a6058cf0b5e6c7a653f8bb47af366f5086a"
+    },
+    "modules/projects/integration/ipc-entry.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "ce4e7cf0acf1ff142b69b840a2419462fa966d60d592cb5103dd5e6155df286f"
+    },
+    "modules/projects/integration/patches/homepage-server.patch": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "cf2f4058659811f93ede9776e226fe1d9336402e2e936aa25274fde3cf55bae2"
+    },
+    "modules/projects/integration/prepare-preview.py": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "b7bfd2053bb2c79e0b81a2ffbecb9f1a4f263124273c640947936b140f143952"
+    },
+    "modules/projects/integration/start-website.mjs": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "e2211cb908bb52c7fef1a8ff8d61c6394c24b86a54146f12c3bae7fe59893068"
+    },
+    "modules/projects/integration/tests/auth-instance.test.mjs": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "3f0c1ef689e97bf550a56f4a89a1b577d73a19153899597889441b064a188645"
+    },
+    "modules/projects/integration/tests/guards.test.mjs": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "5ebdfaa46f220191436d82b828dfbb445ffb19a288b3181db024c194f8f4ba40"
+    },
+    "modules/projects/integration/tests/ipc-harness.mjs": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "a5f3021f23bb14ea041a0225915c4cd9d59f8649c2bcb0dd802fc42509b2b3e8"
+    },
+    "modules/projects/integration/tests/provision-fixture.mjs": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "9cd8b1bddc5c2f9885f4e7fa137fbc6d56fcd62b9635302856fc5dd77162b4a0"
+    },
+    "modules/projects/integration/tests/ratings-ipc.test.mjs": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "77ab995adfc0a589d984ca1387dcbbd6bdcdbd377a07d426a0b3e657c9aa8689"
+    },
+    "modules/projects/integration/website/app/api/v1/commands/[id]/route.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "bf662f536bc983af864302d4414cfcb71b7282700a67e595e8f2a710a292f70f"
+    },
+    "modules/projects/integration/website/app/api/v1/events/stream/route.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "428f0561927c7a0aabec77dca751084cd6f100eb516459129ed6e3f7620460d9"
+    },
+    "modules/projects/integration/website/app/api/v1/projects/[[...path]]/route.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "4ed891bc871d2a798411688ce3a5ebfbcbc1b3bcd1209d64aff504b810258523"
+    },
+    "modules/projects/integration/website/app/internal/v1/ingest/[source]/route.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "78f278d7308a4e91f6493c26b360c2d1b514a8884dc05191f5dab4a07677c386"
+    },
+    "modules/projects/integration/website/app/internal/v1/receipts/[source]/[id]/route.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "e3489c51c00e078c7e359fdfd234aee08b723535a15816a84655320c1ab0498b"
+    },
+    "modules/projects/integration/website/app/page.tsx": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "74269cb76cfe26861afe4d0bd45a6f64c935a3d9eba49f579c07ecb3cb2f3840"
+    },
+    "modules/projects/integration/website/app/project-actions.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "8250f84a40abcb882b975976fbb6497f87903d01e4746f639571fb2d81d65a27"
+    },
+    "modules/projects/integration/website/components/projects-home.tsx": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "b026e2a8c212dd49c59f45806f07bd7646370185f6364f467bc0dd4eada94fe0"
+    },
+    "modules/projects/integration/website/lib/homepage-server.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "b10f9790c03e6555b158a335a5ae5238af08e20fa2d91252ae7912cb53028d9f"
+    },
+    "modules/projects/integration/website/lib/outbox-relay.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "8ac3cf9a4155d23fb5ecbbd1999e4609925220f01a539c442849f23206a18f94"
+    },
+    "modules/projects/integration/website/lib/project-events.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "f9a3c72d42cd85d4263651db3b67382658e3d6c287f0ed1c2f277ed71116c10f"
+    },
+    "modules/projects/integration/website/lib/projects.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "013ca12ed02a8e0c476b6e20563282f583b30497c366590378b8dafebf98616c"
+    },
+    "modules/projects/integration/website/lib/stores.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "36d23e12bfcac58d333a1d3e739b478a456d2495163095d6f8f761109409a6c2"
+    },
+    "modules/projects/integration/website/proxy.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "c57e632ff51ece2c177cb80ef9ae45d0cc4e30dfb069640e9b723c4b25d902dc"
+    },
+    "modules/projects/protocols/product-c02-c03-v1-check.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "a22635f33f3f81a3c562f46ebef1e30c25474f9c03fc4345654ed1d74f41382c"
+    },
+    "modules/projects/protocols/product-c02-c03-v1.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "516aa87e5c61409c31327d88b88fa7f07090bf0761f2d6c5008572d88f4b9e50"
+    },
+    "modules/projects/protocols/product-c02-c03-v1.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "6d23eb94da081cab78838ec02c8d60e25b8a3ad13fc177c148ac3ecd14957313"
+    },
+    "modules/projects/protocols/tracking-ratings-v1.json": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "a18dd71d2df7d758d02d39a3b65828eeb72a073606214ff1bab75ed972ba0065"
+    },
+    "modules/projects/protocols/tracking-ratings-v1.md": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "sha256": "c7b79a8f73d678949c347638d9fe9978f8f22db97e9d6d481873828b4036fde8"
+    }
+  },
+  "received_website_inputs": {
+    "apps/website/app/api/v1/hunter/[...path]/route.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/app/api/v1/hunter/[...path]/route.ts",
+      "source_sha256": "2647193116d12027e97c98355c58e016d355bbb091983780b9ef1d9251f20854"
+    },
+    "apps/website/app/hunter/actions.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/app/hunter/actions.ts",
+      "source_sha256": "163885d4db8b39448eea7f7d764d007a70f95541fcd752ec5f4eb1d8705fa677"
+    },
+    "apps/website/app/hunter/page.tsx": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/app/hunter/page.tsx",
+      "source_sha256": "043baa7080b13dea2694b6bf0f4c86c26866b7f9676adc2f61a501c1019d5bf2"
+    },
+    "apps/website/components/hunter-controller.tsx": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/components/hunter-controller.tsx",
+      "source_sha256": "02be49982ffd8cfc46d9311424d0bf023ad6900bfd286aa0624bc7c744a96f4f"
+    },
+    "apps/website/components/hunter-host.css": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/components/hunter-host.css",
+      "source_sha256": "ef701341c264cb36cd2a40818ade7510d6a08cced8722225c6252f9261525a03"
+    },
+    "apps/website/lib/hunter.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/lib/hunter.ts",
+      "source_sha256": "151165438072d62a55e4f647e7910977344783c7e90daeee4d733670edc17bda"
+    },
+    "apps/website/lib/projects.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "source_path": "modules/projects/integration/website/lib/projects.ts",
+      "source_sha256": "013ca12ed02a8e0c476b6e20563282f583b30497c366590378b8dafebf98616c"
+    },
+    "apps/website/features/hunter-discovery/DiscoveryView.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/DiscoveryView.tsx",
+      "source_sha256": "9d88bb9347170a5ccbbcb460daaafe2914b0212518cc305eb51fc5c9eefb6f0c"
+    },
+    "apps/website/features/hunter-discovery/Prototype.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/Prototype.tsx",
+      "source_sha256": "8fee1f2f12b65c592d5bde288ae8aeb8d411b74367d27b269864312391b3b1e4"
+    },
+    "apps/website/features/hunter-discovery/REFERENCE-REVIEW.md": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/REFERENCE-REVIEW.md",
+      "source_sha256": "253d53370396665c42c12d943bd91cec8d570cc3e0144bd3c3461807f9f36fdc"
+    },
+    "apps/website/features/hunter-discovery/ReferencePreviewFrame.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/ReferencePreviewFrame.tsx",
+      "source_sha256": "3ece210fc63a9c9f962e3a921b5c2d29cd70f97f2db7bfb564310a8a0158ba80"
+    },
+    "apps/website/features/hunter-discovery/UI0-HANDOFF.md": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/UI0-HANDOFF.md",
+      "source_sha256": "0e59436bad5405f9c260d3c86d3ba2100416bbd4e392c50503c37d7211ec4021"
+    },
+    "apps/website/features/hunter-discovery/browser-entry.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/browser-entry.tsx",
+      "source_sha256": "b1aebdfb628067437be2db9b80ffb189bb7a90ade8601bd803a22df7bf95fb1d"
+    },
+    "apps/website/features/hunter-discovery/discovery.module.css": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/discovery.module.css",
+      "source_sha256": "25d2998f3c11ef36b00296a1caa170977990607cc5e7e00f3e41719d5ba317cf"
+    },
+    "apps/website/features/hunter-discovery/fixtures.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/fixtures.ts",
+      "source_sha256": "b933adb8a0701d8940d8b707f44cdd19413b4f7556c7d1257bd6f656970a3a50"
+    },
+    "apps/website/features/hunter-discovery/model.test.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/model.test.ts",
+      "source_sha256": "1bcb56af096eeaadb03c25b40101a407f37c15cc94d4ac75a00a8a9bb384139d"
+    },
+    "apps/website/features/hunter-discovery/model.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/model.ts",
+      "source_sha256": "60ee989bda7a103b2a038c1e6655f1cace16060887a4825b58e67e2a4c613057"
+    },
+    "apps/website/features/hunter-discovery/preview.mjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/preview.mjs",
+      "source_sha256": "aaba87bd50412f80f898dc6e603286b81f305017a6c86e6818867c4aee57c5f0"
+    },
+    "apps/website/features/hunter-discovery/v3/.gitignore": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/.gitignore",
+      "source_sha256": "beac6a68e04f36a030276c27d1f42493710c2712c090c7f64ddf2b808a25c5df"
+    },
+    "apps/website/features/hunter-discovery/v3/App.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/App.tsx",
+      "source_sha256": "e9178e9eaf41496d25a65ac072a7b49299abb62ef05014a236c5b263b49bf1da",
+      "reviewed_patch_sha256": "9bac82b9a1d1f2b5791ea4eecb71c580a59d364ea6896b95376f9432a8c1f93f",
+      "reviewed_patch_output_sha256": "0704ed3f2cb3f2fe5479a6bd1e013ff4d21cbab229d0275b5aca1ca8966dcd2c"
+    },
+    "apps/website/features/hunter-discovery/v3/README.md": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/README.md",
+      "source_sha256": "dc0f164d4eddb094cb5086519635c314297dc96029c2b7cb4a5c524ca127aa5f"
+    },
+    "apps/website/features/hunter-discovery/v3/entry.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/entry.tsx",
+      "source_sha256": "48941f4d2788390f0a2c3dcd776f42d156947911e7f5d9b0fc84ff7eb841371a"
+    },
+    "apps/website/features/hunter-discovery/v3/model.test.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/model.test.ts",
+      "source_sha256": "84263426968dc3ed1057ce5bdb15fdcde077ff0bb427223961a7bbd04f5e4020"
+    },
+    "apps/website/features/hunter-discovery/v3/model.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/model.ts",
+      "source_sha256": "cec638b4e8773daa783756228f735975a4a73bb95269006666b69a02c6562b82",
+      "reviewed_patch_sha256": "9bac82b9a1d1f2b5791ea4eecb71c580a59d364ea6896b95376f9432a8c1f93f",
+      "reviewed_patch_output_sha256": "37307d0dc8f7d17641792f2cfc47f6a96b47df5e8566581dbd6611e08a2c43c5"
+    },
+    "apps/website/features/hunter-discovery/v3/package.json": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/package.json",
+      "source_sha256": "14b79ed6dc8f6915807f498f3401b3483ce9c196847643fcdee3eff7ee78e91d"
+    },
+    "apps/website/features/hunter-discovery/v3/preview.mjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/preview.mjs",
+      "source_sha256": "27160ffeaa351a75bfb6dd19caca0a446c8c9e593fbbf7da7cbbc445404f6458"
+    },
+    "apps/website/features/hunter-discovery/v3/reference/provenance.json": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/reference/provenance.json",
+      "source_sha256": "1aefb674720db423ebdc08b9ebe28e344725223f1a8435449007ed697cd5d104"
+    },
+    "apps/website/features/hunter-discovery/v3/reference/reference.css": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/reference/reference.css",
+      "source_sha256": "2c2858c3bf08ec6736bc928ba5e111f79d17a7bf7ed827194e67848287990ec0"
+    },
+    "apps/website/features/hunter-discovery/v3/reference/seed.json": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/reference/seed.json",
+      "source_sha256": "a91dfbbd731a975d65ddcccc868dcbca269aa69cdf33d7697b358db28a82b164"
+    },
+    "apps/website/features/hunter-discovery/v3/reference/v3.html": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/reference/v3.html",
+      "source_sha256": "79dce14c995865fcebd2b26a28bd7d0c7892cc7314f9434ecbc86ba53464b168"
+    },
+    "apps/website/features/hunter-discovery/v3/setup.mjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/setup.mjs",
+      "source_sha256": "fbd4f894263bc4b03159fc1c3f0c5482d4aa9aa806f936ce08d2fb29327713b7"
+    },
+    "apps/website/features/hunter-discovery/v3/tsconfig.json": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/tsconfig.json",
+      "source_sha256": "58205b451f9c63c4f4e7671cb01645e179bc6d13ad4f56c4d5890d57ee35fe26"
+    },
+    "apps/website/features/hunter-discovery/v3/v3.css": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/v3.css",
+      "source_sha256": "cbbe81e3dc287e7273e51d4f5f51e9b1c28fede86b6a30606033a8a83d177589"
+    },
+    "apps/website/features/hunter-discovery/v3/verify.cjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/verify.cjs",
+      "source_sha256": "d2bc8594b3dba1d4eaab854e3c9f6179119ae7a4696889d840215a3babae0d48"
+    },
+    "apps/website/features/hunter-discovery/verify-ui0.cjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/verify-ui0.cjs",
+      "source_sha256": "d1cc110e8a94fe5bc555b81ce194b50406d6cc4650464a6a09010b523c0879a1"
+    }
+  },
+  "site_patches": {
+    "apps/website/lib/projects.ts": {
+      "baseline_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "baseline_path": "modules/projects/integration/website/lib/projects.ts",
+      "baseline_sha256": "013ca12ed02a8e0c476b6e20563282f583b30497c366590378b8dafebf98616c",
+      "patch_path": "release-integration/night/patches/site-1.patch",
+      "patch_sha256": "7a73693ae47dba68cb7b867139de36c1f579189bbb0c08460eb2cb6b2c25d601",
+      "target_sha256": "e90866ec1bfb61afc60ec70ff8f2e4ac63e09d4a5a5549fd853bc925a59e566b"
+    },
+    "apps/website/components/hunter-controller.tsx": {
+      "baseline_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "baseline_path": "services/hunter-worker/python/integration/website/components/hunter-controller.tsx",
+      "baseline_sha256": "02be49982ffd8cfc46d9311424d0bf023ad6900bfd286aa0624bc7c744a96f4f",
+      "patch_path": "release-integration/night/patches/site-2.patch",
+      "patch_sha256": "bbf0df755adcca68b0cf937f2e3e25d930c50f1721dc9b2b295a7793fa70eca9",
+      "target_sha256": "5228526a8680f8d49ab1b6577af8a0c82cb1c9294f3b5d518dbe88fcab58f6b9"
+    },
+    "apps/website/app/api/v1/commands/[id]/route.ts": {
+      "baseline_commit": "f8ceaa87ecf3b6211b0ad7bc8790a850e5e4de3d",
+      "baseline_path": "apps/website/app/api/v1/commands/[id]/route.ts",
+      "baseline_sha256": "bf662f536bc983af864302d4414cfcb71b7282700a67e595e8f2a710a292f70f",
+      "patch_path": "release-integration/night/patches/site-3.patch",
+      "patch_sha256": "f90f70f1036ee62534181e6d4e5359206392007b308e39de9c06fb73ddcbb5f0",
+      "target_sha256": "e4d9684591e39e5a9804cf4183ee5d0c27e1f3f2f80651bdd0ee43034ddcbb2a"
+    },
+    "apps/website/app/api/v1/hunter/events/route.ts": {
+      "baseline_commit": null,
+      "baseline_path": null,
+      "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patch_path": "release-integration/night/patches/site-4.patch",
+      "patch_sha256": "31bbf8b387c5f5743615b25bece044274af209b2837e38280c83378a79336fe4",
+      "target_sha256": "99ffce22a5d77609fbe617ea0d766ac9732e61aefc1701544328d1e8052fbc87"
+    },
+    "apps/website/app/api/v1/tracking/events/route.ts": {
+      "baseline_commit": null,
+      "baseline_path": null,
+      "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patch_path": "release-integration/night/patches/site-5.patch",
+      "patch_sha256": "2183413bd7a9aebe748469c4040e494bcf2554b58091d0d15569a0712a2c887f",
+      "target_sha256": "fbfc3490c675ca63fb59ebb1d77ad9e327d946759dbb32bc02539c8236d8f39e"
+    },
+    "apps/website/lib/service-gateway/commands.ts": {
+      "baseline_commit": null,
+      "baseline_path": null,
+      "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patch_path": "release-integration/night/patches/site-6.patch",
+      "patch_sha256": "34170a3030ec1a468da93cd9305d8a5374b7903e369a77b9eb3d5468aa87756d",
+      "target_sha256": "c5f13986922b5ce9b4abaa5a58e6682d10f562fbfc9b1e2d298ce453d485f77a"
+    },
+    "apps/website/lib/service-gateway/relay.ts": {
+      "baseline_commit": null,
+      "baseline_path": null,
+      "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patch_path": "release-integration/night/patches/site-7.patch",
+      "patch_sha256": "32dc73b022f5656574b84145f753dd8c67fefe893c0e19cb000df18e864301d0",
+      "target_sha256": "009eae79942edd12c3136ba91fb0e29a15f877e4b94a77a45ceeda5db2889b08"
+    },
+    "apps/website/instrumentation.ts": {
+      "baseline_commit": null,
+      "baseline_path": null,
+      "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "patch_path": "release-integration/night/patches/site-8.patch",
+      "patch_sha256": "411a66256373d96d93cef9b3c6168b1144fa962d730d3cb45562e305a38de909",
+      "target_sha256": "e1a6836a80bd97a2f3ada1f1aa4c15318fa9539306fb71742c63a4c4a0e205c3"
+    }
+  },
+  "original_immutable_and_homepage_checks_remain_required": true
+}

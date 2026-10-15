@@ -1,0 +1,6 @@
+{
+  "name": "@ikun/hunter-ui-v3-prototype", "private": true, "type": "module",
+  "scripts": {"setup": "node setup.mjs", "preview": "node preview.mjs", "typecheck": "tsc -p tsconfig.json", "test": "node --import tsx --test model.test.ts"},
+  "dependencies": {"@ikun/ui": "file:./.dependencies/ui", "react": "19.3.1", "react-dom": "19.3.1"},
+  "devDependencies": {"@types/react": "19.3.0", "@types/react-dom": "19.3.0"}
+}

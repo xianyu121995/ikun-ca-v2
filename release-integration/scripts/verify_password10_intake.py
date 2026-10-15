@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+from verify_night_intake import verify as verify_night
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTROL = '1d56ef2f003c531574e41fe079c70510ac6ed437'
@@ -20,6 +21,7 @@ def digest(value):
 
 
 def verify():
+    night_overrides, night_paths = verify_night()
     review = json.loads(at(CONTROL, 'docs/c0-lite/password10-review.json'))
     intake = json.loads(at(ORIGINAL, 'docs/c0-lite/root-intake.json'))
     source = review['source_commit']
@@ -32,7 +34,7 @@ def verify():
     overrides = review['intake_delta']['immutable_source_overrides']
     assert set(overrides) == {'modules/auth/src/security.ts', 'modules/auth/src/cli.ts'}
     for path, original in intake['immutable_domain_and_shared_sources'].items():
-        expected = overrides.get(path, original)['sha256']
+        expected = overrides.get(path, night_overrides.get(path, original))['sha256']
         assert digest((ROOT / path).read_bytes()) == expected, path
     for path, expected in intake['homepage_final_sha256'].items():
         assert digest((ROOT / path).read_bytes()) == expected, path
@@ -53,6 +55,7 @@ def verify():
         assert digest(at(readonly['source_commit'], path)) == expected, path
         assert digest((ROOT / path).read_bytes()) == expected, path
     scope.update(readonly['allowed_receiving_paths'])
+    scope.update(night_paths)
     receiving_changes = subprocess.check_output(['git', 'diff', '--name-only', baseline], cwd=ROOT, text=True).splitlines()
     assert all(path in scope or path.startswith('release-integration/') for path in receiving_changes), receiving_changes
     return {'status': 'PASS', 'review_commit': CONTROL, 'source_commit': source,

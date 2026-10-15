@@ -1,0 +1,14 @@
+import seed from './reference/seed.json';
+import type {TableSort} from '@ikun/ui';
+export type Grade = 'S'|'A'|'B'|'C'|'D'|null;
+export type Status = 'pending'|'reviewed'|'joined';
+export interface Project {id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;token:'unknown'|'planned'|'none';notes:string;watch:boolean}
+export interface Filters {query:string;time:string;grade:string;status:string}
+export const initialFilters:Filters={query:'',time:'all',grade:'all',status:'all'};
+export const statusText:Record<Status,string>={pending:'待研究',reviewed:'已研究',joined:'已加入监控'};
+export function createProjects(now:number):Project[]{return seed.map((r,i)=>({id:`demo-${i+1}`,name:String(r[0]),handle:String(r[1]),bio:String(r[2]),hunters:Number(r[3]),grade:r[4]==='none'?null:r[4] as Grade,status:r[5] as Status,foundAt:now-Number(r[6])*3600000,website:i%3===0?'https://example.org/':'',description:i===2?'早期 DeFi 项目，研究储备证明与模块化策略。':'',token:'unknown',notes:'',watch:false}));}
+export function filterProjects(projects:Project[],filters:Filters,sort:TableSort,now:number){const q=filters.query.trim().toLowerCase();const ranks={S:5,A:4,B:3,C:2,D:1,none:0};return projects.filter(p=>(!q||[p.name,p.handle,p.bio,p.description,p.notes].join(' ').toLowerCase().includes(q))&&(filters.time==='all'||now-p.foundAt<=Number(filters.time)*3600000)&&(filters.grade==='all'||(p.grade??'none')===filters.grade)&&(filters.status==='all'||p.status===filters.status)).sort((a,b)=>{const value=sort.key==='time'?a.foundAt-b.foundAt:sort.key==='name'?a.name.localeCompare(b.name):sort.key==='hunters'?a.hunters-b.hunters:ranks[a.grade??'none']-ranks[b.grade??'none'];return (sort.direction==='asc'?value:-value)||a.id.localeCompare(b.id,undefined,{numeric:true});});}
+export function validateProject(p:Project):Record<string,string>{const errors:Record<string,string>={};if(!p.name.trim())errors.name='项目名称不能为空';if(p.name.trim().length>120)errors.name='项目名称不能超过 120 字';if(p.website.trim()){try{const u=new URL(p.website.trim());if(!['http:','https:'].includes(u.protocol)||u.username||u.password)throw new Error();}catch{errors.website='请输入有效的 http:// 或 https:// 官网地址';}}return errors;}
+export function normalizeProject(p:Project):Project{return {...p,name:p.name.trim(),bio:p.bio.trim(),website:p.website.trim(),description:p.description.trim(),notes:p.notes.trim()};}
+export function normalizeHandle(input:string){const handle=input.trim().replace(/^@/,'').toLowerCase();return /^[a-z0-9_]{1,15}$/.test(handle)?handle:null;}
+export const formatTime=(ms:number)=>!Number.isFinite(ms)?'时间未知':new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(ms);

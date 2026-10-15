@@ -1,0 +1,164 @@
+[
+  [
+    "Aether Labs",
+    "aether_labs",
+    "面向 AI Agent 的去中心化任务路由网络，正在开放测试申请。",
+    2,
+    "none",
+    "pending",
+    3
+  ],
+  [
+    "Orbit Markets",
+    "orbit_mkt",
+    "链上订单流聚合与意图交易基础设施，支持多网络价格发现。",
+    3,
+    "A",
+    "reviewed",
+    6
+  ],
+  [
+    "Mosaic Finance",
+    "mosaic_fi",
+    "模块化收益产品，强调链上透明储备与可组合策略。",
+    2,
+    "S",
+    "joined",
+    10
+  ],
+  [
+    "Neon Foundry",
+    "neonfoundry",
+    "为链上开发者提供开源索引与实时数据流。",
+    4,
+    "none",
+    "pending",
+    16
+  ],
+  [
+    "Atlas Robotics",
+    "atlas_robotics",
+    "机器人自治结算协议与现实世界服务市场。",
+    2,
+    "B",
+    "reviewed",
+    22
+  ],
+  [
+    "Helix Layer",
+    "helix_layer",
+    "一站式跨链执行环境，支持账户抽象与原子路由。",
+    5,
+    "S",
+    "joined",
+    30
+  ],
+  [
+    "Sable Protocol",
+    "sable_proto",
+    "构建隐私优先的链上身份和可验证凭证。",
+    2,
+    "none",
+    "pending",
+    38
+  ],
+  [
+    "Quanta Studio",
+    "quantastudio",
+    "面向游戏创作者的开放经济工具与链上成就系统。",
+    3,
+    "A",
+    "reviewed",
+    46
+  ],
+  [
+    "Wisp Network",
+    "wisp_network",
+    "轻量级去中心化协作工具，实验性开源产品。",
+    2,
+    "none",
+    "pending",
+    58
+  ],
+  [
+    "Fjord Exchange",
+    "fjord_exchange",
+    "探索新型衍生品清算结构与订单簿交易。",
+    2,
+    "A",
+    "joined",
+    68
+  ],
+  [
+    "Parallax AI",
+    "parallaxai_xyz",
+    "链上智能体身份、执行记录与可审计策略框架。",
+    3,
+    "B",
+    "reviewed",
+    78
+  ],
+  [
+    "Terra Mesh",
+    "terramesh_io",
+    "用于实体设备协作的分布式地图与位置数据协议。",
+    2,
+    "none",
+    "pending",
+    92
+  ],
+  [
+    "Luma Commons",
+    "luma_commons",
+    "可编程会员关系与链上激励产品。",
+    2,
+    "none",
+    "pending",
+    106
+  ],
+  [
+    "Vanta Compute",
+    "vanta_compute",
+    "去中心化 GPU 计算市场，实验性调度网络。",
+    4,
+    "S",
+    "reviewed",
+    118
+  ],
+  [
+    "Nova Settlement",
+    "nova_settle",
+    "稳定币支付路由与商户结算 SDK。",
+    2,
+    "B",
+    "joined",
+    132
+  ],
+  [
+    "Tessera Labs",
+    "tessera_labs",
+    "研究隐私可组合性与零知识证明应用。",
+    3,
+    "none",
+    "pending",
+    153
+  ],
+  [
+    "Arcfield",
+    "arcfield_xyz",
+    "安全优先的链上资产运营管理平台。",
+    2,
+    "A",
+    "reviewed",
+    177
+  ],
+  [
+    "Prism Index",
+    "prism_index",
+    "针对开放生态的项目发现与可信信号聚合。",
+    3,
+    "none",
+    "pending",
+    204
+  ]
+]

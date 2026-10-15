@@ -23,6 +23,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--candidate', required=True)
     parser.add_argument('--from-sha', required=True)
+    parser.add_argument('--hunter-environment')
     args = parser.parse_args()
     assert command(['git', 'rev-parse', 'HEAD'], cwd=ROOT) == args.candidate
     assert command(['git', 'branch', '--show-current'], cwd=ROOT) == 'codex/integration'
@@ -38,6 +39,18 @@ def main():
     env = json.loads(env_path.read_text())
     assert env['DATA_ROOT'] == str(TARGET / 'data') and env['IKUN_RELEASE_SHA'] == args.from_sha
     assert env['IKUN_AUTH_ORIGIN'] == 'https://v2.ikun.ca' and 'IKUN_AUTH_DEV' not in env
+    hunter_web = {}
+    if args.hunter_environment:
+        from night_worker_ops import inside, private_json
+        path = inside(args.hunter_environment, TARGET / 'config')
+        assert path == TARGET / 'config/hunter.environment.json'
+        hunter = private_json(path)
+        assert hunter['DATA_ROOT'] == env['DATA_ROOT'] and hunter['HUNTER_EXTERNAL_IO_ENABLED'] == '0'
+        assert hunter['HUNTER_HOST'] == '127.0.0.1' and hunter['HUNTER_PORT'] == '4011'
+        assert len(hunter['HUNTER_API_TOKEN']) >= 32 and len(hunter['PROJECTS_INGEST_HUNTER_TOKEN']) >= 32
+        hunter_web = {'IKUN_HUNTER_ORIGIN': 'http://127.0.0.1:4011',
+                      'HUNTER_API_TOKEN': hunter['HUNTER_API_TOKEN'],
+                      'PROJECTS_INGEST_HUNTER_TOKEN': hunter['PROJECTS_INGEST_HUNTER_TOKEN']}
     plist = Path.home() / 'Library/LaunchAgents' / (LABEL + '.plist')
     job = plistlib.loads(plist.read_bytes())
     assert job['Label'] == LABEL and str(TARGET / 'releases' / args.from_sha) == job['WorkingDirectory']
@@ -50,7 +63,8 @@ def main():
         if (release / relative).exists(): shutil.rmtree(release / relative)
     for relative in ('node_modules', 'packages/contracts/dist', 'packages/contracts/node_modules', 'packages/runtime/dist',
                      'packages/runtime/node_modules', 'packages/ui/dist', 'packages/ui/node_modules', 'modules/auth/dist',
-                     'apps/website/.next', 'apps/website/node_modules'):
+                     'apps/website/.next', 'apps/website/node_modules', 'services/hunter-worker/dist',
+                     'services/hunter-worker/node_modules'):
         source = ROOT / relative
         if source.is_dir():
             shutil.copytree(source, release / relative, symlinks=True,
@@ -72,6 +86,7 @@ def main():
         time.sleep(.1)
     else: raise RuntimeError('OWNED_NEW_LABEL_DID_NOT_EXIT')
     try:
+        env.update(hunter_web)
         env['IKUN_RELEASE_SHA'] = args.candidate
         job['WorkingDirectory'] = str(release)
         job['ProgramArguments'] = ['/usr/bin/env', '-i', *[k + '=' + v for k, v in env.items()],

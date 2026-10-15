@@ -1,0 +1,76 @@
+--- /dev/null
++++ b/apps/website/lib/service-gateway/commands.ts
+@@ -0,0 +1,73 @@
++import {withAuth,requireIdentity} from '../../../../modules/auth/dist/src/server.js';
++import {projectsAuth,ipc,requestId,failure,type Principal} from '../projects';
++import {hunterCall} from '../hunter';
++
++const uuid='[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
++const commandPattern=new RegExp('^/api/v1/commands/(cmd_'+uuid+')$');
++const projectPattern=new RegExp('^prj_'+uuid+'$');
++async function notFound(response:Response){if(response.status!==404)return false;try{return (await response.clone().json()).error?.code==='NOT_FOUND';}catch{return false;}}
++async function trackingCommand(command:string,id:string,signal:AbortSignal){
++  const target=process.env.TRACKING_API_URL,token=process.env.TRACKING_API_TOKEN;
++  if(!target||!token||token.length<32)return failure(id,503,'AUTH_NOT_CONFIGURED','Tracking 尚未接入，监控结果待核实');
++  try{
++    const url=new URL(target);
++    if(url.protocol!=='http:'||!['127.0.0.1','[::1]'].includes(url.hostname)||url.pathname!=='/'||url.username||url.password||url.search||url.hash)throw Error('INVALID_DIRECTION');
++    const response=await fetch(url.origin+'/internal/v1/commands/'+encodeURIComponent(command),{headers:{authorization:'Bearer '+token,'x-request-id':id},signal,cache:'no-store',redirect:'error'});
++    const bytes=await response.arrayBuffer();if(bytes.byteLength>65536)throw Error('RESPONSE_LIMIT');
++    const envelope=JSON.parse(new TextDecoder().decode(bytes));if(envelope?.request_id!==id||!('data'in envelope||'error'in envelope))throw Error('INVALID_ENVELOPE');
++    return new Response(bytes,{status:response.status,headers:{'content-type':'application/json','cache-control':'no-store','x-request-id':id}});
++  }catch{return failure(id,503,'UPSTREAM_UNAVAILABLE','Tracking 状态未能核实');}
++}
++async function projection(response:Response,command:string,project?:string){
++  const data=(await response.clone().json()).data;
++  if(!data||data.command_id!==command||!['accepted','pending','running','succeeded','failed','unknown'].includes(data.state)
++    ||data.project_id!==null&&!projectPattern.test(data.project_id)||project&&data.project_id!==project)throw Error('INVALID_COMMAND_PROJECTION');
++  return data;
++}
++async function canonical(principal:Principal,command:string,id:string,signal:AbortSignal){
++  return ipc({operation:'command',target:command,principal,request_id:id},signal);
++}
++/** Original ID and existing domain projections only; GET never claims or sends outbox work. */
++export function commandGateway(original:Request){
++  projectsAuth();const id=requestId(original),headers=new Headers(original.headers);headers.set('x-request-id',id);
++  const request=new Request(original.url,{method:original.method,headers,signal:original.signal});
++  return withAuth(request,async()=>{
++    const principal=requireIdentity(request),url=new URL(request.url),match=commandPattern.exec(url.pathname);
++    if(!match||url.search)return failure(id,422,'VALIDATION_ERROR','命令标识或查询字段无效');
++    const command=match[1]!,signal=AbortSignal.any([request.signal,AbortSignal.timeout(8000)]);
++    try{
++      const local=await canonical(principal,command,id,signal);
++      if(local.ok){
++        const known=await projection(local,command);
++        if(!known.project_id)throw Error('CANONICAL_REQUIRED');
++        const actual=await trackingCommand(command,id,signal);
++        if(await notFound(actual))return local; // Durable Projects pending, not a running assertion.
++        if(actual.ok)await projection(actual,command,known.project_id);
++        return actual;
++      }
++      const hunter=await hunterCall('/internal/v1/commands/'+command,id,principal,'GET',undefined,{},signal);
++      if(hunter.ok){
++        const known=await projection(hunter,command);
++        if(known.project_id===null)return hunter;
++        // A receipt may have arrived between the two reads. Resolve the same ID again.
++        const mapped=await canonical(principal,command,id,signal);
++        if(!mapped.ok)return mapped.status===404?failure(id,503,'UPSTREAM_UNAVAILABLE','项目映射结果待核实'):mapped;
++        const project=await projection(mapped,command);
++        const actual=await trackingCommand(command,id,signal);
++        if(await notFound(actual))return mapped;
++        if(actual.ok)await projection(actual,command,project.project_id);
++        return actual;
++      }
++      const direct=await trackingCommand(command,id,signal);
++      if(direct.ok){
++        const known=await projection(direct,command);
++        if(!known.project_id)throw Error('CANONICAL_REQUIRED');
++        const project=await ipc({operation:'get',target:known.project_id,principal,request_id:id},signal);
++        if(!project.ok)return project.status===404?failure(id,503,'UPSTREAM_UNAVAILABLE','命令项目归属待核实'):project;
++        return direct;
++      }
++      if(await notFound(local)&&await notFound(hunter)&&await notFound(direct))return local;
++      return !await notFound(local)?local:!await notFound(hunter)?hunter:direct;
++    }catch{return failure(id,503,'UPSTREAM_UNAVAILABLE','原命令结果待核实，请勿重复确认');}
++  });
++}

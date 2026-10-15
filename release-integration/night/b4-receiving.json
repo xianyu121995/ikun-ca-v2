@@ -1,0 +1,188 @@
+{
+  "state": "RECEIVED_PENDING_SITE_WIRING_AND_TESTS",
+  "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+  "control_commit": "7a90ec281211cc8a307692c8e420cf4b802ce452",
+  "ui_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+  "projects_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+  "files": {
+    "apps/website/app/api/v1/hunter/[...path]/route.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/app/api/v1/hunter/[...path]/route.ts",
+      "source_sha256": "2647193116d12027e97c98355c58e016d355bbb091983780b9ef1d9251f20854"
+    },
+    "apps/website/app/hunter/actions.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/app/hunter/actions.ts",
+      "source_sha256": "163885d4db8b39448eea7f7d764d007a70f95541fcd752ec5f4eb1d8705fa677"
+    },
+    "apps/website/app/hunter/page.tsx": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/app/hunter/page.tsx",
+      "source_sha256": "043baa7080b13dea2694b6bf0f4c86c26866b7f9676adc2f61a501c1019d5bf2"
+    },
+    "apps/website/components/hunter-controller.tsx": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/components/hunter-controller.tsx",
+      "source_sha256": "02be49982ffd8cfc46d9311424d0bf023ad6900bfd286aa0624bc7c744a96f4f"
+    },
+    "apps/website/components/hunter-host.css": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/components/hunter-host.css",
+      "source_sha256": "ef701341c264cb36cd2a40818ade7510d6a08cced8722225c6252f9261525a03"
+    },
+    "apps/website/lib/hunter.ts": {
+      "source_commit": "10fe9d73dcf9d2dd296b808e8aaee41308f12112",
+      "source_path": "services/hunter-worker/python/integration/website/lib/hunter.ts",
+      "source_sha256": "151165438072d62a55e4f647e7910977344783c7e90daeee4d733670edc17bda"
+    },
+    "apps/website/lib/projects.ts": {
+      "source_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+      "source_path": "modules/projects/integration/website/lib/projects.ts",
+      "source_sha256": "013ca12ed02a8e0c476b6e20563282f583b30497c366590378b8dafebf98616c"
+    },
+    "apps/website/features/hunter-discovery/DiscoveryView.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/DiscoveryView.tsx",
+      "source_sha256": "9d88bb9347170a5ccbbcb460daaafe2914b0212518cc305eb51fc5c9eefb6f0c"
+    },
+    "apps/website/features/hunter-discovery/Prototype.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/Prototype.tsx",
+      "source_sha256": "8fee1f2f12b65c592d5bde288ae8aeb8d411b74367d27b269864312391b3b1e4"
+    },
+    "apps/website/features/hunter-discovery/REFERENCE-REVIEW.md": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/REFERENCE-REVIEW.md",
+      "source_sha256": "253d53370396665c42c12d943bd91cec8d570cc3e0144bd3c3461807f9f36fdc"
+    },
+    "apps/website/features/hunter-discovery/ReferencePreviewFrame.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/ReferencePreviewFrame.tsx",
+      "source_sha256": "3ece210fc63a9c9f962e3a921b5c2d29cd70f97f2db7bfb564310a8a0158ba80"
+    },
+    "apps/website/features/hunter-discovery/UI0-HANDOFF.md": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/UI0-HANDOFF.md",
+      "source_sha256": "0e59436bad5405f9c260d3c86d3ba2100416bbd4e392c50503c37d7211ec4021"
+    },
+    "apps/website/features/hunter-discovery/browser-entry.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/browser-entry.tsx",
+      "source_sha256": "b1aebdfb628067437be2db9b80ffb189bb7a90ade8601bd803a22df7bf95fb1d"
+    },
+    "apps/website/features/hunter-discovery/discovery.module.css": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/discovery.module.css",
+      "source_sha256": "25d2998f3c11ef36b00296a1caa170977990607cc5e7e00f3e41719d5ba317cf"
+    },
+    "apps/website/features/hunter-discovery/fixtures.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/fixtures.ts",
+      "source_sha256": "b933adb8a0701d8940d8b707f44cdd19413b4f7556c7d1257bd6f656970a3a50"
+    },
+    "apps/website/features/hunter-discovery/model.test.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/model.test.ts",
+      "source_sha256": "1bcb56af096eeaadb03c25b40101a407f37c15cc94d4ac75a00a8a9bb384139d"
+    },
+    "apps/website/features/hunter-discovery/model.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/model.ts",
+      "source_sha256": "60ee989bda7a103b2a038c1e6655f1cace16060887a4825b58e67e2a4c613057"
+    },
+    "apps/website/features/hunter-discovery/preview.mjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/preview.mjs",
+      "source_sha256": "aaba87bd50412f80f898dc6e603286b81f305017a6c86e6818867c4aee57c5f0"
+    },
+    "apps/website/features/hunter-discovery/v3/.gitignore": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/.gitignore",
+      "source_sha256": "beac6a68e04f36a030276c27d1f42493710c2712c090c7f64ddf2b808a25c5df"
+    },
+    "apps/website/features/hunter-discovery/v3/App.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/App.tsx",
+      "source_sha256": "e9178e9eaf41496d25a65ac072a7b49299abb62ef05014a236c5b263b49bf1da",
+      "reviewed_patch_sha256": "9bac82b9a1d1f2b5791ea4eecb71c580a59d364ea6896b95376f9432a8c1f93f",
+      "reviewed_patch_output_sha256": "0704ed3f2cb3f2fe5479a6bd1e013ff4d21cbab229d0275b5aca1ca8966dcd2c"
+    },
+    "apps/website/features/hunter-discovery/v3/README.md": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/README.md",
+      "source_sha256": "dc0f164d4eddb094cb5086519635c314297dc96029c2b7cb4a5c524ca127aa5f"
+    },
+    "apps/website/features/hunter-discovery/v3/entry.tsx": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/entry.tsx",
+      "source_sha256": "48941f4d2788390f0a2c3dcd776f42d156947911e7f5d9b0fc84ff7eb841371a"
+    },
+    "apps/website/features/hunter-discovery/v3/model.test.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/model.test.ts",
+      "source_sha256": "84263426968dc3ed1057ce5bdb15fdcde077ff0bb427223961a7bbd04f5e4020"
+    },
+    "apps/website/features/hunter-discovery/v3/model.ts": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/model.ts",
+      "source_sha256": "cec638b4e8773daa783756228f735975a4a73bb95269006666b69a02c6562b82",
+      "reviewed_patch_sha256": "9bac82b9a1d1f2b5791ea4eecb71c580a59d364ea6896b95376f9432a8c1f93f",
+      "reviewed_patch_output_sha256": "37307d0dc8f7d17641792f2cfc47f6a96b47df5e8566581dbd6611e08a2c43c5"
+    },
+    "apps/website/features/hunter-discovery/v3/package.json": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/package.json",
+      "source_sha256": "14b79ed6dc8f6915807f498f3401b3483ce9c196847643fcdee3eff7ee78e91d"
+    },
+    "apps/website/features/hunter-discovery/v3/preview.mjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/preview.mjs",
+      "source_sha256": "27160ffeaa351a75bfb6dd19caca0a446c8c9e593fbbf7da7cbbc445404f6458"
+    },
+    "apps/website/features/hunter-discovery/v3/reference/provenance.json": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/reference/provenance.json",
+      "source_sha256": "1aefb674720db423ebdc08b9ebe28e344725223f1a8435449007ed697cd5d104"
+    },
+    "apps/website/features/hunter-discovery/v3/reference/reference.css": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/reference/reference.css",
+      "source_sha256": "2c2858c3bf08ec6736bc928ba5e111f79d17a7bf7ed827194e67848287990ec0"
+    },
+    "apps/website/features/hunter-discovery/v3/reference/seed.json": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/reference/seed.json",
+      "source_sha256": "a91dfbbd731a975d65ddcccc868dcbca269aa69cdf33d7697b358db28a82b164"
+    },
+    "apps/website/features/hunter-discovery/v3/reference/v3.html": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/reference/v3.html",
+      "source_sha256": "79dce14c995865fcebd2b26a28bd7d0c7892cc7314f9434ecbc86ba53464b168"
+    },
+    "apps/website/features/hunter-discovery/v3/setup.mjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/setup.mjs",
+      "source_sha256": "fbd4f894263bc4b03159fc1c3f0c5482d4aa9aa806f936ce08d2fb29327713b7"
+    },
+    "apps/website/features/hunter-discovery/v3/tsconfig.json": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/tsconfig.json",
+      "source_sha256": "58205b451f9c63c4f4e7671cb01645e179bc6d13ad4f56c4d5890d57ee35fe26"
+    },
+    "apps/website/features/hunter-discovery/v3/v3.css": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/v3.css",
+      "source_sha256": "cbbe81e3dc287e7273e51d4f5f51e9b1c28fede86b6a30606033a8a83d177589"
+    },
+    "apps/website/features/hunter-discovery/v3/verify.cjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/v3/verify.cjs",
+      "source_sha256": "d2bc8594b3dba1d4eaab854e3c9f6179119ae7a4696889d840215a3babae0d48"
+    },
+    "apps/website/features/hunter-discovery/verify-ui0.cjs": {
+      "source_commit": "08065d700239b20fb4c887bbd0c85321904687f8",
+      "source_path": "apps/website/features/hunter-discovery/verify-ui0.cjs",
+      "source_sha256": "d1cc110e8a94fe5bc555b81ce194b50406d6cc4650464a6a09010b523c0879a1"
+    }
+  }
+}

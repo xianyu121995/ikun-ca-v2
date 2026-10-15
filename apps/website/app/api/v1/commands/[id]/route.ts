@@ -1,4 +1,4 @@
-import {projectsRoute} from '../../../../../lib/projects';
+import {commandGateway} from '../../../../../lib/service-gateway/commands';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
-export const GET=projectsRoute;
+export const GET=commandGateway;

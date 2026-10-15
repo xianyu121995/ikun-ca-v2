@@ -1,0 +1,17 @@
+{
+  "state": "lightweight_pass_actual_next_pending_b3",
+  "authority_commit": "579a57f2e3e470525eb53f9f1f85ba75d25f3728",
+  "auth_source_commit": "28e6aaf4141790fc74ae4ae4429be4b854460955",
+  "class_regression_node_tests": 3,
+  "pytest_entry_wrappers": 1,
+  "nested_node_entry_tests": 10,
+  "nested_tests_not_double_counted": true,
+  "typescript_strict_noemit": "passed",
+  "class_log_sha256": "a2c5d2ba019350e712936745c86817ba84f930a4edd35c8ed3816ddb1bb2ce50",
+  "entry_junit_sha256": "fbacf5d8930bbd3d199bffc214555f13279c91d493ea5846a2a1f31ca545f5ef",
+  "next_build_run": false,
+  "chromium_run": false,
+  "auth_source_changed": false,
+  "real_provider_calls": 0,
+  "other_worktree_writes": 0
+}

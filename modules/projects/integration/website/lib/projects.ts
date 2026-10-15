@@ -2,7 +2,7 @@ import {randomUUID,timingSafeEqual} from 'node:crypto';
 import {lstat} from 'node:fs/promises';
 import http from 'node:http';
 import {auth,requireIdentity,requireSuperadmin,withAuth} from '../../../modules/auth/dist/src/server.js';
-import {AuthHttp} from '../../../modules/auth/dist/src/http.js';
+import type {AuthHttp} from '../../../modules/auth/dist/src/http.js';
 
 const uuid='[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const readPaths=[/^\/api\/v1\/projects\/(?:home-summary|milestones)$/,new RegExp('^/api/v1/projects/operations/'+uuid+'$')];
@@ -10,7 +10,7 @@ const globalState=globalThis as typeof globalThis & {ikunAuth?:AuthHttp;ikunProj
 /** Reviewed additive route admission on the very same B1 store/singleton. */
 export function projectsAuth(){
   const current=auth();
-  if(!globalState.ikunProjectsPolicy){globalState.ikunAuth=new AuthHttp(current.store,[...current.readApi,...readPaths],current.readPages);globalState.ikunProjectsPolicy=true;}
+  if(!globalState.ikunProjectsPolicy){const CurrentAuth=current.constructor as typeof AuthHttp;globalState.ikunAuth=new CurrentAuth(current.store,[...current.readApi,...readPaths],current.readPages);globalState.ikunProjectsPolicy=true;}
   return auth();
 }
 export function requestId(request:Request){const id=request.headers.get('x-request-id');return id&&/^[A-Za-z0-9_-]{1,64}$/.test(id)?id:randomUUID();}

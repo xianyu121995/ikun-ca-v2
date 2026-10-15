@@ -24,6 +24,9 @@ def main():
     parser.add_argument('--candidate', required=True)
     parser.add_argument('--from-sha', required=True)
     parser.add_argument('--hunter-environment')
+    parser.add_argument('--tracking-environment')
+    parser.add_argument('--stage-only', action='store_true')
+    parser.add_argument('--use-staged-release', action='store_true')
     args = parser.parse_args()
     assert command(['git', 'rev-parse', 'HEAD'], cwd=ROOT) == args.candidate
     assert command(['git', 'branch', '--show-current'], cwd=ROOT) == 'codex/integration'
@@ -51,26 +54,51 @@ def main():
         hunter_web = {'IKUN_HUNTER_ORIGIN': 'http://127.0.0.1:4011',
                       'HUNTER_API_TOKEN': hunter['HUNTER_API_TOKEN'],
                       'PROJECTS_INGEST_HUNTER_TOKEN': hunter['PROJECTS_INGEST_HUNTER_TOKEN']}
+    tracking_web = {}
+    if args.tracking_environment:
+        from night_worker_ops import inside, private_json
+        path = inside(args.tracking_environment, TARGET / 'config')
+        assert path == TARGET / 'config/tracking.environment.json'
+        tracking = private_json(path)
+        config_path = inside(tracking['IKUN_TRACKING_CONFIG'], TARGET / 'config')
+        cfg = private_json(config_path)
+        assert tracking['DATA_ROOT'] == env['DATA_ROOT'] and tracking['IKUN_TRACKING_EXTERNAL_IO_DISABLED'] == '1'
+        assert cfg['remote_enabled'] is False and cfg['dedicated_account'] is False
+        assert cfg['host'] == '127.0.0.1' and cfg['port'] == 4012 and not cfg.get('token_file') and not cfg.get('service_token_file')
+        assert len(tracking['TRACKING_API_TOKEN']) >= 32
+        tracking_web = {'TRACKING_API_URL': 'http://127.0.0.1:4012', 'TRACKING_API_TOKEN': tracking['TRACKING_API_TOKEN'],
+                        'IKUN_TRACKING_FIXTURE': '1'}
     plist = Path.home() / 'Library/LaunchAgents' / (LABEL + '.plist')
     job = plistlib.loads(plist.read_bytes())
     assert job['Label'] == LABEL and str(TARGET / 'releases' / args.from_sha) == job['WorkingDirectory']
     release = TARGET / 'releases' / args.candidate
-    assert not release.exists(), 'NEW_RELEASE_ONLY'
-    release.mkdir(mode=0o700)
-    archive = subprocess.check_output(['git', 'archive', args.candidate], cwd=ROOT)
-    subprocess.run(['/usr/bin/tar', '-x', '-C', str(release)], input=archive, check=True)
-    for relative in ('modules/auth/integration/preview-only', 'packages/ui/preview', 'packages/ui/review'):
-        if (release / relative).exists(): shutil.rmtree(release / relative)
-    for relative in ('node_modules', 'packages/contracts/dist', 'packages/contracts/node_modules', 'packages/runtime/dist',
+    assert not (args.stage_only and args.use_staged_release)
+    if not args.use_staged_release:
+        assert not release.exists(), 'NEW_RELEASE_ONLY'
+        release.mkdir(mode=0o700)
+        archive = subprocess.check_output(['git', 'archive', args.candidate], cwd=ROOT)
+        subprocess.run(['/usr/bin/tar', '-x', '-C', str(release)], input=archive, check=True)
+        for relative in ('modules/auth/integration/preview-only', 'packages/ui/preview', 'packages/ui/review',
+                         'services/tracking-worker/python/tests', 'services/tracking-worker/python/integration/tests'):
+            if (release / relative).exists(): shutil.rmtree(release / relative)
+        for relative in ('node_modules', 'packages/contracts/dist', 'packages/contracts/node_modules', 'packages/runtime/dist',
                      'packages/runtime/node_modules', 'packages/ui/dist', 'packages/ui/node_modules', 'modules/auth/dist',
                      'apps/website/.next', 'apps/website/node_modules', 'services/hunter-worker/dist',
-                     'services/hunter-worker/node_modules'):
-        source = ROOT / relative
-        if source.is_dir():
-            shutil.copytree(source, release / relative, symlinks=True,
+                         'services/hunter-worker/node_modules', 'services/tracking-worker/dist', 'services/tracking-worker/node_modules'):
+            source = ROOT / relative
+            if source.is_dir():
+                shutil.copytree(source, release / relative, symlinks=True,
                             ignore=(lambda path, names: ['cache'] if Path(path) == source and 'cache' in names else []) if relative.endswith('/.next') else None)
+        write_private(release / 'c0-staged.json', {'candidate_sha': args.candidate, 'binding_sha256': digest(ROOT / 'release-integration/c0-lite/evidence/build-binding.json')})
+    stage = json.loads((release / 'c0-staged.json').read_text())
+    assert stage == {'candidate_sha': args.candidate, 'binding_sha256': digest(ROOT / 'release-integration/c0-lite/evidence/build-binding.json')}
+    for path, expected in {**binding['sources'], **binding['compiled']}.items():
+        assert digest(release / path) == expected, path
     for path in release.rglob('*'):
         if path.is_symlink(): assert release in path.resolve().parents, 'CROSS_CHECKOUT_DEPENDENCY'
+    if args.stage_only:
+        print(json.dumps({'status': 'STAGED_NO_SERVICE_CHANGE', 'candidate_sha': args.candidate, 'release': str(release)}))
+        return
     rollback = TARGET / 'rollbacks' / (args.from_sha + '-' + time.strftime('%Y%m%d-%H%M%S'))
     rollback.mkdir(parents=True, mode=0o700)
     originals = {plist: plist.read_bytes(), env_path: env_path.read_bytes(), owner_path: owner_path.read_bytes()}
@@ -87,6 +115,7 @@ def main():
     else: raise RuntimeError('OWNED_NEW_LABEL_DID_NOT_EXIT')
     try:
         env.update(hunter_web)
+        env.update(tracking_web)
         env['IKUN_RELEASE_SHA'] = args.candidate
         job['WorkingDirectory'] = str(release)
         job['ProgramArguments'] = ['/usr/bin/env', '-i', *[k + '=' + v for k, v in env.items()],

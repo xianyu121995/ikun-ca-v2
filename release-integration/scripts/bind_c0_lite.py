@@ -22,14 +22,17 @@ def main():
     for directory in ('apps/website/app', 'apps/website/lib', 'apps/website/components', 'apps/website/features',
                       'modules/auth/src', 'modules/projects/candidate/projects_service', 'modules/projects/integration',
                       'packages/contracts/src', 'packages/runtime/src', 'packages/ui/src', 'schemas',
-                      'services/hunter-worker/src', 'services/hunter-worker/python/hunterradar'):
+                      'services/hunter-worker/src', 'services/hunter-worker/python/hunterradar',
+                      'services/tracking-worker/src', 'services/tracking-worker/python/tracking'):
         paths.update(str(p.relative_to(ROOT)) for p in (ROOT / directory).rglob('*')
                      if p.is_file() and p.suffix not in ('.pyc', '.png', '.log') and '__pycache__' not in p.parts)
     sources = {p: sha(ROOT / p) for p in sorted(paths) if (ROOT / p).is_file()}
     outputs = {}
-    paths.update(('apps/website/instrumentation.ts', 'services/hunter-worker/python/requirements-lock.txt'))
+    paths.update(('apps/website/instrumentation.ts', 'services/hunter-worker/python/requirements-lock.txt',
+                  'services/tracking-worker/python/entry.py', 'services/tracking-worker/python/requirements.lock.txt',
+                  'services/tracking-worker/python/integration/preflight-release.py'))
     sources = {p: sha(ROOT / p) for p in sorted(paths) if (ROOT / p).is_file()}
-    for directory in ('packages/contracts/dist', 'packages/runtime/dist', 'packages/ui/dist', 'modules/auth/dist', 'apps/website/.next/server', 'apps/website/.next/static', 'services/hunter-worker/dist'):
+    for directory in ('packages/contracts/dist', 'packages/runtime/dist', 'packages/ui/dist', 'modules/auth/dist', 'apps/website/.next/server', 'apps/website/.next/static', 'services/hunter-worker/dist', 'services/tracking-worker/dist'):
         outputs.update({str(p.relative_to(ROOT)): sha(p) for p in (ROOT / directory).rglob('*') if p.is_file()})
     receipt = {'control_commit': CONTROL, 'tested_merge_head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
                'approved_password10_delta': delta,

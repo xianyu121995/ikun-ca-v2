@@ -1,0 +1,30 @@
+{
+  "source": "ikun-hunter-project-tracking-ui-prototype (2).html",
+  "sha256": "80a136cfbc5597a91a9a1f281c741de4503b44df7f8e20255decf869b30ed82a",
+  "checkedAt": "2026-10-15T04:11:00.303Z",
+  "layouts": [
+    {
+      "width": 1440,
+      "stats": 5,
+      "posts": 6,
+      "remarksFirst": true,
+      "managerInitiallyHidden": true
+    },
+    {
+      "width": 1920,
+      "stats": 5,
+      "posts": 6,
+      "remarksFirst": true,
+      "managerInitiallyHidden": true
+    },
+    {
+      "width": 390,
+      "stats": 5,
+      "posts": 6,
+      "remarksFirst": true,
+      "managerInitiallyHidden": true
+    }
+  ],
+  "externalRequests": [],
+  "originalUnchanged": true
+}

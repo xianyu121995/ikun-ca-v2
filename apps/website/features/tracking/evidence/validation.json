@@ -1,0 +1,93 @@
+{
+  "approved_prototype": {
+    "file": "ikun-hunter-project-tracking-ui-prototype (2).html",
+    "sha256": "80a136cfbc5597a91a9a1f281c741de4503b44df7f8e20255decf869b30ed82a",
+    "original_unchanged": true
+  },
+  "previous_candidate": "a6bebb39435fa02df9d9065df148e6fe2f0851f7",
+  "branch": "codex/tracking-ui",
+  "checked_at": "2026-10-15T04:14:30.232Z",
+  "node": "24.22.0",
+  "specification": "phase2-v1.0.0",
+  "specification_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "checks": [
+    {
+      "command": "pnpm --filter @ikun/website typecheck",
+      "passed": true
+    },
+    {
+      "command": "node --import tsx --test apps/website/features/tracking/final/model.test.ts",
+      "passed": true,
+      "tests": 10
+    },
+    {
+      "command": "node apps/website/features/tracking/browser.test.mjs",
+      "passed": true,
+      "tests": 19,
+      "widths": [
+        1440,
+        1920,
+        2560,
+        1020,
+        768,
+        390,
+        360
+      ]
+    },
+    {
+      "command": "node apps/website/features/tracking-prototype/tests/browser.mjs",
+      "passed": true,
+      "tests": 13
+    },
+    {
+      "check": "approved HTML rendered read-only for layout comparison",
+      "passed": true,
+      "widths": [
+        1440,
+        1920,
+        390
+      ]
+    }
+  ],
+  "shared_ui": {
+    "package": "@ikun/ui",
+    "source_commit": "4527ba4510dcb3ea8a3d1bf932dc46367070d1d5",
+    "archive_sha256": "e150bf43730dfcd01c4e4048f5478ed4ea31be6301ef4339b1b983ad1a2be71d",
+    "unchanged_upstream_source": true,
+    "workspace_registration_pending": true,
+    "preparation_verified_in": "a0694ba971a63e19fa90706e143e0cfbd8abd4f3"
+  },
+  "layout": {
+    "stats": 5,
+    "page_size": 6,
+    "remark_first": true,
+    "manager_entry": "account total only",
+    "persistent_right_rail": false,
+    "quick_filter_rail": false,
+    "event_expansion_or_ai_panel": false
+  },
+  "ownership": {
+    "owner": "tracking-ui",
+    "allowed_prefixes": [
+      "apps/website/features/tracking/",
+      "apps/website/app/tracking/",
+      "apps/website/features/tracking-prototype/",
+      "apps/website/public/tracking-prototype/"
+    ],
+    "out_of_scope_changes": []
+  },
+  "dependency_changes": false,
+  "root_manifest_or_lock_changes": false,
+  "business_network_requests": [],
+  "database_created_or_modified": false,
+  "engine_or_other_module_changes": false,
+  "preview_running_for_user": true,
+  "preview_stopped": false,
+  "production_build_run": false,
+  "merge_push_deploy": false,
+  "not_verified": [
+    "real API/auth/monitoring integration",
+    "formal workspace registration and clean checkout/frozen install",
+    "production build/deployment"
+  ]
+}

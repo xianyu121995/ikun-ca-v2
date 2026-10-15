@@ -1,0 +1,356 @@
+{
+  "state": "PASS_B3_LOCAL_COMBINED_EXTERNAL_OFF",
+  "source_head": "0440632e6f533755dca7af97186057b31779f4e9",
+  "checks": [
+    {
+      "check": "explicit_tracking_init_before_serve",
+      "result": "PASS"
+    },
+    {
+      "check": "worker_external_collection_off",
+      "result": "PASS"
+    },
+    {
+      "check": "readiness_reports_configuration_only",
+      "result": "PASS"
+    },
+    {
+      "check": "three_independent_processes",
+      "result": "PASS"
+    },
+    {
+      "check": "website_and_hunter_independent_processes",
+      "result": "PASS"
+    },
+    {
+      "check": "real_auth_login_c0_admin",
+      "result": "PASS"
+    },
+    {
+      "check": "real_first_password_change_c0_admin",
+      "result": "PASS"
+    },
+    {
+      "check": "real_auth_login_c0_user",
+      "result": "PASS"
+    },
+    {
+      "check": "real_first_password_change_c0_user",
+      "result": "PASS"
+    },
+    {
+      "check": "anonymous_rejected_/api/v1/hunter/signals",
+      "result": "PASS"
+    },
+    {
+      "check": "anonymous_rejected_/api/v1/hunter/events",
+      "result": "PASS"
+    },
+    {
+      "check": "anonymous_rejected_/api/v1/events/stream",
+      "result": "PASS"
+    },
+    {
+      "check": "anonymous_rejected_/api/v1/tracking/subscriptions",
+      "result": "PASS"
+    },
+    {
+      "check": "anonymous_rejected_/api/v1/tracking/events",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_rejects_hunter_cursor",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_user_write_rejected_POST",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_user_write_rejected_PATCH",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_user_write_rejected_DELETE",
+      "result": "PASS"
+    },
+    {
+      "check": "hunter_rejects_tracking_cursor",
+      "result": "PASS"
+    },
+    {
+      "check": "projects_rejects_hunter_cursor",
+      "result": "PASS"
+    },
+    {
+      "check": "synthetic_discovery_public_DTO",
+      "result": "PASS"
+    },
+    {
+      "check": "ordinary_DTO_no_individual_hunter_identity",
+      "result": "PASS"
+    },
+    {
+      "check": "user_write_rejected_POST",
+      "result": "PASS"
+    },
+    {
+      "check": "user_write_rejected_PUT",
+      "result": "PASS"
+    },
+    {
+      "check": "user_write_rejected_PATCH",
+      "result": "PASS"
+    },
+    {
+      "check": "user_write_rejected_DELETE",
+      "result": "PASS"
+    },
+    {
+      "check": "hunter_management_admin_only",
+      "result": "PASS"
+    },
+    {
+      "check": "native_hunter_cursor_preserved",
+      "result": "PASS"
+    },
+    {
+      "check": "original_projects_stream_preserved",
+      "result": "PASS"
+    },
+    {
+      "check": "manual_confirmation_durable_not_running",
+      "result": "PASS"
+    },
+    {
+      "check": "same_idempotency_original_command",
+      "result": "PASS"
+    },
+    {
+      "check": "hunter_loopback_delivery_Projects_IPC_canonical_hidden",
+      "result": "PASS"
+    },
+    {
+      "check": "original_Hunter_command_relay_creates_Tracking_subscription",
+      "result": "PASS"
+    },
+    {
+      "check": "strict_gateway_reconciles_original_command",
+      "result": "PASS"
+    },
+    {
+      "check": "remote_unconfigured_never_claims_running",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_stop_preserves_website_and_Hunter",
+      "result": "PASS"
+    },
+    {
+      "check": "website_ready_and_other_domain_survive_tracking_stop",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_failure_does_not_fail_website_readiness",
+      "result": "PASS"
+    },
+    {
+      "check": "offline_normalizer_Store_insert_and_deduplicate_no_parallel_writer",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_restart_independent",
+      "result": "PASS"
+    },
+    {
+      "check": "authoritative_Projects_rating_for_feed",
+      "result": "PASS"
+    },
+    {
+      "check": "published_feed_real_B1_C03_UDS_Tracking_projection",
+      "result": "PASS"
+    },
+    {
+      "check": "physical_database_integrity_auth",
+      "result": "PASS"
+    },
+    {
+      "check": "physical_database_integrity_projects",
+      "result": "PASS"
+    },
+    {
+      "check": "physical_database_integrity_hunter",
+      "result": "PASS"
+    },
+    {
+      "check": "physical_database_integrity_tracking",
+      "result": "PASS"
+    },
+    {
+      "check": "four_distinct_database_inodes",
+      "result": "PASS"
+    },
+    {
+      "check": "homepage_add_is_separate_explicit_action",
+      "result": "PASS"
+    },
+    {
+      "check": "homepage_public_project_visible",
+      "result": "PASS"
+    },
+    {
+      "check": "live_truthful_source_admin_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "layout_no_page_overflow_admin_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "live_truthful_source_admin_390",
+      "result": "PASS"
+    },
+    {
+      "check": "layout_no_page_overflow_admin_390",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_truthful_source_admin_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_layout_admin_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_truthful_source_admin_390",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_layout_admin_390",
+      "result": "PASS"
+    },
+    {
+      "check": "live_truthful_source_user_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "layout_no_page_overflow_user_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "live_truthful_source_user_390",
+      "result": "PASS"
+    },
+    {
+      "check": "layout_no_page_overflow_user_390",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_truthful_source_user_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_layout_user_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_readonly_controls_1440",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_truthful_source_user_390",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_layout_user_390",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_readonly_controls_390",
+      "result": "PASS"
+    },
+    {
+      "check": "tracking_remove_accepted_not_remote_completion",
+      "result": "PASS"
+    },
+    {
+      "check": "Tracking_remove_preserves_Projects_home_data",
+      "result": "PASS"
+    },
+    {
+      "check": "homepage_remove_only",
+      "result": "PASS"
+    },
+    {
+      "check": "Projects_remove_does_not_change_Hunter_discovery",
+      "result": "PASS"
+    },
+    {
+      "check": "Projects_delete_preserves_Tracking_subscription",
+      "result": "PASS"
+    },
+    {
+      "check": "live_user_SSE_started_before_revocation",
+      "result": "PASS"
+    },
+    {
+      "check": "disabled_user_all_domain_APIs_revoked",
+      "result": "PASS"
+    },
+    {
+      "check": "quiet_module_SSE_revoked_without_new_event",
+      "result": "PASS"
+    },
+    {
+      "check": "admin_unaffected_by_synthetic_user_disable",
+      "result": "PASS"
+    }
+  ],
+  "real_provider_calls": 0,
+  "tracking_intake": "offline normalized fixture; no remote receipt claimed",
+  "Projects_tracking_observation_ingest": "501 remains unimplemented",
+  "audio_output": "not invoked",
+  "build_id": "QTLRQ2vGatyCJCEhtFEVA",
+  "attempts": [
+    {
+      "receipt": "release-integration/.runtime/night-b3/site-acceptance-1792093098755207000.json",
+      "sha256": "9f489190b67d22023d09f37efffb9c5510020cb6713b684833a4017c5e741446",
+      "checks": 74
+    },
+    {
+      "receipt": "release-integration/.runtime/night-b3/site-acceptance-1792093360954549000.json",
+      "sha256": "f510baa0d5e3f321ba7a9c0e904d6c857cd4963b1922e8708b85a78948e8f376",
+      "checks": 76
+    }
+  ],
+  "counts_not_cumulative": true,
+  "screenshots": {
+    "release-integration/.runtime/night-b3/hunter-admin-1440.png": "9e311f39c47ff7a3b4ff3f80de883a61ceb7bd434987565b2c07491d5c828f10",
+    "release-integration/.runtime/night-b3/hunter-admin-390.png": "2001034f0623cbae5af1c86ce8a53ab61cb81cd1b926aa5a736b4128a36cb1f1",
+    "release-integration/.runtime/night-b3/hunter-user-1440.png": "f7e5b81c0462e46e845a18fa264e499218566c798009833d4623f4cf64275036",
+    "release-integration/.runtime/night-b3/hunter-user-390.png": "85c826aadc58c16642903994fe3c90a2c99cee89ba18502230c369ef433fa2a1",
+    "release-integration/.runtime/night-b3/tracking-admin-1440.png": "4274cb133caea37b8c8f288619fddb850de4b9e6d8307cbb4939830bb1a6d0e5",
+    "release-integration/.runtime/night-b3/tracking-admin-390.png": "50bfd69f02525f8c047921cc37c7ef04828d07fbae6bfd2065de5e0f2c1276f9",
+    "release-integration/.runtime/night-b3/tracking-user-1440.png": "e3efb6b54a8a8370cc505f23779364a4b26dae8e9dfa8b475307a0b5ee5ea39b",
+    "release-integration/.runtime/night-b3/tracking-user-390.png": "446cef4f6442e1bdfed20dbb8cd06d450f626a295703735de11f31fb0c088d67"
+  },
+  "screenshots_visually_reviewed": [
+    "tracking-admin-1440",
+    "tracking-admin-390",
+    "tracking-user-1440",
+    "tracking-user-390"
+  ],
+  "additional_regressions": {
+    "strict_command_gateway": {
+      "passed": 12,
+      "command": "node --import tsx --test release-integration/tests/command-gateway.test.mjs",
+      "initial_wrong_invocation_missing_tsx": "ERR_MODULE_NOT_FOUND retained in tool output; runtime unchanged"
+    },
+    "worker_guard": {
+      "passed": 38,
+      "distinct": 38,
+      "suite_unchanged": true
+    }
+  }
+}

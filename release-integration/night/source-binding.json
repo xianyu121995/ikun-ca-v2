@@ -1221,8 +1221,8 @@
       "baseline_path": null,
       "baseline_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "patch_path": "release-integration/night/patches/site-6.patch",
-      "patch_sha256": "2183413bd7a9aebe748469c4040e494bcf2554b58091d0d15569a0712a2c887f",
-      "target_sha256": "fbfc3490c675ca63fb59ebb1d77ad9e327d946759dbb32bc02539c8236d8f39e"
+      "patch_sha256": "b4e9cbf455ef65ee9099c5d68968e24b9e8150ae008180c42fcd3e7643aed3ea",
+      "target_sha256": "f16a411c23cea2d19f6a35a5688e0ced8774fde6e8ad7350d4539a68aa46a8ad"
     },
     "apps/website/lib/service-gateway/commands.ts": {
       "baseline_commit": null,
@@ -1247,6 +1247,14 @@
       "patch_path": "release-integration/night/patches/site-9.patch",
       "patch_sha256": "411a66256373d96d93cef9b3c6168b1144fa962d730d3cb45562e305a38de909",
       "target_sha256": "e1a6836a80bd97a2f3ada1f1aa4c15318fa9539306fb71742c63a4c4a0e205c3"
+    },
+    "apps/website/app/health/ready/route.ts": {
+      "baseline_commit": "25dcb4ef066a135694ee88e7744c01a78919693c",
+      "baseline_path": "apps/website/app/health/ready/route.ts",
+      "baseline_sha256": "75acc79e908e340b721eab011edf45c1f6f5d196ba637e6173a51916fba883d0",
+      "patch_path": "release-integration/night/patches/site-10.patch",
+      "patch_sha256": "911589a6a354d9c55ec93a6d9ddce13ce2cf4496330e14527da70d448956a0e8",
+      "target_sha256": "534af430fdb587b36e27d529aefa3436d434310c6c527dcf5ab54a2184b69970"
     }
   },
   "site_patch_format": "unified-zero-context; apply with git apply --unidiff-zero",

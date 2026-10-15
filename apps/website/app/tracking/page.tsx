@@ -1,5 +1,7 @@
-import {Panel} from '@ikun/ui';
-import {AuthShell} from '../../components/auth/shell';
-import {requireAuthPage} from '../../lib/auth';
-export const dynamic='force-dynamic';
-export default async function Page(){const account=await requireAuthPage('/tracking');return <AuthShell pathname="/tracking" username={account.username}><Panel title="猎手项目追踪"><p>未接入。此测试站当前提供登录、本人改密和主页项目管理。</p></Panel></AuthShell>;}
+import { TrackingShell } from '../../components/tracking-shell';
+import '@ikun/ui/styles.css';
+import { requireAuthPage } from '../../lib/auth';
+import { TrackingLive } from '../../components/tracking-live';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export default async function Tracking() { const identity = await requireAuthPage('/tracking'); return <TrackingShell><TrackingLive fixture={process.env.IKUN_TRACKING_FIXTURE==='1'} username={identity.username} csrf={identity.csrf_token} canManage={identity.role === 'superadmin' && !identity.must_change_password}/></TrackingShell>; }

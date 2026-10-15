@@ -1,0 +1,205 @@
+{
+  "state": "RECEIVED_PENDING_COMBINED_ACCEPTANCE",
+  "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+  "delivery_commit": "f3bc19503ae33e000bdd33c140baa1fe77c9109a",
+  "control_commit": "d0af2804ed1ad70d3dd66e930582831bbd6b5e96",
+  "manifest_sha256": "e95eadb528becd748263ac3811853dc9d2e33b5fba58d418aaa67b860af5a03d",
+  "files": {
+    "apps/website/features/tracking/.gitignore": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/.gitignore",
+      "source_sha256": "8849b516bffb35a897cbe7d0f9ffaff999ef4d82cb07ae63d0ddf7e612352e23"
+    },
+    "apps/website/features/tracking/FINAL-HANDOFF.md": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/FINAL-HANDOFF.md",
+      "source_sha256": "15819d7af8802138670bf7be9801e5bac84bd47123041d490026f25aa4969f5e"
+    },
+    "apps/website/features/tracking/README.md": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/README.md",
+      "source_sha256": "3a78be2180995d3847fecf85695fa14bb59e20cfd6b2662b9f2eda8848c0819a"
+    },
+    "apps/website/features/tracking/UI0-HANDOFF.md": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/UI0-HANDOFF.md",
+      "source_sha256": "c1d7fd5ea90b7fa8e0ed41019c3f20196ed13714b780a4079b7a54736abce685"
+    },
+    "apps/website/features/tracking/browser.test.mjs": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/browser.test.mjs",
+      "source_sha256": "a3b48e6b0f751677da44709b23421f632fba35384c67b0b2925ef5fd090bd1b4"
+    },
+    "apps/website/features/tracking/demo-fixtures.ts": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/demo-fixtures.ts",
+      "source_sha256": "c0ba7b9f091d0f5066e0f47b93a102c336b485fe54264005167b7fd56f6e2f3f"
+    },
+    "apps/website/features/tracking/evidence/browser-results.json": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/evidence/browser-results.json",
+      "source_sha256": "6659c6795ef2bc0111f3457de86abf098aae415ea561dd67bc2e8a4987f52b72"
+    },
+    "apps/website/features/tracking/evidence/reference-layout.json": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/evidence/reference-layout.json",
+      "source_sha256": "01c2faba0a667901fe914f2507344161a9c9d6aae364f43dc25bd457d01835de"
+    },
+    "apps/website/features/tracking/evidence/validation.json": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/evidence/validation.json",
+      "source_sha256": "278371f4724d303bc4a6d93a1bc385cb46392db3803e8346bec86db2b3f764f6"
+    },
+    "apps/website/features/tracking/final/browser.test.mjs": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/final/browser.test.mjs",
+      "source_sha256": "dfc6fb4780eafd8b819580013a33ae0269a17c4bfdaee06fcd0f2e8d70ea1e5b"
+    },
+    "apps/website/features/tracking/final/demo-data.ts": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/final/demo-data.ts",
+      "source_sha256": "82a2787a872947b18197c6a1314dffcd053bb061fa39fe09b1bd88cf1232c043"
+    },
+    "apps/website/features/tracking/final/model.test.ts": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/final/model.test.ts",
+      "source_sha256": "75ae7eb4d44422c81d011071820eec8e1265d9459d69acdb44fddadba46c728d"
+    },
+    "apps/website/features/tracking/final/model.ts": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/final/model.ts",
+      "source_sha256": "5330cf135d6e55b56d128c8a8a84d647a7bc698797d76c5c258f535fb22c4029",
+      "reviewed_patch_sha256": "eacccbfeebcdf852ab4505e06d0a9d071150ac652a7d641172fa960af3508db8",
+      "reviewed_patch_output_sha256": "3a44a8a4ea89b3c3e44653b85b12a4b8ebebfb6796b005f9fc430e9b0c263711"
+    },
+    "apps/website/features/tracking/final/tracking-demo.tsx": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/final/tracking-demo.tsx",
+      "source_sha256": "ab738bc9e846f7676acc02fb2e6c5cd1dcb4e58fced5ea3635ca5c4ccfd6bf94"
+    },
+    "apps/website/features/tracking/final/tracking-page.module.css": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/final/tracking-page.module.css",
+      "source_sha256": "81f87ccd44f00e43f675321880a6e66d630db585d0d63f722390183ab00cf9a3"
+    },
+    "apps/website/features/tracking/final/tracking-page.tsx": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/final/tracking-page.tsx",
+      "source_sha256": "6353c3bf54b8c8acfe07e680e10502d7966e5247fe72f77c6c95a0ee9bd3c6a1",
+      "reviewed_patch_sha256": "eacccbfeebcdf852ab4505e06d0a9d071150ac652a7d641172fa960af3508db8",
+      "reviewed_patch_output_sha256": "e6c661b66281ebd6642473da29cf6fa3c6b5ba608493b7c573889106b38a31ec"
+    },
+    "apps/website/features/tracking/package.json": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/package.json",
+      "source_sha256": "ec03a1169f999593b2733b34855ca4fdf2b60b931771d309eb66e78a12ccc5b2"
+    },
+    "apps/website/features/tracking/scripts/prepare-ui.mjs": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/scripts/prepare-ui.mjs",
+      "source_sha256": "0037cee583eed9b856b8ca4c7585061387165b9e8723fe9fd43967ce8cf7a74a"
+    },
+    "apps/website/features/tracking/tracking-demo.tsx": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/tracking-demo.tsx",
+      "source_sha256": "e7c8aa0e503d38cefc6fd50dab27ee875e802353ad4e0744027ab21925f77398"
+    },
+    "apps/website/features/tracking/tracking-feed.tsx": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/tracking-feed.tsx",
+      "source_sha256": "2d8734c12b8064deb4efbaa52f8ab2be5ecbcabfaff81aff4e527f71844fe2ce"
+    },
+    "apps/website/features/tracking/tracking-view.tsx": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/tracking-view.tsx",
+      "source_sha256": "49b2e360603fbd206f57d7b11a5af8180227f8178ab0650a7d06ee1e101956f1"
+    },
+    "apps/website/features/tracking/tracking-workspace.tsx": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/tracking-workspace.tsx",
+      "source_sha256": "567124c9f6016f804bd346d8eed7fdd555874fdc110c7f697b16ea6cadce7d9e"
+    },
+    "apps/website/features/tracking/tracking.module.css": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/tracking.module.css",
+      "source_sha256": "87495bae61be866c20e3b11949f8533d9a22e15ddb88581dbd1f89845217e945"
+    },
+    "apps/website/features/tracking/types.ts": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/types.ts",
+      "source_sha256": "bd4b0dca414c6c9d3cbf37dcaa43aadd29f6d21c85a1aaa9f574a08ee96dd299"
+    },
+    "apps/website/features/tracking/view-model.test.ts": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/view-model.test.ts",
+      "source_sha256": "2dbe6bf8afd16c5362662a11469445da1a8114e4a0b4ece5db82ae9a43f7fe1d"
+    },
+    "apps/website/features/tracking/view-model.ts": {
+      "source_commit": "d90598f4bc595458ce26c5ee1c2e1618e318abc0",
+      "source_path": "apps/website/features/tracking/view-model.ts",
+      "source_sha256": "8c16f2d30a47feca7a49efed07be5cdbff7e418e0e55fbcac2c272fcc8c3ce0c"
+    },
+    "apps/website/app/api/v1/tracking/[[...path]]/route.ts": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/app/api/v1/tracking/[[...path]]/route.ts",
+      "source_sha256": "9a087c948dd83a4d50f07816161a7e7669208f835fe9c82bf9c44ddfc6d3fc9b",
+      "target_sha256": "a389e4488ac04fcd945467b6f439b39a16b7c61ae6a62a3f0acc635ab982b1d9"
+    },
+    "apps/website/app/api/v1/tracking/events/route.ts": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/app/api/v1/events/stream/route.ts",
+      "source_sha256": "ca46f8d93cdbd20f03e9de6359e21acbc56898a9220f84d7e932423a2ac60452",
+      "target_sha256": "f16a411c23cea2d19f6a35a5688e0ced8774fde6e8ad7350d4539a68aa46a8ad"
+    },
+    "apps/website/app/tracking/actions.ts": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/app/tracking/actions.ts",
+      "source_sha256": "bde7eb48f4b4481b7a12bf90ead331f9e14e6265ad9081f115aface25c4c5a4f",
+      "target_sha256": "bde7eb48f4b4481b7a12bf90ead331f9e14e6265ad9081f115aface25c4c5a4f"
+    },
+    "apps/website/app/tracking/page.tsx": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/app/tracking/page.tsx",
+      "source_sha256": "7a0193966ab5e691b322ce5d469d80cd75f334e23936c0f8c9d228e361361f0f",
+      "target_sha256": "7a0193966ab5e691b322ce5d469d80cd75f334e23936c0f8c9d228e361361f0f"
+    },
+    "apps/website/components/tracking-shell.tsx": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/components/tracking-shell.tsx",
+      "source_sha256": "ff5659d4cee1fc31dcb2c8227626527132526205ea3a5f466e72c60c56b8c6dd",
+      "target_sha256": "ff5659d4cee1fc31dcb2c8227626527132526205ea3a5f466e72c60c56b8c6dd"
+    },
+    "apps/website/components/tracking-live.tsx": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/components/tracking-live.tsx",
+      "source_sha256": "3f18891f894a8ba0e6e76544a38d50ecbb199a3b7f221ae10a7e59a6d4b92ad7",
+      "target_sha256": "75a9053f5b8b55d6a92d1750685e0ee529e2ad52b093f7da6616b5bd0d5606bd"
+    },
+    "apps/website/lib/tracking.ts": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/lib/tracking.ts",
+      "source_sha256": "9df448823ce652e061f041821641ddfeaf4660ed9b8aa8d2943c0a53c542fa4c",
+      "target_sha256": "9df448823ce652e061f041821641ddfeaf4660ed9b8aa8d2943c0a53c542fa4c"
+    },
+    "apps/website/lib/coalesced-refresh.ts": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/lib/coalesced-refresh.ts",
+      "source_sha256": "171baff37787b01852370991c8570f6c66a03879786c81323247d4363165922c",
+      "target_sha256": "171baff37787b01852370991c8570f6c66a03879786c81323247d4363165922c"
+    },
+    "apps/website/lib/feed-casefold.ts": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/lib/feed-casefold.ts",
+      "source_sha256": "68db202cb158c0a6f315bb6d9b12235ba5e5fc2b7ec127c97297ef3b0d4587cf",
+      "target_sha256": "68db202cb158c0a6f315bb6d9b12235ba5e5fc2b7ec127c97297ef3b0d4587cf"
+    },
+    "apps/website/lib/published-feed.ts": {
+      "source_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+      "source_path": "services/tracking-worker/python/integration/website/lib/published-feed.ts",
+      "source_sha256": "a9aa4afb271ab09dd8c06892c1b0b8ff4ea1e1d5960fcdfabc414eb4ba332aa0",
+      "target_sha256": "a9aa4afb271ab09dd8c06892c1b0b8ff4ea1e1d5960fcdfabc414eb4ba332aa0"
+    }
+  },
+  "excluded_command_candidate": "services/tracking-worker/python/integration/website/app/api/v1/commands/[id]/route.ts",
+  "preserved_global_stream": "apps/website/app/api/v1/events/stream/route.ts"
+}

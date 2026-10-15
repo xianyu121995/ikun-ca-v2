@@ -1,0 +1,6 @@
+--- a/apps/website/app/api/v1/tracking/events/route.ts
++++ b/apps/website/app/api/v1/tracking/events/route.ts
+@@ -4 +4,2 @@
+-export const GET = trackingEventsRoute;
++import { projectsAuth } from '../../../../../lib/projects';
++export function GET(request: Request) { projectsAuth(); return trackingEventsRoute(request); }

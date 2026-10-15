@@ -1,0 +1,13 @@
+--- a/apps/website/app/api/v1/tracking/[[...path]]/route.ts
++++ b/apps/website/app/api/v1/tracking/[[...path]]/route.ts
+@@ -4,4 +4,6 @@
+-export const GET = trackingRoute;
+-export const POST = trackingRoute;
+-export const PATCH = trackingRoute;
+-export const DELETE = trackingRoute;
++import { projectsAuth } from '../../../../../lib/projects';
++function route(request: Request) { projectsAuth(); return trackingRoute(request); }
++export const GET = route;
++export const POST = route;
++export const PATCH = route;
++export const DELETE = route;

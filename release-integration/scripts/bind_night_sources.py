@@ -37,6 +37,7 @@ def main():
     for path in ('apps/website/app/api/v1/hunter/events/route.ts', 'apps/website/app/api/v1/tracking/events/route.ts',
                  'apps/website/lib/service-gateway/commands.ts', 'apps/website/lib/service-gateway/relay.ts', 'apps/website/instrumentation.ts'):
         candidates[path] = (None, None)
+    candidates['apps/website/app/health/ready/route.ts'] = ('25dcb4ef066a135694ee88e7744c01a78919693c', 'apps/website/app/health/ready/route.ts')
     directory = ROOT / 'release-integration/night/patches'
     directory.mkdir(exist_ok=True)
     for index, (path, (commit, source)) in enumerate(candidates.items()):

@@ -1,0 +1,8 @@
+{
+  "name": "@ikun/tracking-ui-candidate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "prepare:ui": "node scripts/prepare-ui.mjs" },
+  "dependencies": { "@ikun/ui": "file:.ui-consumer/ikun-ui-0.1.0.tgz" }
+}

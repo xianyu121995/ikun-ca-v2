@@ -1,0 +1,85 @@
+{
+  "approvedPrototype": "ikun-hunter-project-tracking-ui-prototype (2).html",
+  "checkedAt": "2026-10-15T04:11:41.962Z",
+  "base": "http://127.0.0.1:3900",
+  "results": [
+    {
+      "name": "default is empty readonly with no fixture or fabricated identity",
+      "passed": true
+    },
+    {
+      "name": "approved structure: five stats, six vertical posts, no rail or added tools",
+      "passed": true
+    },
+    {
+      "name": "remark leads every post; account grade, publication, body and media retained",
+      "passed": true
+    },
+    {
+      "name": "two-page pagination has six records and correct boundaries",
+      "passed": true
+    },
+    {
+      "name": "S/A/B grade filters work and reset page to one",
+      "passed": true
+    },
+    {
+      "name": "remark, X handle, project and body search; empty recovery",
+      "passed": true
+    },
+    {
+      "name": "24-hour, seven-day and important filters compose correctly",
+      "passed": true
+    },
+    {
+      "name": "refresh resets filters without fetching posts or adding UI features",
+      "passed": true
+    },
+    {
+      "name": "demo original-post action gives explicit unsupported feedback",
+      "passed": true
+    },
+    {
+      "name": "account total opens right-side manager using shared controls and table",
+      "passed": true
+    },
+    {
+      "name": "manager search supports note, project and handle",
+      "passed": true
+    },
+    {
+      "name": "manager keyboard trap, Escape, focus return and add cancel",
+      "passed": true
+    },
+    {
+      "name": "add validates syntax, required fields and normalized duplicates",
+      "passed": true
+    },
+    {
+      "name": "add confirmation works once and creates no fabricated tweet history",
+      "passed": true
+    },
+    {
+      "name": "delete cancel, nested focus and Escape affect only confirmation",
+      "passed": true
+    },
+    {
+      "name": "delete confirmed hides the account and its posts; refresh restores only filters",
+      "passed": true
+    },
+    {
+      "name": "HTML-looking names and remarks are text, no executable markup",
+      "passed": true
+    },
+    {
+      "name": "approved desktop/mobile layouts; drawer and table stay inside viewport",
+      "passed": true
+    },
+    {
+      "name": "all demo activity remains local, no API/WSS/external calls or sessions",
+      "passed": true
+    }
+  ],
+  "runtimeErrors": [],
+  "forbiddenRequests": []
+}

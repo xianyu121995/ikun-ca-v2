@@ -1,0 +1,5 @@
+--- a/apps/website/components/tracking-live.tsx
++++ b/apps/website/components/tracking-live.tsx
+@@ -98 +98 @@
+-        const events = new EventSource('/api/v1/events/stream');
++        const events = new EventSource('/api/v1/tracking/events');

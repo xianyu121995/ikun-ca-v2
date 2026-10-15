@@ -21,6 +21,8 @@ def at(commit, path):
 
 
 def verify():
+    from verify_b3_intake import verify as verify_b3
+    b3_overrides, b3_paths = verify_b3()
     path = ROOT / 'release-integration/night/source-binding.json'
     if not path.exists():
         return {}, set()
@@ -48,7 +50,7 @@ def verify():
                  'apps/website/app/api/v1/commands/[id]/route.ts', 'apps/website/app/api/v1/hunter/events/route.ts',
                  'apps/website/app/api/v1/tracking/events/route.ts', 'apps/website/instrumentation.ts',
                  'apps/website/lib/service-gateway/commands.ts', 'apps/website/lib/service-gateway/relay.ts',
-                 'apps/website/features/hunter-discovery/v3/App.tsx'}
+                 'apps/website/features/hunter-discovery/v3/App.tsx', 'apps/website/app/health/ready/route.ts'}
     assert set(patches) == permitted
     for target, row in patches.items():
         assert digest((ROOT / row['patch_path']).read_bytes()) == row['patch_sha256']
@@ -69,4 +71,4 @@ def verify():
     app = (ROOT / 'apps/website/features/hunter-discovery/v3/App.tsx').read_bytes()
     before_caption = app.replace(b"import {WorkspaceLink} from '../../../components/auth/forms';\n", b'', 1).replace(b'LinkComponent={live?WorkspaceLink:Link}', b'LinkComponent={Link}', 1)
     assert digest(before_caption) == freeze['patched_ui_output_sha256']['apps/website/features/hunter-discovery/v3/App.tsx']
-    return overrides, allowed
+    return {**overrides, **b3_overrides}, allowed | b3_paths

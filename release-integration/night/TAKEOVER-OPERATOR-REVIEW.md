@@ -1,6 +1,6 @@
 # 精确旧侧操作工具待审
 
-状态：`PENDING_ROOT_REVIEW_DRILL_POLICY_DEPENDENCIES`。f517f4b 经控制 885b08f 放行后完成七库及文件归档，PG 读取角色不足而停下；4eb37cf 经控制 74b6327 放行后成功完整 dump，但新演练集群因 POLICY 引用角色缺失而停止恢复。两 job/6466 均未停止，没有迁移或平台调用。直接人类授权为总管 turn `01a143aa-3744-7933-98b1-925db1af2681` 的两条用户消息 `01a143aa-3791-7732-9065-410adf6e08f2`、`01a143c4-70e8-7011-8651-1e20179584f7`；原唯一执行者及 journal 不变。
+状态：`PENDING_ROOT_REVIEW_LAUNCHD_STATE_TOKEN`。f517f4b 经控制 885b08f 放行后完成七库及归档，PG 读取角色不足而停下；4eb37cf 经控制 74b6327 放行后成功完整 dump，演练 POLICY 缺角色而停止恢复；f7ece12 经控制 614ac820 放行后已通过100表数据恢复，随后在首个 job disable 确认处停下。首 job override 已禁用，但两 job/6466 均仍运行，bootout/SIGTERM 未执行，没有迁移或平台调用。直接人类授权为总管 turn `01a143aa-3744-7933-98b1-925db1af2681` 的两条用户消息 `01a143aa-3791-7732-9065-410adf6e08f2`、`01a143c4-70e8-7011-8651-1e20179584f7`；原唯一执行者及 journal 不变。
 
 仅处理 `ca.ikun.overload-tracking`、`com.lvlei.ikun-auto-research` 和复核后 PID 6466 的一次 SIGTERM。顺序为七库备份、私密配置及现存源码归档、只读 PostgreSQL 一致 dump 与独立恢复演练，再精确停获批目标，最后重复快照及演练。每次停止前递归校验原备份资产，不以 receipt 本身替代资产；保护 Alpha、旧 PostgreSQL/监督进程/Tunnel 和 v2 全部进程、配置及四库身份。父 login 6465 不发送信号，但可能自然退出。
 
@@ -33,3 +33,9 @@ f517f4b 的模块角色无全表 SELECT，lvlei 无自身口令，故 `PG_FULL_B
 仅在独立 socket/data/PID 守卫通过的新集群创建 NOLOGIN/NOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOINHERIT/NOREPLICATION/NOBYPASSRLS 占位角色，不复制口令、成员或原权限。明确只验数据恢复，**不声称权限语义复现**；原 archive 的 owner/ACL 保留。唯一允许 reconcile 的既有失败目录、已停止状态 hash 和 archive/decoded hash 均精确固化；要求 stopped=true、无 postmaster.pid，原目录和日志全部保留，journal 记录原现场并另建新 attempt，不删除或覆盖 partial。未审定的失败现场仍拒绝自动重试。
 
 最终完整隔离测试 **39/39**（包含前 35，不累计），真实两临时集群夹具新增 POLICY 引用/最低权限角色恢复，另覆盖默认 PUBLIC、未知依赖、旧端创建角色拒绝、未停止现场拒绝和精确新 attempt 对账。回执 `release-integration/.runtime/takeover-operator-tests/run-1792142533429096000/receipt.json`，SHA256 `6ebd1cda810f4956c6fa0ce31c4f9a10292a5a0696634c2ce5d7c954d8868e5b`。先前 38 项中间回执保留；本修订未恢复生产操作，待准确新 SHA 复审。
+
+## 本机 launchd 状态输出修订
+
+f7ece12 实际已重验并复用原备份、完整 dump，在另建临时集群创建8个最小 NOLOGIN 角色并恢复100表，计数一致、归档及旧失败现场未变，新临时集群正常停止。首个 `launchctl disable` 成功后，本机 `print-disabled` 实际返回 `disabled`，原解析只识别 true/false，故 `JOB_DISABLE_NOT_CONFIRMED` 失败关闭。两 job 仍 loaded、原 PID 46545/38618；没有 bootout 或 SIGTERM。原 unset override 及 disable_intent 均在 journal 保留，不能把本批称为零旧侧动作。
+
+最小修订只兼容 enabled/disabled/true/false，未知 token 明确失败关闭、缺省仍为 None。续跑根据既有 disable_intent 对账到 true，跳过重复 disable；不改原始 override、日志和已完成备份/恢复。完整隔离 **40/40**（含前39，不累计），新一项覆盖四种状态、缺省及未知拒绝。回执 `release-integration/.runtime/takeover-operator-tests/run-1792143004591702000/receipt.json`，SHA256 `c9a8c470c8b1a84667fb9c3b32cfa1f54c542d9e3ec1fd1e7d04a92a454215f7`。待准确新 SHA 复审，未自行恢复停止流程。

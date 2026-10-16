@@ -3,7 +3,7 @@
   "execution_id": "IKUN-ONLY-2026-10-16",
   "authority": "0e875cc910e0b83289d6257ebf68e5af82d7374a",
   "direct_initial_user_message": "01a143aa-3791-7732-9065-410adf6e08f2",
-  "captured_at": "2026-10-16T09:22:55.347811+00:00",
+  "captured_at": "2026-10-16T09:30:28.473577+00:00",
   "uid": 501,
   "jobs": {
     "ca.ikun.overload-tracking": {
@@ -26,7 +26,7 @@
         }
       ],
       "restartable_from_existing_entry": true,
-      "original_disabled_override": null
+      "original_disabled_override": true
     },
     "com.lvlei.ikun-auto-research": {
       "process": {
@@ -228,10 +228,10 @@
   "initial_alpha_health": {
     "pid": 9034,
     "connected": true,
-    "last_pong_at": 1792142557.317075,
-    "pong_age_seconds": 18.042,
+    "last_pong_at": 1792143014.781802,
+    "pong_age_seconds": 13.705,
     "reconnects": 280,
-    "observed_at": "2026-10-16T09:22:55.359127+00:00",
+    "observed_at": "2026-10-16T09:30:28.486420+00:00",
     "new_wss_connections_by_operator": 0
   },
   "sqlite_sources": {
@@ -272,7 +272,7 @@
     }
   },
   "code_files_sha256": {
-    "release-integration/scripts/takeover_operator.py": "3be287b2969ff4b049daa7c1c7420eb32d0f8c28c6898a8d0be268784564d906",
+    "release-integration/scripts/takeover_operator.py": "1aec79cffa47446cca09e9c470c558f158ff4b3eb365855e5bdd192ccba1a13a",
     "release-integration/scripts/takeover_backup.py": "b54bd2b2d338f936b638e44d1f0bf561f74227eef8f2ac60af335fe8dab15b24"
   },
   "pg_backup_role_source": {

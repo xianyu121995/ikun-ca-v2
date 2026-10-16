@@ -68,7 +68,9 @@ class System:
  def disabled(self,label):
   require(label in JOB_SPECS,'UNAPPROVED_DISABLED_QUERY')
   result=subprocess.run(['/bin/launchctl','print-disabled',self.domain],capture_output=True,text=True);require(result.returncode==0,'DISABLED_QUERY_FAILED')
-  found=re.search(r'"'+re.escape(label)+r'"\s*=>\s*(true|false)',result.stdout);return None if not found else found[1]=='true'
+  found=re.search(r'"'+re.escape(label)+r'"\s*=>\s*(\S+)',result.stdout)
+  if not found:return None
+  states={'true':True,'false':False,'disabled':True,'enabled':False};require(found[1] in states,'UNKNOWN_LAUNCHD_DISABLED_STATE');return states[found[1]]
  def disable(self,label):
   require(label in JOB_SPECS,'UNAPPROVED_DISABLE');command(['/bin/launchctl','disable',self.domain+'/'+label],self.log,timeout=15)
  def bootout(self,label):

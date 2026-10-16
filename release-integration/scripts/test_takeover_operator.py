@@ -96,6 +96,13 @@ class OperatorTests(unittest.TestCase):
   with o.Journal(self.path) as j:
    j.mark('stop_job:'+label,{'state':'in_progress','disable_intent':'earlier','tree':[self.plan['jobs'][label]['process']],'previous_disabled_override':None});o.stop_job_once(j,self.system,label,self.plan)
   self.assertEqual(self.system.actions,[('bootout',label)])
+ def test_launchd_disabled_native_and_legacy_tokens_unknown_fails_closed(self):
+  label=next(iter(o.JOB_SPECS));system=o.System(self.root/'commands.log')
+  for token,expected in (('disabled',True),('enabled',False),('true',True),('false',False)):
+   with patch.object(o.subprocess,'run',return_value=subprocess.CompletedProcess([],0,'"'+label+'" => '+token+'\n','')):self.assertIs(system.disabled(label),expected)
+  with patch.object(o.subprocess,'run',return_value=subprocess.CompletedProcess([],0,'disabled services = {}','')):self.assertIsNone(system.disabled(label))
+  with patch.object(o.subprocess,'run',return_value=subprocess.CompletedProcess([],0,'"'+label+'" => unknown\n','')):
+   with self.assertRaisesRegex(b.SafeFailure,'UNKNOWN_LAUNCHD_DISABLED_STATE'):system.disabled(label)
  def test_protected_descendant_blocks_all_job_actions(self):
   for pid in (9034,79494,6465,6466):
    self.system=FakeSystem();self.system.extra=[identity(pid)]

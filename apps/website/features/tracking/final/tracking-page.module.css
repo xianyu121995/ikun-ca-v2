@@ -132,3 +132,20 @@
 }
 
 .quoteContext {margin:12px 0;padding:12px 14px;border:1px solid var(--ik-border,#334155);border-radius:8px;background:rgba(127,127,127,.06);white-space:pre-wrap;overflow-wrap:anywhere}.quoteContext strong{display:block}.quoteContext strong span{font-weight:400;opacity:.7}.quoteContext p{margin:8px 0}.quoteContext a{font-size:12px}
+
+/* 2026-10-17 owner request: compact live feed so many more tweets fit on one screen. */
+.tweetCompact { display:flex; flex-direction:column; gap:4px; border:1px solid var(--ik-border); border-radius:var(--ik-radius); background:var(--ik-panel); padding:8px 12px; min-width:0; }
+.tweetCompact:hover { border-color:var(--ik-control-border); }
+.compactHead { display:flex; align-items:center; gap:8px; min-width:0; font-size:11px; color:var(--ik-muted); }
+.compactHead :global(.ik-score) { min-height:18px; flex:none; }
+.compactNote { color:var(--ik-warning); font-weight:600; font-size:12px; max-width:28%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:none; }
+.compactWho { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.compactTime { white-space:nowrap; flex:none; }
+.compactActions { margin-left:auto; display:flex; align-items:center; gap:4px; flex:none; }
+.workspace .compactBody { margin:0; font-size:12.5px; color:var(--ik-text); line-height:1.5; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; }
+.compactQuote { margin:0; padding:4px 8px; border-left:2px solid var(--ik-border); font-size:11.5px; color:var(--ik-secondary); line-height:1.45; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; }
+.compactQuote strong { color:var(--ik-text); font-weight:550; }
+.compactQuote strong span { color:var(--ik-muted); font-weight:400; }
+.compactQuote a { color:var(--ik-info); }
+.compactMissing { font-size:10.5px; color:var(--ik-muted); }
+.tweetCompact .media { width:240px; height:120px; }

@@ -44,7 +44,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
     const [filters,setFilters]=useState<Filters>(emptyFilters);
     const [windowFrom,setWindowFrom]=useState<string|null>(null);
     const [totals,setTotals]=useState<{matchedTotal:number;subscriptionCounts:{S:number;A:number;B:number}}|null>(null);
-    const query=new URLSearchParams({profile:'published-v1',limit:'6',q:filters.query,ratings:filters.grade==='all'?'S,A,B':filters.grade});
+    const query=new URLSearchParams({profile:'published-v1',limit:'20',q:filters.query,ratings:filters.grade==='all'?'S,A,B':filters.grade});
     if(windowFrom)query.set('from_at',windowFrom);
     const viewKey = JSON.stringify([page, cursors[page], csrf,query.toString()]);
     function changeFilters(next:Filters){setFilters(next);setWindowFrom(next.hours==='all'?null:new Date(Date.now()-Number(next.hours)*3600000).toISOString());setPage(0);setCursors([null]);setLoading(true);}

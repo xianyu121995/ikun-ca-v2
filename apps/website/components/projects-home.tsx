@@ -54,6 +54,19 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
       persist(null);mainCursors.current=[null];completedCursors.current=[null];otherCursors.current=[null];setPage(1);setCompletedIndex(1);setOtherIndex(1);setDetail(null);reload();return {state:'succeeded',request_id:value.request_id};
     }catch{return operationError({error:{code:'UPSTREAM_TIMEOUT',message:'写入结果待核对，保留原幂等键'},request_id:null},'unknown');}
   }
+  // 2026-10-17 product decision: removing/completing/deleting a homepage project also stops its tweet tracking
+  // (the Tracking delete command also removes ikun's own 6551 NEW_TWEET Watch entry). Best-effort, after success.
+  async function stopTracking(projectIds:readonly string[]){
+    const ids=new Set(projectIds);if(!ids.size)return;
+    try{
+      let cursor:string|null=null;const rows:{subscription_id:string;project_id:string;revision:number;desired_state:string}[]=[];
+      do{const response:Response=await fetch('/api/v1/tracking/subscriptions?limit=100'+(cursor?'&cursor='+encodeURIComponent(cursor):''),{headers:{'x-csrf-token':csrf},cache:'no-store',signal:AbortSignal.timeout(10000)});
+        if(!response.ok)return;const value=await response.json();rows.push(...value.data.items);cursor=value.data.next_cursor;}while(cursor&&rows.length<=1000);
+      for(const row of rows.filter(r=>ids.has(r.project_id)&&r.desired_state!=='removed'))
+        await fetch('/api/v1/tracking/subscriptions/'+row.subscription_id,{method:'DELETE',headers:{'content-type':'application/json','x-csrf-token':csrf,'idempotency-key':crypto.randomUUID(),'if-match':`"rev-${row.revision}"`},signal:AbortSignal.timeout(10000)}).catch(()=>undefined);
+    }catch{/* tracking page shows the real state; homepage write already succeeded */}
+  }
+  const thenStop=(ids:readonly string[])=>(result:OperationResult)=>{if(result.state==='succeeded')void stopTracking(ids);return result;};
   async function openDetail(id:string){try{setDetail(await read('/api/v1/projects/'+id+'?view=home-v1'));}catch(e){setError(e as PublicError);}}
   const latest=new Map<string,Home>();
   for(const home of [...main.items,...completed.items,...other.items,...events,...(detail?[detail]:[])]){const previous=latest.get(home.project.project_id);if(!previous||home.project.revision>=previous.project.revision)latest.set(home.project.project_id,home);}
@@ -62,9 +75,9 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   const pagination=(index:number,loaded:number,total:number,next:string|null,cursors:(string|null)[],move:(index:number)=>void)=><div className="hpv2-pagination"><Button size="sm" aria-label="上一页记录" disabled={index<=1||index!==loaded} onClick={()=>move(index-1)}>‹</Button><span>{index} / {Math.max(1,Math.ceil(total/9))} · {total}</span><Button size="sm" aria-label="下一页记录" disabled={!next||index!==loaded} onClick={()=>{if(index<cursors.length)move(index+1);}}>›</Button></div>;
   const draftBody=(draft:EditorDraft)=>({fields:draft.fields,milestone:draft.milestone,complete:draft.archive_after_save});
   const mutations:Pick<ReferenceCallbacks,'onCreateDraft'|'onUpdateDraft'|'onDelete'|'onMembership'|'onArchive'|'onRestore'>=canWrite?{
-      onCreateDraft:draft=>write('/api/v1/projects','POST',draftBody(draft)),onUpdateDraft:(target,draft)=>write('/api/v1/projects/'+target.project_id,'PATCH',{fields:draft.fields,milestone:draft.milestone,...(draft.archive_after_save?{complete:true}:{})},target),
-      onDelete:target=>write('/api/v1/projects/'+target.project_id,'DELETE',{},target),onMembership:(target,action)=>write('/api/v1/projects/'+target.project_id+'/home-membership','POST',{action},target),
-      onArchive:targets=>write('/api/v1/projects/completions','POST',{items:targets.map(t=>({project_id:t.project_id,revision:t.revision}))}),onRestore:target=>write('/api/v1/projects/'+target.project_id+'/restore','POST',{},target)}:{};
+      onCreateDraft:draft=>write('/api/v1/projects','POST',draftBody(draft)),onUpdateDraft:(target,draft)=>write('/api/v1/projects/'+target.project_id,'PATCH',{fields:draft.fields,milestone:draft.milestone,...(draft.archive_after_save?{complete:true}:{})},target).then(draft.archive_after_save?thenStop([target.project_id]):(r:OperationResult)=>r),
+      onDelete:target=>write('/api/v1/projects/'+target.project_id,'DELETE',{},target).then(thenStop([target.project_id])),onMembership:(target,action)=>write('/api/v1/projects/'+target.project_id+'/home-membership','POST',{action},target).then(action==='remove'?thenStop([target.project_id]):(r:OperationResult)=>r),
+      onArchive:targets=>write('/api/v1/projects/completions','POST',{items:targets.map(t=>({project_id:t.project_id,revision:t.revision}))}).then(thenStop(targets.map(t=>t.project_id))),onRestore:target=>write('/api/v1/projects/'+target.project_id+'/restore','POST',{},target)}:{};
   return <div className="projects-home-access" data-project-access={canWrite?'write':'readonly'}><ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
     callbacks={{...mutations,onReconcile:reconcile,
       onQueryChange:(q:HomepageQuery)=>change({q:q.q,rating:q.rating,progress_stage:q.progress_stage}),onDiscoveryDateChange:day=>change({discovered_on:day??''}),onReload:reload}}

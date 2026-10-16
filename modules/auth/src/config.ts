@@ -35,5 +35,7 @@ export function environment(): AuthConfig {
   if (!process.env.DATA_ROOT) throw new Error("AUTH_DATA_ROOT_REQUIRED");
   return config({dataRoot: resolve(process.env.DATA_ROOT),
     origin: process.env.IKUN_AUTH_ORIGIN ?? "https://ikun.ca", secure: process.env.IKUN_AUTH_DEV !== "1",
-    tenantId: process.env.IKUN_AUTH_TENANT_ID ?? "ikun-main"});
+    tenantId: process.env.IKUN_AUTH_TENANT_ID ?? "ikun-main",
+    // Product decision 2026-10-17: one device per account; a new login revokes the older session.
+    maxSessions: Number(process.env.IKUN_AUTH_MAX_SESSIONS ?? 1)});
 }

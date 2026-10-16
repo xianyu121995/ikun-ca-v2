@@ -141,6 +141,27 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             setBusy(false);
         }
     }
+    // 2026-10-17: superadmin can promote a tracked project (possibly hidden) onto the homepage.
+    async function addToHome(row: Subscription) {
+        if (busy)
+            return;
+        setBusy(true);
+        try {
+            const project = await api('projects/' + row.project_id);
+            if (project.home_membership === 'active') {
+                setCommand('「' + (project.name || row.name) + '」已在主页');
+                return;
+            }
+            await api('projects/' + row.project_id + '/home-membership', 'POST', { action: 'add' }, { revision: project.revision } as unknown as Subscription);
+            setCommand('「' + (project.name || row.name) + '」已加入主页');
+        }
+        catch (e) {
+            setError((e as Error).message);
+        }
+        finally {
+            setBusy(false);
+        }
+    }
     async function create(event: FormEvent, close: () => void) {
         event.preventDefault();
         if (busy || !add.confirmed)
@@ -185,11 +206,15 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
                 if (post.original_url && /^https:\/\/x\.com\/[A-Za-z0-9_]+\/status\/[0-9]+$/.test(post.original_url))
                     window.open(post.original_url, '_blank', 'noopener,noreferrer');
             },
+            postActions: post => {
+                const row = subs.find(r => r.subscription_id === post.account_key);
+                return row ? <Button size='sm' variant='ghost' disabled={busy} title='把这个项目放到主页“正在做”' onClick={() => void addToHome(row)}>加入主页</Button> : null;
+            },
             manageActions: account => {
                 const row = subs.find(r => r.subscription_id === account.ui_key);
                 if (!row)
                     return null;
-                return <><Button size='sm' disabled={busy} onClick={() => { setEdit(row); setEditName(row.name); setEditNotes(row.notes); }}>编辑</Button><Button size='sm' disabled={busy || row.operation_state === 'unknown'} title={row.operation_state === 'unknown' ? '结果待核实，禁止盲目重试' : undefined} onClick={() => void operate(row, row.desired_state === 'running' ? 'stop' : 'resume')}>{row.desired_state === 'running' ? '停止' : '恢复'}</Button></>;
+                return <><Button size='sm' disabled={busy} onClick={() => { setEdit(row); setEditName(row.name); setEditNotes(row.notes); }}>编辑</Button><Button size='sm' disabled={busy || row.operation_state === 'unknown'} title={row.operation_state === 'unknown' ? '结果待核实，禁止盲目重试' : undefined} onClick={() => void operate(row, row.desired_state === 'running' ? 'stop' : 'resume')}>{row.desired_state === 'running' ? '停止' : '恢复'}</Button><Button size='sm' disabled={busy} title='把这个项目放到主页“正在做”' onClick={() => void addToHome(row)}>加入主页</Button></>;
             },
             addForm: close => <form method='post' action='/tracking' onSubmit={event => void create(event, close)}>{error && <Alert tone='danger' title={error}/>}<Input label='已注册项目 ID' value={add.project_id} required onChange={e => setAdd(v => ({ ...v, project_id: e.target.value }))}/><Input label='项目名称' value={add.name} required maxLength={120} onChange={e => setAdd(v => ({ ...v, name: e.target.value }))}/><Input label='X 用户名（不含 @）' value={add.x_handle} required pattern='[A-Za-z0-9_]{1,15}' onChange={e => setAdd(v => ({ ...v, x_handle: e.target.value }))}/><Input label='监控备注' value={add.notes} maxLength={4000} onChange={e => setAdd(v => ({ ...v, notes: e.target.value }))}/><label><input type='checkbox' checked={add.confirmed} onChange={e => setAdd(v => ({ ...v, confirmed: e.target.checked }))} required/>我已人工确认项目与 X 账号</label><Button type='submit' pending={busy}>确认加入监控</Button><Button onClick={close}>取消</Button></form>,
             pagination: <Panel><span>服务端发布时间排序 · 第 {page + 1} 页 · 匹配 {totals?.matchedTotal??"—"} 条 · 本页 {posts.length} 条</span><Button disabled={page === 0 || busy} onClick={() => { setLoading(true); setPage(v => v - 1); }}>上一页</Button><Button disabled={!cursor || busy} onClick={() => { setLoading(true); setCursors(v => [...v.slice(0, page + 1), cursor]); setPage(v => v + 1); }}>下一页</Button></Panel> }}/>

@@ -25,7 +25,7 @@ function validDate(value: string): boolean {
 // Validation checks display fields only; this is neither auth nor a domain writer.
 export function validateFields(fields: ProjectFieldsProjection): string | null {
   if (!fields.name.trim()||fields.name.length>120) return '项目名称需为 1–120 字符。';
-  if (fields.rating!==null&&!ratings.includes(fields.rating)) return '评分需为 S/A/B/C/D 或未评分。';
+  if (fields.rating!==null&&!ratings.includes(fields.rating)) return '评分需为 S/A/B 或未评分。';
   if (fields.description.length>4000||fields.notes.length>4000) return '简介和备注各不得超过 4000 字符。';
   if (fields.category!==null&&fields.category.length>80) return '分类不得超过 80 字符。';
   if (fields.website_url!==null&&!safeWebsite(fields.website_url)) return '官网需为不含用户名或密码的 http(s) 地址。';

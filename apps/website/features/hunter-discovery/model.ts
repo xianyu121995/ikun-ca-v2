@@ -52,7 +52,7 @@ export interface DiscoveryView {
   category: string; stageLabel: string; notes: string; reviewState: ReviewState | null;
   monitoringLabel: string; commandState: CommandState | null; source: DiscoveryDTO;
 }
-const grades = ['S','A','B','C','D'] as const;
+const grades = ['S','A','B'] as const;
 const stages: Record<ProgressStage,string> = {todo:'待开始',researching:'研究中',watching:'观察中',participating:'参与中',completed:'已完成',paused:'已暂停'};
 const commandStates = ['accepted','pending','running','succeeded','failed','unknown'];
 export function canWrite(context: ViewContext | undefined, capability: 'can_edit_projects' | 'can_manage_hunter') {

@@ -24,8 +24,14 @@ function unavailable(request: Request) {
   return Response.json({error:{code:"AUTH_NOT_CONFIGURED",message:"认证存储未初始化或不可用",retryable:false},request_id:id},
     {status:503,headers:{"x-request-id":id,"cache-control":"no-store"}});
 }
+/** Real visitor IP behind Cloudflare Tunnel (the site is only reachable through the tunnel). */
+export function clientPeer(request: Request): string|undefined {
+  const raw=request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0];
+  const value=raw?.trim();
+  return value && /^[0-9A-Fa-f:.]{2,45}$/.test(value) ? value : undefined;
+}
 export async function route(request: Request) {
-  try { return await auth().handle(request); } catch { return unavailable(request); }
+  try { return await auth().handle(request,clientPeer(request)); } catch { return unavailable(request); }
 }
 export function gate(request: Request) {
   try { return auth().gate(request); } catch { return unavailable(request); }

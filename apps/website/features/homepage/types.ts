@@ -1,7 +1,7 @@
 // Page-owned projection of phase2-v1.0.0. Replace with approved shared type imports
 // only after B0 propagation; this module has no runtime or transport dependency.
 export const SITE_SCOPE = 'ikun-main' as const;
-export const ratings = ['S', 'A', 'B', 'C', 'D'] as const;
+export const ratings = ['S', 'A', 'B'] as const;
 export type ProjectRating = typeof ratings[number] | null;
 export const progressStages = ['todo', 'researching', 'watching', 'participating', 'completed', 'paused'] as const;
 export type ProgressStage = typeof progressStages[number];

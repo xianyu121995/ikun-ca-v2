@@ -34,6 +34,11 @@ async def synchronize(engine):
                 key = 'owned_watch:' + row['id']
                 saved = engine.store.states().get(key)
                 watch = snapshot.get(row['username'])
+                blocked_key = 'watch_blocked:'+row['id']
+                blocked = engine.store.states().get(blocked_key)
+                if wanted and blocked and (not watch or watch.get('newFlwBol') is not True):
+                    errors.append(blocked);continue
+                if wanted and blocked:engine.store.set_state(blocked_key,None)
                 owned = bool(saved and watch and watch.get('remark')==marker and (saved.get('id') is None or str(watch.get('id'))==saved['id']))
                 if wanted and not watch:
                     if len(snapshot) >= 600:
@@ -56,7 +61,8 @@ async def synchronize(engine):
                         snapshot = rows(await engine.providers.request('watch'))
                         updated = snapshot.get(row['username'],{})
                         if str(updated.get('id'))!=approved['id'] or updated.get('twGroupId')!=before.get('twGroupId') or updated.get('newFlwBol') is not True or any(updated.get(f)!=before.get(f) for f in FLAGS if f!='newFlwBol'):
-                            raise ProviderError('watch_flag_preservation_failed',300)
+                            engine.store.set_state(blocked_key,'existing_watch_update_unsupported')
+                        raise ProviderError('existing_watch_update_unsupported',300)
                     else:
                         errors.append('existing_watch_owned_elsewhere')
                 elif row['deleted_at'] and saved:
@@ -75,6 +81,7 @@ async def synchronize(engine):
                         else:engine.store.set_state(key,None)
                     else:errors.append('watch_delete_ownership_conflict')
             except ProviderError as error:
+                if error.code=='watch_mutation_failed':engine.store.set_state('watch_blocked:'+row['id'],error.code)
                 errors.append(error.code)
                 snapshot = rows(await engine.providers.request('watch'))
         engine.store.coverage({name for name,w in snapshot.items() if w.get('newFlwBol') is True},time.time())

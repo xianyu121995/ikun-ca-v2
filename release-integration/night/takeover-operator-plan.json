@@ -1,0 +1,277 @@
+{
+  "state": "PENDING_TOOL_REVIEW_NO_OLD_ACTIONS",
+  "execution_id": "IKUN-ONLY-2026-10-16",
+  "authority": "0e875cc910e0b83289d6257ebf68e5af82d7374a",
+  "direct_initial_user_message": "01a143aa-3791-7732-9065-410adf6e08f2",
+  "captured_at": "2026-10-16T08:57:31.699276+00:00",
+  "uid": 501,
+  "jobs": {
+    "ca.ikun.overload-tracking": {
+      "process": {
+        "pid": 46545,
+        "ppid": 1,
+        "uid": 501,
+        "started_utc": "2026-10-14T12:44:32+00:00",
+        "executable": "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace/backend/.venv/bin/python",
+        "cwd": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking"
+      },
+      "plist": "/Users/lvlei/Library/LaunchAgents/ca.ikun.overload-tracking.plist",
+      "plist_sha256": "e7b63d23ef2aabe1e2e4390a0c11ee1380bb83d364be4fe98da0cdfeb2677f65",
+      "cwd": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking",
+      "entry_files": [
+        {
+          "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking/repo/scripts/overload_listener.py",
+          "exists": true,
+          "sha256": "3d2f937137b3f90de161fa8691b72ac64e2d374c88a0235b43b272cc488e3bc4"
+        }
+      ],
+      "restartable_from_existing_entry": true,
+      "original_disabled_override": null
+    },
+    "com.lvlei.ikun-auto-research": {
+      "process": {
+        "pid": 38618,
+        "ppid": 1,
+        "uid": 501,
+        "started_utc": "2026-10-11T19:23:12+00:00",
+        "executable": "/Users/lvlei/.codex/worktrees/ikun-ca-ai-research-audit/ikun.ca/.runtime/auto-research/venv/bin/python",
+        "cwd": "/Users/lvlei/.codex/worktrees/ikun-ca-ai-research-audit/ikun.ca"
+      },
+      "plist": "/Users/lvlei/Library/LaunchAgents/com.lvlei.ikun-auto-research.plist",
+      "plist_sha256": "8b54f546b9b665580c947b61dcc6fb4208f6756d335ab1f0f443575e61b75efd",
+      "cwd": "/Users/lvlei/.codex/worktrees/ikun-ca-ai-research-audit/ikun.ca",
+      "entry_files": [
+        {
+          "path": "/Users/lvlei/.codex/worktrees/ikun-ca-ai-research-audit/ikun.ca/auto-research/setup.py",
+          "exists": false,
+          "sha256": null
+        }
+      ],
+      "restartable_from_existing_entry": false,
+      "original_disabled_override": null
+    }
+  },
+  "manual_hunter": {
+    "pid": 6466,
+    "ppid": 6465,
+    "uid": 501,
+    "started_utc": "2026-10-10T10:33:40+00:00",
+    "executable": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+    "cwd": "/Users/lvlei/Documents/ChatGPT/猎手"
+  },
+  "manual_authorization": {
+    "pid": 6466,
+    "parent_pid": 6465,
+    "started_at_local": "2026-10-10 18:33:40",
+    "cwd": "/Users/lvlei/Documents/ChatGPT/猎手",
+    "signal": "SIGTERM"
+  },
+  "protected_processes": {
+    "Alpha": {
+      "pid": 9034,
+      "ppid": 1,
+      "uid": 501,
+      "started_utc": "2026-10-10T12:26:54+00:00",
+      "executable": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+      "cwd": "/Users/lvlei/Documents/ChatGPT/ALPHA哨兵动态监控"
+    },
+    "old_supervisor": {
+      "pid": 79489,
+      "ppid": 79488,
+      "uid": 501,
+      "started_utc": "2026-10-14T21:11:10+00:00",
+      "executable": "python",
+      "cwd": "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace"
+    },
+    "old_Postgres": {
+      "pid": 79494,
+      "ppid": 1,
+      "uid": 501,
+      "started_utc": "2026-10-14T21:11:10+00:00",
+      "executable": "/opt/homebrew/Cellar/postgresql@17/17.11_1/bin/postgres",
+      "cwd": "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace/.runtime/pgdata"
+    },
+    "old_Tunnel": {
+      "pid": 79502,
+      "ppid": 79489,
+      "uid": 501,
+      "started_utc": "2026-10-14T21:11:10+00:00",
+      "executable": "/opt/homebrew/bin/cloudflared",
+      "cwd": "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace"
+    },
+    "v2_web": {
+      "pid": 87924,
+      "ppid": 1,
+      "uid": 501,
+      "started_utc": "2026-10-16T07:27:09+00:00",
+      "executable": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/toolchains/node24/bin/node",
+      "cwd": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/releases/0ce180c33ea4be350ac57daa7dbfa5b5221e58cb"
+    },
+    "v2_Hunter": {
+      "pid": 2608,
+      "ppid": 1,
+      "uid": 501,
+      "started_utc": "2026-10-15T18:50:24+00:00",
+      "executable": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/venvs/hunter/bin/python",
+      "cwd": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/jobs/hunter"
+    },
+    "v2_Tracking": {
+      "pid": 25225,
+      "ppid": 1,
+      "uid": 501,
+      "started_utc": "2026-10-15T19:46:33+00:00",
+      "executable": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/toolchains/node24/bin/node",
+      "cwd": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/jobs/tracking"
+    },
+    "v2_Tunnel": {
+      "pid": 39523,
+      "ppid": 1,
+      "uid": 501,
+      "started_utc": "2026-10-15T15:40:19+00:00",
+      "executable": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/toolchains/cloudflared/cloudflared",
+      "cwd": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite"
+    }
+  },
+  "parent_login": {
+    "pid": 6465,
+    "ppid": 6462,
+    "uid": 0,
+    "started_utc": "2026-10-10T10:33:40+00:00",
+    "executable": "login",
+    "cwd": null
+  },
+  "protected_files_sha256": {
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/config/hunter.environment.json": "247e402790c023dbcf4dcb7beb5f75a24301cd21c7de3070cb4acb835c0488cb",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/config/tracking.environment.json": "bd9105fe4737b90e9bf5bbce8ad4cfdae5cf22bb8c89b24f3a138a7d044e6b2b",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/config/tracking/tracking.json": "9e06debdfc0b2baba8bfc265fa796d4e3b333cfc48591ed4ba4e1a414108caee",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/plans/hunter/75b81a2b5210e41bdf8522467c7fba2a6a6e693c/worker.json": "e3b13cad5ba255ddf76182326b90622896e489e18bf29b351aa1a2735c9f87a2",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/plans/tracking/64088893841122491aba508fdb514507db3d9339/worker.json": "e87f5bbfbc2f7a4540b858988353d0dca355a687d16ececd96e3f43d6d0af494",
+    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.hunter.plist": "0d5a9721d342f0a21b6dee33c4951318ac9cb955c240e7d30aa8eb740bc317e1",
+    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.tracking.plist": "29921315bf346f76fa4914d72b1c631c9678b3ab1b48dd58c24c90377d501e21",
+    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.web.plist": "2c142866bebe39b9f83c8d4baf56857a49f4cff9cfac79e9165eecc2fae7bcee"
+  },
+  "v2_database_identities": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/auth/auth.db",
+      "device": 16777229,
+      "inode": 20187691,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652484,
+      "user_version": 2
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/projects/projects.db",
+      "device": 16777229,
+      "inode": 20187927,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652483,
+      "user_version": 2
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/hunter/hunter.db",
+      "device": 16777229,
+      "inode": 20535150,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652481,
+      "user_version": 4
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/tracking/tracking.db",
+      "device": 16777229,
+      "inode": 20685563,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652482,
+      "user_version": 4,
+      "business_change_rows": 0
+    }
+  },
+  "tracking_config_sha256": "b18bc27084842262c1adbe934faa77e851e0be2e4f7c3d8a3b86ddd8a61386be",
+  "tracking_private_file_references": {
+    "x_token_file": "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace/.runtime/ikun-first-release/releases/x-id-save-68c28cd87227-v3/config/x-profile.token",
+    "module_token_file": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking/module.token",
+    "module_dsn_file": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking/module.dsn",
+    "import_token_file": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking/import.token",
+    "import_dsn_file": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking/import.dsn"
+  },
+  "pgbin": "/opt/homebrew/bin",
+  "pg_binary_sha256": {
+    "pg_dump": {
+      "path": "/opt/homebrew/bin/pg_dump",
+      "sha256": "0dfb479d62d1fead2d3eaa2e622599e58b1254181f216a6a76d4f908e77631da"
+    },
+    "pg_restore": {
+      "path": "/opt/homebrew/bin/pg_restore",
+      "sha256": "3510c60d7157e0ad5e9f6d311cbe9585cf87ec3b4e074d1c2b65ad844abd29b6"
+    },
+    "pg_ctl": {
+      "path": "/opt/homebrew/bin/pg_ctl",
+      "sha256": "edec7e6b28943c45345f2a4b1f872358f51ee082087b1b86e8bf38704ded96ca"
+    },
+    "initdb": {
+      "path": "/opt/homebrew/bin/initdb",
+      "sha256": "e4591b1b3b1f7a91098b0d2016db18b7924358ba22b80a77d5b1e1a6cbd8b26e"
+    },
+    "postgres": {
+      "path": "/opt/homebrew/bin/postgres",
+      "sha256": "8893dbf9edc90e63eb2b7861a6806cc0024add016dbd9019e0412670c2c81a42"
+    }
+  },
+  "initial_alpha_health": {
+    "pid": 9034,
+    "connected": true,
+    "last_pong_at": 1792141047.630543,
+    "pong_age_seconds": 4.078,
+    "reconnects": 280,
+    "observed_at": "2026-10-16T08:57:31.708686+00:00",
+    "new_wss_connections_by_operator": 0
+  },
+  "sqlite_sources": {
+    "old_hunter": {
+      "path": "/Users/lvlei/Documents/ChatGPT/猎手/data/hunter_monitor.db",
+      "device": 16777229,
+      "inode": 12099334
+    },
+    "old_tracking_events": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking/target-events.sqlite",
+      "device": 16777229,
+      "inode": 18924805
+    },
+    "old_tracking_dispatch": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca/.runtime/overload-live-tracking/dispatch.sqlite",
+      "device": 16777229,
+      "inode": 18924809
+    },
+    "v2_auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/auth/auth.db",
+      "device": 16777229,
+      "inode": 20187691
+    },
+    "v2_projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/projects/projects.db",
+      "device": 16777229,
+      "inode": 20187927
+    },
+    "v2_hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/hunter/hunter.db",
+      "device": 16777229,
+      "inode": 20535150
+    },
+    "v2_tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/tracking/tracking.db",
+      "device": 16777229,
+      "inode": 20685563
+    }
+  },
+  "code_files_sha256": {
+    "release-integration/scripts/takeover_operator.py": "13f443328a08d233ecd95942db6f303b7dcf951db562af92a038b2cdea2c7eef",
+    "release-integration/scripts/takeover_backup.py": "bb01fb21e252e9f9917c717c4164c72efb59bbc1b3de1523c1448aff4d524181"
+  }
+}

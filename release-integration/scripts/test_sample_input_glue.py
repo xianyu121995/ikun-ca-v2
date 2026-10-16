@@ -45,5 +45,16 @@ class SampleGlue(unittest.TestCase):
  def test_hunter_missing_owner_receipts_never_fabricates_input(self):
   with self.assertRaisesRegex(SafeFailure,'REAL_HUNTER_OWNER_ARTIFACTS_REQUIRED'):h.bind({},{} )
 
+ def add_fixture(self):
+  before=[{'id':'old','twAccount':'fixtureold','newTweetBol':True,'newTweetQuoteBol':False,'newFlwBol':False}];request={'method':'POST','endpoint':'twitter_watch_add','root_review_sha':'a'*40,'body':{'username':'0x2a_ikun','groupName':'test-group','newTweetBol':True,'newTweetQuoteBol':True,'newFlwBol':False}};created={'success':True,'data':{'id':'new','twGroupId':42}};return before,request,created
+ def test_one_setup_read_builds_expected_proof_from_actual_add_not_snapshot(self):
+  before,request,created=self.add_fixture();watch=t.expected_new_watch('0x2a_ikun',before,created,request);self.assertEqual(watch['id'],'new');self.assertEqual(watch['twGroupId'],42);self.assertNotIn('watch_after',t.LATE);self.assertIn('watch_request',t.LATE)
+ def test_add_id_only_blocks_without_inventing_assigned_group(self):
+  before,request,created=self.add_fixture();created['data'].pop('twGroupId')
+  with self.assertRaisesRegex(SafeFailure,'ASSIGNED_GROUP_UNPROVEN'):t.expected_new_watch('0x2a_ikun',before,created,request)
+ def test_missing_expected_flag_blocks_without_guessing_false(self):
+  before,request,created=self.add_fixture();before[0]['newUnFlwBol']=False
+  with self.assertRaisesRegex(SafeFailure,'EXPECTED_FLAGS_INCOMPLETE'):t.expected_new_watch('0x2a_ikun',before,created,request)
+
 
 if __name__=='__main__':unittest.main()

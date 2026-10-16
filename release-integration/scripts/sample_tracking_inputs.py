@@ -11,10 +11,21 @@ import time
 from takeover_backup import require,private_dir,atomic,artifact,sha,read_json
 from takeover_operator import ROOT,V2
 
-LATE=('tracking_snapshot','projects_reconcile','setup_profile','watch_before','watch_creation','watch_after')
+LATE=('tracking_snapshot','projects_reconcile','setup_profile','watch_before','watch_creation','watch_request')
 
 
 def iso(value):return datetime.fromtimestamp(value,timezone.utc).isoformat(timespec='microseconds')
+
+
+def expected_new_watch(target,before,creation,request):
+ require(not any(str(r.get('twAccount',r.get('username',''))).lower()==target for r in before),'TARGET_WATCH_ALREADY_EXISTED_DO_NOT_MODIFY')
+ require(request.get('method')=='POST'and request.get('endpoint')=='twitter_watch_add'and isinstance(request.get('root_review_sha'),str)and len(request['root_review_sha'])==40,'APPROVED_ACTUAL_ADD_REQUEST_REQUIRED');body=request['body'];require(body.get('username')==target,'ADD_REQUEST_TARGET_DIFFERS')
+ require(creation.get('success')is True and isinstance(creation.get('data'),dict),'REAL_ADD_RECEIPT_INSUFFICIENT');returned=creation['data'];identifier=returned.get('id');require(type(identifier)in(str,int)and str(identifier)not in {str(r['id'])for r in before},'ADD_RECEIPT_NEW_ID_UNPROVEN')
+ # Real readback exposes twGroupId, not necessarily groupName; do not invent that ID.
+ require('twGroupId'in returned and type(returned['twGroupId'])in(str,int),'ADD_RECEIPT_ASSIGNED_GROUP_UNPROVEN')
+ required={k for row in before for k in row if k.endswith('Bol')};flags={k:v for k,v in body.items()if k.endswith('Bol')};flags.update({k:v for k,v in returned.items()if k.endswith('Bol')});require(required<=flags.keys()and all(type(v)is bool for v in flags.values()),'ADD_EXPECTED_FLAGS_INCOMPLETE')
+ require(all(returned[k]==body[k]for k in returned if k.endswith('Bol')and k in body),'ADD_RECEIPT_FLAGS_CONFLICT');require(flags.get('newTweetBol')is True and flags.get('newTweetQuoteBol')is True and all(v is False for k,v in flags.items()if k not in('newTweetBol','newTweetQuoteBol')),'NEW_REST_TEST_FLAGS_DIFFERS')
+ return {'id':identifier,'twAccount':target,'twGroupId':returned['twGroupId'],**flags}
 
 
 def mint(static,late):
@@ -25,6 +36,7 @@ def mint(static,late):
  from tracking.takeover import private_path,read_private,digest
  from tracking.events import timestamp
  require(source['source_commit']=='704e6214ba7b2dff79ec372249bf47e2b9eb7c04','FROZEN_TRACKING_SAMPLE_REQUIRED')
+ require('watch_after'not in late,'SETUP_MUST_NOT_CONSUME_OBSERVATION_WATCH_READ')
  require(all(k in late for k in LATE) and all(k in late for k in ('identity_observed_at','watch_created_at','approved_at','create_command_id')),'ACTUAL_LATE_RECEIPTS_REQUIRED')
  def data(key):
   row=late[key];return read_private(row['path'],row['sha256'])
@@ -41,11 +53,7 @@ def mint(static,late):
  require(row['handle']==static['target'] and row['x_user_id']==user_id and row['generation']==row['revision']==1 and command['subscription_id']==row['subscription_id'],'NEW_SUBSCRIPTION_IDENTITY_DIFFERS')
  def watches(key):
   envelope=data(key);require(envelope.get('success')is True,'REAL_WATCH_RESPONSE_REQUIRED');rows=envelope['data'];rows=rows if isinstance(rows,list)else rows.get('list',rows.get('items'));require(isinstance(rows,list),'WATCH_LIST_REQUIRED');return rows
- before=watches('watch_before');after=watches('watch_after');require(not any(str(r.get('twAccount',r.get('username',''))).lower()==static['target']for r in before),'TARGET_WATCH_ALREADY_EXISTED_DO_NOT_MODIFY')
- selected=[r for r in after if str(r.get('twAccount',r.get('username',''))).lower()==static['target']];require(len(selected)==1,'NEW_WATCH_NOT_EXACTLY_ONE');watch=selected[0];require(data('watch_creation').get('success')is True,'REAL_WATCH_CREATION_REQUIRED')
- protected=lambda r:(str(r['id']),r.get('twAccount',r.get('username')),{k:v for k,v in r.items()if k.endswith('Bol')},{k:r[k]for k in ('twGroupId','groupName')if k in r})
- old={str(r['id']):protected(r)for r in before};current={str(r['id']):protected(r)for r in after};require(all(current.get(k)==v for k,v in old.items())and len(after)==len(before)+1,'EXISTING_WATCH_CHANGED_OR_EXTRA_ADD')
- require(watch.get('newTweetBol')is True and watch.get('newTweetQuoteBol')is True and watch.get('newFlwBol')is False,'NEW_REST_TEST_FLAGS_DIFFERS')
+ before=watches('watch_before');watch=expected_new_watch(static['target'],before,data('watch_creation'),data('watch_request'))
  negative=Exclusions.model_validate(read_private(static['exclusions'],sha(private_path(static['exclusions']))));require(static['target']not in {x.lower()for x in negative.excluded_handles}and user_id not in negative.excluded_x_user_ids and str(watch['id'])not in negative.excluded_watch_ids,'TEST_ACCOUNT_EXCLUDED')
  initial=private_path(static['alpha_initial']);alpha=AlphaState.model_validate(read_private(initial,sha(initial)));expected_exclusions=digest({'handles':sorted({x.lower()for x in negative.excluded_handles}),'watch_ids':sorted(negative.excluded_watch_ids),'x_user_ids':sorted(negative.excluded_x_user_ids)});require(alpha.healthy and alpha.exclusions_sha256==expected_exclusions,'ALPHA_INITIAL_DIFFERS')
  clocks=[timestamp(x)for x in (late['identity_observed_at'],late['watch_created_at'],late['approved_at'],record['created_at'],projects.data.completed_at)]+[row['created_at']];now=time.time();require(all(x is not None and -1<=now-x<240 for x in clocks),'LATE_FACTS_ALREADY_TOO_OLD');seconds=min(static['max_tracking_seconds'],int(min(clocks)+295-now));require(seconds>=30,'INSUFFICIENT_FRESH_SAMPLE_WINDOW')

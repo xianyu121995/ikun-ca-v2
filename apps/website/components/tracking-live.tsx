@@ -19,7 +19,7 @@ type Subscription = {
     operation_state: string;
     connection: string;
 };
-type Activity = {activity_id:string;subscription_id:string;project_id:string;name:string;x_handle:string;notes:string;rating:'S'|'A'|'B';rating_revision:number;text:string;occurred_at:string|null;received_at:string;sort_at:string;sort_basis:string;url:string};
+type Activity = {quoted_tweet?:Post['quoted_tweet'];tweet_kind?:string;activity_id:string;subscription_id:string;project_id:string;name:string;x_handle:string;notes:string;rating:'S'|'A'|'B';rating_revision:number;text:string;occurred_at:string|null;received_at:string;sort_at:string;sort_basis:string;url:string};
 export function TrackingLive({ csrf, canManage, username, voiceSession, fixture = false }: {
     csrf: string;
     canManage: boolean;
@@ -78,7 +78,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             if(data.items.some((item:Activity)=>!visible.some(row=>row.subscription_id===item.subscription_id)))throw Error("VERSION_CONFLICT · 订阅投影已变化，请刷新");
             const grades=new Map<string,Activity['rating']>(data.items.map((item:Activity)=>[item.subscription_id,item.rating]));
             const accountRows:Account[]=visible.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.notes,grade:grades.get(row.subscription_id)??null,avatar:row.name.slice(0,1),status:row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.operation_state==='failed'?'failed':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
-            setPosts(data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url})));
+            setPosts(data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url})));
             setTotals({matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating});
             setCursor(data.next_cursor);
             setSubs(rows);
@@ -176,11 +176,12 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             setBusy(false);
         }
     }
-    return <><Alert title='未连接真实来源' />{fixture&&<Alert title='本地验收夹具 · 合成数据仅供测试' />}{error && <Alert tone='danger' title={error}/>} {command && <Alert title={command}/>}<TrackingVoiceSettings controller={voice.controller} subscriptions={subs.map(row => ({ subscription_id: row.subscription_id, label: row.notes || row.name }))}/><TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
+    const connected=subs.some(row=>row.connection==='connected');
+    return <><Alert title={connected?'实时来源已连接':'实时来源未连接'} />{fixture&&!connected&&<Alert title='本地模式 · 尚未连接实时来源' />}{error && <Alert tone='danger' title={error}/>} {command && <Alert title={command}/>}<TrackingVoiceSettings controller={voice.controller} subscriptions={subs.map(row => ({ subscription_id: row.subscription_id, label: row.notes || row.name }))}/><TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
             const row = subs.find(r => r.subscription_id === id);
             if (row && !(await operate(row, 'remove')))
                 throw Error('移除未确认');
-        }} live={{ server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password' onClick={voice.revoke}>修改本人密码</a><span onClickCapture={voice.revoke}><LogoutButton /></span></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
+        }} live={{ connected,server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password' onClick={voice.revoke}>修改本人密码</a><span onClickCapture={voice.revoke}><LogoutButton /></span></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
                 if (post.original_url && /^https:\/\/x\.com\/[A-Za-z0-9_]+\/status\/[0-9]+$/.test(post.original_url))
                     window.open(post.original_url, '_blank', 'noopener,noreferrer');
             },

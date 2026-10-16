@@ -36,3 +36,9 @@ Tracking 原 worktree 提交 b728f1e990896133359e89b5c5a9d1bad793bfce：保留 v
 v3唯一例外：本次固定历史SHA的自有Watch创建时刻为不可变历史；fresh profile/当前完整Watch/当前root授权与原BFF记录仍≤300秒，原观察段独立门禁保留。Watch无XID字段，稳定XID由固定首次profile与fresh profile绑定，Watch仅有真实ID/handle，未伪造字段。具体语义和下一次准确预算见FIRST-REAL-SAMPLE-OPS末节，待总管简审。
 
 累计真实请求6次（5只读、1新Watch），本轮没有额外执行。WSS0、停服0、Projects/Tracking新记录0、授权mint0。下一次只freshprofile1+完整Watch1，原观察3读+1有限WSS，新增Watch0。用户选择先补正，重新待命之前禁止实测。
+
+## v3首轮实际执行失败，已恢复
+
+用户重新待命后实际fresh profile1+Watch1通过；原BFF Projects201、正式reconcile200、Tracking202，新项目/订阅保留，不重复创建。最初相对plan使备份sqlite_counts.as_uri抛ValueError，发生于任何停服前；保留partial并改用新绝对plan，before/stopped/after各四库，共12备份。仅原Tracking83544树正常退出及heartbeat归零。mint只输出SafeFailure；保存证据文件实际mtime重算profile年龄为250.528秒，冻结minter门禁<240秒，对应LATE_FACTS_ALREADY_TOO_OLD；不是伪称CLI曾输出完整code。未出proof/authorization、未调用launcher、未发观察段请求/WSS。
+
+按同Journal、无proof/授权/sampler回执、原slot进程/端口/lease围栏、after四库备份和原tracking_only_maintenance.restore恢复固定307d硬关；新PID6021，对等保护检查通过。无虚构sampler回执，无数据库覆盖/旧服务改动。累计真实provider8次=7只读+1新Watch，原观察0，WSS0。本轮不可发推。私有事实回执arm-v3/tracking/FAILED-MINT-AND-RESTORED.json。

@@ -130,3 +130,5 @@
   .addGrid { grid-template-columns:minmax(0,1fr); }
   .footer { font-size:9px; }
 }
+
+.quoteContext {margin:12px 0;padding:12px 14px;border:1px solid var(--ik-border,#334155);border-radius:8px;background:rgba(127,127,127,.06);white-space:pre-wrap;overflow-wrap:anywhere}.quoteContext strong{display:block}.quoteContext strong span{font-weight:400;opacity:.7}.quoteContext p{margin:8px 0}.quoteContext a{font-size:12px}

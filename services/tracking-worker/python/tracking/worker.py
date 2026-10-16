@@ -283,7 +283,7 @@ class Worker:
     async def ticks(self):
         while not self.stop.is_set():
             rows = self.store.projects(include_removed=True)
-            if time.time()-self._last_reconcile >= min(300,self.cfg.remote_fresh_seconds/2) or any(r['status'] not in ('running','stopped','removed') or r['error'] for r in rows):
+            if time.time()-self._last_reconcile >= min(300,self.cfg.remote_fresh_seconds/2) or any(r['next_retry'] <= time.time() and (r['status'] not in ('running','stopped','removed') or r['error']) for r in rows):
                 await self.reconcile()
             await self.pause(self.cfg.reconcile_seconds)
 

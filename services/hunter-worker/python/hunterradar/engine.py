@@ -171,7 +171,7 @@ class Engine:
             try:
                 signature = [(h['id'],h['enabled'],h['mode'],h['deleted_at']) for h in self.store.hunters(include_deleted=True)]
                 states = self.store.states()
-                if self.settings.external_io_enabled and (signature != previous or time.time()-states.get('watch_checked_at',0)>=300 or states.get('watch_error')):
+                if self.settings.external_io_enabled and (signature != previous or time.time()-states.get('watch_checked_at',0)>=300):
                     await synchronize(self)
                     previous = signature
             except (ProviderError, BudgetExceeded, ValueError, TimeoutError) as error:

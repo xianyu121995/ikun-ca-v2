@@ -1,0 +1,108 @@
+{
+  "state": "PASS_LOCAL_PENDING_FINAL_ROOT_REVIEW_AND_ACTIVATION",
+  "Projects_source": "6067658d6092e4d046a8691e8f2f93b34c717801",
+  "Projects_control": "2c55f927bcbcc0d2b47472d84156ffa38826876b",
+  "integration_runtime_source_commit": "0b0f4549758b74ec5defc06493054f41d80d439d",
+  "build_id": "X0CYNNjMlhJWNcjEpx1PF",
+  "source_hashes": 331,
+  "compiled_hashes": 271,
+  "build_binding_sha256": "e69d9b6b0c43f8b1dad2a2529b0b22e3ba586a77808bbf776970944481c294aa",
+  "tests": {
+    "frozen_Projects_owner_regression": 246,
+    "actual_Next_receiver_and_readonly_browser": 108,
+    "frozen_B3_combined": 76,
+    "frozen_voice_silent_browser": 48,
+    "separate_Auth": 3,
+    "loader_and_activation_recovery": 14
+  },
+  "counts_not_cumulative": true,
+  "nested_Node_already_in_246": [
+    16,
+    14,
+    11
+  ],
+  "failure_attempts": [
+    {
+      "path": "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134849629377000/acceptance.json",
+      "checks_reached": 34,
+      "reason": "Locator expected to have count '1'\nActual value: 0 \nCall log:\n  - Expect \"to_have_count\" get_by_role(\"dialog\").get_by_role(\"button\", name=\"加入主页\", exact=True, include_hidden=True).first with timeout 5000ms\n  - waiting for get_by_role(\"dialog",
+      "not_added_to_final_count": true
+    },
+    {
+      "path": "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134914386747000/acceptance.json",
+      "checks_reached": 28,
+      "reason": "fixture_other_removed_membership_reaches_join_control",
+      "not_added_to_final_count": true
+    }
+  ],
+  "fixture_corrections": [
+    "First Next run reached 34 checks, then other-project UI required an inactive homepage member. Fixture now removes that project through real API.",
+    "Second run reached 28 checks; fixture DELETE lacked Content-Type application/json and was correctly rejected by B1. Added the required header.",
+    "Fixture now has nineteen active projects to satisfy existing pagination regression. No product source change."
+  ],
+  "earlier_ops_subset": {
+    "checks": 12,
+    "not_added_to_final_14": true
+  },
+  "immutable_evidence_directory": "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000",
+  "private_evidence_sha256": {
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/operations-tests-1792135108267415000.json": "b628ceff2dd5b3742495fbda825395b896d3de647df2b8a2e5a804a155ea8b7e",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/operations-tests-1792134665337711000.json": "82b1213968438a4238cf60e113418b9c299de85cfd33218b3680bc5e75ab257d",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/build-1792134538997.log": "00d758707e5789903f309eede2ab446f1cbcb3fdbad168c75c960acc817db591",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/build-1792134538997.log.json": "2c699f88897d600b44b70e955fef52dfb69d71ad33404854dbbcffca99bc445a",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/owner-regression-1792134700.xml": "1614c5278324a74c41bcdfca832124d23ec2bea6bc6229e5143a2d28b6007003",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134914386747000/acceptance.json": "c44a40521fa57cf7f069323d787c499482474beb29a0424b3be2f05cc3828fb0",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134914386747000/website.log": "5476e286bdadb9238cac21cda1aec01de8a3430be25a8d59a9b07bb03d8e2585",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134961562713000/entry-admin-empty-390.png": "ac6445485b75e62f68f89f05a891cccbb1baa95aa55cf5119b31659dc918a4c5",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134961562713000/acceptance.json": "08e67ba9563c95ed41139e076c5a2f446061653ec54382590553e790f756fe45",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134961562713000/entry-admin-empty-1440.png": "4272b253edf2f2819ce10affac5e2409235cd0dc2f2c5f34c82eea81f5b8b7bf",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134961562713000/entry-user-empty-390.png": "c9044f9cd59477a7d2e6f7643245c48009faa3168b197aaf4ae21044e1702ac5",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134961562713000/website.log": "7255ead9adf4b0f59126619d9ac17f7ab149a37a1eb001b234a502d871d072db",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134961562713000/entry-user-empty-1440.png": "f2f621bc4ae35f0d3c35f7a44d77ea76a62a555e40b0be56bccf90bcbf7eadb0",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/auth-instance.tap": "8dd946c772ef9595f80e6a044595789e170e328196274a9195090ddbab58d7f8",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/regressions.json": "f4041f84a2c92829c434a64d10372fe49d06fe4ea0fa786146b6cf081e3856fe",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/site-1792135050611475000.log": "f10432ee6b5083a657a0a4caf3f35f5247f93273b7cee5a170e2addb26f00b44",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/tracking-admin-1440.png": "dda69c08904635f52cece4f75a48db689bfe7a102b88fcae4b73c95604b4f9b6",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/tracking-user-390.png": "1400225abbc3c4e7bdbe172b94067b39cea88bb033db716e7f47cfd360123311",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/hunter-admin-390.png": "7cdb381d5a07110c22cd06210e081f497f8faa5becb1c8ac7f849d52d8aad553",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/hunter-admin-1440.png": "a69dcc753b181b589c0dc852f02a1c079b19e16b5ac0602fa0fbf5ef659d7254",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/tracking-user-1440.png": "f0192351bcdab03d32beb0f01d65c761ffe15b0a2415eb96a803f7633297b22e",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/tested-harness.py": "0e097dc78bc3e1f5fc8ef5dd6db4450338ce9b6a450798106326fac72f4a2827",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/hunter-user-1440.png": "60ac023faca097ff5ad7b48939a6eca6a9ce3c3054b0df2069a4a94bdd450e52",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/tracking-admin-390.png": "dc610d73f99d3f14885fd6f0358165ced5978d4d4b5dfc03bf0be00166f1e931",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/hunter-user-390.png": "402188a015526b87c8805ebfbed6ae53d3b22162b7fc39accd82a5b87621ebd0",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/B3/site-acceptance-1792135065051522000.json": "30543903a9c2e06a0807f65f30ed863d5e0ce7f0be5b5ca1869a73def2e24911",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/voice/site-acceptance-1792135079438070000.json": "485bbae5b2814b4e54904800341eed87c7b7a87229b9fbcb3c856e4f79ad7eb5",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/voice/tested-harness.py": "f871f1831e366d139ffc1ce9b8f00cd7025db85f55d09a6ccb799cbd66748eb0",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/voice/site-1792135067091143000.log": "c882d0debb722cc47ed6941880c8fdb81c4c339d9042a443dc9d6fb49bc294a7",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/voice/run-1792135065054393000/voice-admin-390.png": "b1e17de2a9ac5eeb513f6768296037510f93f0da023cb1ce9bf3d73c67f03287",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/voice/run-1792135065054393000/voice-admin-1440.png": "9b0a9b9eaf1b31b9be0918921b66ec61d3cb10f8fb901faa592d8e72bdc90be7",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/voice/run-1792135065054393000/voice-user-390.png": "78b882609ea8cad0ba109b232f86499ee055da9f711a0e62b7e1ebf66f596264",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/voice/run-1792135065054393000/voice-user-1440.png": "9a70a660d0451444fc2221987f320457526de3864af77621b0bee8209ff4421a",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134849629377000/acceptance.json": "07b1d0c176c25ea1469c8e7a6e15b0de297901c72d6570bc021deda3bd170823",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134849629377000/website.log": "ef3e425fe6b65b0e2525a39b5503eefdb531ac43385eab3ab89f9a66381e4abd",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/test-sources/test_tracking_ingest_operations.py": "d25d677c8f8f7685ec824e1feadddc237f8b4752d90d069e7ac74f0ff24d4ce0",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/test-sources/accept_tracking_ingest_site.py": "47ee07d73a9da6d96e805f720879a5180489202d87ff0a53604c7d79803da167",
+    "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/test-sources/run_tracking_ingest_regressions.py": "895f2edf3ade7a52c333b39ece52dd8d9125142288680a578c5288a04d05e76e"
+  },
+  "final_Next_receipt": "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/next-run-1792134961562713000/acceptance.json",
+  "final_ops_receipt": "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/operations-tests-1792135108267415000.json",
+  "regressions_receipt": "release-integration/.runtime/tracking-ingest/evidence-1792135382141172000/regressions-1792135048270690000/regressions.json",
+  "visual_samples_reviewed": [
+    "readonly homepage user390",
+    "homepage admin1440",
+    "voice admin390"
+  ],
+  "original_voice_evidence_unchanged": true,
+  "runtime_website_still": "19863b2af031fc2592bb6d73b7161efc77b0bd1d",
+  "deployment_process_started": false,
+  "public_probes_executed": false,
+  "live_fixture_event_posts": 0,
+  "real_provider_calls": 0,
+  "real_sound": false,
+  "worker_change": false,
+  "pending_writeback": "BLOCKED_FROZEN_OWNER_GAP",
+  "expired404": "unknown",
+  "main_unchanged": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+  "recorded_at": "2026-10-16T07:23:02.172048+00:00"
+}

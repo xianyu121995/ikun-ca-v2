@@ -1,5 +1,5 @@
 {
-  "state": "PENDING_ROOT_OPERATIONAL_REVIEW",
+  "state": "OPS_REVIEWED_0b0_WITH_POSTCHECK_DIAGNOSTICS_PENDING_FINAL_REVIEW",
   "Projects_source": "6067658d6092e4d046a8691e8f2f93b34c717801",
   "Projects_control": "2c55f927bcbcc0d2b47472d84156ffa38826876b",
   "website_from": "19863b2af031fc2592bb6d73b7161efc77b0bd1d",
@@ -7,7 +7,7 @@
   "files_sha256": {
     "scripts/start-c0-lite.mjs": "e5854403852463c58dde9dbf9ac99ce7fa35a76c7e8a0cef70e7eab4b1eab728",
     "release-integration/scripts/upgrade_c0_lite.py": "42fc279e27b7c4cdb933a0f9bb64ea29f37093bed6fd636601a86768bd11ef9d",
-    "release-integration/scripts/upgrade_tracking_ingest_site.py": "be1b5d6c2c67dba43abc916ce54532a6b0ab376fda5451c8f6790b08f9668258",
+    "release-integration/scripts/upgrade_tracking_ingest_site.py": "86be00621d3d9e7f14ab21e283c8f102faac181f468d29f35b553e9d71694901",
     "release-integration/scripts/bind_c0_lite.py": "1376a490b34ad9c4292ebd491e162ef0fc9a5907637a8e27d834cb334e816f18",
     "release-integration/scripts/verify_night_intake.py": "018f09d67a4b1a996904e9602645ab34d21f6e082dcab40da254ad021b88fc84",
     "release-integration/scripts/receive_tracking_ingest.py": "014f24fb6cbc05edc212e184d9554575f8de254bd0a2a8927f2dcefc71a2091a",
@@ -25,5 +25,17 @@
   "database_replacement": false,
   "worker_change": false,
   "source_guards": "77 plus B3/B4/C03 and voice checks retained; exact receiver and launcher patches only",
-  "test_state": "source verification passed; production build and isolation acceptance pending"
+  "test_state": "Next production build/typecheck,246 owner tests,108 actual Next/browser,76 B3,48 silent voice,3 separate Auth,14 isolated loader/activation checks passed; sets not cumulative",
+  "initial_operational_review_commit": "0b0f4549758b74ec5defc06493054f41d80d439d",
+  "post_review_wrapper_delta": "Failure path now records observed website SHA/PIDs/rollback receipt; never assumes outer invariant failure caused automatic rollback.",
+  "acceptance_scripts_sha256": {
+    "release-integration/scripts/test_tracking_ingest_operations.py": "d25d677c8f8f7685ec824e1feadddc237f8b4752d90d069e7ac74f0ff24d4ce0",
+    "release-integration/scripts/accept_tracking_ingest_site.py": "47ee07d73a9da6d96e805f720879a5180489202d87ff0a53604c7d79803da167",
+    "release-integration/scripts/run_tracking_ingest_regressions.py": "895f2edf3ade7a52c333b39ece52dd8d9125142288680a578c5288a04d05e76e"
+  },
+  "post_activation_helpers_sha256": {
+    "release-integration/scripts/prepare_tracking_ingest_public_viewer.py": "1c52aa807ff390e309a908acbe279b815ec6b1f89558d9fb4d3575ec5ef50f8d",
+    "release-integration/scripts/audit_tracking_ingest_runtime.py": "43371ef446b83c559423faaae011456bd15ce5a79fc848d7815341a5c00baf22",
+    "release-integration/scripts/probe_tracking_ingest_runtime.py": "ef5bdbf826136e815b35d6bf47342b64fa76e84713561d735bc7ee1da2efe1dc"
+  }
 }

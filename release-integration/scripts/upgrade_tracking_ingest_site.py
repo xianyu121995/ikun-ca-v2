@@ -32,7 +32,7 @@ def main():
  before_files=workers();before_pids={n:job_pid('ca.ikun.v2.c0lite.'+n) for n in ('web','hunter','tracking','tunnel')};assert all(before_pids.values())
  identities={n:((TARGET/'data'/n/(n+'.db')).stat().st_dev,(TARGET/'data'/n/(n+'.db')).stat().st_ino) for n in ('auth','projects','hunter','tracking')}
  out=ROOT/'release-integration/.runtime/tracking-ingest';out.mkdir(mode=0o700,parents=True,exist_ok=True)
- report={'state':'PREPARING','candidate_sha':args.candidate,'previous_website':PREVIOUS,'Hunter_release':HUNTER,'Tracking_release':TRACKING,'before_pids':before_pids,'worker_files_before':before_files,'real_provider_calls':0,'Cloudflare_changed':False,'old_services_changed':False,'pending_writeback':'BLOCKED_FROZEN_OWNER_GAP','public_verified':False}
+ report={'state':'PREPARING','candidate_sha':args.candidate,'previous_website':PREVIOUS,'Hunter_release':HUNTER,'Tracking_release':TRACKING,'runtime_plan':str(TARGET/'plans/tracking'/TRACKING/'worker.json'),'before_pids':before_pids,'worker_files_before':before_files,'real_provider_calls':0,'Cloudflare_changed':False,'old_services_changed':False,'pending_writeback':'BLOCKED_FROZEN_OWNER_GAP','public_verified':False}
  try:
   report['backup_before']=backups(TARGET/'backups'/('tracking-ingest-before-'+uuid.uuid4().hex))
   run(['/Users/lvlei/.local/bin/python3.11',ROOT/'release-integration/scripts/upgrade_c0_lite.py','--candidate',args.candidate,'--from-sha',PREVIOUS,'--enable-tracking-ingest'],timeout=300)
@@ -50,8 +50,14 @@ def main():
   receipt=private_json(ROOT/'release-integration/.runtime/c0-lite/deployment.json')
   report.update(state='PASS_WEBSITE_RECEIVER_LOCAL_ACTIVATION',after_pids=after_pids,worker_files_after=before_files,database_identities_preserved=True,build_id=binding['build_id'],backup_after=backups(TARGET/'backups'/('tracking-ingest-after-'+uuid.uuid4().hex)),rollback=receipt['rollback'],new_private_credential_field='PROJECTS_INGEST_TRACKING_TOKEN',secret_in_launchd_arguments=False)
   print(json.dumps({'state':report['state'],'candidate_sha':args.candidate,'build_id':binding['build_id'],'worker_pids_and_files_unchanged':True}))
- except Exception:
-  report['state']='FAILED_PRESERVED_FOR_REPAIR';raise
+ except Exception as error:
+  report.update(state='FAILED_ACTIVATION_OR_POSTCHECK_REQUIRES_INSPECTION',error_type=type(error).__name__,automatic_rollback_not_assumed=True)
+  try:
+   report['observed_website_candidate']=private_json(TARGET/'owner.json')['candidate_sha']
+   report['observed_pids']={n:job_pid('ca.ikun.v2.c0lite.'+n) for n in before_pids}
+   report['observed_rollback_receipt']=private_json(ROOT/'release-integration/.runtime/c0-lite/deployment.json').get('rollback')
+  except Exception:report['post_failure_runtime_observation']='UNAVAILABLE'
+  raise
  finally:
   path=out/'deployment.json';path.write_text(json.dumps(report,indent=2)+'\n');path.chmod(0o600)
 

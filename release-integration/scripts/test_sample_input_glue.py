@@ -56,5 +56,20 @@ class SampleGlue(unittest.TestCase):
   before,request,created=self.add_fixture();before[0]['newUnFlwBol']=False
   with self.assertRaisesRegex(SafeFailure,'EXPECTED_FLAGS_INCOMPLETE'):t.expected_new_watch('0x2a_ikun',before,created,request)
 
+ def readback_fixture(self):
+  before,request,created=self.add_fixture();before={'success':True,'total':len(before),'data':before};added={'success':True,'data':{'success':True,'username':'0x2a_ikun','groupId':42}};row={'id':'new','twAccount':'0x2a_ikun','twGroupId':42,**{k:v for k,v in request['body'].items()if k.endswith('Bol')}};after={'success':True,'total':2,'data':before['data']+[row]};return before,added,request,after
+ def test_version2_keeps_raw_add_distinct_and_binds_real_reconcile(self):
+  before,added,request,after=self.readback_fixture();evidence,row=t.readback_evidence(before,added,request,after);self.assertEqual(evidence['contract'],'tracking-watch-add-readback-evidence-v2');self.assertNotIn('id',added['data']);self.assertEqual(row['id'],'new');self.assertIs(evidence['add'],added);self.assertIs(evidence['reconcile'],after)
+ def test_version2_rejects_duplicate_group_and_incomplete_reconcile(self):
+  for fault in ('duplicate','group','total','flags','missing_id'):
+   with self.subTest(fault=fault):
+    before,added,request,after=self.readback_fixture()
+    if fault=='duplicate':after['data'].append(after['data'][-1]);after['total']=3
+    elif fault=='group':added['data']['groupId']=99
+    elif fault=='total':after['total']=7
+    elif fault=='flags':after['data'][-1]['newFlwBol']=True
+    elif fault=='missing_id':del after['data'][-1]['id']
+    with self.assertRaises((SafeFailure,KeyError)):t.readback_evidence(before,added,request,after)
+
 
 if __name__=='__main__':unittest.main()

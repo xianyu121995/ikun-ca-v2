@@ -97,6 +97,7 @@ def main():
     hunter.update(OPENNEWS_TOKEN=token,TWITTERAPI_IO_API_KEY=values['TWITTERAPI_IO_API_KEY'],HUNTER_EXTERNAL_IO_ENABLED='1',HUNTER_REQUIRE_EXTERNAL_IO_DISABLED='0',HUNTER_PROJECT_DELIVERY_ENABLED='1',HUNTER_PROJECT_TASK_URL='http://127.0.0.1:4000/internal/v1/ingest/hunter',HUNTER_TWITTERAPI_DAILY_CREDITS='100000')
     tracking={'DATA_ROOT':web['DATA_ROOT'],'TRACKING_API_TOKEN':web['TRACKING_API_TOKEN'],'IKUN_TRACKING_6551_TOKEN':token,'IKUN_TRACKING_CONFIG':str(V2/'config/tracking.live.json')}
     cfg={'db_path':str(V2/'data/tracking/tracking.db'),'remote_enabled':True,'shared_account_safe':True,'dedicated_account':False,'watch_group':'ikun-ca-v2-project-tracking','host':'127.0.0.1','port':4012,'heartbeat_seconds':3,'reconcile_seconds':10,'remote_fresh_seconds':660,'backfill_seconds':300,'adopted_watch_ids':{'0x2a_ikun':'1322757'}}
+    if (V2/'config/tracking.live.json').exists():cfg['adopted_watch_ids'].update(json.loads((V2/'config/tracking.live.json').read_text()).get('adopted_watch_ids') or {})
     atomic(V2/'config/hunter.live.environment.json',hunter);atomic(V2/'config/tracking.live.environment.json',tracking);atomic(V2/'config/tracking.live.json',cfg)
     new_tracking='ca.ikun.v2.c0lite.tracking-live'
     changed=False

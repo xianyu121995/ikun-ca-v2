@@ -1,0 +1,109 @@
+{
+  "state": "PREPARED_HUNTER_F9_READER_AND_CURRENT_GUARDS_NOT_EXECUTED",
+  "source_commit": "f9e3c6cbf7c44676c37ef973389e6176777640ce",
+  "control_commit": "8ab1faa64662e098247d31b90bfb51721d15ee0a",
+  "preparation_receipt": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-f9-preparation-v1/PREPARATION-ONLY.json",
+    "sha256": "1d33301b42c993d6091914d08e7a436daae7a97ff8a407f8c0c96b6fa1226b37"
+  },
+  "source_intake": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-directory-rehearsal/intake-1792150068812437000/INTAKE-ONLY.json",
+    "sha256": "8746c5d82dcf70efb4242aab3502c88722ea42e3947a2ab105e3d74dcb1f2b95",
+    "bytes": 28494
+  },
+  "clone_rehearsal": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-directory-rehearsal/clone-1792150656666089000/REHEARSAL_ONLY.json",
+    "sha256": "e9af5e71f832003cfe51c9d730a701a773a13686b168dd22a8a327db9c3ee18a",
+    "bytes": 10866
+  },
+  "formal_directory_package": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/hunter-worker/var/directory-v2-final-8f5a453a/directory-package-v2-for-root-review.json",
+    "sha256": "90b8b3b0970cafa80c076fbf679370144d7b5b9b660668422252d8c4b239800f",
+    "bytes": 2086072
+  },
+  "runtime_git_files": 183,
+  "future_plan": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-f9-preparation-v1/future-worker-plan.json",
+    "sha256": "0b586f4ff1a602522ce3570998dfbe264318a0c16ffeef150b43958e9039db6e",
+    "bytes": 27027
+  },
+  "future_acceptance": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-f9-preparation-v1/future-acceptance.json",
+    "sha256": "09225536ce6fd214e33ebf75b31b411510804d2d466528f873af2a40a2a9aefc",
+    "bytes": 26483
+  },
+  "current_protection": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-f9-preparation-v1/current-protection-projection.json",
+    "sha256": "d2c92f9450762d2612b45c97e036a129768a1deb0c216d0db81c955a9d0f0862",
+    "bytes": 5501
+  },
+  "during_hunter_protection": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-f9-preparation-v1/during-hunter-maintenance-protection.json",
+    "sha256": "9b21cd358398776345e58f6de366978136ecc7619d9f54e63ac3c53ef0a4e4f0",
+    "bytes": 5037
+  },
+  "legacy_plan_preserved": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/night/takeover-operator-plan.json",
+    "sha256": "70356d761a008e2c891a146ad79cf5ba43e883008da502fa267a4d69a127514e"
+  },
+  "web_tree_pids_checked": [
+    54011,
+    54012,
+    54014,
+    54018,
+    54019
+  ],
+  "current_socket_checked": {
+    "path": "/private/tmp/ikp-aUeczB/p.sock",
+    "holder_pids": [
+      54014
+    ],
+    "mode": "0600"
+  },
+  "readiness": {
+    "web": {
+      "status": 200
+    },
+    "hunter": {
+      "status": 200,
+      "external_io_enabled": false
+    },
+    "tracking": {
+      "status": 200,
+      "external_collection_enabled": false
+    }
+  },
+  "reader_schema_version": 5,
+  "fixture_wrapper_checks": {
+    "checks_passed": [
+      "original_validate_schema5_python_entry",
+      "original_render_no_job_install",
+      "external_enabled_rejected",
+      "schema4_receipt_cannot_start_schema5",
+      "wrong_reader_source_rejected"
+    ],
+    "count": 5,
+    "original_wrapper_sha256": "4ac7144929559e2169684e803319cd181fab4dc00cfb5da0885635a031fd9fd0",
+    "rendered": {
+      "label": "ca.ikun.v2.c0lite.hunter",
+      "installed": false,
+      "started": false,
+      "status": "RENDERED_PREFLIGHT_REQUIRED",
+      "plan": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-f9-preparation-v1/launch-wrapper-fixture/plans/hunter/f9e3c6cbf7c44676c37ef973389e6176777640ce/worker.json"
+    },
+    "fixture_only": true,
+    "job_installed": false,
+    "process_started": false,
+    "network_connections": 0
+  },
+  "tool_source_sha256": "841770b6e70b44d22a763161467c018d3ca8f8e543cedb76a3f2d1942c2d87ad",
+  "runtime_database_connections": 0,
+  "runtime_database_writes": 0,
+  "runtime_files_created": 0,
+  "service_mutations": 0,
+  "new_provider_calls": 0,
+  "Watch_writes": 0,
+  "next_builds": 0,
+  "execution_entry_in_this_tool": false,
+  "remaining_gate": "root must review concrete native maintenance executor/argv before stop, sole005 migration, directory apply and reader cutover"
+}

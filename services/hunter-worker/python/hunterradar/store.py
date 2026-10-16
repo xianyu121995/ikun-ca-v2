@@ -155,7 +155,7 @@ class Store:
             if row:
                 if row['deleted_at'] is None:
                     return dict(row)
-                db.execute("UPDATE hunters SET deleted_at=NULL,enabled=?,note=?,label=?,version=version+1,generation=generation+1,profile_status='pending',next_profile_at=0,baseline_ready=0,baseline_at=NULL,active_since=? WHERE id=?", (int(enabled),note,label,now,row['id']))
+                db.execute("UPDATE hunters SET deleted_at=NULL,enabled=?,note=?,label=?,version=version+1,generation=generation+1,baseline_ready=0,baseline_at=NULL,active_since=? WHERE id=?", (int(enabled),note,label,now,row['id']))
                 identifier = row['id']
             else:
                 identifier = str(uuid.uuid4())
@@ -177,10 +177,10 @@ class Store:
             if label is not None:data['label']=label
             if enabled is not None and bool(enabled) != bool(data['enabled']):
                 data.update(enabled=int(enabled), generation=data['generation'] + 1, baseline_ready=0,
-                            next_poll_at=0, next_profile_at=0, profile_status='pending',active_since=now,baseline_at=None)
+                            next_poll_at=0, active_since=now,baseline_at=None)
             if delete:
                 data.update(enabled=0, deleted_at=now, generation=data['generation'] + 1, baseline_ready=0,baseline_at=None)
-            if recheck:
+            if recheck and data['profile_status'] != 'ready':
                 data['next_profile_at'] = 0
             fields = ('note','label', 'enabled', 'generation', 'baseline_ready','baseline_at', 'next_poll_at', 'next_profile_at', 'profile_status', 'deleted_at','active_since')
             db.execute('UPDATE hunters SET ' + ','.join(k+'=?' for k in fields) + ',version=version+1 WHERE id=?',
@@ -197,6 +197,9 @@ class Store:
             other = db.execute('SELECT id FROM hunters WHERE user_id=? AND id<>?', (user_id, row['id'])).fetchone()
             if other or (current['user_id'] and current['user_id'] != user_id):
                 raise Conflict('hunter_stable_identity_conflict')
+            # The initial successful lookup fixes routing for this hunter.
+            if current['profile_status'] == 'ready':
+                return False
             changed = current['mode'] != mode
             db.execute("""UPDATE hunters SET user_id=?,name=?,followers=?,mode=?,profile_status='ready',
                 next_profile_at=?,profile_failures=0,profile_error=NULL,version=version+1,
@@ -204,7 +207,7 @@ class Store:
                 baseline_at=CASE WHEN ? THEN ? ELSE baseline_at END,
                 active_since=CASE WHEN ? THEN ? ELSE active_since END,
                 next_poll_at=CASE WHEN ? THEN 0 ELSE next_poll_at END WHERE id=?""",
-                       (user_id, name, followers, mode, now+6*3600, int(changed), changed,changed,now,changed,now,changed, row['id']))
+                       (user_id, name, followers, mode, 9999999999, int(changed), changed,changed,now,changed,now,changed, row['id']))
         return True
 
     @staticmethod

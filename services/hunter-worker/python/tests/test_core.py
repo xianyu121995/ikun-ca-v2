@@ -135,10 +135,14 @@ def test_disable_inflight_poll_and_reenable_baseline(store):
     assert store.status()['events']==0
 
 
-def test_channel_switch_fences_old_result(store):
+def test_initial_channel_remains_fixed_after_profile_change(store):
     row=ready(store,followers=4999)
-    store.apply_profile(row,row['user_id'],'hunter1',5000,NOW+10)
-    assert store.apply_poll(row,[Target('new','2')],NOW+20)['discarded']
+    assert not store.apply_profile(row,row['user_id'],'hunter1',5000,NOW+10)
+    assert store.hunter(row['id'])['mode']=='REST'
+    disabled=store.patch(row['id'],row['version'],enabled=False)
+    enabled=store.patch(row['id'],disabled['version'],enabled=True,recheck=True)
+    assert enabled['profile_status']=='ready' and enabled['mode']=='REST'
+    assert enabled['next_profile_at']==9999999999
 
 
 def test_duplicate_stable_id_cannot_fake_two_hunters(store):

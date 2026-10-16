@@ -119,7 +119,7 @@ class Engine:
     async def profile_loop(self):
         while not self.stop.is_set():
             for row in self.store.hunters():
-                if row['enabled'] and row['next_profile_at'] <= time.time():
+                if row['enabled'] and row['profile_status'] != 'ready' and row['next_profile_at'] <= time.time():
                     await self.scan_profile(row)
                 if self.stop.is_set():
                     break

@@ -52,8 +52,8 @@ def activate_hunters(release):
     assert len(expected)==88 and all(name in actual for name in expected)
     for name,item in expected.items():
         row=store.hunter(actual[name]['id'])
+        if row['profile_status']!='ready':row=store.adopt_legacy_profile(row['id'],row['version'],item)
         if not row['enabled']:row=store.patch(row['id'],row['version'],enabled=True,actor='owner-approved-activation')
-        if row['profile_status']!='ready':store.apply_profile(row,str(item['user_id']),item['display_name'] or name,item['followers'],time.time())
         row=store.hunter(row['id']);assert row['mode']==item['monitor_mode']
         if name in ('0xbadkoi','captainqygi'):
             store.set_state('approved_flag:'+row['id'],{'id':{'0xbadkoi':'1318746','captainqygi':'1318675'}[name]})

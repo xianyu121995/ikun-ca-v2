@@ -204,6 +204,25 @@ class Store:
             self.audit(db, actor, 'hunter.delete' if delete else 'hunter.update', identifier, now)
         return {'deleted': True, 'id': identifier} if delete else self.hunter(identifier)
 
+    def adopt_legacy_profile(self, identifier, version, profile, actor='owner-approved-activation'):
+        """Use the owner's approved historical profile without claiming a fresh provider lookup."""
+        with self.connect(True) as db:
+            row=db.execute('SELECT * FROM hunters WHERE id=? AND deleted_at IS NULL',(identifier,)).fetchone()
+            if not row or row['version']!=version:raise Conflict('stale_hunter_version')
+            if handle(profile['username'])!=row['username'] or not str(profile['user_id']).isdigit() or type(profile['followers']) is not int or profile['followers']<0 or profile['monitor_mode'] not in ('WSS','REST'):
+                raise ValueError('invalid_approved_legacy_profile')
+            key=LEGACY_DIRECTORY_PREFIX+'account:'+identifier
+            marker=db.execute('SELECT value FROM state WHERE key=?',(key,)).fetchone()
+            if not marker:raise Conflict('not_a_migrated_directory_account')
+            other=db.execute('SELECT id FROM hunters WHERE user_id=? AND id<>?',(str(profile['user_id']),identifier)).fetchone()
+            if other or (row['user_id'] and row['user_id']!=str(profile['user_id'])):raise Conflict('hunter_stable_identity_conflict')
+            if row['profile_status']=='ready':return dict(row)
+            marker=json.loads(marker[0]);marker.update(status='owner_accepted_legacy',profile_source='approved_migration_snapshot')
+            db.execute('UPDATE state SET value=? WHERE key=?',(json.dumps(marker),key))
+            db.execute("UPDATE hunters SET user_id=?,name=?,followers=?,mode=?,profile_status='ready',next_profile_at=9999999999,profile_error=NULL,profile_failures=0,version=version+1 WHERE id=?",(str(profile['user_id']),profile.get('display_name') or row['username'],profile['followers'],profile['monitor_mode'],identifier))
+            self.audit(db,actor,'hunter.adopt_legacy_profile',identifier,time.time())
+        return self.hunter(identifier)
+
     def apply_profile(self, row, user_id, name, followers, now):
         mode = 'WSS' if followers >= 5000 else 'REST'
         with self.connect(True) as db:
@@ -542,7 +561,7 @@ class Store:
         row = db.execute('SELECT value FROM state WHERE key=?', (LEGACY_DIRECTORY_PREFIX+'account:'+identifier,)).fetchone()
         if not row:
             return False
-        return json.loads(row[0]).get('status') != 'verified_current'
+        return json.loads(row[0]).get('status') not in ('verified_current','owner_accepted_legacy')
 
     def coverage(self, usernames, now):
         with self.connect(True) as db:

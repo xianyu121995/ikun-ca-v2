@@ -43,6 +43,8 @@ class Worker:
             self._leased = False
 
     def owned(self, row, watch):
+        if str(watch.get("id")) == (self.cfg.adopted_watch_ids or {}).get(row["handle"]):
+            return True
         return row["claim"] in ("reserved", "owned") and (
             watch.get("remark") == "ikun-ca-v2:tracking" or watch.get("groupName") == self.cfg.watch_group
             or str(watch.get("id")) == (self.cfg.adopted_watch_ids or {}).get(row["handle"])

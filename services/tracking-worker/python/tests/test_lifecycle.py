@@ -382,3 +382,15 @@ async def test_rate_limit_backoff(cfg):
         assert err.value.code == "rate_limited" and err.value.retry_after == 91
     finally:
         await remote.close()
+
+
+@pytest.mark.asyncio
+async def test_explicit_owned_legacy_watch_adopts_without_remote_write(worker,store,vendor):
+    from dataclasses import replace
+    add(store)
+    vendor.rows['project1']={**vendor.watch('project1',group='legacy-ikun'),'id':777,'remark':'ikun.website:fixture:1'}
+    worker.cfg=replace(worker.cfg,adopted_watch_ids={'project1':'777'})
+    await worker.reconcile()
+    row=store.get('prj_550e8400-e29b-41d4-a716-446655440001')
+    assert row['claim']=='owned' and row['remote_state']=='active'
+    assert not any(endpoint in ('twitter_watch_add','twitter_watch_delete') for endpoint,body in vendor.calls)

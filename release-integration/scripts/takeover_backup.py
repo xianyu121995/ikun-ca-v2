@@ -216,12 +216,40 @@ def assert_drill_connection(params,data_directory):
   actual=conn.execute('show data_directory').fetchone()[0]
  require(Path(actual).resolve()==Path(data_directory).resolve(),'DRILL_DATA_DIRECTORY_MISMATCH')
 
-def postgres_restore(dump,directory,pgbin,*,protected_pids=()):
+def policy_role_binding(dump,allowed_roles,expected_count=None):
+ check_artifact(dump['archive']);check_artifact(dump['decoded_sql'])
+ lines=[line for line in Path(dump['decoded_sql']['path']).read_text().splitlines() if line.startswith('CREATE POLICY ')]
+ roles=set()
+ for line in lines:
+  parts=line.split(' ON ',1);require(len(parts)==2,'UNRECOGNIZED_POLICY_HEADER');header=re.split(r' USING | WITH CHECK |;',parts[1],maxsplit=1)[0]
+  ident=r'(?:[a-zA-Z_][a-zA-Z_0-9$]*|"(?:[^"]|"")*")'
+  match=re.fullmatch(ident+r'(?:\.'+ident+r')?(?: AS (?:PERMISSIVE|RESTRICTIVE))?(?: FOR (?:ALL|SELECT|INSERT|UPDATE|DELETE))?(?: TO (.+))?',header);require(match is not None,'UNRECOGNIZED_POLICY_HEADER')
+  for token in (match[1] or 'public').split(','):
+   token=token.strip();require(re.fullmatch(r'[a-z_][a-z_0-9]*',token) is not None,'UNRECOGNIZED_POLICY_ROLE')
+   if token!='public':roles.add(token)
+ require(roles<=set(allowed_roles),'UNKNOWN_POLICY_ROLE_DEPENDENCY')
+ require(expected_count is None or len(lines)==expected_count,'POLICY_COUNT_CHANGED')
+ return {'archive_sha256':dump['archive']['sha256'],'decoded_sql_sha256':dump['decoded_sql']['sha256'],'policy_count':len(lines),'roles':sorted(roles),'role_permission_semantics_reproduced':False}
+
+def create_drill_policy_roles(params,data,roles):
+ import psycopg
+ from psycopg import sql
+ assert_drill_connection(params,data)
+ with psycopg.connect(**params,autocommit=True) as conn:
+  require(Path(conn.execute('show data_directory').fetchone()[0]).resolve()==Path(data).resolve(),'DRILL_DATA_DIRECTORY_MISMATCH')
+  for role in roles:
+   require(conn.execute('select 1 from pg_roles where rolname=%s',(role,)).fetchone() is None,'DRILL_ROLE_ALREADY_EXISTS')
+   conn.execute(sql.SQL('CREATE ROLE {} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS').format(sql.Identifier(role)))
+   flags=conn.execute('select rolcanlogin,rolsuper,rolcreatedb,rolcreaterole,rolinherit,rolreplication,rolbypassrls from pg_roles where rolname=%s',(role,)).fetchone()
+   require(flags is not None and not any(flags),'DRILL_ROLE_FLAGS_NOT_MINIMAL')
+
+def postgres_restore(dump,directory,pgbin,*,protected_pids=(),policy_role_allowlist=(),expected_policy_count=None):
  import psycopg
  directory=private_dir(directory);receipt=directory/'restore-receipt.json'
  if receipt.exists():r=read_json(receipt);require(r['counts_match'],'RESTORE_RECEIPT_FAILED');return r
  data=directory/'pgdata';state=directory/'server-state.json';log=directory/'restore.error.log';pglog=directory/'postgres.log'
  require(not data.exists() and not state.exists(),'PARTIAL_RESTORE_REQUIRES_RECONCILIATION')
+ binding=policy_role_binding(dump,policy_role_allowlist,expected_policy_count);atomic(directory/'policy-role-binding.json',binding)
  socket=Path(tempfile.mkdtemp(prefix='iktpg-',dir='/private/tmp'));socket.chmod(0o700)
  command([pgbin/'initdb','-D',data,'-A','trust','--encoding=UTF8','--no-locale'],log,timeout=120)
  options=shlex.join(['-k',str(socket),'-p','65432','-c','listen_addresses=','-c','shared_buffers=32MB','-c','max_connections=8'])
@@ -232,12 +260,13 @@ def postgres_restore(dump,directory,pgbin,*,protected_pids=()):
   pid=int((data/'postmaster.pid').read_text().splitlines()[0]);require(pid not in protected_pids,'DRILL_PID_IS_PROTECTED')
   atomic(state,{'pid':pid,'data_directory':str(data),'socket':str(socket),'started_at':utc(),'stopped':False})
   assert_drill_connection(params,data)
+  create_drill_policy_roles(params,data,binding['roles'])
   # --clean applies ONLY after the independent socket/data_directory guard above.
   command([pgbin/'pg_restore','--dbname=postgres','--clean','--if-exists','--no-owner','--no-privileges','--exit-on-error','--single-transaction','--no-password',dump['archive']['path']],log,env=pg_env(params,readonly=False),timeout=600)
   with psycopg.connect(**params,options='-c default_transaction_read_only=on') as conn:counts=catalog_counts(conn)
   expected=read_json(dump['counts_file']['path']);require(counts==expected,'RESTORED_TABLE_COUNTS_MISMATCH')
   atomic(directory/'restored-table-counts.json',counts)
-  row={'completed_at':utc(),'counts_match':True,'table_count':len(counts),'data_directory':str(data),'socket':str(socket),'source_archive_sha256':dump['archive']['sha256'],'owners_and_acls_skipped_for_drill_only':True,'old_database_writes':0,'restored_counts':artifact(directory/'restored-table-counts.json')}
+  row={'completed_at':utc(),'counts_match':True,'table_count':len(counts),'data_directory':str(data),'socket':str(socket),'source_archive_sha256':dump['archive']['sha256'],'owners_and_acls_skipped_for_drill_only':True,'old_database_writes':0,'restored_counts':artifact(directory/'restored-table-counts.json'),'policy_role_binding':artifact(directory/'policy-role-binding.json'),'placeholder_role_count':len(binding['roles']),'role_permission_semantics_reproduced':False}
  finally:
   lines=(data/'postmaster.pid').read_text().splitlines() if (data/'postmaster.pid').exists() else []
   if lines:

@@ -38,6 +38,8 @@ JOB_SPECS={
 MANUAL={'pid':6466,'parent_pid':6465,'started_at_local':'2026-10-10 18:33:40','cwd':str(HUNTER),'signal':'SIGTERM'}
 PROTECTED={'Alpha':9034,'old_supervisor':79489,'old_Postgres':79494,'old_Tunnel':79502,'v2_web':87924,'v2_Hunter':2608,'v2_Tracking':25225,'v2_Tunnel':39523}
 PG_BACKUP_SOURCE={'path':str(LIVE/'.runtime/ikun-first-release/original-site/.env'),'sha256':'247dae0379223121c305cc2ba4ad93986df2c4e54df5abd752a0cf3be07e9f70','user':'web3'}
+POLICY_ROLES=['ikun_accounts_guard','ikun_q87_ai_runtime','ikun_q87_hunter_runtime','ikun_q87_import_runtime','ikun_q87_module_guard','ikun_q87_source_guard','ikun_q87_tracking_runtime','ikun_research_runtime']
+FAILED_DRILL={'directory':'before_pg_restore-bdcd64df25b54e5a8afe48c373687e73','server_state_sha256':'30b740c4b96a2dbad22172d94ab8ef7ca07c1861d736a26fcbb4286e5a895e67','archive_sha256':'7280b1d5c3ea1cd6c75745ca8092b3d4e6e18ce540e499ffa2288044aea3470f','decoded_sql_sha256':'8ca7aac0d69785c294e101c20b90553d1fc367e13466a7693db95516d848b769'}
 SQLITES={'old_hunter':HUNTER/'data/hunter_monitor.db','old_tracking_events':TRACK/'target-events.sqlite','old_tracking_dispatch':TRACK/'dispatch.sqlite',**{'v2_'+n:V2/'data'/n/(n+'.db') for n in ('auth','projects','hunter','tracking')}}
 
 def local_to_utc(value):return datetime.strptime(value,'%Y-%m-%d %H:%M:%S').replace(tzinfo=ZoneInfo('Asia/Shanghai')).astimezone(timezone.utc).isoformat()
@@ -192,6 +194,7 @@ def capture_plan():
  bins={name:{'path':str(pgbin/name),'sha256':sha(pgbin/name)} for name in ('pg_dump','pg_restore','pg_ctl','initdb','postgres')}
  result={'state':'PENDING_TOOL_REVIEW_NO_OLD_ACTIONS','execution_id':EXECUTION,'authority':'0e875cc910e0b83289d6257ebf68e5af82d7374a','direct_initial_user_message':'01a143aa-3791-7732-9065-410adf6e08f2','captured_at':utc(),'uid':os.getuid(),'jobs':jobs,'manual_hunter':manual,'manual_authorization':MANUAL,'protected_processes':protected,'parent_login':system.process(6465),'protected_files_sha256':files,'v2_database_identities':old['databases'],'tracking_config_sha256':sha(config),'tracking_private_file_references':references,'pgbin':str(pgbin),'pg_binary_sha256':bins,'initial_alpha_health':alpha_health(),'sqlite_sources':{name:{'path':str(path),'device':path.stat().st_dev,'inode':path.stat().st_ino} for name,path in SQLITES.items()},'code_files_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [Path(__file__),ROOT/'release-integration/scripts/takeover_backup.py']}}
  result['pg_backup_role_source']=dict(PG_BACKUP_SOURCE)
+ result['drill_policy_roles']=list(POLICY_ROLES);result['failed_drill_reconciliation']=dict(FAILED_DRILL)
  atomic(PLAN,result);print(json.dumps({'state':result['state'],'plan':str(PLAN),'job_pids':{k:v['process']['pid'] for k,v in jobs.items()},'manual_sigterm_pid':6466,'protected_processes':len(protected),'old_actions':0}))
 
 def source_files_backup(directory,plan):
@@ -231,7 +234,19 @@ def run_step(journal,name,fn):
   require(existing.get('state')=='intent','UNRECOGNIZED_STEP_STATE');directory=private_dir(existing['directory'])
  else:
   directory=private_dir(OUTPUT/(name+'-'+uuid.uuid4().hex));journal.mark(name,{'state':'intent','directory':str(directory),'started_at':utc()})
- result=fn(directory);validate_artifacts(result);receipt=directory/'operator-receipt.json';atomic(receipt,result);journal.mark(name,{'state':'done','receipt':artifact(receipt),'directory':str(directory),'completed_at':utc()});return result
+ result=fn(directory);validate_artifacts(result);receipt=directory/'operator-receipt.json';atomic(receipt,result);journal.mark(name,{**journal.steps()[name],'state':'done','receipt':artifact(receipt),'directory':str(directory),'completed_at':utc()});return result
+
+def reconcile_failed_drill(journal,plan,dump,prefix):
+ name=prefix+'_pg_restore';existing=journal.steps().get(name)
+ if not existing or existing.get('state')!='intent':return
+ old=Path(existing['directory'])
+ if not (old/'pgdata').exists():return
+ require(prefix=='before' and plan.get('failed_drill_reconciliation')==FAILED_DRILL and old==OUTPUT/FAILED_DRILL['directory'],'UNAPPROVED_FAILED_DRILL_RECONCILIATION')
+ state=read_json(old/'server-state.json');require(state.get('stopped') is True and not (old/'pgdata/postmaster.pid').exists(),'FAILED_DRILL_NOT_CONFIRMED_STOPPED')
+ require(Path(state['data_directory'])==old/'pgdata' and sha(old/'server-state.json')==FAILED_DRILL['server_state_sha256'],'FAILED_DRILL_STATE_DRIFT')
+ require(dump['archive']['sha256']==FAILED_DRILL['archive_sha256'] and dump['decoded_sql']['sha256']==FAILED_DRILL['decoded_sql_sha256'],'FAILED_DRILL_SOURCE_DRIFT');validate_artifacts(dump)
+ prior={'directory':str(old),'server_state':artifact(old/'server-state.json'),'error_log':artifact(old/'restore.error.log'),'archive_sha256':dump['archive']['sha256'],'reconciled_at':utc(),'preserved_unchanged':True}
+ new=private_dir(OUTPUT/(name+'-reconciled-'+uuid.uuid4().hex));journal.mark(name,{'state':'intent','directory':str(new),'started_at':utc(),'prior_failed_attempt':prior})
 
 def backup_phase(journal,system,plan,prefix):
  result={'scope':prefix,'sqlites':{},'started_at':utc()}
@@ -245,7 +260,13 @@ def backup_phase(journal,system,plan,prefix):
   require(plan['pg_backup_role_source']==PG_BACKUP_SOURCE,'PG_BACKUP_ROLE_SOURCE_DRIFT')
   params=source_pg_params(TRACK/'config.json');params,role=select_source_role(params,directory/'role.error.log',backup_role_source=plan['pg_backup_role_source']);row=postgres_dump(params,directory,pgbin);row['read_role_strategy']=role;return row
  result['postgres']=run_step(journal,prefix+'_pg_dump',dump)
- result['restore']=run_step(journal,prefix+'_pg_restore',lambda directory:postgres_restore(result['postgres'],directory,pgbin,protected_pids=[p['pid'] for p in plan['protected_processes'].values()]+[6465,6466,46545,38618]))
+ require(plan.get('drill_policy_roles')==POLICY_ROLES,'DRILL_ROLE_ALLOWLIST_DRIFT');reconcile_failed_drill(journal,plan,result['postgres'],prefix)
+ def restore(directory):
+  r=postgres_restore(result['postgres'],directory,pgbin,protected_pids=[p['pid'] for p in plan['protected_processes'].values()]+[6465,6466,46545,38618],policy_role_allowlist=POLICY_ROLES,expected_policy_count=260)
+  prior=journal.steps()[prefix+'_pg_restore'].get('prior_failed_attempt')
+  if prior:r['prior_failed_attempt']=prior
+  return r
+ result['restore']=run_step(journal,prefix+'_pg_restore',restore)
  result['guard_after']=guard(system,plan);validate_artifacts(result);result['completed_at']=utc();return result
 
 def execute(candidate):

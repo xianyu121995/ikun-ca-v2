@@ -1,6 +1,6 @@
 # 精确旧侧操作工具待审
 
-状态：`PENDING_ROOT_REVIEW_PG_CREDENTIAL_FIX`。前一候选 f517f4b 经总管控制 885b08f 放行后已运行一次，完成七库及文件归档，但在 PG 完整读取角色检查处失败关闭；两 job/6466 均未停止，没有迁移或平台调用。直接人类授权为总管 turn `01a143aa-3744-7933-98b1-925db1af2681` 的两条用户消息 `01a143aa-3791-7732-9065-410adf6e08f2`、`01a143c4-70e8-7011-8651-1e20179584f7`；原唯一执行者及 journal 不变。
+状态：`PENDING_ROOT_REVIEW_DRILL_POLICY_DEPENDENCIES`。f517f4b 经控制 885b08f 放行后完成七库及文件归档，PG 读取角色不足而停下；4eb37cf 经控制 74b6327 放行后成功完整 dump，但新演练集群因 POLICY 引用角色缺失而停止恢复。两 job/6466 均未停止，没有迁移或平台调用。直接人类授权为总管 turn `01a143aa-3744-7933-98b1-925db1af2681` 的两条用户消息 `01a143aa-3791-7732-9065-410adf6e08f2`、`01a143c4-70e8-7011-8651-1e20179584f7`；原唯一执行者及 journal 不变。
 
 仅处理 `ca.ikun.overload-tracking`、`com.lvlei.ikun-auto-research` 和复核后 PID 6466 的一次 SIGTERM。顺序为七库备份、私密配置及现存源码归档、只读 PostgreSQL 一致 dump 与独立恢复演练，再精确停获批目标，最后重复快照及演练。每次停止前递归校验原备份资产，不以 receipt 本身替代资产；保护 Alpha、旧 PostgreSQL/监督进程/Tunnel 和 v2 全部进程、配置及四库身份。父 login 6465 不发送信号，但可能自然退出。
 
@@ -25,3 +25,11 @@ f517f4b 的模块角色无全表 SELECT，lvlei 无自身口令，故 `PG_FULL_B
 总管指定既有 `LIVE/.runtime/ikun-first-release/original-site/.env`，SHA256 `247dae0379223121c305cc2ba4ad93986df2c4e54df5abd752a0cf3be07e9f70`。只提取唯一 DATABASE_URL，不 source/eval、不加载其他键；校验 uid/0600/单链接/无路径别名及 hash，必须同 module/import 库和 endpoint，精确 web3 角色且口令存在。一次真实只读探测通过：100 表 SELECT 及序列权限完整、active RLS=false；probe 回执 SHA256 `8d2ac3eccb413de6906366bf126adbfd438a45672890854a7c9ba8d52e0030b9`。不创建角色、不 GRANT、不改旧配置。
 
 新选择器只尝试原配置角色和该固定既有角色，均默认及显式 READ ONLY；不再尝试无口令 lvlei。新增来源进入 plan/protected 文件 hash 绑定。恢复执行将先递归复验并复用原 7 库/25 资产，仅继续未完成 PG intent，不覆盖历史失败。修订后完整隔离测试 **35/35**（含原 30，不累计），只测试夹具、无旧库连接；新 5 项覆盖来源 URL 编码、同库约束、hash/alias/权限、重复键、两角色只读及不足权限拒绝。回执 `release-integration/.runtime/takeover-operator-tests/run-1792141730666211000/receipt.json`，SHA256 `50286eac4ab991a514a69e95a6b33137ed9cee5f4a351b42787a5653e7544403`。待新精确提交复审后才恢复原入口。
+
+## 新演练集群 POLICY 依赖修订
+
+既有完整 dump（1,897,368 bytes）SHA256 `7280b1d5c3ea1cd6c75745ca8092b3d4e6e18ce540e499ffa2288044aea3470f`，decoded SQL SHA256 `8ca7aac0d69785c294e101c20b90553d1fc367e13466a7693db95516d848b769`；4 原资产已复核，100 表一致计数保留。只读离线核对 260 条 POLICY、8 个已批准非 PUBLIC 角色；固定白名单在 plan 和工具中逐项比对，未知角色/语法或计数变化失败关闭。初次离线读法遗漏 pg_dump 默认 PUBLIC 省略 TO 的形式，尚未执行恢复；补正并加入独立场景后实际 dump 离线检查通过，未重 dump。
+
+仅在独立 socket/data/PID 守卫通过的新集群创建 NOLOGIN/NOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOINHERIT/NOREPLICATION/NOBYPASSRLS 占位角色，不复制口令、成员或原权限。明确只验数据恢复，**不声称权限语义复现**；原 archive 的 owner/ACL 保留。唯一允许 reconcile 的既有失败目录、已停止状态 hash 和 archive/decoded hash 均精确固化；要求 stopped=true、无 postmaster.pid，原目录和日志全部保留，journal 记录原现场并另建新 attempt，不删除或覆盖 partial。未审定的失败现场仍拒绝自动重试。
+
+最终完整隔离测试 **39/39**（包含前 35，不累计），真实两临时集群夹具新增 POLICY 引用/最低权限角色恢复，另覆盖默认 PUBLIC、未知依赖、旧端创建角色拒绝、未停止现场拒绝和精确新 attempt 对账。回执 `release-integration/.runtime/takeover-operator-tests/run-1792142533429096000/receipt.json`，SHA256 `6ebd1cda810f4956c6fa0ce31c4f9a10292a5a0696634c2ce5d7c954d8868e5b`。先前 38 项中间回执保留；本修订未恢复生产操作，待准确新 SHA 复审。

@@ -3,7 +3,7 @@
   "execution_id": "IKUN-ONLY-2026-10-16",
   "authority": "0e875cc910e0b83289d6257ebf68e5af82d7374a",
   "direct_initial_user_message": "01a143aa-3791-7732-9065-410adf6e08f2",
-  "captured_at": "2026-10-16T09:09:19.046645+00:00",
+  "captured_at": "2026-10-16T09:22:55.347811+00:00",
   "uid": 501,
   "jobs": {
     "ca.ikun.overload-tracking": {
@@ -228,10 +228,10 @@
   "initial_alpha_health": {
     "pid": 9034,
     "connected": true,
-    "last_pong_at": 1792141746.963785,
-    "pong_age_seconds": 12.092,
+    "last_pong_at": 1792142557.317075,
+    "pong_age_seconds": 18.042,
     "reconnects": 280,
-    "observed_at": "2026-10-16T09:09:19.055677+00:00",
+    "observed_at": "2026-10-16T09:22:55.359127+00:00",
     "new_wss_connections_by_operator": 0
   },
   "sqlite_sources": {
@@ -272,12 +272,28 @@
     }
   },
   "code_files_sha256": {
-    "release-integration/scripts/takeover_operator.py": "945e671be9155941d29a9a58fb136fed5b3627bdcfd7a64725bc65d7e8a23d07",
-    "release-integration/scripts/takeover_backup.py": "c987d20174b10d13fb3a59529dda2e18028ed256820c1ced49a2566801963c55"
+    "release-integration/scripts/takeover_operator.py": "3be287b2969ff4b049daa7c1c7420eb32d0f8c28c6898a8d0be268784564d906",
+    "release-integration/scripts/takeover_backup.py": "b54bd2b2d338f936b638e44d1f0bf561f74227eef8f2ac60af335fe8dab15b24"
   },
   "pg_backup_role_source": {
     "path": "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace/.runtime/ikun-first-release/original-site/.env",
     "sha256": "247dae0379223121c305cc2ba4ad93986df2c4e54df5abd752a0cf3be07e9f70",
     "user": "web3"
+  },
+  "drill_policy_roles": [
+    "ikun_accounts_guard",
+    "ikun_q87_ai_runtime",
+    "ikun_q87_hunter_runtime",
+    "ikun_q87_import_runtime",
+    "ikun_q87_module_guard",
+    "ikun_q87_source_guard",
+    "ikun_q87_tracking_runtime",
+    "ikun_research_runtime"
+  ],
+  "failed_drill_reconciliation": {
+    "directory": "before_pg_restore-bdcd64df25b54e5a8afe48c373687e73",
+    "server_state_sha256": "30b740c4b96a2dbad22172d94ab8ef7ca07c1861d736a26fcbb4286e5a895e67",
+    "archive_sha256": "7280b1d5c3ea1cd6c75745ca8092b3d4e6e18ce540e499ffa2288044aea3470f",
+    "decoded_sql_sha256": "8ca7aac0d69785c294e101c20b90553d1fc367e13466a7693db95516d848b769"
   }
 }

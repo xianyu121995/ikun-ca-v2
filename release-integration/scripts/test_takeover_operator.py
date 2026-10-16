@@ -214,8 +214,36 @@ class OperatorTests(unittest.TestCase):
   try:
    with patch('psycopg.connect') as connect:
     with self.assertRaisesRegex(b.SafeFailure,'OLD_PORT'):b.assert_drill_connection({'host':str(socket),'port':'55432'},self.root)
+    with self.assertRaisesRegex(b.SafeFailure,'OLD_PORT'):b.create_drill_policy_roles({'host':str(socket),'port':'55432'},self.root,['synthetic_role'])
     connect.assert_not_called()
   finally:socket.rmdir()
+ def synthetic_dump(self,text=''):
+  directory=b.private_dir(self.root/('dump-'+str(time.time_ns())));b.atomic(directory/'archive',b'synthetic archive');b.atomic(directory/'decoded.sql',text.encode())
+  return {'archive':b.artifact(directory/'archive'),'decoded_sql':b.artifact(directory/'decoded.sql')}
+ def test_unknown_policy_role_rejected_before_cluster_creation(self):
+  dump=self.synthetic_dump('CREATE POLICY fixture ON public.sample TO unknown_role USING (true);\n')
+  with patch.object(b,'command') as command:
+   with self.assertRaisesRegex(b.SafeFailure,'UNKNOWN_POLICY_ROLE'):b.postgres_restore(dump,self.root/'drill',Path('/fixture'),policy_role_allowlist=o.POLICY_ROLES)
+   command.assert_not_called()
+ def test_policy_default_public_without_to_and_explicit_approved_role(self):
+  dump=self.synthetic_dump('CREATE POLICY fixture ON public.sample USING (true);\nCREATE POLICY restricted ON public.sample AS RESTRICTIVE FOR SELECT TO synthetic_role USING (true);\n');r=b.policy_role_binding(dump,['synthetic_role'],2)
+  self.assertEqual(r['policy_count'],2);self.assertEqual(r['roles'],['synthetic_role']);self.assertEqual(r['archive_sha256'],dump['archive']['sha256'])
+ def failed_drill_fixture(self,*,stopped=True,pid_file=False):
+  output=b.private_dir(self.root/'output');old=b.private_dir(output/'approved-failed-drill');b.private_dir(old/'pgdata');b.atomic(old/'server-state.json',{'stopped':stopped,'data_directory':str(old/'pgdata')});b.atomic(old/'restore.error.log',b'synthetic failed restore')
+  if pid_file:b.atomic(old/'pgdata/postmaster.pid',b'999991')
+  dump=self.synthetic_dump();spec={'directory':old.name,'server_state_sha256':b.sha(old/'server-state.json'),'archive_sha256':dump['archive']['sha256'],'decoded_sql_sha256':dump['decoded_sql']['sha256']}
+  return output,old,dump,spec
+ def test_exact_stopped_failed_drill_reconciles_to_new_attempt_preserving_original(self):
+  output,old,dump,spec=self.failed_drill_fixture();original={p.name:b.sha(p) for p in (old/'server-state.json',old/'restore.error.log')}
+  with patch.object(o,'OUTPUT',output),patch.object(o,'FAILED_DRILL',spec),o.Journal(self.path) as j:
+   j.mark('before_pg_restore',{'state':'intent','directory':str(old)});o.reconcile_failed_drill(j,{'failed_drill_reconciliation':spec},dump,'before');first=copy.deepcopy(j.steps()['before_pg_restore']);o.reconcile_failed_drill(j,{'failed_drill_reconciliation':spec},dump,'before');self.assertEqual(j.steps()['before_pg_restore'],first);self.assertNotEqual(first['directory'],str(old));self.assertEqual(first['prior_failed_attempt']['directory'],str(old))
+  self.assertEqual({p.name:b.sha(p) for p in (old/'server-state.json',old/'restore.error.log')},original);self.assertTrue((old/'pgdata').is_dir())
+ def test_unstopped_failed_drill_cannot_reconcile(self):
+  output,old,dump,spec=self.failed_drill_fixture(stopped=False)
+  with patch.object(o,'OUTPUT',output),patch.object(o,'FAILED_DRILL',spec),o.Journal(self.path) as j:
+   j.mark('before_pg_restore',{'state':'intent','directory':str(old)})
+   with self.assertRaisesRegex(b.SafeFailure,'NOT_CONFIRMED_STOPPED'):o.reconcile_failed_drill(j,{'failed_drill_reconciliation':spec},dump,'before')
+   self.assertEqual(j.steps()['before_pg_restore']['directory'],str(old))
  def test_unknown_pg_start_with_pid_is_cleaned_without_old_cluster(self):
   directory=self.root/'drill';calls=[]
   def command(args,*_,**__):
@@ -225,7 +253,7 @@ class OperatorTests(unittest.TestCase):
     options=shlex.split(args[args.index('-o')+1]);socket=options[options.index('-k')+1];(directory/'pgdata/postmaster.pid').write_text('999991\n'+str(directory/'pgdata')+'\n0\n65432\n'+socket+'\n');raise b.SafeFailure('SYNTHETIC_START_RESULT_UNKNOWN')
    if args[-1]=='stop':(directory/'pgdata/postmaster.pid').unlink()
   with patch.object(b,'command',side_effect=command):
-   with self.assertRaisesRegex(b.SafeFailure,'SYNTHETIC_START_RESULT_UNKNOWN'):b.postgres_restore({},directory,Path('/fixture'),protected_pids=[79494])
+   with self.assertRaisesRegex(b.SafeFailure,'SYNTHETIC_START_RESULT_UNKNOWN'):b.postgres_restore(self.synthetic_dump(),directory,Path('/fixture'),protected_pids=[79494])
   self.assertEqual(sum(args[-1]=='start' for args in calls),1);self.assertEqual(sum(args[-1]=='stop' for args in calls),1);self.assertTrue(b.read_json(directory/'server-state.json')['stopped'])
  def test_protected_pid_from_unknown_pg_start_never_stopped(self):
   directory=self.root/'drill';calls=[]
@@ -235,7 +263,7 @@ class OperatorTests(unittest.TestCase):
    if args[-1]=='start':
     options=shlex.split(args[args.index('-o')+1]);socket=options[options.index('-k')+1];(directory/'pgdata/postmaster.pid').write_text('79494\n'+str(directory/'pgdata')+'\n0\n65432\n'+socket+'\n');raise b.SafeFailure('UNKNOWN')
   with patch.object(b,'command',side_effect=command):
-   with self.assertRaisesRegex(b.SafeFailure,'DRILL_STOP_IDENTITY_FAILED'):b.postgres_restore({},directory,Path('/fixture'),protected_pids=[79494])
+   with self.assertRaisesRegex(b.SafeFailure,'DRILL_STOP_IDENTITY_FAILED'):b.postgres_restore(self.synthetic_dump(),directory,Path('/fixture'),protected_pids=[79494])
   self.assertEqual(sum(args[-1]=='stop' for args in calls),0)
 
 class PostgresRoundtrip(unittest.TestCase):
@@ -248,8 +276,8 @@ class PostgresRoundtrip(unittest.TestCase):
     options=shlex.join(['-k',str(socket),'-p','65431','-c','listen_addresses=','-c','shared_buffers=32MB','-c','max_connections=8'])
     b.command([pgbin/'pg_ctl','-D',data,'-l',root/'source-server.log','-o',options,'-w','start'],log);started=True
     with psycopg.connect(**params) as conn:
-     conn.execute('create table synthetic_parent(id bigint primary key, notes text)');conn.execute('create table synthetic_child(id integer primary key,pid bigint references synthetic_parent(id))');conn.execute('insert into synthetic_parent values(%s,%s)',(9223372036854775807,'仅隔离夹具 😀'));conn.execute('insert into synthetic_child values(1,9223372036854775807)')
-    dump=b.postgres_dump(params,root/'dump',pgbin);self.assertEqual(dump['table_count'],2);self.assertTrue(Path(dump['decoded_sql']['path']).is_file());result=b.postgres_restore(dump,root/'restore',pgbin,protected_pids=list(o.PROTECTED.values())+[6465,6466,46545,38618]);self.assertTrue(result['counts_match']);self.assertEqual(result['table_count'],2);self.assertTrue(b.read_json(root/'restore/server-state.json')['stopped'])
+     conn.execute('create table synthetic_parent(id bigint primary key, notes text)');conn.execute('create table synthetic_child(id integer primary key,pid bigint references synthetic_parent(id))');conn.execute('insert into synthetic_parent values(%s,%s)',(9223372036854775807,'仅隔离夹具 😀'));conn.execute('insert into synthetic_child values(1,9223372036854775807)');conn.execute('CREATE ROLE synthetic_policy_reader NOLOGIN');conn.execute('ALTER TABLE synthetic_parent ENABLE ROW LEVEL SECURITY');conn.execute('CREATE POLICY fixture_policy ON synthetic_parent TO synthetic_policy_reader USING (true)')
+    dump=b.postgres_dump(params,root/'dump',pgbin);self.assertEqual(dump['table_count'],2);self.assertTrue(Path(dump['decoded_sql']['path']).is_file());result=b.postgres_restore(dump,root/'restore',pgbin,protected_pids=list(o.PROTECTED.values())+[6465,6466,46545,38618],policy_role_allowlist=['synthetic_policy_reader'],expected_policy_count=1);self.assertTrue(result['counts_match']);self.assertEqual(result['table_count'],2);self.assertEqual(result['placeholder_role_count'],1);self.assertFalse(result['role_permission_semantics_reproduced']);self.assertTrue(b.read_json(root/'restore/server-state.json')['stopped'])
     b.validate_artifacts(dump)
    finally:
     if started:

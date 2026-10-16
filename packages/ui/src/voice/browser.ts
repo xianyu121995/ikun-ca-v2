@@ -22,7 +22,7 @@ export function createWebSpeechPort(target: (Window & typeof globalThis) | undef
     speak(text, hooks) {
       const voice = localVoice(); if (!voice) { hooks.error(); return; }
       cancel(); const utterance = new target!.SpeechSynthesisUtterance(text); owned = utterance;
-      utterance.voice = voice; utterance.lang = voice.lang; utterance.rate = 1; utterance.pitch = 1; utterance.volume = 1;
+      utterance.voice = voice; utterance.lang = voice.lang; utterance.rate = 1.1; utterance.pitch = 1; utterance.volume = 1;
       utterance.onstart = () => { if (owned === utterance) hooks.start(); };
       utterance.onend = () => { if (owned === utterance) { owned = undefined; hooks.end(); } };
       utterance.onerror = () => { if (owned === utterance) { owned = undefined; hooks.error(); } };

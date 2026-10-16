@@ -1,5 +1,7 @@
 # 精确旧侧操作工具待审
 
+**最终状态已前向更新为通过**：3120e29 经总管16f7098精确复审后已完成获批停采、最终快照及两次100表恢复，详见[最终验收](./TAKEOVER-STOP-ACCEPTANCE.md)。以下保留各待审与失败阶段的原始记录，不视为当前未执行状态；None仅为旧解析器结果，原override键缺省未获证实。
+
 状态：`PENDING_ROOT_REVIEW_LAUNCHD_STATE_TOKEN`。f517f4b 经控制 885b08f 放行后完成七库及归档，PG 读取角色不足而停下；4eb37cf 经控制 74b6327 放行后成功完整 dump，演练 POLICY 缺角色而停止恢复；f7ece12 经控制 614ac820 放行后已通过100表数据恢复，随后在首个 job disable 确认处停下。首 job override 已禁用，但两 job/6466 均仍运行，bootout/SIGTERM 未执行，没有迁移或平台调用。直接人类授权为总管 turn `01a143aa-3744-7933-98b1-925db1af2681` 的两条用户消息 `01a143aa-3791-7732-9065-410adf6e08f2`、`01a143c4-70e8-7011-8651-1e20179584f7`；原唯一执行者及 journal 不变。
 
 仅处理 `ca.ikun.overload-tracking`、`com.lvlei.ikun-auto-research` 和复核后 PID 6466 的一次 SIGTERM。顺序为七库备份、私密配置及现存源码归档、只读 PostgreSQL 一致 dump 与独立恢复演练，再精确停获批目标，最后重复快照及演练。每次停止前递归校验原备份资产，不以 receipt 本身替代资产；保护 Alpha、旧 PostgreSQL/监督进程/Tunnel 和 v2 全部进程、配置及四库身份。父 login 6465 不发送信号，但可能自然退出。

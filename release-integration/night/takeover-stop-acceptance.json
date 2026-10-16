@@ -1,0 +1,158 @@
+{
+  "state": "PASS_APPROVED_OLD_SIDE_STOP_AND_SNAPSHOT_ONLY",
+  "execution_id": "IKUN-ONLY-2026-10-16",
+  "operator_candidate": "3120e29c54ac2c2796a1fecad518d61cbe889461",
+  "operator_review_control": "16f709836d18ae3e640ab76028bfa69eb6c45322",
+  "completed_at_shanghai": "2026-10-16T17:36:34.010027+08:00",
+  "direct_user_message_ids": [
+    "01a143aa-3791-7732-9065-410adf6e08f2",
+    "01a143c4-70e8-7011-8651-1e20179584f7"
+  ],
+  "journal_state": "legacy_snapshots_ready_waiting_owner_imports",
+  "receipt": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/takeover-execution/IKUN-ONLY-2026-10-16/final-receipt.json",
+    "sha256": "9d6fac46e22cdd9587d16c2fe182c8d09f589890d8718be4824ec2a5e28d42ef"
+  },
+  "verification": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/takeover-execution/IKUN-ONLY-2026-10-16/verified-summary.json",
+    "sha256": "325f73de955547853e9c955fcd6b4868a4f59c4d46175c930bb8627f9728e9a4"
+  },
+  "post_stop_protection": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/takeover-execution/IKUN-ONLY-2026-10-16/post-stop-protection.json",
+    "sha256": "1e2e1accab6e2c291af41213e47852a040a5e6602887df8723901141fe0ef0a2"
+  },
+  "raw_assets_hash_verified": 66,
+  "sqlite_backups": 14,
+  "sqlite_integrity_fk_rechecked": 14,
+  "pg_stages": {
+    "before": {
+      "pg_archive": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/takeover-execution/IKUN-ONLY-2026-10-16/before_pg_dump-13560179d60740c98de14af7beb2a0c1/database.dump",
+        "sha256": "7280b1d5c3ea1cd6c75745ca8092b3d4e6e18ce540e499ffa2288044aea3470f",
+        "bytes": 1897368
+      },
+      "pg_counts_file": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/takeover-execution/IKUN-ONLY-2026-10-16/before_pg_dump-13560179d60740c98de14af7beb2a0c1/table-counts.json",
+        "sha256": "886087cd54f1d01f927f97919b167021f34c0053c3f6afdd872815a6b7fc60e0",
+        "bytes": 3651
+      },
+      "pg_table_count": 100,
+      "pg_restore_counts_match": true,
+      "restored_table_count": 100,
+      "placeholder_roles": 8,
+      "policy_count": 260,
+      "drill_stopped": true,
+      "permission_semantics_reproduced": false
+    },
+    "after": {
+      "pg_archive": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/takeover-execution/IKUN-ONLY-2026-10-16/after_pg_dump-0da03ca6620345ea8f967efb0f068775/database.dump",
+        "sha256": "d0e25f6472aca37ff408ff4ff8219fb6953ab698e053add40dc14e7f44431d46",
+        "bytes": 1897368
+      },
+      "pg_counts_file": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/takeover-execution/IKUN-ONLY-2026-10-16/after_pg_dump-0da03ca6620345ea8f967efb0f068775/table-counts.json",
+        "sha256": "886087cd54f1d01f927f97919b167021f34c0053c3f6afdd872815a6b7fc60e0",
+        "bytes": 3651
+      },
+      "pg_table_count": 100,
+      "pg_restore_counts_match": true,
+      "restored_table_count": 100,
+      "placeholder_roles": 8,
+      "policy_count": 260,
+      "drill_stopped": true,
+      "permission_semantics_reproduced": false
+    }
+  },
+  "approved_jobs": {
+    "ca.ikun.overload-tracking": {
+      "loaded": false,
+      "disabled": true,
+      "original_pid_absent": true
+    },
+    "com.lvlei.ikun-auto-research": {
+      "loaded": false,
+      "disabled": true,
+      "original_pid_absent": true
+    }
+  },
+  "manual_stop": {
+    "pid": 6466,
+    "signal": "SIGTERM",
+    "operator_signal_attempts": 1,
+    "original_absent": true,
+    "parent_6465_signalled": false,
+    "parent_6465_exists_after": false
+  },
+  "disabled_previous_value_note": "Recorded None came from the previous parser; original override absence was not established.",
+  "protected_processes": {
+    "Alpha": {
+      "pid": 9034,
+      "started_utc": "2026-10-10T12:26:54+00:00"
+    },
+    "old_supervisor": {
+      "pid": 79489,
+      "started_utc": "2026-10-14T21:11:10+00:00"
+    },
+    "old_Postgres": {
+      "pid": 79494,
+      "started_utc": "2026-10-14T21:11:10+00:00"
+    },
+    "old_Tunnel": {
+      "pid": 79502,
+      "started_utc": "2026-10-14T21:11:10+00:00"
+    },
+    "v2_web": {
+      "pid": 87924,
+      "started_utc": "2026-10-16T07:27:09+00:00"
+    },
+    "v2_Hunter": {
+      "pid": 2608,
+      "started_utc": "2026-10-15T18:50:24+00:00"
+    },
+    "v2_Tracking": {
+      "pid": 25225,
+      "started_utc": "2026-10-15T19:46:33+00:00"
+    },
+    "v2_Tunnel": {
+      "pid": 39523,
+      "started_utc": "2026-10-15T15:40:19+00:00"
+    }
+  },
+  "alpha_connected": true,
+  "alpha_observed_at": "2026-10-16T09:38:18.150655+00:00",
+  "v2_health": {
+    "web": {
+      "http": 200
+    },
+    "hunter": {
+      "http": 200,
+      "external_io_enabled": false
+    },
+    "tracking": {
+      "http": 200,
+      "external_collection_enabled": false
+    }
+  },
+  "v2_release": {
+    "sha": "0ce180c33ea4be350ac57daa7dbfa5b5221e58cb",
+    "build_id": "X0CYNNjMlhJWNcjEpx1PF",
+    "source_hashes_verified": 331,
+    "compiled_hashes_verified": 271
+  },
+  "four_database_identities_preserved": true,
+  "migration_executed": false,
+  "operator_new_wss_connections": 0,
+  "operator_direct_watch_writes": 0,
+  "operator_provider_calls": 0,
+  "remote_watch_audit_performed": false,
+  "ai_original_entry_missing_before_stop": true,
+  "permissions_semantics_restored_in_drill": false,
+  "main_unchanged": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+  "failure_history_preserved": [
+    "PG_FULL_BACKUP_READONLY_ROLE_UNAVAILABLE",
+    "isolated_pg_restore_missing_policy_role",
+    "JOB_DISABLE_NOT_CONFIRMED_native_disabled_token"
+  ],
+  "scope_limit": "Stopped exact authorized legacy producers only. No owner imports, live-provider sample, v2 process change, main merge, domain or Cloudflare change."
+}

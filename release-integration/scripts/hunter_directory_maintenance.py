@@ -116,6 +116,9 @@ def immutable(plan):
  for path,h in ((PROJECTS,PROJECTS_SHA),(INTAKE,INTAKE_SHA),(REHEARSAL,REHEARSAL_SHA),(PACKAGE,PACKAGE_SHA),(PREPARATION,PREPARATION_SHA)):
   require(sha(private_file(path))==h,'APPROVED_HUNTER_INPUT_DRIFT')
  validate_artifacts(read_json(PROJECTS));validate_artifacts(read_json(REHEARSAL))
+ if plan.get('current_seed_rehearsal'):
+  proof=plan['current_seed_rehearsal'];require(sha(private_file(proof['path']))==proof['sha256'],'CURRENT_REHEARSAL_HASH_MISMATCH');receipt=read_json(proof['path']);validate_artifacts(receipt)
+  require(receipt['state']=='PASS_HUNTER_DIRECTORY_V2_SEALED_V4_CLONE_ONLY' and receipt['source_commit']==SOURCE and receipt['package_sha256']==PACKAGE_SHA and receipt['source_schema']==4 and receipt['result_schema']==5 and receipt['original_hunters_preserved']==2 and receipt['new_disabled_pending_directory']==88 and receipt['new_private_facts']==6575 and receipt['replay_all_table_fingerprints_unchanged'] is True,'CURRENT_REHEARSAL_NOT_APPROVED_SCOPE')
  for path,h in plan['helper_files'].items():require(sha(ROOT/path)==h,'REVIEWED_HUNTER_HELPER_DRIFT')
  validate_artifacts(read_json(PREPARATION));validate_artifacts(plan['acceptance']);validate_artifacts(plan['reader_plan_file'])
  require(plan['runtime_files']==reader_files(read_json(INTAKE)) and plan['code_root']==read_json(INTAKE)['staged_code_root'],'RUNTIME_SELECTION_DRIFT')
@@ -253,8 +256,10 @@ def verify_persisted_run(path,result):
  require((result.get('original_result') if result['duplicate_package'] else result)==original,'CLI_RESULT_DIFFERS_FROM_PERSISTED_ORIGINAL_RUN')
 
 
-def require_rehearsed_seed(path):
- current=fingerprint(path);seed=read_json(REHEARSAL.parent/'before.private.json')
+def require_rehearsed_seed(path,plan=None):
+ proof=(plan or {}).get('current_seed_rehearsal');rehearsal=Path(proof['path']) if proof else REHEARSAL
+ if proof:require(sha(private_file(rehearsal))==proof['sha256'],'CURRENT_REHEARSAL_HASH_MISMATCH')
+ current=fingerprint(path);seed=read_json(rehearsal.parent/'before.private.json')
  require(current['user_version']==4 and set(current['tables'])==set(seed['tables']) and all(row==current['tables'][name] for name,row in seed['tables'].items() if name not in ('state','worker_lease')),'CURRENT_HUNTER_REHEARSAL_REQUIRED')
 
 
@@ -299,13 +304,13 @@ def execute(candidate,path,expected,*,resume_recovered=False):
   def backups(directory):return {name:sqlite_backup(db,private_dir(directory/name),strict_foreign_keys=True) for name,db in DATABASES.items()}
   try:
    peers(ops,plan);online=step('before_online_'+str(index),backups)
-   if online['hunter']['metadata']['user_version']==4:require_rehearsed_seed(online['hunter']['artifact']['path'])
+   if online['hunter']['metadata']['user_version']==4:require_rehearsed_seed(online['hunter']['artifact']['path'],plan)
    stage_reader(plan)
    if 'original_plist' not in window:require(sha(private_file(PLIST))==plan['initial_plist_sha256'],'HUNTER_PLIST_DRIFT_BEFORE_STOP');window['original_plist']=copy_private(PLIST,OUTPUT/('original-hunter-'+str(index)+'.plist'));save()
    protected_pids={x['pid'] for x in plan['during_protection']['protected_processes'].values()}|{x['pid'] for x in plan['web_tree']}
    stop_owned_job_once(window,save,ops,plan['initial_hunter'],protected_pids,expected_tree=plan['initial_tree']);ops.fence();peers(ops,plan)
    stopped=step('stopped_window_'+str(index),backups);baseline=stopped['hunter']['artifact']['path'];state.setdefault('first_baseline',stopped['hunter']['artifact']);save()
-   if stopped['hunter']['metadata']['user_version']==4:require_rehearsed_seed(baseline)
+   if stopped['hunter']['metadata']['user_version']==4:require_rehearsed_seed(baseline,plan)
    wait_lease(ops)
    version=schema(plan,ops)
    if state.get('schema5_observed'):require(version==5,'SCHEMA5_STICKY_DOWNGRADE_FORBIDDEN')

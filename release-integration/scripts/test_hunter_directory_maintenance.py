@@ -144,6 +144,20 @@ class StorageAndReceipts(Fixture):
   m.require_rehearsed_seed(self.databases['hunter'])
   with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="new edit",revision=8')
   with self.assertRaisesRegex(m.SafeFailure,'REHEARSAL_REQUIRED'):m.require_rehearsed_seed(self.databases['hunter'])
+ def new_seed_plan(self):
+  directory=m.private_dir(self.root/'current-rehearsal');proof=directory/'REHEARSAL_ONLY.json';m.atomic(proof,{'fixture':True});m.atomic(directory/'before.private.json',m.fingerprint(self.databases['hunter']))
+  return {'current_seed_rehearsal':m.artifact(proof)}
+ def test_plan_bound_current_seed_keeps_old_seed_intact(self):
+  with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="current human text",revision=8')
+  plan=self.new_seed_plan();m.require_rehearsed_seed(self.databases['hunter'],plan)
+  with self.assertRaisesRegex(m.SafeFailure,'REHEARSAL_REQUIRED'):m.require_rehearsed_seed(self.databases['hunter'])
+ def test_plan_bound_rehearsal_tamper_fails_before_seed_read(self):
+  plan=self.new_seed_plan();m.atomic(plan['current_seed_rehearsal']['path'],{'fixture':'changed'})
+  with self.assertRaisesRegex(m.SafeFailure,'CURRENT_REHEARSAL_HASH_MISMATCH'):m.require_rehearsed_seed(self.databases['hunter'],plan)
+ def test_plan_bound_seed_still_rejects_later_manual_changes(self):
+  plan=self.new_seed_plan()
+  with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="latest preserved text",revision=9')
+  with self.assertRaisesRegex(m.SafeFailure,'REHEARSAL_REQUIRED'):m.require_rehearsed_seed(self.databases['hunter'],plan)
  def test_live_lease_is_never_deleted_to_make_migration_pass(self):
   with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE worker_lease SET expires_at=9999999999')
   with self.assertRaisesRegex(m.SafeFailure,'NO_DELETE'):m.wait_lease(FakeOps(loaded=False),timeout=0)

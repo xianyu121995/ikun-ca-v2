@@ -1,0 +1,109 @@
+{
+  "state": "READY_FOR_ROOT_EXACT_REVIEW_NOT_EXECUTED",
+  "phase": "hunter_directory_f9_90b_v1",
+  "owner_source": "f9e3c6cbf7c44676c37ef973389e6176777640ce",
+  "package_sha256": "90b8b3b0970cafa80c076fbf679370144d7b5b9b660668422252d8c4b239800f",
+  "tool_source_sha256": "a202d2238fbb69c7c286c6bb0e4256bba03eda8057a166ed761cfda586921bc3",
+  "source_files_sha256": {
+    "release-integration/scripts/hunter_directory_maintenance.py": "a202d2238fbb69c7c286c6bb0e4256bba03eda8057a166ed761cfda586921bc3",
+    "release-integration/scripts/test_hunter_directory_maintenance.py": "9a75d5f7838e60f940fac54a9f9857f4734bc7f481022c1373635784c2d258ff",
+    "release-integration/scripts/takeover_backup.py": "b54bd2b2d338f936b638e44d1f0bf561f74227eef8f2ac60af335fe8dab15b24",
+    "release-integration/scripts/takeover_operator.py": "1aec79cffa47446cca09e9c470c558f158ff4b3eb365855e5bdd192ccba1a13a",
+    "release-integration/scripts/projects_first_maintenance.py": "6d594df36f3067609a607f78161b32084fef1b38e72c7126f647d8014268898c",
+    "release-integration/scripts/night_worker_ops.py": "4ac7144929559e2169684e803319cd181fab4dc00cfb5da0885635a031fd9fd0",
+    "release-integration/scripts/prepare_hunter_directory_maintenance.py": "841770b6e70b44d22a763161467c018d3ca8f8e543cedb76a3f2d1942c2d87ad"
+  },
+  "plan": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first/f9-90b-v1/execution-plan-v2.json",
+    "sha256": "e3f46ed6a8132e3f0760639d1d4cc3c8be6fa1b7d8179e906e7a4a500ef1e61d"
+  },
+  "runtime_files": 26,
+  "reader_plan": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first/f9-90b-v1/execution-plan-v2.worker-plan.json",
+    "sha256": "5c0a87b8a2dd15b04cf48a8fd82119a37346f2a26bce5cebba3d3e17dd902397",
+    "bytes": 4291
+  },
+  "reader_acceptance": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first/f9-90b-v1/execution-plan-v2.acceptance.json",
+    "sha256": "6a128f77d3b8f6a7c9ce9763c24e58fc0f32e015c51a6699992fca94a20d1dfd",
+    "bytes": 3785
+  },
+  "initial_hunter": {
+    "pid": 2608,
+    "ppid": 1,
+    "uid": 501,
+    "started_utc": "2026-10-15T18:50:24+00:00",
+    "executable": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/venvs/hunter/bin/python",
+    "cwd": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/jobs/hunter"
+  },
+  "initial_hunter_tree": [
+    {
+      "pid": 2608,
+      "ppid": 1,
+      "uid": 501,
+      "started_utc": "2026-10-15T18:50:24+00:00",
+      "executable": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/venvs/hunter/bin/python",
+      "cwd": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/jobs/hunter"
+    }
+  ],
+  "web_tree_protected": [
+    54011,
+    54012,
+    54014,
+    54018,
+    54019
+  ],
+  "web_socket": {
+    "path": "/private/tmp/ikp-aUeczB/p.sock",
+    "holder_pids": [
+      54014
+    ],
+    "mode": "0600"
+  },
+  "previous_worker_release": null,
+  "fixture_tests": {
+    "count": 29,
+    "receipt": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first-tests/sealed-1792152926897241000/receipt.json",
+      "sha256": "698d0c2f1b0fb6e27d6d0a7b5f0a1fc910ba4994536062311a25fb4e5eadb860"
+    },
+    "log": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first-tests/sealed-1792152926897241000/unittest.log",
+      "sha256": "7b0c40c9dc7987a7e1c5465e46711e378d7612c2c7225797b117f28d9b7be2a8",
+      "bytes": 5043
+    }
+  },
+  "owner_copy_checks": {
+    "count": 3,
+    "receipt": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first-tests/sealed-1792152926897241000/owner-copy-checks.json",
+      "sha256": "2d14d956bca5557cc3cf93c25b8a2e2e92c869bcd10e299e4030c41ebe749ffd"
+    }
+  },
+  "readonly_status": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first/f9-90b-v1/readonly-status-v2.json",
+    "sha256": "9f40d76ced2778cdd79ea1ac85a81e810e3b72a1f48964ab9081a37fc68048dc",
+    "state": "not_started",
+    "actions": 0,
+    "runtime_database_connections": 0,
+    "journal_written": false
+  },
+  "legacy_plan_sha256_preserved": "70356d761a008e2c891a146ad79cf5ba43e883008da502fa267a4d69a127514e",
+  "journal_sha256_before_execution": "d577e35111df8ea34c1cd2557cd2b314deb9a291ffc7f9f2d2dcc8cf72102380",
+  "new_hunter_phase_exists": false,
+  "native_runtime_release_or_config_installed": false,
+  "production_plist_changed": false,
+  "expected_schema_version": 5,
+  "schema5_recovery": "fixed F9 reader or remain stopped; never old B4/613 or database overwrite",
+  "before_and_stopped_seed_recheck": true,
+  "replay_requires_original_counts_and_persisted_provenance": true,
+  "standard_operator_backup_count": 13,
+  "native_execution_command_after_git_commit": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first/f9-90b-v1/reviewed-execution-command.json",
+  "service_mutations": 0,
+  "runtime_database_writes": 0,
+  "runtime_imports": 0,
+  "new_provider_calls": 0,
+  "Watch_writes": 0,
+  "Next_builds": 0,
+  "root_exact_execution_review_required": true
+}

@@ -1,0 +1,52 @@
+{
+  "state": "PASS_TRACKING_RUNTIME_TAKEOVER",
+  "completed_at_Asia_Shanghai": "2026-10-16T21:22:59.558256+08:00",
+  "candidate": "2cf01fc3d90c346b8479a4dc97630232a31152b1",
+  "source_commit": "307d6e2cfb6102d21ffb5cfd7146f64ed195681f",
+  "receipt": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/tracking-only/307d-formal-v1/final-receipt.json",
+    "sha256": "20017c8c3960b9901ea16852881d24c9f2afcfbe77ccfd04b78f4b6c5c9e667b",
+    "bytes": 22995
+  },
+  "tracking_pid": 83544,
+  "schema": 4,
+  "before_accounts": 0,
+  "after_accounts": 1,
+  "new_accounts": 1,
+  "tweets": 0,
+  "ledger": 0,
+  "notifications": 0,
+  "replay": {
+    "accounts": 0,
+    "ledger": 0,
+    "notifications": 0,
+    "tweets": 0
+  },
+  "graceful_release_verified": [
+    0,
+    "disconnected",
+    null
+  ],
+  "heartbeat_sql_clear": false,
+  "runtime_backups": 12,
+  "original_rows_and_current_fields_preserved": true,
+  "canonical_ids_from_actual_projects": true,
+  "new_subscription_uuid_not_from_rehearsal": true,
+  "same_db_inode": true,
+  "external_collection_enabled": false,
+  "provider_calls": 0,
+  "Watch_writes": 0,
+  "next_builds": 0,
+  "database_overwrites": 0,
+  "migrated_domains": [
+    "projects",
+    "hunter",
+    "tracking"
+  ],
+  "stop_to_restore_seconds": 5.172,
+  "permanent_and_website_Hunter_protection_verified": true,
+  "remaining": [
+    "0x2a real setup/profile/Watch/finite temporary jobs not executed",
+    "whole site real data flow, audible voice and 24h acceptance pending"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "source_commit": "6067658d6092e4d046a8691e8f2f93b34c717801",
+  "control_commit": "2c55f927bcbcc0d2b47472d84156ffa38826876b",
+  "baseline_commit": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+  "site_baseline_commit": "23d2221bd99ca500cfad5b570eb4589181effd38",
+  "files": {
+    "modules/projects/README.md": {
+      "baseline_sha256": "acb4ba52fc70fe561c4f52795ec019a052669c42c73c920d7cdb8d2ea2c02fb8",
+      "sha256": "70718b73ef3cd421f35a493c265e61c91cb61233e815793bad2c7ef8e1978d2d"
+    },
+    "modules/projects/TRACKING-INGEST-REPORT.md": {
+      "baseline_sha256": null,
+      "sha256": "a3ad9a3e2c53118ce93cee20f6c3569f8969112cfb994c215cd67dc886bcf1f2"
+    },
+    "modules/projects/candidate/projects_service/service.py": {
+      "baseline_sha256": "f0fffc2642459ad65302e6f134d973cf6b623ff777c9de68996a9b296b0dbef2",
+      "sha256": "ab91de2013a73d9b997f04f0fb03654224e4070308e2cd54c9f415e67549fd52"
+    },
+    "modules/projects/candidate/projects_service/tracking_observations.py": {
+      "baseline_sha256": null,
+      "sha256": "f48182a8fad86f081be11331d2b6719ed7c879f3c2de3357cd304cdc8374323b"
+    },
+    "modules/projects/candidate/projects_service/transport.py": {
+      "baseline_sha256": "39e28cd0f73f758cb55032def6c5df7f714916d8ee040f24dcb908bbdb41e05a",
+      "sha256": "f149c495c36ee8e0cf200d020e1dd8704455f61a3b0b3b7d97c7512d74fbb229"
+    },
+    "modules/projects/candidate/tests/test_tracking_observations.py": {
+      "baseline_sha256": null,
+      "sha256": "535d34dc590f5f9104255f042149b67a61db688e7a43a01402ed4c4109620189"
+    },
+    "modules/projects/integration/README.md": {
+      "baseline_sha256": "fbfc8f9b73a79de70e87b184f9adb61766f5f6e9b88980eba9974bcc1f8a3e7c",
+      "sha256": "6c7f250ef4a204376d378a097d8c2407e7a82afb33e69b6e669dcd9f2d85c3a0"
+    },
+    "modules/projects/integration/evidence/tracking-ingest-check.json": {
+      "baseline_sha256": null,
+      "sha256": "5995eff93c706721b097329f095a20206d4276b7d8e70ad02b14d233c268108a"
+    },
+    "modules/projects/integration/tests/tracking-ingest.test.mjs": {
+      "baseline_sha256": null,
+      "sha256": "8442bb942568f335470870c292af7d2b72499c74d2b874f8d53c88eed9a704e5"
+    },
+    "modules/projects/integration/website/lib/projects.ts": {
+      "baseline_sha256": "013ca12ed02a8e0c476b6e20563282f583b30497c366590378b8dafebf98616c",
+      "sha256": "9cfdfe9b04eea4a3889fba66ebe30386222c7e745ec5a948de885edd80c57b82"
+    },
+    "modules/projects/protocols/tracking-observations-size-check.json": {
+      "baseline_sha256": null,
+      "sha256": "ae83bd4e4c036813066bcae9960a69ed04b1bac72baa3b33b863414f503e29f8"
+    },
+    "modules/projects/protocols/tracking-observations-v1.json": {
+      "baseline_sha256": null,
+      "sha256": "a87e766e1c05b8d938225474c2fd40ca6b02fbfbc070796345dfc926c0dfa074"
+    },
+    "modules/projects/protocols/tracking-observations-v1.md": {
+      "baseline_sha256": null,
+      "sha256": "393ac9bcba95457d7c8ad565837e3eccaa05ad20ace9cb148eb5fa4ce1f5d9f7"
+    }
+  },
+  "website_mapping": {
+    "source_path": "modules/projects/integration/website/lib/projects.ts",
+    "baseline_commit": "23d2221bd99ca500cfad5b570eb4589181effd38",
+    "baseline_sha256": "e90866ec1bfb61afc60ec70ff8f2e4ac63e09d4a5a5549fd853bc925a59e566b",
+    "target_sha256": "7c8010f78cf2d5639357266275b2933baa3fc63dbaa1042e9ff8e1eb4141c431",
+    "patch_path": "release-integration/night/patches/tracking-ingest-site.patch",
+    "patch_sha256": "301a5fd6dc5f1c4383ef867410a35dc1f72221810b6dd89b5dcd39f3f5118cc0",
+    "transform": "retain exact two previously accepted B1 readPaths additions"
+  },
+  "scope": "website receiver only; frozen workers unchanged",
+  "root_launcher": {
+    "baseline_commit": "23d2221bd99ca500cfad5b570eb4589181effd38",
+    "baseline_sha256": "daa36a7d617f199940fdd059904f4b39f007a3fa91a13ce35b7a644e77ac76db",
+    "target_sha256": "e5854403852463c58dde9dbf9ac99ce7fa35a76c7e8a0cef70e7eab4b1eab728",
+    "patch_path": "release-integration/night/patches/tracking-ingest-launcher.patch",
+    "patch_sha256": "8b837d27b726deef050a50c2840b1ad8226608b64120501b14211754109b623f",
+    "scope": "load new website direction only from owned 0600 web env; no token in launchd argv; pending root review"
+  }
+}

@@ -139,7 +139,7 @@ class Rpc(StrictModel):
     body: dict=Field(default_factory=dict)
     idempotency_key: str | None=None
     if_match: str | None=None
-    contract: Literal['phase2-v1.0.0','projects-home-v1','tracking-ratings-v1']='phase2-v1.0.0'
+    contract: Literal['phase2-v1.0.0','projects-home-v1','tracking-ratings-v1','tracking-observations-v1']='phase2-v1.0.0'
 
     @model_validator(mode='after')
     def ratings_contract(self):
@@ -149,6 +149,8 @@ class Rpc(StrictModel):
             if self.model_fields_set & {'target','source','query','idempotency_key','if_match'}:
                 raise ValueError('ratings is a dedicated read-only request')
             self.body=RatingsQuery.model_validate(self.body).model_dump()
+        if self.contract=='tracking-observations-v1' and (self.operation not in ('ingest','receipt') or self.source!='tracking'):
+            raise ValueError('observation contract only admits tracking ingest/receipt')
         return self
 
 

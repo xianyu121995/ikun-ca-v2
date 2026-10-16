@@ -2,6 +2,8 @@
 
 B2 现有实现已在原候选上增加 `phase2-v1.0.0 + auth-b1-final-v2 + projects-home-v1` 适配，入口与运行方式见 [integration/README.md](integration/README.md)，验收记录见 [B2-REPORT.md](B2-REPORT.md)。正式候选由网站通过 B0 私有 UDS 托管；原候选独立登录/TCP/offset 页面仅作历史回归，不作为新版入口。
 
+Tracking 观察受理/持久回执增量见 [TRACKING-INGEST-REPORT.md](TRACKING-INGEST-REPORT.md)，沿用既有方向凭据与 UDS，只写 Projects 最小账本，不保存推文正文。网站候选通过轻量回归，等待本次完整 SHA 正式收件；Tracking worker 的投递/ACK 写回缺口仍未闭合。
+
 本模块由“再做项目管理”窗口负责，分支 `codex/projects`，基础 `f89d8f55fc3e68d6360e7a1e33e23bde48591098`。
 
 可运行候选见 [candidate/README.md](candidate/README.md)：独立 projects.db、迁移、CRUD、评分/简介/官网/备注/研究进度、真实搜索/排序/筛选/分页、受控加入、稳定 ID、来源去重、权限/租户、审计及页面测试。

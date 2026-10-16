@@ -21,6 +21,8 @@ def at(commit, path):
 
 
 def verify():
+    from receive_tracking_ingest import verify as verify_receiver
+    receiver_overrides,receiver_paths,receiver_mapping=verify_receiver()
     from verify_b3_intake import verify as verify_b3
     b3_overrides, b3_paths = verify_b3()
     path = ROOT / 'release-integration/night/source-binding.json'
@@ -41,10 +43,13 @@ def verify():
         assert commit in (B4, C03)
         prefixes = ('services/hunter-worker/', 'schemas/hunter/') if commit == B4 else ('modules/projects/',)
         assert source.startswith(prefixes) and not source.startswith('services/hunter-worker/ui/')
-        assert digest(at(commit, source)) == row['sha256'] == digest((ROOT / source).read_bytes()), source
+        assert digest(at(commit, source)) == row['sha256'], source
+        expected = receiver_overrides.get(source)
+        if expected: assert expected['baseline_sha256'] == row['sha256'], source
+        assert digest((ROOT / source).read_bytes()) == (expected['sha256'] if expected else row['sha256']), source
         allowed.add(source)
         if source.startswith('modules/projects/candidate/projects_service/'):
-            overrides[source] = {'sha256': row['sha256'], 'source_commit': C03, 'control_commit': CONTROL}
+            overrides[source] = expected or {'sha256': row['sha256'], 'source_commit': C03, 'control_commit': CONTROL}
     patches = record['site_patches']
     permitted = {'apps/website/lib/projects.ts', 'apps/website/components/hunter-controller.tsx',
                  'apps/website/app/api/v1/commands/[id]/route.ts', 'apps/website/app/api/v1/hunter/events/route.ts',
@@ -54,21 +59,26 @@ def verify():
     assert set(patches) == permitted
     for target, row in patches.items():
         assert digest((ROOT / row['patch_path']).read_bytes()) == row['patch_sha256']
-        assert digest((ROOT / target).read_bytes()) == row['target_sha256'], target
+        expected = receiver_overrides.get(target)
+        if expected: assert expected['baseline_sha256'] == row['target_sha256'], target
+        assert digest((ROOT / target).read_bytes()) == (expected['sha256'] if expected else row['target_sha256']), target
         original = at(row['baseline_commit'], row['baseline_path']) if row['baseline_commit'] else b''
         assert digest(original) == row['baseline_sha256']
         allowed.add(target)
     helper = at(C03, 'modules/projects/integration/website/lib/projects.ts')
     expected = helper.replace(b"const globalState=", b"readPaths.push(/^\\/api\\/v1\\/hunter\\/events$/, /^\\/api\\/v1\\/tracking\\/events$/);\nconst globalState=", 1)
-    assert (ROOT / 'apps/website/lib/projects.ts').read_bytes() == expected, 'only two exact readPaths allowed'
+    assert digest(expected) == receiver_mapping['baseline_sha256'], 'original two readPaths baseline unchanged'
+    assert digest((ROOT / 'apps/website/lib/projects.ts').read_bytes()) == receiver_mapping['target_sha256']
     for target, row in record['received_website_inputs'].items():
         assert digest(at(row['source_commit'], row['source_path'])) == row['source_sha256']
         expected_hash = patches[target]['target_sha256'] if target in patches else row.get('reviewed_patch_output_sha256', row['source_sha256'])
-        assert digest((ROOT / target).read_bytes()) == expected_hash, target
+        replacement = receiver_overrides.get(target)
+        if replacement: assert replacement['baseline_sha256'] == expected_hash, target
+        assert digest((ROOT / target).read_bytes()) == (replacement['sha256'] if replacement else expected_hash), target
         allowed.add(target)
     # User explicitly required the existing tracking navigation wording before deployment.
     # Reuse the already received WorkspaceLink; reverse only these two receiving lines.
     app = (ROOT / 'apps/website/features/hunter-discovery/v3/App.tsx').read_bytes()
     before_caption = app.replace(b"import {WorkspaceLink} from '../../../components/auth/forms';\n", b'', 1).replace(b'LinkComponent={live?WorkspaceLink:Link}', b'LinkComponent={Link}', 1)
     assert digest(before_caption) == freeze['patched_ui_output_sha256']['apps/website/features/hunter-discovery/v3/App.tsx']
-    return {**overrides, **b3_overrides}, allowed | b3_paths
+    return {**overrides, **b3_overrides}, allowed | b3_paths | receiver_paths | {'scripts/start-c0-lite.mjs'}

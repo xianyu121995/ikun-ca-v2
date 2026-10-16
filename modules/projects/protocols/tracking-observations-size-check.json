@@ -1,0 +1,55 @@
+{
+  "record_version": 1,
+  "protocol": "tracking-observations-v1",
+  "state": "static_size_proof_not_receiver_functional_test",
+  "node_version": "v24.22.0",
+  "http_tracking_body_limit": 131072,
+  "http_hunter_body_limit_unchanged": 65536,
+  "ipc_limit_unchanged": 131072,
+  "cases": {
+    "max_utf8_emoji": {
+      "text_codepoints": 20000,
+      "name_codepoints": 120,
+      "generation": "9223372036854775807",
+      "canonical_event_bytes": 81441,
+      "rpc_bytes_including_all_legacy_optional_fields_and_hash": 81772,
+      "ipc_limit_bytes": 131072,
+      "margin_bytes": 49300,
+      "event_sha256": "7fb7d4c8696aaa56e75352e3dbf1d06b10fa75b317bf1d855d1172abd610c1c0",
+      "rpc_sha256": "fada97c3f97b44c5e876cd3f5df53c4bc67fb5e896ae31a951d6a022afc45431",
+      "node_python_serialization_equal": true
+    },
+    "max_canonical_control": {
+      "text_codepoints": 20000,
+      "name_codepoints": 120,
+      "generation": "9223372036854775807",
+      "canonical_event_bytes": 121681,
+      "rpc_bytes_including_all_legacy_optional_fields_and_hash": 122012,
+      "ipc_limit_bytes": 131072,
+      "margin_bytes": 9060,
+      "event_sha256": "977610e7246f98086c1d199354f79d25d20be26433250b4fcc92ebc72b21a51e",
+      "rpc_sha256": "d37bec4711c09a8ea817b8b6655d993d920eeb871e832e3f16818e7831ec9975",
+      "node_python_serialization_equal": true
+    }
+  },
+  "mathematical_bound": {
+    "max_valid_string_canonical_bytes_per_codepoint": 6,
+    "text_codepoints": 20000,
+    "name_codepoints": 120,
+    "fixed_max_envelope_bytes": 961,
+    "max_canonical_event_bytes": 121681
+  },
+  "node_integer_preservation": "Node24 JSON.parse context.source + JSON.rawJSON validated; standard JSON.parse would round unsafe int64",
+  "strict_utf8_unpaired_surrogate_cases_rejected": 3,
+  "planned_receiver_cases": [
+    "max emoji preserves 20000 codepoints",
+    "max escaped control payload preserves original hash",
+    "single high/low surrogate or malformed UTF-8 ->422 without replacement",
+    "body 131073 bytes ->413 without truncation",
+    "Hunter remains 65536 bytes"
+  ],
+  "functional_receiver_tests_run": 0,
+  "runtime_files_changed": 0,
+  "document_sha256": "393ac9bcba95457d7c8ad565837e3eccaa05ad20ace9cb148eb5fa4ce1f5d9f7",
+  "manifest_sha256": "a87e766e1c05b8d938225474c2fd40ca6b02fbfbc070796345dfc926c0dfa074"
+}

@@ -1,0 +1,17 @@
+--- a/scripts/start-c0-lite.mjs
++++ b/scripts/start-c0-lite.mjs
+@@ -2 +2 @@
+-import {readFileSync} from 'node:fs';
++import {readFileSync,lstatSync} from 'node:fs';
+@@ -10,0 +11,11 @@
++// This additional direction stays in the owned 0600 web file, never launchd argv.
++if(process.env.IKUN_TRACKING_INGEST_ENV_FILE){
++  const path=process.env.IKUN_TRACKING_INGEST_ENV_FILE;
++  if(path!==resolve(process.env.DATA_ROOT,'..','config/web.environment.json'))throw Error('OWNED_INGEST_ENV_REQUIRED');
++  const info=lstatSync(path);
++  if(!info.isFile()||info.uid!==process.getuid()||(info.mode&0o777)!==0o600||info.nlink!==1||info.size>65536)throw Error('PRIVATE_INGEST_ENV_REQUIRED');
++  let token;
++  try{token=JSON.parse(readFileSync(path,'utf8')).PROJECTS_INGEST_TRACKING_TOKEN;}catch{throw Error('INVALID_INGEST_ENV');}
++  if(typeof token!=='string'||token.length<32||token.length>8192||!/^[!-~]+$/.test(token)||process.env.PROJECTS_INGEST_TRACKING_TOKEN!==undefined)throw Error('INVALID_INGEST_DIRECTION');
++  process.env.PROJECTS_INGEST_TRACKING_TOKEN=token;
++}

@@ -1,0 +1,44 @@
+--- a/apps/website/lib/projects.ts
++++ b/apps/website/lib/projects.ts
+@@ -76 +76,11 @@
+-async function boundedJson(request:Request,allowEmpty=false){
++function trackingJson(bytes:Buffer):unknown{
++  const parser=JSON as unknown as {parse(text:string,reviver:(key:string,value:unknown,context:{source?:string})=>unknown):unknown;rawJSON(text:string):unknown};
++  const raw=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
++  return parser.parse(raw,(key,value,context)=>{
++    if(/\p{Surrogate}/u.test(key)||(typeof value==='string'&&/\p{Surrogate}/u.test(value)))throw Error('INVALID_UNICODE');
++    // Preserve raw JSON numbers through JSON.stringify -> Python; never round int64 IDs/generations.
++    if(key&&typeof value==='number'){if(!context?.source)throw Error('INVALID_NUMBER');return parser.rawJSON(context.source);}
++    return value;
++  });
++}
++async function boundedJson(request:Request,allowEmpty=false,maximum=65536,trackingWire=false){
+@@ -79 +89 @@
+-  try{while(true){let timer:ReturnType<typeof setTimeout>|undefined;const part=await Promise.race([reader.read(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('BODY_TIMEOUT')),Math.max(1,deadline-Date.now()));})]).finally(()=>clearTimeout(timer));if(part.done)break;size+=part.value.length;if(size>65536)throw Error('BODY_TOO_LARGE');pieces.push(part.value);}if(size===0&&allowEmpty)return {};const parsed=JSON.parse(Buffer.concat(pieces).toString());if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('INVALID_BODY');return parsed;}catch(error){void reader.cancel().catch(()=>{});throw error;}finally{reader.releaseLock();}
++  try{while(true){let timer:ReturnType<typeof setTimeout>|undefined;const part=await Promise.race([reader.read(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('BODY_TIMEOUT')),Math.max(1,deadline-Date.now()));})]).finally(()=>clearTimeout(timer));if(part.done)break;size+=part.value.length;if(size>maximum)throw Error('BODY_TOO_LARGE');pieces.push(part.value);}if(size===0&&allowEmpty)return {};const bytes=Buffer.concat(pieces);const parsed=trackingWire?trackingJson(bytes):JSON.parse(bytes.toString());if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('INVALID_BODY');return parsed;}catch(error){void reader.cancel().catch(()=>{});throw error;}finally{reader.releaseLock();}
+@@ -103 +113 @@
+-/** Direction credential binds Hunter only; user sessions cannot invoke this entry. */
++/** Each worker direction is independently authenticated; cookies never authorize ingestion. */
+@@ -105 +115 @@
+-  const id=requestId(request);const path=new URL(request.url).pathname;
++  const id=requestId(request);const url=new URL(request.url);const path=url.pathname;
+@@ -108,0 +119,10 @@
++  const tracking=source==='tracking';const query:Record<string,string>={};
++  if(tracking){
++    if(['PROJECTS_INGEST_HUNTER_TOKEN','TRACKING_API_TOKEN','HUNTER_API_TOKEN','IKUN_PROJECTS_IPC_TOKEN'].some(name=>process.env[name]&&process.env[name]===expected))return failure(id,503,'AUTH_NOT_CONFIGURED','来源方向凭据配置无效');
++    for(const name of ['x-tenant','x-tenant-id','x-scope'])if(request.headers.has(name)&&request.headers.get(name)!=='ikun-main')return failure(id,403,'FORBIDDEN','事件范围无权限');
++    if(url.searchParams.getAll('tenant_id').some(value=>value!=='ikun-main'))return failure(id,403,'FORBIDDEN','事件范围无权限');
++    if(url.searchParams.size)return failure(id,422,'VALIDATION_ERROR','观察入口不接受查询参数');
++    const hash=request.headers.get('x-expected-event-sha256');
++    if(hash!==null){if(!/^[0-9a-f]{64}$/.test(hash))return failure(id,422,'VALIDATION_ERROR','事件 hash 格式不正确');query.expected_hash=hash;}
++  }
++  const extra=tracking?{contract:'tracking-observations-v1',query}:{};
+@@ -110 +130 @@
+-  if(request.method==='GET'&&receipt)return ipc({operation:'receipt',source:receipt[1] as 'hunter'|'tracking',target:receipt[2],request_id:id},request.signal);
++  if(request.method==='GET'&&receipt)return ipc({operation:'receipt',source:receipt[1] as 'hunter'|'tracking',target:receipt[2],request_id:id,...extra},request.signal);
+@@ -112 +131,0 @@
+-  if(source!=='hunter')return failure(id,501,'NOT_IMPLEMENTED','本候选仅接收人工确认的 Hunter 项目资料');
+@@ -114 +133,2 @@
+-  try{return ipc({operation:'ingest',source:'hunter',request_id:id,body:await boundedJson(request)},request.signal);}catch{return failure(id,422,'VALIDATION_ERROR','事件 JSON 无效');}
++  try{return ipc({operation:'ingest',source:source as 'hunter'|'tracking',request_id:id,body:await boundedJson(request,false,tracking?131072:65536,tracking),...extra},request.signal);}
++  catch(error){return failure(id,tracking&&error instanceof Error&&error.message==='BODY_TOO_LARGE'?413:422,'VALIDATION_ERROR',tracking?'事件 JSON 无效或超出限制':'事件 JSON 无效');}

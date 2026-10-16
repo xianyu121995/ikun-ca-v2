@@ -28,9 +28,12 @@ HTTP-over-UDS 使用 B0 `ManagedProjectsIpc`：私有短路径 socket、随机�
 | GET `/api/v1/commands/{id}` | 本域 outbox/真实远端回执的脱敏状态，不猜运行成功 |
 | GET `/api/v1/events/stream` | 项目变化重放/心跳，B1 撤销控制 |
 | POST `/internal/v1/ingest/hunter` | 独立方向凭据；仅人工 confirmed 监控事件 |
+| POST `/internal/v1/ingest/tracking` | Tracking 既有方向凭据；严格观察事件，仅受理已有 canonical 的最小账本 |
 | GET `/internal/v1/receipts/{source}/{event_id}` | 对应来源凭据的持久回执 |
 
-表内 `/{id}` 路径均在 `/api/v1/projects` 下。Tracking 观察接收当前明确返回 NOT_IMPLEMENTED；不启动冻结 worker。来源冲突返回409，不覆盖手工字段。Hunter confirmed 事件在一个 projects.db 事务内写 canonical、inbox receipt 和同 command_id 的 Tracking outbox。`outbox-relay.ts` 仅提供网站 owner 可调的单次投递函数；没有自动后台轮询/平台调用。unknown 总是 GET 原远端 command 后再决定，真实 Tracking 未联调。
+表内 `/{id}` 路径均在 `/api/v1/projects` 下。Tracking 观察接收按已批准 `tracking-observations-v1` 实现，专用 HTTP 上限128KiB，Hunter仍64KiB，既有IPC仍128KiB；私有可选头 `X-Expected-Event-SHA256` 核对原 canonical hash，格式错422、hash冲突409。只保事件ID/hash/时间/receipt和订阅→已有项目关联，不存正文、不改人工字段/主页成员/评分、不写命令或公开SSE。实现与测试详见 [TRACKING-INGEST-REPORT.md](../TRACKING-INGEST-REPORT.md)，本增量待正式收件。
+
+Hunter confirmed 事件仍在一个 projects.db 事务内写 canonical、inbox receipt 和同 command_id 的 Tracking outbox。`outbox-relay.ts` 仅提供网站 owner 可调的单次投递函数；没有自动后台轮询/平台调用。unknown 总是先GET原回执。Tracking过期scrub对象禁止POST，无原回执404继续unknown；部署c4de worker尚无投递/ACK写回任务，仅网站接收可用不能清零其pending。本窗口未启动或修改冻结worker。
 
 home-v1 列表接受 collection=tracked/completed/other、q/rating/progress_stage/home_membership/discovered_on/sort/direction/limit/cursor。collection 缺省仍 active；显式 membership 与集合取交集。默认 discovered/desc，未知值总在末尾，ID升序打破同值；名称为 SQLite BINARY Unicode 排序。progress 按冻结枚举、百分比排序，event 按独立日期/小时排序。所有条件在数据库 LIMIT 前执行，total 同一读取快照；cursor 绑定全部规范化条件、显式 membership 状态、集合、limit、scope 与 profile。
 

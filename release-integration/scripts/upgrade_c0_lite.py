@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import plistlib
 import shutil
+import secrets
 import subprocess
 import time
 import urllib.request
@@ -27,6 +28,7 @@ def main():
     parser.add_argument('--tracking-environment')
     parser.add_argument('--stage-only', action='store_true')
     parser.add_argument('--use-staged-release', action='store_true')
+    parser.add_argument('--enable-tracking-ingest', action='store_true', help='add one independent website-only direction in its existing private env file')
     args = parser.parse_args()
     assert command(['git', 'rev-parse', 'HEAD'], cwd=ROOT) == args.candidate
     assert command(['git', 'branch', '--show-current'], cwd=ROOT) == 'codex/integration'
@@ -42,6 +44,10 @@ def main():
     env = json.loads(env_path.read_text())
     assert env['DATA_ROOT'] == str(TARGET / 'data') and env['IKUN_RELEASE_SHA'] == args.from_sha
     assert env['IKUN_AUTH_ORIGIN'] == 'https://v2.ikun.ca' and 'IKUN_AUTH_DEV' not in env
+    if args.enable_tracking_ingest:
+        assert 'PROJECTS_INGEST_TRACKING_TOKEN' not in env, 'NEW_WEBSITE_DIRECTION_ONLY'
+        assert 'modules/projects/candidate/projects_service/tracking_observations.py' in binding['sources']
+        assert 'IKUN_TRACKING_INGEST_ENV_FILE' in (ROOT/'scripts/start-c0-lite.mjs').read_text()
     hunter_web = {}
     if args.hunter_environment:
         from night_worker_ops import inside, private_json
@@ -116,9 +122,16 @@ def main():
     try:
         env.update(hunter_web)
         env.update(tracking_web)
+        if args.enable_tracking_ingest:
+            token = secrets.token_urlsafe(48)
+            assert all(token != env.get(name) for name in ('PROJECTS_INGEST_HUNTER_TOKEN','TRACKING_API_TOKEN','HUNTER_API_TOKEN','IKUN_PROJECTS_IPC_TOKEN'))
+            env['PROJECTS_INGEST_TRACKING_TOKEN'] = token
         env['IKUN_RELEASE_SHA'] = args.candidate
         job['WorkingDirectory'] = str(release)
-        job['ProgramArguments'] = ['/usr/bin/env', '-i', *[k + '=' + v for k, v in env.items()],
+        launch_env = {k:v for k,v in env.items() if k != 'PROJECTS_INGEST_TRACKING_TOKEN'}
+        if 'PROJECTS_INGEST_TRACKING_TOKEN' in env:
+            launch_env['IKUN_TRACKING_INGEST_ENV_FILE'] = str(env_path)
+        job['ProgramArguments'] = ['/usr/bin/env', '-i', *[k + '=' + v for k, v in launch_env.items()],
                                    str(TARGET / 'toolchains/node24/bin/node'), str(release / 'scripts/start-c0-lite.mjs')]
         owner['candidate_sha'] = args.candidate
         atomic(env_path, env); atomic(owner_path, owner); atomic(plist, plistlib.dumps(job))
@@ -139,6 +152,8 @@ def main():
         receipt.update(candidate_sha=args.candidate, release=str(release), build_id=binding['build_id'],
                        artifact_sha256=digest(release / 'c0-artifact.json'), previous_candidate=args.from_sha,
                        rollback=str(rollback), upgraded_at=datetime.now(timezone.utc).isoformat())
+        if args.enable_tracking_ingest:
+            receipt['tracking_ingest_direction'] = {'field':'PROJECTS_INGEST_TRACKING_TOKEN','storage':str(env_path),'website_only':True,'secret_in_launchd_arguments':False}
         atomic(receipt_path, receipt)
         print(json.dumps({'status': 'UPGRADED_LOCAL_ONLY', 'candidate_sha': args.candidate, 'receipt': str(receipt_path)}))
     except Exception:

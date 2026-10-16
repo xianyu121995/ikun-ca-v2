@@ -13,6 +13,7 @@ from .queries import canonical, page, record, summary, milestones
 from . import home
 from .transport import CommandResult, Event, Fields, MembershipAction, Rpc, SCOPE, UUID4
 from .ratings import RatingsCatalog
+from . import tracking_observations as observations
 
 WRITES={'create','patch','membership','delete','completion','completions','restore'}
 READS={'get','list','command','changes','reconcile','summary','milestones','ratings'}
@@ -85,8 +86,10 @@ class Service:
                     row=entity(con,rpc.target);return 200,home.projection(con,row) if rpc.contract=='projects-home-v1' else record(row),f'"rev-{row["version"]}"'
                 if rpc.operation=='receipt':
                     if rpc.source is None:raise DomainError(403,'FORBIDDEN','来源凭证未绑定')
+                    expected=observations.expected_hash(rpc.query) if rpc.source=='tracking' else None
                     row=con.execute('SELECT * FROM event_inbox WHERE source=? AND event_id=? AND tenant_id=?',(rpc.source,valid_id(rpc.target,'evt_'),SCOPE)).fetchone()
                     if not row:raise DomainError(404,'NOT_FOUND','受理回执不存在')
+                    if rpc.source=='tracking':observations.verify_hash(expected,row['body_hash'])
                     return 200,self.event_receipt(row,True),None
                 if rpc.operation=='command':
                     row=con.execute('SELECT * FROM tracking_outbox WHERE command_id=? AND tenant_id=?',(valid_id(rpc.target,'cmd_'),SCOPE)).fetchone()
@@ -172,6 +175,14 @@ class Service:
         return {key:row[key] for key in ('event_id','project_id','receipt_id','accepted_at','command_id')}|{'duplicate':duplicate}
 
     def ingest(self,rpc):
+        claimed=rpc.body.get('source')
+        if claimed in ('hunter','tracking') and claimed!=rpc.source:
+            raise DomainError(403,'FORBIDDEN','事件来源与方向凭证不匹配')
+        if rpc.source=='tracking':
+            if rpc.contract!=observations.CONTRACT:raise DomainError(422,'VALIDATION_ERROR','观察事件需要版本化接收协议')
+            with self.db.transaction() as con:
+                row,duplicate=observations.accept(con,rpc.body,rpc.query)
+                return 200,self.event_receipt(row,duplicate),None
         event=Event.model_validate(rpc.body)
         if event.source!='hunter' or rpc.source!=event.source:
             raise DomainError(403,'FORBIDDEN','事件来源与方向凭证不匹配')

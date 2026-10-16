@@ -1,0 +1,267 @@
+{
+  "record_version": 1,
+  "protocol": "tracking-observations-v1",
+  "state": "pending_protocol_review",
+  "authority_commit": "a76f17633b1a0c73e6a9cdada9db575514256c4c",
+  "projects_baseline": "aa51a640a159e4c8f6cdd841a25f4279e73075ba",
+  "tracking_input_commit": "c4de379a67bd9b154bab87ce81d4645b53102ea0",
+  "phase2_commit": "9699375c920465b5d802e7acff17b5421203e544",
+  "document_sha256": "393ac9bcba95457d7c8ad565837e3eccaa05ad20ace9cb148eb5fa4ce1f5d9f7",
+  "http": {
+    "post": "/internal/v1/ingest/tracking",
+    "get": "/internal/v1/receipts/tracking/{event_id}",
+    "existing_direction_secret": "PROJECTS_INGEST_TRACKING_TOKEN",
+    "new_directions": [],
+    "body_limit_bytes": 131072,
+    "optional_hash_check_header": "X-Expected-Event-SHA256",
+    "hash_header_format": "^[0-9a-f]{64}$",
+    "hunter_body_limit_unchanged": 65536,
+    "oversize_status": 413
+  },
+  "private_rpc": {
+    "contract": "tracking-observations-v1",
+    "operations": [
+      "ingest",
+      "receipt"
+    ],
+    "source": "tracking",
+    "human_principal": null,
+    "new_server": false
+  },
+  "events": {
+    "schema_version": 1,
+    "source": "tracking",
+    "scope": "ikun-main",
+    "types": [
+      "tracking.feed.activity.created.v1",
+      "tracking.feed.activity.updated.v1"
+    ],
+    "envelope_exact_fields": [
+      "schema_version",
+      "event_id",
+      "source",
+      "event_type",
+      "occurred_at",
+      "received_at",
+      "tenant_id",
+      "project_id",
+      "correlation_id",
+      "payload"
+    ],
+    "payload_exact_fields": [
+      "activity_id",
+      "subscription_id",
+      "project_id",
+      "project_name",
+      "tweet_id",
+      "x_handle",
+      "text",
+      "url",
+      "occurred_at",
+      "received_at",
+      "source",
+      "generation",
+      "tweet_kind",
+      "replay",
+      "is_live_new"
+    ],
+    "field_table": {
+      "activity_id": "act_UUIDv5; equals B3 namespace/name derivation",
+      "subscription_id": "sub_UUIDv4",
+      "project_id": "prj_UUIDv4; equal outer canonical ID",
+      "project_name": "string length 1..120; never updates Projects name",
+      "tweet_id": "decimal string length 1..40",
+      "x_handle": "ASCII letters/digits/underscore length 1..15, no @",
+      "text": "valid UTF-8 string length 0..20000; never persisted",
+      "url": "exact https://x.com/{x_handle}/status/{tweet_id}",
+      "occurred_at": "valid UTC/Z string <=9 fractional digits or null; equal outer, original representation kept",
+      "received_at": "valid UTC/Z string <=9 fractional digits; equal outer, original representation kept",
+      "source": "wss | rest",
+      "generation": "strict integer 1..9223372036854775807; raw integer semantics retained through Node->IPC without IEEE rounding",
+      "tweet_kind": "original | quote | reply | repost | unknown",
+      "replay": "strict boolean",
+      "is_live_new": "strict boolean"
+    },
+    "additional_properties": false,
+    "created_requires": {
+      "tweet_kind": [
+        "original",
+        "quote"
+      ],
+      "source": "wss",
+      "replay": false,
+      "is_live_new": true
+    },
+    "updated_requires": {
+      "replay": true,
+      "is_live_new": false
+    },
+    "stable_activity_namespace": "c018deb2-7ccf-5092-8112-b5c9f71d40be",
+    "stable_activity_name": "compact JSON [scope,subscription_id,tweet_id]",
+    "correlation_equals_activity_id": true,
+    "inner_outer_project_and_times_equal": true,
+    "valid_utf8_and_paired_unicode_required": true,
+    "invalid_unicode_status": 422
+  },
+  "hash": {
+    "algorithm": "SHA256",
+    "input": "UTF-8 canonical validated original JSON object",
+    "canonical": {
+      "sort_keys": true,
+      "separators": [
+        ",",
+        ":"
+      ],
+      "ensure_ascii": false,
+      "allow_nan": false
+    },
+    "normalize_datetime_or_text_before_hash": false,
+    "same_event_different_hash_status": 409
+  },
+  "receipt": {
+    "exact_fields": [
+      "event_id",
+      "project_id",
+      "receipt_id",
+      "accepted_at",
+      "duplicate",
+      "command_id"
+    ],
+    "command_id": null,
+    "status": 200,
+    "duplicate_initial": false,
+    "duplicate_replay_and_get": true,
+    "missing_status": 404,
+    "expected_hash_mismatch_status": 409,
+    "receiver_clock_for_accepted_at": true,
+    "meaning": "durable observation acceptance only; not provider or public delivery success"
+  },
+  "storage": {
+    "database": "projects.db only",
+    "transaction": "existing BEGIN IMMEDIATE",
+    "tables": [
+      "event_inbox",
+      "project_sources"
+    ],
+    "event_key": [
+      "tenant_id",
+      "source",
+      "event_id"
+    ],
+    "subscription_alias": "observations-v1:subscription:{subscription_id}",
+    "event_hash_commits_original_project_sub_activity_tuple": true,
+    "canonical_must_already_exist": true,
+    "alias_conflict_status": 409,
+    "unrelated_canonical_status": 404,
+    "new_migration": false,
+    "body_persisted": false,
+    "public_projection_added": false,
+    "canonical_or_membership_or_rating_mutation": false,
+    "commands_or_project_changes_emitted": false,
+    "inbox_receipt_and_alias_atomic": true
+  },
+  "expiry_reconciliation": {
+    "scrubbed_post_status": 422,
+    "expired_body_may_be_rebuilt": false,
+    "expired_body_may_be_posted": false,
+    "get_matching_hash_200": "historical acceptance evidenced; local ACK still requires Tracking owner implementation",
+    "get_404_without_original_body": "unknown; keep expired_pending_reconciliation; no fabricated ACK",
+    "global_ttl_not_inferred_from_generation_received_at": true,
+    "receiver_has_authoritative_source_expiry_field": false
+  },
+  "worker_blocker": {
+    "verified_no_delivery_loop": true,
+    "verified_no_ack_writeback_api": true,
+    "existing_outbox_get_returns_envelope": false,
+    "website_only_upgrade_can_clear_tracking_pending": false,
+    "required_owner": "tracking-worker",
+    "minimum_increment": [
+      "single-owner outbox publisher/reconcile task",
+      "fixed loopback target and existing ingest token file configuration",
+      "original-hash checked ACK and restart transaction",
+      "expiry/purge barrier; expired GET only; 404 remains unknown"
+    ],
+    "authorized_here": false
+  },
+  "regression_ids": [
+    "TI-01 wire/IDs/types",
+    "TI-02 replay/hash/concurrency/association",
+    "TI-03 atomicity/fault/restart",
+    "TI-04 actual route/UDS/direction/scope",
+    "TI-05 lost ACK then GET",
+    "TI-06 scrubbed body and 404 unknown",
+    "TI-07 no auto-import/projection/foreign store access",
+    "TI-08 Hunter/B2/C03/B1 preserved",
+    "TI-10 max emoji/control canonical+RPC bytes; raw int64; invalid surrogate/UTF-8 and oversize rejection"
+  ],
+  "examples": {
+    "event": {
+      "schema_version": 1,
+      "event_id": "evt_550e8400-e29b-41d4-a716-446655440003",
+      "source": "tracking",
+      "event_type": "tracking.feed.activity.created.v1",
+      "occurred_at": null,
+      "received_at": "2026-10-16T00:00:01.000Z",
+      "tenant_id": "ikun-main",
+      "project_id": "prj_550e8400-e29b-41d4-a716-446655440000",
+      "correlation_id": "act_ec4e0e15-9907-55eb-a383-e7e9326f1d19",
+      "payload": {
+        "activity_id": "act_ec4e0e15-9907-55eb-a383-e7e9326f1d19",
+        "subscription_id": "sub_550e8400-e29b-41d4-a716-446655440002",
+        "project_id": "prj_550e8400-e29b-41d4-a716-446655440000",
+        "project_name": "协议夹具",
+        "tweet_id": "123456789012345678",
+        "x_handle": "fixture_user",
+        "text": "仅校验hash，不持久化正文",
+        "url": "https://x.com/fixture_user/status/123456789012345678",
+        "occurred_at": null,
+        "received_at": "2026-10-16T00:00:01.000Z",
+        "source": "wss",
+        "generation": 1,
+        "tweet_kind": "original",
+        "replay": false,
+        "is_live_new": true
+      }
+    },
+    "event_sha256": "cfbb216b80c1517e456bc54a513325d9cfa654f2bc2b29b56b148de2863bc649",
+    "receipt": {
+      "event_id": "evt_550e8400-e29b-41d4-a716-446655440003",
+      "project_id": "prj_550e8400-e29b-41d4-a716-446655440000",
+      "receipt_id": "rcp_550e8400-e29b-41d4-a716-446655440004",
+      "accepted_at": "2026-10-16T00:00:02.000Z",
+      "duplicate": false,
+      "command_id": null
+    }
+  },
+  "source_evidence_sha256": {
+    "c4de379a67bd9b154bab87ce81d4645b53102ea0:services/tracking-worker/python/tracking/store.py": "1a27015220707778028b2fada092d425122d9ec4877d52b737e911fddf4fb9f2",
+    "c4de379a67bd9b154bab87ce81d4645b53102ea0:services/tracking-worker/python/tracking/commands.py": "76b963e4aeb290f43cdf2ae6c32b3a7802cd02c15ad7a8dce54c1d09ba0930bc",
+    "c4de379a67bd9b154bab87ce81d4645b53102ea0:services/tracking-worker/python/tracking/protocol.py": "ea8f87909c3e9276fbb2ee98263ca59f5cad1d8ee1b343042ea2f89ab7a90e7a",
+    "c4de379a67bd9b154bab87ce81d4645b53102ea0:services/tracking-worker/python/tracking/retention.py": "6f3c5d3345f87d4c2c9a2a16883a96addb43a9d2ae60810fa73de4c688e93029",
+    "c4de379a67bd9b154bab87ce81d4645b53102ea0:services/tracking-worker/python/tracking/api.py": "0c685f4bdd9d84fe9d67b06af3db7257413ad37dc99f77dc0e02fef47ad922d1",
+    "c4de379a67bd9b154bab87ce81d4645b53102ea0:services/tracking-worker/python/tracking/worker.py": "869835677c118adcad329b855731714275d3186239242ab3dfb1677d808390c3",
+    "c4de379a67bd9b154bab87ce81d4645b53102ea0:services/tracking-worker/python/tracking/feed.py": "f802c5719440970fec7d92523ac5d1e9a80b2d6f703ecefbd44f89de80399d06",
+    "c4de379a67bd9b154bab87ce81d4645b53102ea0:services/tracking-worker/python/tracking/config.py": "c64cf483fe5a6faac0a95bacf90d1f83d2d8d5d38a5af4cfd7115b848c2c4804"
+  },
+  "normative_evidence_sha256": {
+    "a76f17633b1a0c73e6a9cdada9db575514256c4c:docs/progress/TRACKING-INGEST-RELEASE-2026-10-16.md": "5a6d495e750490ff04ae3a3226439e6e87d4f50f2eee279a70c6ef132b911ffe",
+    "a76f17633b1a0c73e6a9cdada9db575514256c4c:docs/progress/tracking-ingest-release-2026-10-16.json": "aa5efbce2128519633293afebd6bf2b48e5e8a979a44b4fc65c244da6807d7cb",
+    "9699375c920465b5d802e7acff17b5421203e544:docs/phase2/API.md": "ec1547e1349da1e45caea5c009499f258c34de2e387af4cbf14c81dbc7e16722",
+    "9699375c920465b5d802e7acff17b5421203e544:docs/phase2/DTO.md": "6911a952c0dfe5aa452460a2b78e29cda8ca282af734be899adafd9314d7efb4",
+    "9699375c920465b5d802e7acff17b5421203e544:packages/contracts/src/phase2.ts": "ae4cd7dc9c7b7acdd1092dd5dab97de118334da941e86e9f7293c01e8470311d"
+  },
+  "static_checks": {
+    "deployed_payload_keys_verified": 15,
+    "deployed_envelope_keys_verified": 10,
+    "worker_canonical_kwargs_verified": true,
+    "example_uuid5_and_hash_verified": true,
+    "baseline_source_inputs_unchanged": 52,
+    "source_set_sha256": "6fc9ef0895ea8d4e95709477d49d3852581d7893e5f9e6704fafb4a10533eee1",
+    "runtime_changed_files": 0,
+    "functional_tests_run": 0,
+    "databases_opened": 0,
+    "build_browser_runs": 0,
+    "worker_changes": 0,
+    "size_receipt": "tracking-observations-size-check.json"
+  }
+}

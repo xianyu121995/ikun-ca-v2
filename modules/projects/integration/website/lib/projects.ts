@@ -72,10 +72,20 @@ async function ipcRequest(payload:Rpc,signal?:AbortSignal):Promise<Response>{
     });
   }catch{return failure(payload.request_id,503,'DB_UNAVAILABLE','项目操作结果待核对，请查询原操作回执');}
 }
-async function boundedJson(request:Request,allowEmpty=false){
+function trackingJson(bytes:Buffer):unknown{
+  const parser=JSON as unknown as {parse(text:string,reviver:(key:string,value:unknown,context:{source?:string})=>unknown):unknown;rawJSON(text:string):unknown};
+  const raw=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
+  return parser.parse(raw,(key,value,context)=>{
+    if(/\p{Surrogate}/u.test(key)||(typeof value==='string'&&/\p{Surrogate}/u.test(value)))throw Error('INVALID_UNICODE');
+    // Preserve raw JSON numbers through JSON.stringify -> Python; never round int64 IDs/generations.
+    if(key&&typeof value==='number'){if(!context?.source)throw Error('INVALID_NUMBER');return parser.rawJSON(context.source);}
+    return value;
+  });
+}
+async function boundedJson(request:Request,allowEmpty=false,maximum=65536,trackingWire=false){
   const reader=request.body?.getReader();if(!reader){if(allowEmpty)return {};throw Error('INVALID_BODY');}
   let size=0;const pieces:Uint8Array[]=[];const deadline=Date.now()+5000;
-  try{while(true){let timer:ReturnType<typeof setTimeout>|undefined;const part=await Promise.race([reader.read(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('BODY_TIMEOUT')),Math.max(1,deadline-Date.now()));})]).finally(()=>clearTimeout(timer));if(part.done)break;size+=part.value.length;if(size>65536)throw Error('BODY_TOO_LARGE');pieces.push(part.value);}if(size===0&&allowEmpty)return {};const parsed=JSON.parse(Buffer.concat(pieces).toString());if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('INVALID_BODY');return parsed;}catch(error){void reader.cancel().catch(()=>{});throw error;}finally{reader.releaseLock();}
+  try{while(true){let timer:ReturnType<typeof setTimeout>|undefined;const part=await Promise.race([reader.read(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('BODY_TIMEOUT')),Math.max(1,deadline-Date.now()));})]).finally(()=>clearTimeout(timer));if(part.done)break;size+=part.value.length;if(size>maximum)throw Error('BODY_TOO_LARGE');pieces.push(part.value);}if(size===0&&allowEmpty)return {};const bytes=Buffer.concat(pieces);const parsed=trackingWire?trackingJson(bytes):JSON.parse(bytes.toString());if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('INVALID_BODY');return parsed;}catch(error){void reader.cancel().catch(()=>{});throw error;}finally{reader.releaseLock();}
 }
 export async function projectsRoute(original:Request){
   projectsAuth();const id=requestId(original);const headers=new Headers(original.headers);headers.set('x-request-id',id);const request=new Request(original,{headers});
@@ -99,16 +109,26 @@ export async function projectsRoute(original:Request){
     return ipc({operation,principal,request_id:id,target,query,body,contract,idempotency_key:request.headers.get('idempotency-key'),if_match:request.headers.get('if-match')},request.signal);
   });
 }
-/** Direction credential binds Hunter only; user sessions cannot invoke this entry. */
+/** Each worker direction is independently authenticated; cookies never authorize ingestion. */
 export async function ingestRoute(request:Request){
-  const id=requestId(request);const path=new URL(request.url).pathname;
+  const id=requestId(request);const url=new URL(request.url);const path=url.pathname;
   const source=path.split('/')[4];
   const expected=source==='hunter'?process.env.PROJECTS_INGEST_HUNTER_TOKEN:source==='tracking'?process.env.PROJECTS_INGEST_TRACKING_TOKEN:undefined;const given=request.headers.get('authorization')??'';
   if(!expected||expected.length<32||Buffer.byteLength(given)!==Buffer.byteLength('Bearer '+expected)||!timingSafeEqual(Buffer.from(given),Buffer.from('Bearer '+expected)))return failure(id,401,'UNAUTHENTICATED','来源凭据无效');
+  const tracking=source==='tracking';const query:Record<string,string>={};
+  if(tracking){
+    if(['PROJECTS_INGEST_HUNTER_TOKEN','TRACKING_API_TOKEN','HUNTER_API_TOKEN','IKUN_PROJECTS_IPC_TOKEN'].some(name=>process.env[name]&&process.env[name]===expected))return failure(id,503,'AUTH_NOT_CONFIGURED','来源方向凭据配置无效');
+    for(const name of ['x-tenant','x-tenant-id','x-scope'])if(request.headers.has(name)&&request.headers.get(name)!=='ikun-main')return failure(id,403,'FORBIDDEN','事件范围无权限');
+    if(url.searchParams.getAll('tenant_id').some(value=>value!=='ikun-main'))return failure(id,403,'FORBIDDEN','事件范围无权限');
+    if(url.searchParams.size)return failure(id,422,'VALIDATION_ERROR','观察入口不接受查询参数');
+    const hash=request.headers.get('x-expected-event-sha256');
+    if(hash!==null){if(!/^[0-9a-f]{64}$/.test(hash))return failure(id,422,'VALIDATION_ERROR','事件 hash 格式不正确');query.expected_hash=hash;}
+  }
+  const extra=tracking?{contract:'tracking-observations-v1',query}:{};
   const receipt=new RegExp('^/internal/v1/receipts/(hunter|tracking)/(evt_'+uuid+')$').exec(path);
-  if(request.method==='GET'&&receipt)return ipc({operation:'receipt',source:receipt[1] as 'hunter'|'tracking',target:receipt[2],request_id:id},request.signal);
+  if(request.method==='GET'&&receipt)return ipc({operation:'receipt',source:receipt[1] as 'hunter'|'tracking',target:receipt[2],request_id:id,...extra},request.signal);
   if(request.method!=='POST'||!/^\/internal\/v1\/ingest\/(hunter|tracking)$/.test(path))return failure(id,404,'NOT_FOUND','来源入口不存在');
-  if(source!=='hunter')return failure(id,501,'NOT_IMPLEMENTED','本候选仅接收人工确认的 Hunter 项目资料');
   if(request.headers.get('content-type')?.split(';')[0]?.toLowerCase()!=='application/json')return failure(id,415,'VALIDATION_ERROR','请使用 application/json');
-  try{return ipc({operation:'ingest',source:'hunter',request_id:id,body:await boundedJson(request)},request.signal);}catch{return failure(id,422,'VALIDATION_ERROR','事件 JSON 无效');}
+  try{return ipc({operation:'ingest',source:source as 'hunter'|'tracking',request_id:id,body:await boundedJson(request,false,tracking?131072:65536,tracking),...extra},request.signal);}
+  catch(error){return failure(id,tracking&&error instanceof Error&&error.message==='BODY_TOO_LARGE'?413:422,'VALIDATION_ERROR',tracking?'事件 JSON 无效或超出限制':'事件 JSON 无效');}
 }

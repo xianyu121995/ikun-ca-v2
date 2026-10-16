@@ -1,0 +1,29 @@
+{
+  "state": "PENDING_ROOT_OPERATIONAL_REVIEW",
+  "Projects_source": "6067658d6092e4d046a8691e8f2f93b34c717801",
+  "Projects_control": "2c55f927bcbcc0d2b47472d84156ffa38826876b",
+  "website_from": "19863b2af031fc2592bb6d73b7161efc77b0bd1d",
+  "integration_base": "23d2221bd99ca500cfad5b570eb4589181effd38",
+  "files_sha256": {
+    "scripts/start-c0-lite.mjs": "e5854403852463c58dde9dbf9ac99ce7fa35a76c7e8a0cef70e7eab4b1eab728",
+    "release-integration/scripts/upgrade_c0_lite.py": "42fc279e27b7c4cdb933a0f9bb64ea29f37093bed6fd636601a86768bd11ef9d",
+    "release-integration/scripts/upgrade_tracking_ingest_site.py": "be1b5d6c2c67dba43abc916ce54532a6b0ab376fda5451c8f6790b08f9668258",
+    "release-integration/scripts/bind_c0_lite.py": "1376a490b34ad9c4292ebd491e162ef0fc9a5907637a8e27d834cb334e816f18",
+    "release-integration/scripts/verify_night_intake.py": "018f09d67a4b1a996904e9602645ab34d21f6e082dcab40da254ad021b88fc84",
+    "release-integration/scripts/receive_tracking_ingest.py": "014f24fb6cbc05edc212e184d9554575f8de254bd0a2a8927f2dcefc71a2091a",
+    "release-integration/scripts/build_tracking_ingest_site.mjs": "9f0aa572cb5e4538a4e3d7800e0389b4f3a18a11d2503f35443761943bf7fe05"
+  },
+  "env_delta": {
+    "add_web_only": "PROJECTS_INGEST_TRACKING_TOKEN",
+    "generation": "secrets.token_urlsafe(48), only inside activation try after rollback snapshot",
+    "storage": "original owned config/web.environment.json,0600",
+    "launchd_arguments": "only IKUN_TRACKING_INGEST_ENV_FILE path; new secret omitted",
+    "loader": "exact owned path + regular file/uid/mode/nlink/size validation; read one token only",
+    "worker_env_changed": false
+  },
+  "rollback": "original web env/plist/owner are captured before credential generation; failure restores all three, so absent field remains absent",
+  "database_replacement": false,
+  "worker_change": false,
+  "source_guards": "77 plus B3/B4/C03 and voice checks retained; exact receiver and launcher patches only",
+  "test_state": "source verification passed; production build and isolation acceptance pending"
+}

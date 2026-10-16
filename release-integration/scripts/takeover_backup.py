@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import sqlite3
 import stat
@@ -173,19 +174,36 @@ def source_pg_params(config_path):
  require(values[0]['dbname']==values[1]['dbname'],'DSN_DATABASE_MISMATCH')
  return {k:v for k,v in values[0].items() if k in ('host','port','dbname','user','password')}
 
-def select_source_role(params,log):
+def pinned_pg_params(spec,baseline):
+ from psycopg.conninfo import conninfo_to_dict
+ path=Path(spec['path']);info=path.lstat()
+ require(stat.S_ISREG(info.st_mode) and info.st_uid==os.getuid() and stat.S_IMODE(info.st_mode)==0o600 and info.st_nlink==1 and not any(p.is_symlink() for p in (path,*path.parents)),'PINNED_PG_SOURCE_IDENTITY')
+ body=path.read_bytes();require(hashlib.sha256(body).hexdigest()==spec['sha256'],'PINNED_PG_SOURCE_HASH')
+ values=[m[1] for line in body.decode('utf-8').splitlines() if (m:=re.fullmatch(r'\s*DATABASE_URL\s*=\s*(.*?)\s*',line))]
+ require(len(values)==1,'PINNED_DATABASE_URL_EXACTLY_ONE');value=values[0]
+ if value.startswith(('"',"'")):
+  require(len(value)>=2 and value[-1]==value[0],'PINNED_DATABASE_URL_QUOTES');value=value[1:-1]
+ require(value.startswith(('postgresql://','postgres://')) and not any(ord(c)<32 for c in value),'PINNED_DATABASE_URL_FORMAT')
+ params=conninfo_to_dict(value)
+ require(all(params.get(k)==baseline[k] for k in ('host','port','dbname')),'PINNED_DATABASE_URL_ENDPOINT_DATABASE_MISMATCH')
+ require(params.get('user')==spec['user'] and bool(params.get('password')),'PINNED_DATABASE_URL_ROLE_OR_PASSWORD')
+ return {k:v for k,v in params.items() if k in ('host','port','dbname','user','password')}
+
+def select_source_role(params,log,*,backup_role_source):
  import psycopg
  params={**params,'passfile':empty_pgpass(Path(log).parent)}
- candidates=[dict(params),{**{k:v for k,v in params.items() if k not in ('user','password')},'user':'lvlei'}]
+ pinned={**pinned_pg_params(backup_role_source,params),'passfile':params['passfile']}
+ candidates=[dict(params),pinned]
  for index,value in enumerate(candidates):
   try:
    safe={k:str(v) for k,v in value.items()};safe.update(connect_timeout='5',options='-c default_transaction_read_only=on -c statement_timeout=30000 -c lock_timeout=3000')
    with psycopg.connect(**safe,autocommit=True) as conn:
     with conn.transaction():
      conn.execute('SET TRANSACTION READ ONLY')
-     enough=conn.execute("select coalesce(bool_and(has_table_privilege(c.oid,'SELECT')),true) from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind in ('r','p') and n.nspname not like 'pg_%' and n.nspname <> 'information_schema'").fetchone()[0]
-     require(enough,'RESTRICTED_ROLE_INSUFFICIENT_FOR_FULL_BACKUP')
-   return value,('configured_readonly_role' if index==0 else 'local_lvlei_readonly_fallback')
+     enough,rls=conn.execute("select coalesce(bool_and(has_table_privilege(c.oid,'SELECT')),true),coalesce(bool_or(row_security_active(c.oid)),false) from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind in ('r','p') and n.nspname not like 'pg_%' and n.nspname <> 'information_schema'").fetchone()
+     sequences=conn.execute("select coalesce(bool_and(has_sequence_privilege(c.oid,'SELECT')),true) from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind='S' and n.nspname not like 'pg_%' and n.nspname <> 'information_schema'").fetchone()[0]
+     require(enough and not rls and sequences,'RESTRICTED_ROLE_INSUFFICIENT_FOR_FULL_BACKUP')
+   return value,('configured_readonly_role' if index==0 else 'pinned_existing_web3_readonly_backup')
   except Exception as error:
    with private_log(log) as f:f.write((utc()+' '+type(error).__name__+'\n').encode())
  raise SafeFailure('PG_FULL_BACKUP_READONLY_ROLE_UNAVAILABLE')

@@ -37,6 +37,7 @@ JOB_SPECS={
 }
 MANUAL={'pid':6466,'parent_pid':6465,'started_at_local':'2026-10-10 18:33:40','cwd':str(HUNTER),'signal':'SIGTERM'}
 PROTECTED={'Alpha':9034,'old_supervisor':79489,'old_Postgres':79494,'old_Tunnel':79502,'v2_web':87924,'v2_Hunter':2608,'v2_Tracking':25225,'v2_Tunnel':39523}
+PG_BACKUP_SOURCE={'path':str(LIVE/'.runtime/ikun-first-release/original-site/.env'),'sha256':'247dae0379223121c305cc2ba4ad93986df2c4e54df5abd752a0cf3be07e9f70','user':'web3'}
 SQLITES={'old_hunter':HUNTER/'data/hunter_monitor.db','old_tracking_events':TRACK/'target-events.sqlite','old_tracking_dispatch':TRACK/'dispatch.sqlite',**{'v2_'+n:V2/'data'/n/(n+'.db') for n in ('auth','projects','hunter','tracking')}}
 
 def local_to_utc(value):return datetime.strptime(value,'%Y-%m-%d %H:%M:%S').replace(tzinfo=ZoneInfo('Asia/Shanghai')).astimezone(timezone.utc).isoformat()
@@ -185,10 +186,12 @@ def capture_plan():
  protected={name:system.process(pid) for name,pid in PROTECTED.items()};require(all(protected.values()),'INITIAL_PROTECTED_PROCESS_MISSING')
  old=read_json(ROOT/'release-integration/night/tracking-ingest-acceptance.json');files=dict(old['worker_files_before'])
  files[str(Path.home()/'Library/LaunchAgents/ca.ikun.v2.c0lite.web.plist')]=sha(Path.home()/'Library/LaunchAgents/ca.ikun.v2.c0lite.web.plist')
+ require(sha(PG_BACKUP_SOURCE['path'])==PG_BACKUP_SOURCE['sha256'],'PINNED_PG_SOURCE_HASH');files[PG_BACKUP_SOURCE['path']]=PG_BACKUP_SOURCE['sha256']
  config=TRACK/'config.json';refs=read_json(config);references={k:v for k,v in refs.items() if k.endswith('_file') and isinstance(v,str)}
  pgbin=Path((LIVE/'.runtime/pgbin').read_text().strip());require(pgbin==Path('/opt/homebrew/bin'),'UNEXPECTED_PG_BIN_PATH')
  bins={name:{'path':str(pgbin/name),'sha256':sha(pgbin/name)} for name in ('pg_dump','pg_restore','pg_ctl','initdb','postgres')}
  result={'state':'PENDING_TOOL_REVIEW_NO_OLD_ACTIONS','execution_id':EXECUTION,'authority':'0e875cc910e0b83289d6257ebf68e5af82d7374a','direct_initial_user_message':'01a143aa-3791-7732-9065-410adf6e08f2','captured_at':utc(),'uid':os.getuid(),'jobs':jobs,'manual_hunter':manual,'manual_authorization':MANUAL,'protected_processes':protected,'parent_login':system.process(6465),'protected_files_sha256':files,'v2_database_identities':old['databases'],'tracking_config_sha256':sha(config),'tracking_private_file_references':references,'pgbin':str(pgbin),'pg_binary_sha256':bins,'initial_alpha_health':alpha_health(),'sqlite_sources':{name:{'path':str(path),'device':path.stat().st_dev,'inode':path.stat().st_ino} for name,path in SQLITES.items()},'code_files_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [Path(__file__),ROOT/'release-integration/scripts/takeover_backup.py']}}
+ result['pg_backup_role_source']=dict(PG_BACKUP_SOURCE)
  atomic(PLAN,result);print(json.dumps({'state':result['state'],'plan':str(PLAN),'job_pids':{k:v['process']['pid'] for k,v in jobs.items()},'manual_sigterm_pid':6466,'protected_processes':len(protected),'old_actions':0}))
 
 def source_files_backup(directory,plan):
@@ -239,7 +242,8 @@ def backup_phase(journal,system,plan,prefix):
  pgbin=Path(plan['pgbin'])
  for binary,row in plan['pg_binary_sha256'].items():require(sha(row['path'])==row['sha256'],'PG_BINARY_DRIFT')
  def dump(directory):
-  params=source_pg_params(TRACK/'config.json');params,role=select_source_role(params,directory/'role.error.log');row=postgres_dump(params,directory,pgbin);row['read_role_strategy']=role;return row
+  require(plan['pg_backup_role_source']==PG_BACKUP_SOURCE,'PG_BACKUP_ROLE_SOURCE_DRIFT')
+  params=source_pg_params(TRACK/'config.json');params,role=select_source_role(params,directory/'role.error.log',backup_role_source=plan['pg_backup_role_source']);row=postgres_dump(params,directory,pgbin);row['read_role_strategy']=role;return row
  result['postgres']=run_step(journal,prefix+'_pg_dump',dump)
  result['restore']=run_step(journal,prefix+'_pg_restore',lambda directory:postgres_restore(result['postgres'],directory,pgbin,protected_pids=[p['pid'] for p in plan['protected_processes'].values()]+[6465,6466,46545,38618]))
  result['guard_after']=guard(system,plan);validate_artifacts(result);result['completed_at']=utc();return result

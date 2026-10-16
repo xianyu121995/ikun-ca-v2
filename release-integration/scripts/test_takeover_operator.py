@@ -169,6 +169,46 @@ class OperatorTests(unittest.TestCase):
   password='synthetic space quote \' slash \\';dsn=make_conninfo(host='127.0.0.1',port=55432,dbname='synthetic db',user='synthetic',password=password);files=[]
   for n in ('module','import'):p=self.root/(n+'.dsn');b.atomic(p,dsn.encode());files.append(p)
   config=self.root/'config.json';b.atomic(config,dict(zip(('module_dsn_file','import_dsn_file'),map(str,files))));params=b.source_pg_params(config);self.assertEqual(params['password'],password);params['passfile']=b.empty_pgpass(self.root);env=b.pg_env(params,readonly=True);self.assertEqual(env['PGPASSWORD'],password);self.assertIn('default_transaction_read_only=on',env['PGOPTIONS']);self.assertEqual(Path(env['PGPASSFILE']).read_bytes(),b'')
+ def pinned_fixture(self):
+  path=self.root/'existing.env';body=b'OTHER=ignored\nDATABASE_URL="postgresql://web3:synthetic%20space%27@127.0.0.1:55432/synthetic%20db"\n';b.atomic(path,body)
+  return {'path':str(path),'sha256':b.sha(path),'user':'web3'},{'host':'127.0.0.1','port':'55432','dbname':'synthetic db','user':'module','password':'synthetic-module'}
+ def test_pinned_database_url_only_preserves_encoded_secret(self):
+  spec,baseline=self.pinned_fixture();params=b.pinned_pg_params(spec,baseline)
+  self.assertEqual(params['password'],"synthetic space'");self.assertEqual(params['dbname'],baseline['dbname']);self.assertEqual(set(params),{'host','port','dbname','user','password'})
+ def test_pinned_database_url_rejects_different_database(self):
+  spec,baseline=self.pinned_fixture();baseline['dbname']='other'
+  with self.assertRaisesRegex(b.SafeFailure,'ENDPOINT_DATABASE_MISMATCH'):b.pinned_pg_params(spec,baseline)
+ def test_pinned_database_url_rejects_source_hash_alias_and_permissions(self):
+  spec,baseline=self.pinned_fixture();path=Path(spec['path']);path.write_bytes(path.read_bytes()+b'# changed\n')
+  with self.assertRaisesRegex(b.SafeFailure,'SOURCE_HASH'):b.pinned_pg_params(spec,baseline)
+  spec['sha256']=b.sha(path);path.chmod(0o644)
+  with self.assertRaisesRegex(b.SafeFailure,'SOURCE_IDENTITY'):b.pinned_pg_params(spec,baseline)
+  path.chmod(0o600);alias=self.root/'alias.env';alias.symlink_to(path);spec['path']=str(alias)
+  with self.assertRaisesRegex(b.SafeFailure,'SOURCE_IDENTITY'):b.pinned_pg_params(spec,baseline)
+ def test_pinned_database_url_rejects_duplicate_key(self):
+  spec,baseline=self.pinned_fixture();path=Path(spec['path']);path.write_bytes(path.read_bytes()+path.read_bytes());spec['sha256']=b.sha(path)
+  with self.assertRaisesRegex(b.SafeFailure,'EXACTLY_ONE'):b.pinned_pg_params(spec,baseline)
+ def test_role_selection_only_two_existing_roles_and_readonly(self):
+  spec,baseline=self.pinned_fixture()
+  for pinned_enough in (True,False):
+   calls=[];queries=[]
+   class Connection:
+    def __init__(self,enough):self.enough=enough
+    def __enter__(self):return self
+    def __exit__(self,*_):pass
+    def transaction(self):return self
+    def execute(self,query):
+     queries.append(query)
+     result=(self.enough,False) if 'has_table_privilege' in query else (True,)
+     return type('Cursor',(),{'fetchone':lambda _:result})()
+   def connect(**params):
+    calls.append(params['user']);self.assertIn('default_transaction_read_only=on',params['options']);self.assertTrue(params['autocommit']);return Connection(pinned_enough and params['user']=='web3')
+   with patch('psycopg.connect',side_effect=connect):
+    if pinned_enough:
+     params,strategy=b.select_source_role(baseline,self.root/'role.log',backup_role_source=spec);self.assertEqual(params['user'],'web3');self.assertEqual(strategy,'pinned_existing_web3_readonly_backup')
+    else:
+     with self.assertRaisesRegex(b.SafeFailure,'PG_FULL_BACKUP_READONLY_ROLE_UNAVAILABLE'):b.select_source_role(baseline,self.root/'role.log',backup_role_source=spec)
+   self.assertEqual(calls,['module','web3']);self.assertEqual(queries.count('SET TRANSACTION READ ONLY'),2);self.assertTrue(all(q=='SET TRANSACTION READ ONLY' or q.startswith('select ') for q in queries))
  def test_restore_old_port_rejected_before_connect(self):
   socket=Path(tempfile.mkdtemp(prefix='iktpg-',dir='/private/tmp'));socket.chmod(0o700)
   try:

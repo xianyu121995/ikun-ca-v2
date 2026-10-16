@@ -3,7 +3,7 @@
   "execution_id": "IKUN-ONLY-2026-10-16",
   "authority": "0e875cc910e0b83289d6257ebf68e5af82d7374a",
   "direct_initial_user_message": "01a143aa-3791-7732-9065-410adf6e08f2",
-  "captured_at": "2026-10-16T08:57:31.699276+00:00",
+  "captured_at": "2026-10-16T09:09:19.046645+00:00",
   "uid": 501,
   "jobs": {
     "ca.ikun.overload-tracking": {
@@ -148,7 +148,8 @@
     "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/plans/tracking/64088893841122491aba508fdb514507db3d9339/worker.json": "e87f5bbfbc2f7a4540b858988353d0dca355a687d16ececd96e3f43d6d0af494",
     "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.hunter.plist": "0d5a9721d342f0a21b6dee33c4951318ac9cb955c240e7d30aa8eb740bc317e1",
     "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.tracking.plist": "29921315bf346f76fa4914d72b1c631c9678b3ab1b48dd58c24c90377d501e21",
-    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.web.plist": "2c142866bebe39b9f83c8d4baf56857a49f4cff9cfac79e9165eecc2fae7bcee"
+    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.web.plist": "2c142866bebe39b9f83c8d4baf56857a49f4cff9cfac79e9165eecc2fae7bcee",
+    "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace/.runtime/ikun-first-release/original-site/.env": "247dae0379223121c305cc2ba4ad93986df2c4e54df5abd752a0cf3be07e9f70"
   },
   "v2_database_identities": {
     "auth": {
@@ -227,10 +228,10 @@
   "initial_alpha_health": {
     "pid": 9034,
     "connected": true,
-    "last_pong_at": 1792141047.630543,
-    "pong_age_seconds": 4.078,
+    "last_pong_at": 1792141746.963785,
+    "pong_age_seconds": 12.092,
     "reconnects": 280,
-    "observed_at": "2026-10-16T08:57:31.708686+00:00",
+    "observed_at": "2026-10-16T09:09:19.055677+00:00",
     "new_wss_connections_by_operator": 0
   },
   "sqlite_sources": {
@@ -271,7 +272,12 @@
     }
   },
   "code_files_sha256": {
-    "release-integration/scripts/takeover_operator.py": "13f443328a08d233ecd95942db6f303b7dcf951db562af92a038b2cdea2c7eef",
-    "release-integration/scripts/takeover_backup.py": "bb01fb21e252e9f9917c717c4164c72efb59bbc1b3de1523c1448aff4d524181"
+    "release-integration/scripts/takeover_operator.py": "945e671be9155941d29a9a58fb136fed5b3627bdcfd7a64725bc65d7e8a23d07",
+    "release-integration/scripts/takeover_backup.py": "c987d20174b10d13fb3a59529dda2e18028ed256820c1ced49a2566801963c55"
+  },
+  "pg_backup_role_source": {
+    "path": "/Users/lvlei/Documents/Codex/2026-10-11/codex-web3-workspace-codex-web3-next/outputs/web3-workspace/.runtime/ikun-first-release/original-site/.env",
+    "sha256": "247dae0379223121c305cc2ba4ad93986df2c4e54df5abd752a0cf3be07e9f70",
+    "user": "web3"
   }
 }

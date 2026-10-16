@@ -140,24 +140,10 @@ class StorageAndReceipts(Fixture):
   with sqlite3.connect(self.databases['hunter']) as db:
    db.execute('CREATE TABLE hunter_takeover_runs(package_sha256,source_sha256,ownership_sha256,projects_sha256,report_json)');db.execute('INSERT INTO hunter_takeover_runs VALUES(?,?,?,?,?)',(m.PACKAGE_SHA,'different-source','fixture-ownership','not-applicable:directory-v2',json.dumps(result)))
   with self.assertRaisesRegex(m.SafeFailure,'SOURCE_BINDING_MISMATCH'):m.verify_persisted_run(self.databases['hunter'],replay(result))
- def test_changed_stopped_seed_requires_new_rehearsal(self):
-  m.require_rehearsed_seed(self.databases['hunter'])
-  with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="new edit",revision=8')
-  with self.assertRaisesRegex(m.SafeFailure,'REHEARSAL_REQUIRED'):m.require_rehearsed_seed(self.databases['hunter'])
- def new_seed_plan(self):
-  directory=m.private_dir(self.root/'current-rehearsal');proof=directory/'REHEARSAL_ONLY.json';m.atomic(proof,{'fixture':True});m.atomic(directory/'before.private.json',m.fingerprint(self.databases['hunter']))
-  return {'current_seed_rehearsal':m.artifact(proof)}
- def test_plan_bound_current_seed_keeps_old_seed_intact(self):
-  with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="current human text",revision=8')
-  plan=self.new_seed_plan();m.require_rehearsed_seed(self.databases['hunter'],plan)
-  with self.assertRaisesRegex(m.SafeFailure,'REHEARSAL_REQUIRED'):m.require_rehearsed_seed(self.databases['hunter'])
- def test_plan_bound_rehearsal_tamper_fails_before_seed_read(self):
-  plan=self.new_seed_plan();m.atomic(plan['current_seed_rehearsal']['path'],{'fixture':'changed'})
-  with self.assertRaisesRegex(m.SafeFailure,'CURRENT_REHEARSAL_HASH_MISMATCH'):m.require_rehearsed_seed(self.databases['hunter'],plan)
- def test_plan_bound_seed_still_rejects_later_manual_changes(self):
-  plan=self.new_seed_plan()
-  with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="latest preserved text",revision=9')
-  with self.assertRaisesRegex(m.SafeFailure,'REHEARSAL_REQUIRED'):m.require_rehearsed_seed(self.databases['hunter'],plan)
+ def test_partial_rehearsal_clone_is_preserved_not_overwritten(self):
+  directory=m.private_dir(self.out/'partial-rehearsal');database=m.private_dir(directory/'data/hunter')/'hunter.db';m.atomic(database,b'preserve partial evidence')
+  with self.assertRaisesRegex(m.SafeFailure,'PARTIAL_REVIEW_REQUIRED'):m.rehearse_stopped_seed({},FakeOps(loaded=False),self.databases['hunter'],directory)
+  self.assertEqual(database.read_bytes(),b'preserve partial evidence')
  def test_live_lease_is_never_deleted_to_make_migration_pass(self):
   with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE worker_lease SET expires_at=9999999999')
   with self.assertRaisesRegex(m.SafeFailure,'NO_DELETE'):m.wait_lease(FakeOps(loaded=False),timeout=0)
@@ -180,7 +166,9 @@ class FullFlow(Fixture):
  def setUp(self):
   super().setUp();self.ops=FakeOps();self.plan_data={**self.plan(),'tool_source_sha256':m.sha(m.__file__),'initial_hunter':self.ops.process(2608),'initial_tree':self.ops.tree(2608),'during_protection':{'protected_processes':{'web':identity(54011),'tracking':identity(25225)}},'web_tree':[identity(54011),identity(54012,54011)]};self.plan_path=self.root/'plan.json';m.atomic(self.plan_path,self.plan_data)
   self.apply_calls=0;self.migrate_calls=0;self.migration_fault=None;self.apply_fault=None;self.import_count=88
-  self.stack.enter_context(patch.object(m,'HunterOps',return_value=self.ops));self.stack.enter_context(patch.object(m,'Journal',side_effect=lambda:RealJournal(self.journal)));self.stack.enter_context(patch.object(m,'immutable'));self.stack.enter_context(patch.object(m,'peers',return_value={'protected':True}));self.stack.enter_context(patch.object(m,'stage_reader'));self.stack.enter_context(patch.object(m,'install_reader_plan',side_effect=self.install));self.stack.enter_context(patch.object(m,'owner',side_effect=self.owner));self.stack.enter_context(patch.object(m.subprocess,'check_output',side_effect=self.git));self.stack.enter_context(redirect_stdout(io.StringIO()))
+  self.stack.enter_context(patch.object(m,'HunterOps',return_value=self.ops));self.stack.enter_context(patch.object(m,'Journal',side_effect=lambda:RealJournal(self.journal)));self.stack.enter_context(patch.object(m,'immutable'));self.stack.enter_context(patch.object(m,'peers',return_value={'protected':True}));self.stack.enter_context(patch.object(m,'stage_reader'));self.stack.enter_context(patch.object(m,'install_reader_plan',side_effect=self.install));self.stack.enter_context(patch.object(m,'owner',side_effect=self.owner));self.stack.enter_context(patch.object(m,'rehearse_stopped_seed',side_effect=self.rehearse));self.stack.enter_context(patch.object(m.subprocess,'check_output',side_effect=self.git));self.stack.enter_context(redirect_stdout(io.StringIO()))
+ def rehearse(self,plan,ops,snapshot,directory):
+  self.assertFalse(ops.loaded);self.assertEqual(m.fingerprint(snapshot),m.fingerprint(self.databases['hunter']));return {'state':'PASS_EXACT_STOPPED_WINDOW_CLONE_ONLY'}
  def git(self,args,**_):
   values={('git','rev-parse','HEAD'):'fixture-candidate\n',('git','branch','--show-current'):'codex/integration\n',('git','status','--porcelain'):'',('git','rev-parse','main'):'63e8a2857241c6a76226f21435e40db9736a1e7e\n'};return values[tuple(args)]
  def owner(self,plan,ops,name,args):
@@ -215,6 +203,13 @@ class FullFlow(Fixture):
   self.migration_fault='before_commit'
   with self.assertRaises(SystemExit):self.execute()
   self.assertEqual(self.ops.actions,[('bootout',m.LABEL),('bootstrap','legacy4')]);self.assertEqual(m.read_json(self.journal)['migrated_domains'],['projects'])
+ def test_pre005_recovery_rehearses_latest_rows_and_archives_prior_baseline(self):
+  self.migration_fault='before_commit'
+  with self.assertRaises(SystemExit):self.execute()
+  with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="newest current row",revision=10 WHERE id="manual"')
+  self.rebase();self.migration_fault=None;self.execute(resume_recovered=True)
+  state=m.read_json(self.journal)['maintenance_steps'][m.PHASE];self.assertEqual(len(state['prior_schema4_baselines']),1)
+  with sqlite3.connect(self.databases['hunter']) as db:self.assertEqual(db.execute('SELECT notes,revision FROM hunters WHERE id="manual"').fetchone(),('newest current row',10))
  def test_unknown_005_commit_restores_only_f9_and_keeps_sticky5(self):
   self.migration_fault='after_commit'
   with self.assertRaises(SystemExit):self.execute()
@@ -227,13 +222,22 @@ class FullFlow(Fixture):
   self.execute(resume_recovered=True);self.assertEqual(self.migrate_calls,1)
   with sqlite3.connect(self.databases['hunter']) as db:self.assertEqual(db.execute('SELECT count(*) FROM hunters').fetchone()[0],89)
   self.assertEqual(self.ops.actions,[('bootout',m.LABEL),('bootstrap','f9'),('bootout',m.LABEL),('bootstrap','f9')])
- def test_stopped_seed_race_restores_schema4_and_preserves_human_edit(self):
+ def test_stop_time_edit_is_rehearsed_and_preserved_as_latest_baseline(self):
   def edit():
    with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="legal new edit",revision=8 WHERE id="manual"')
-  self.ops.on_stop=edit
-  with self.assertRaises(SystemExit):self.execute()
-  self.assertEqual(self.migrate_calls,0);self.assertEqual(self.apply_calls,0);self.assertEqual(self.ops.actions,[('bootout',m.LABEL),('bootstrap','legacy4')])
+  self.ops.on_stop=edit;self.execute()
+  self.assertEqual(self.migrate_calls,1);self.assertEqual(self.ops.actions,[('bootout',m.LABEL),('bootstrap','f9')])
   with sqlite3.connect(self.databases['hunter']) as db:self.assertEqual(db.execute('SELECT notes,revision FROM hunters WHERE id="manual"').fetchone(),('legal new edit',8))
+ def test_stopped_rehearsal_failure_restores_without_live_migration(self):
+  with patch.object(m,'rehearse_stopped_seed',side_effect=m.SafeFailure('REHEARSAL_FAILED')):
+   with self.assertRaises(SystemExit):self.execute()
+  self.assertEqual(self.migrate_calls,0);self.assertEqual(self.apply_calls,0);self.assertEqual(self.ops.actions,[('bootout',m.LABEL),('bootstrap','legacy4')])
+ def test_lease_is_released_before_stopped_backup_and_rehearsal(self):
+  def lease(ops):
+   with sqlite3.connect(self.databases['hunter']) as db:db.execute('UPDATE hunters SET notes="latest after lease",revision=9 WHERE id="manual"')
+  with patch.object(m,'wait_lease',side_effect=lease):self.execute()
+  final=m.read_json(self.out/'final-receipt.json')
+  with sqlite3.connect(final['stopped']['hunter']['artifact']['path']) as db:self.assertEqual(db.execute('SELECT notes,revision FROM hunters WHERE id="manual"').fetchone(),('latest after lease',9))
  def test_bad_first_count_cannot_become_success_after_recovery_zero_replay(self):
   self.import_count=87
   with self.assertRaises(SystemExit):self.execute()

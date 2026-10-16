@@ -116,9 +116,6 @@ def immutable(plan):
  for path,h in ((PROJECTS,PROJECTS_SHA),(INTAKE,INTAKE_SHA),(REHEARSAL,REHEARSAL_SHA),(PACKAGE,PACKAGE_SHA),(PREPARATION,PREPARATION_SHA)):
   require(sha(private_file(path))==h,'APPROVED_HUNTER_INPUT_DRIFT')
  validate_artifacts(read_json(PROJECTS));validate_artifacts(read_json(REHEARSAL))
- if plan.get('current_seed_rehearsal'):
-  proof=plan['current_seed_rehearsal'];require(sha(private_file(proof['path']))==proof['sha256'],'CURRENT_REHEARSAL_HASH_MISMATCH');receipt=read_json(proof['path']);validate_artifacts(receipt)
-  require(receipt['state']=='PASS_HUNTER_DIRECTORY_V2_SEALED_V4_CLONE_ONLY' and receipt['source_commit']==SOURCE and receipt['package_sha256']==PACKAGE_SHA and receipt['source_schema']==4 and receipt['result_schema']==5 and receipt['original_hunters_preserved']==2 and receipt['new_disabled_pending_directory']==88 and receipt['new_private_facts']==6575 and receipt['replay_all_table_fingerprints_unchanged'] is True,'CURRENT_REHEARSAL_NOT_APPROVED_SCOPE')
  for path,h in plan['helper_files'].items():require(sha(ROOT/path)==h,'REVIEWED_HUNTER_HELPER_DRIFT')
  validate_artifacts(read_json(PREPARATION));validate_artifacts(plan['acceptance']);validate_artifacts(plan['reader_plan_file'])
  require(plan['runtime_files']==reader_files(read_json(INTAKE)) and plan['code_root']==read_json(INTAKE)['staged_code_root'],'RUNTIME_SELECTION_DRIFT')
@@ -256,19 +253,31 @@ def verify_persisted_run(path,result):
  require((result.get('original_result') if result['duplicate_package'] else result)==original,'CLI_RESULT_DIFFERS_FROM_PERSISTED_ORIGINAL_RUN')
 
 
-def require_rehearsed_seed(path,plan=None):
- proof=(plan or {}).get('current_seed_rehearsal');rehearsal=Path(proof['path']) if proof else REHEARSAL
- if proof:require(sha(private_file(rehearsal))==proof['sha256'],'CURRENT_REHEARSAL_HASH_MISMATCH')
- current=fingerprint(path);seed=read_json(rehearsal.parent/'before.private.json')
- require(current['user_version']==4 and set(current['tables'])==set(seed['tables']) and all(row==current['tables'][name] for name,row in seed['tables'].items() if name not in ('state','worker_lease')),'CURRENT_HUNTER_REHEARSAL_REQUIRED')
-
-
 def verify_directory_rows(before_path,after_path):
  with closing(sqlite3.connect(Path(before_path).as_uri()+'?mode=ro',uri=True)) as db:old={row[0] for row in db.execute('SELECT id FROM hunters')}
  with closing(sqlite3.connect(Path(after_path).as_uri()+'?mode=ro',uri=True)) as db:
   db.row_factory=sqlite3.Row
   rows=[row for row in db.execute('SELECT id,enabled,profile_status,user_id,followers,mode,baseline_ready,watch_covered FROM hunters') if row['id'] not in old]
   require(len(rows)==88 and all(row['enabled']==0 and row['profile_status']=='pending' and all(row[k] is None for k in ('user_id','followers','mode')) and row['baseline_ready']==row['watch_covered']==0 for row in rows),'DIRECTORY_ROWS_NOT_EXPECTED_DISABLED_PENDING')
+
+
+def rehearse_stopped_seed(plan,ops,snapshot,directory):
+ """Reuse the reviewed F9 migrate/apply/replay on a copy of this exact stopped window."""
+ ops.fence();before=fingerprint(snapshot);require(before['user_version']==4,'REHEARSAL_SCHEMA4_REQUIRED')
+ database=private_dir(directory/'data/hunter')/'hunter.db';require(not os.path.lexists(database),'STOPPED_REHEARSAL_PARTIAL_REVIEW_REQUIRED')
+ with closing(sqlite3.connect(Path(snapshot).as_uri()+'?mode=ro',uri=True)) as source,closing(sqlite3.connect(database)) as target:source.backup(target)
+ database.chmod(0o600);require(fingerprint(database)==before,'STOPPED_REHEARSAL_COPY_MISMATCH')
+ env=owner_env(plan);env.update(DATA_ROOT=str(directory/'data'),HUNTER_DB=str(database))
+ receipts={}
+ def run(name,args):
+  ops.fence();out=directory/(name+'.json');command([plan['python'],*args],directory/'owner-cli.private.log',env=env,stdout=out,timeout=60);receipts[name]=artifact(out);return read_json(out)
+ run('migrate',['-m','hunterradar','migrate']);require(fingerprint(database)['user_version']==5,'STOPPED_REHEARSAL_MIGRATION_FAILED');preserve_hunter(snapshot,database)
+ args=['-m','hunterradar.takeover','apply','--package',str(PACKAGE),'--package-sha256',PACKAGE_SHA,'--database',str(database),'--offline-confirmed']
+ applied=run('apply',args);verify_apply(applied);require(applied['duplicate_package'] is False,'STOPPED_REHEARSAL_NOT_FRESH')
+ preserve_hunter(snapshot,database);verify_persisted_run(database,applied);verify_directory_rows(snapshot,database);after=fingerprint(database)
+ replay=run('replay',args);verify_apply(replay);require(replay['duplicate_package'] is True,'STOPPED_REHEARSAL_REPLAY_NOT_DUPLICATE');verify_persisted_run(database,replay);require(fingerprint(database)==after,'STOPPED_REHEARSAL_REPLAY_CHANGED_COPY')
+ ops.fence();require(fingerprint(DATABASE)==before,'STOPPED_LIVE_CHANGED_DURING_REHEARSAL')
+ return {'state':'PASS_EXACT_STOPPED_WINDOW_CLONE_ONLY','source_snapshot':artifact(snapshot),'clone':str(database),'original_hunters_preserved':before['tables']['hunters']['rows'],'new_disabled_pending_directory':88,'new_private_facts':6575,'new_private_receipts':6575,'replay_new_rows':0,'live_fingerprint_unchanged':True,'owner_receipts':receipts,'provider_calls':0,'Watch_writes':0}
 
 
 def readonly_status(path,expected):
@@ -304,14 +313,18 @@ def execute(candidate,path,expected,*,resume_recovered=False):
   def backups(directory):return {name:sqlite_backup(db,private_dir(directory/name),strict_foreign_keys=True) for name,db in DATABASES.items()}
   try:
    peers(ops,plan);online=step('before_online_'+str(index),backups)
-   if online['hunter']['metadata']['user_version']==4:require_rehearsed_seed(online['hunter']['artifact']['path'],plan)
    stage_reader(plan)
    if 'original_plist' not in window:require(sha(private_file(PLIST))==plan['initial_plist_sha256'],'HUNTER_PLIST_DRIFT_BEFORE_STOP');window['original_plist']=copy_private(PLIST,OUTPUT/('original-hunter-'+str(index)+'.plist'));save()
    protected_pids={x['pid'] for x in plan['during_protection']['protected_processes'].values()}|{x['pid'] for x in plan['web_tree']}
    stop_owned_job_once(window,save,ops,plan['initial_hunter'],protected_pids,expected_tree=plan['initial_tree']);ops.fence();peers(ops,plan)
-   stopped=step('stopped_window_'+str(index),backups);baseline=stopped['hunter']['artifact']['path'];state.setdefault('first_baseline',stopped['hunter']['artifact']);save()
-   if stopped['hunter']['metadata']['user_version']==4:require_rehearsed_seed(baseline,plan)
    wait_lease(ops)
+   stopped=step('stopped_window_'+str(index),backups);baseline=stopped['hunter']['artifact']['path']
+   if stopped['hunter']['metadata']['user_version']==4:
+    require(not state.get('schema5_observed'),'SCHEMA5_STICKY_DOWNGRADE_FORBIDDEN')
+    if state.get('first_baseline') and state['first_baseline']!=stopped['hunter']['artifact']:state.setdefault('prior_schema4_baselines',[]).append(state['first_baseline'])
+    state['first_baseline']=stopped['hunter']['artifact'];save()
+    rehearsal=step('stopped_rehearsal_'+str(index),lambda directory:rehearse_stopped_seed(plan,ops,baseline,directory));state['stopped_rehearsal']=state['steps']['stopped_rehearsal_'+str(index)]['receipt'];save()
+   else:require(state.get('stopped_rehearsal'),'PRIOR_STOPPED_REHEARSAL_REQUIRED')
    version=schema(plan,ops)
    if state.get('schema5_observed'):require(version==5,'SCHEMA5_STICKY_DOWNGRADE_FORBIDDEN')
    prearm_f9_plist(window,save,ops,plan);state['migration_intent']=state.get('migration_intent') or utc();save()
@@ -322,7 +335,7 @@ def execute(candidate,path,expected,*,resume_recovered=False):
    after=step('after_import_'+str(index),backups);preserve_hunter(baseline,after['hunter']['artifact']['path']);preserve_hunter(state['first_baseline']['path'],after['hunter']['artifact']['path']);verify_persisted_run(after['hunter']['artifact']['path'],applied);verify_directory_rows(state['first_baseline']['path'],after['hunter']['artifact']['path'])
    replay_path,replay=owner(plan,ops,'replay',['-m','hunterradar.takeover','apply','--package',str(PACKAGE),'--package-sha256',PACKAGE_SHA,'--database',str(DATABASE),'--offline-confirmed']);verify_apply(replay);verify_persisted_run(after['hunter']['artifact']['path'],replay);require(replay.get('duplicate_package') is True,'HUNTER_REPLAY_NOT_DUPLICATE');require(fingerprint(DATABASE)==fingerprint(after['hunter']['artifact']['path']),'HUNTER_REPLAY_CHANGED_DATABASE')
    peers(ops,plan);compatible_restore(state,window,save,ops,plan,5,checkpoint=after['hunter']);immutable(plan);protected=peers(ops,plan)
-   result={'state':'PASS_HUNTER_DIRECTORY_RUNTIME_IMPORT','candidate':candidate,'completed_at':utc(),'source_commit':SOURCE,'package_sha256':PACKAGE_SHA,'owner_apply_receipt':artifact(apply_path),'owner_replay_receipt':artifact(replay_path),'before_online':online,'stopped':stopped,'schema5_before_apply':schema5,'after_import':after,'original_hunter_rows_preserved':True,'non_import_tables_unchanged':True,'same_package_replay_all_fingerprints_unchanged':True,'reader_release':str(RELEASE),'reader_plan':artifact(PLAN_DIR/'worker.json'),'installed_plist_snapshot':copy_private(PLIST,OUTPUT/'installed-hunter-f9.plist'),'installed_plist_sha256':sha(PLIST),'schema_version':5,'schema5_sticky':True,'web_Tracking_and_permanent_protection':protected,'window':window,'Auth_and_Projects_not_targeted_by_owner_cli':True,'new_provider_calls':0,'Watch_writes':0,'next_builds':0,'database_overwrites':0}
+   result={'state':'PASS_HUNTER_DIRECTORY_RUNTIME_IMPORT','candidate':candidate,'completed_at':utc(),'source_commit':SOURCE,'package_sha256':PACKAGE_SHA,'owner_apply_receipt':artifact(apply_path),'owner_replay_receipt':artifact(replay_path),'before_online':online,'stopped':stopped,'schema5_before_apply':schema5,'after_import':after,'stopped_rehearsal':state['stopped_rehearsal'],'original_hunter_rows_preserved':True,'non_import_tables_unchanged':True,'same_package_replay_all_fingerprints_unchanged':True,'reader_release':str(RELEASE),'reader_plan':artifact(PLAN_DIR/'worker.json'),'installed_plist_snapshot':copy_private(PLIST,OUTPUT/'installed-hunter-f9.plist'),'installed_plist_sha256':sha(PLIST),'schema_version':5,'schema5_sticky':True,'web_Tracking_and_permanent_protection':protected,'window':window,'Auth_and_Projects_not_targeted_by_owner_cli':True,'new_provider_calls':0,'Watch_writes':0,'next_builds':0,'database_overwrites':0}
    atomic(OUTPUT/'final-receipt.json',result);state.update(state='complete',result=artifact(OUTPUT/'final-receipt.json'));journal.data['migrated_domains']=list(dict.fromkeys([*journal.data.get('migrated_domains',[]),'hunter']));save();print(json.dumps({'state':result['state'],'receipt':str(OUTPUT/'final-receipt.json'),'sha256':sha(OUTPUT/'final-receipt.json')}))
   except BaseException as error:
    recovery='not_needed'

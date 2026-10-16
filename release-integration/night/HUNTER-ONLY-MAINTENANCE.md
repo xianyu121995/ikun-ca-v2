@@ -1,6 +1,8 @@
 # Hunter-only 准确维护执行包
 
-状态 **READY_FOR_ROOT_EXACT_REVIEW_NOT_EXECUTED**。仅准备原Hunter独立job维护；没有连接运行库、安装运行文件、停启服务、迁移或外呼。Projects真实迁入已由root fc537a6验收；其32个正式canonical不等于Hunter或Tracking已迁入。两Worker准备/演练的root记录为4378a6f。
+最新前向修正：最终精确复制库演练移入同一个真实停窗，lease释放/失效后封存当前schema4，再复用F9 migrate/apply/replay验证副本，成功且原库完整指纹仍相同才升级原库。所有当前字段包括重试字段完整保留，schema4恢复后的旧基线引用归档、新停稳快照成为当前保护基线；已见schema5后不得替换原始基线。旧v2/v3/v4计划及两次失败证据保留，不再执行旧逻辑；新候选/plan/argv须总管准确准收。
+
+以下表格及原状态为 **f524历史冻结包**：状态 **READY_FOR_ROOT_EXACT_REVIEW_NOT_EXECUTED**。仅准备原Hunter独立job维护；没有连接运行库、安装运行文件、停启服务、迁移或外呼。Projects真实迁入已由root fc537a6验收；其32个正式canonical不等于Hunter或Tracking已迁入。两Worker准备/演练的root记录为4378a6f。
 
 | 绑定 | 准确值 |
 | --- | --- |
@@ -26,9 +28,9 @@ Auth/Projects网站writer与Tracking仍运行，因此四库备份各自一致�
 ## 实际执行顺序（本轮未执行）
 
 1. 准确clean Git/candidate/main、工具及5个复用helper、F9/90b/原逐行归属与源、Projects实际回执、e9复制库演练、原配置和解释器逐项绑定。复用原Journal单operator锁，只新增Hunter维护phase；不重跑旧端停止或Projects execute。
-2. 每窗口新建before_online_N四库在线备份。仍为schema4时核已验演练种子，排除已声明的state/lease时间变化；猎手人工字段、已有业务/账本表变化须重新演练。只复制26个准确文件到新F9 release，拒绝别名、错误hash、额外import文件或不同accepted receipt；保留原release/脚本。
+2. 每窗口新建before_online_N四库在线备份。在线备份及所有身份门禁保留；不再以运行中的易变重试字段反复比较旧演练种子。只复制26个准确文件到新F9 release，拒绝别名、错误hash、额外import文件或不同accepted receipt；保留原release/脚本。
 3. 备份原Hunter plist，复核原PID/start/cwd/子树和全部保护后代，只bootout该label一次。原树重父化但同PID/start仍算存活；不强杀。确认Hunter DB/WAL/SHM无RW holder、4011无listener。未知结果先只读对账，不盲目重新bootout/bootstrap。
-4. stopped_window_N另备份四库。**schema4必须再核停止后的种子**，堵住before_online→停服期间的合法编辑竞争；有新编辑就保留它，恢复schema4原v2 reader并另做新演练，绝不覆盖。原lease只等自然释放/过期，60秒未过则失败；不删除lease。
+4. 先等原lease自然释放/过期，60秒未过则失败，不删除lease；stopped_window_N另备份四库。schema4以该最新快照复制隔离库，原F9 CLI升级/88目录导入/replay0，并验证原行、持久run、88停用pending及副本重放完整指纹。演练结束必须再次确认原库完整指纹仍等于停稳快照，才进入005；任何失败按原schema4恢复规则处理。
 5. 停净并保存prearm_intent后，先把Hunter plist原子指向固定F9启动路径，再由原 `python -m hunterradar migrate`执行005。此时未来F9 plan尚未通过schema5正式render，重启也只能失败关闭，不能自动回到旧B4。005确认提交即落盘schema5_observed，之后所有恢复均拒绝schema4/旧reader。
 6. schema5前置备份通过后，原 `python -m hunterradar.takeover apply --package <90b包> --package-sha256 90b8b3b0970cafa80c076fbf679370144d7b5b9b660668422252d8c4b239800f --database <原hunter.db> --offline-confirmed`。清空继承环境，固定F9 PYTHONPATH/原Hunter解释器/外采0；没有provider token、HTTP或第二套迁移SQL。
 7. after_import_N另备份四库，验证Hunter所有原行/人工字段/revision、非导入表精确不变；state原键逐值hash保持，仅原clock可推进，新键仅允许私有v2命名空间。新增88目录必须停用pending、身份/粉丝/通道NULL、baseline/watch不ready。副作用计数全部0。

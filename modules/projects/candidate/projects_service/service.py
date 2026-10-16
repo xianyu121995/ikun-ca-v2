@@ -15,12 +15,12 @@ from .transport import CommandResult, Event, Fields, MembershipAction, Rpc, SCOP
 from .ratings import RatingsCatalog
 from . import tracking_observations as observations
 
-WRITES={'create','patch','membership','delete','completion','completions','restore'}
+WRITES={'tracking_register','create','patch','membership','delete','completion','completions','restore'}
 READS={'get','list','command','changes','reconcile','summary','milestones','ratings'}
 
 def route_identity(rpc):
     root='/api/v1/projects'
-    if rpc.operation=='create':return 'POST',root
+    if rpc.operation in ('create','tracking_register'):return 'POST',root
     if rpc.operation=='completions':return 'POST',root+'/completions'
     path=root+'/'+valid_id(rpc.target)
     return {'patch':('PATCH',path),'delete':('DELETE',path),'membership':('POST',path+'/home-membership'),
@@ -138,6 +138,14 @@ class Service:
                     rows.append(row)
                 for row in rows:home.apply(con,rpc.model_copy(update={'operation':'completion','body':{}}),row)
                 output={'items':[home.projection(con,entity(con,row['id'])) for row in rows]};status=200
+            elif rpc.operation=='tracking_register':
+                data=rpc.body
+                if set(data)-{'name','x_handle','notes','rating'} or not isinstance(data.get('x_handle'),str) or not re.fullmatch(r'[A-Za-z0-9_]{1,15}',data['x_handle']) or data.get('rating') not in ('S','A','B',None):
+                    raise DomainError(422,'VALIDATION_ERROR','账号或评分不正确')
+                fields=Fields.model_validate(dict(name=data.get('name'),rating=data.get('rating'),description='',website_url=None,notes=data.get('notes',''),category=None,progress_stage='watching',progress_percent=None,token_date=None,token_date_status='unconfirmed'))
+                imported=CoreProjectImport(source='manual-tracking',external_id='x-handle:'+data['x_handle'].lower(),explicit_add=True,project=fields.core())
+                result,_=core.import_project(con,imported,rpc.principal.user_id,SCOPE,include_removed=True,extras={**fields.extras(),'home_membership':'hidden','discovered_at':None})
+                project_id=result['id'];status=201;output=record(entity(con,project_id))
             elif rpc.operation=='create' and rpc.contract=='projects-home-v1':
                 project_id=home.apply(con,rpc);status=201;output=home.projection(con,entity(con,project_id))
             elif rpc.operation=='create':
@@ -165,6 +173,15 @@ class Service:
                     core.delete_project(con,project_id,version,rpc.principal.user_id,SCOPE,home_action='active' if action=='add' else 'removed')
                 status=200
                 output=home.projection(con,entity(con,project_id)) if rpc.contract=='projects-home-v1' or rpc.operation in ('completion','restore') else record(entity(con,project_id))
+            # Project lifecycle and cleanup intent commit together; the existing relay owns retries.
+            cleanup=[]
+            if rpc.operation=='completions':cleanup=[r['id'] for r in rows]
+            elif rpc.operation in ('delete','completion') or (rpc.operation=='membership' and rpc.body.get('action')=='remove') or (rpc.operation=='patch' and rpc.body.get('complete')):cleanup=[project_id]
+            for target in cleanup:
+                cid='cmd_'+str(uuid.uuid5(uuid.NAMESPACE_URL,'tracking-cleanup:'+rpc.principal.user_id+':'+key+':'+target))
+                command={'schema_version':1,'command_id':cid,'tenant_id':SCOPE,'actor':rpc.principal.model_dump(),'operation':'tracking.remove','project_id':target,'subscription_id':None,'expected_revision':None,'payload':{},'issued_at':now()}
+                body=canonical(command)
+                con.execute('INSERT OR IGNORE INTO tracking_outbox(command_id,tenant_id,project_id,command_json,command_hash,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)',(cid,SCOPE,target,body,hashlib.sha256(body.encode()).hexdigest(),'pending',now(),now()))
             con.execute('INSERT INTO operation_receipts(actor_id,tenant_id,route,idempotency_key,body_hash,response_json,status,created_at,expires_at,original_request_id,method,path,contract) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
                         (rpc.principal.user_id,SCOPE,route,key,hashed,canonical(output),status,now(),int(time.time())+7*86400,rpc.request_id,method,path,rpc.contract))
             revision_value=output.get('project',output).get('revision')

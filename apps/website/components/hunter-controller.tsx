@@ -9,7 +9,7 @@ type Session={role:'superadmin'|'user';csrf_token:string;must_change_password:bo
 type PublicError={code:string;message:string};
 type Outcome={ok:true;message:string;project?:Project}|{ok:false;error:PublicError};
 const toProject=(row:DiscoveryDTO):Project=>({id:row.discovery_id,name:row.project.name,handle:row.x_handle,bio:row.profile_bio,hunters:row.signal_count,grade:row.project.rating as Grade,
- status:row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,token:'unknown',notes:row.project.notes,watch:false});
+ status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,token:'unknown',notes:row.project.notes,watch:row.monitoring_state==='succeeded',monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message});
 export interface LiveBinding{
  projects:Project[];role:'superadmin'|'user';loading:boolean;refreshing:boolean;error:string|null;
  fixture:boolean;nextCursor:string|null;previous:boolean;blockedIds:ReadonlySet<string>;
@@ -35,11 +35,18 @@ export default function HunterController({session,fixture=false}:{session:Sessio
   const version=++generation.current;active.current?.abort();const controller=new AbortController();active.current=controller;
   if(initial)setLoading(true);else setRefreshing(true);setError(null);
   try{const page=await api('/api/v1/hunter/signals?'+new URLSearchParams({...query,limit:'100',...(target?{cursor:target}:{})}),'GET',undefined,{},controller.signal);
+   let subscriptions: {project_id:string;observed_state:string;desired_state:string;connection:string;error_code?:string}[]=[];
+   try { let after:string|null=null; do {const data=await api('/api/v1/tracking/subscriptions?limit=100'+(after?'&cursor='+encodeURIComponent(after):''),'GET',undefined,{},controller.signal);subscriptions.push(...data.items);after=data.next_cursor;}while(after); } catch { /* Explicit unavailable state below. */ }
+   for (const item of page.items) if(item.review_state==='tracking') {
+    const sub=subscriptions.find(s=>s.project_id===item.project_id);
+    item.monitoring_state=sub?.error_code?'failed':sub?.desired_state==='running'&&sub.observed_state==='running'&&sub.connection==='connected'?'succeeded':'pending';
+    item.monitoring_message=sub?.error_code?'失败：'+sub.error_code:item.monitoring_state==='succeeded'?'追踪中':sub?.desired_state==='removed'?'追踪已移除':sub?.desired_state==='stopped'?'追踪已停止':sub?'监听连接中':'订阅投递中或追踪服务暂不可用';
+   }
    if(version!==generation.current)return;setRecords(page.items);setNextCursor(page.next_cursor);
   }catch(e){if(controller.signal.aborted)return;setError(e instanceof Error?e.message:'列表不可用');}
   finally{if(version===generation.current){setLoading(false);setRefreshing(false);}}
  }
- useEffect(()=>{void load(cursor,records.length===0);return()=>active.current?.abort();},[cursor,query]);
+ useEffect(()=>{void load(cursor,records.length===0);const poll=setInterval(()=>void load(),10000);return()=>{clearInterval(poll);active.current?.abort();};},[cursor,query]);
  useEffect(()=>{
   if(revoked)return;
   const source=new EventSource('/api/v1/hunter/events'),abort=new AbortController();
@@ -98,7 +105,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
    const result:CommandResult=await api('/api/v1/hunter/discoveries/'+encodeURIComponent(row.discovery_id)+'/monitoring-requests','POST',body,{'if-match':'"rev-'+row.revision+'"','idempotency-key':operation.key});
    // 202 only acknowledges durable receipt; it never becomes "joined/running" here.
    setRecords(old=>old.map(item=>item.discovery_id===row.discovery_id?{...item,monitoring_state:result.state,review_state:'tracking'}:item));
-   void load();return {ok:true,message:'人工确认已持久受理；远端监控状态仍待核实。'};
+   void load();return {ok:true,message:'已提交加入追踪，页面将自动显示追踪状态或失败原因。'};
   }catch(e){
    const code=e instanceof ApiError?e.code:'UPSTREAM_TIMEOUT';
    if(['FORBIDDEN','VALIDATION_ERROR','VERSION_CONFLICT','CONFLICT','NOT_FOUND'].includes(code)){operations.current.delete(project.id);setBlockedIds(old=>{const next=new Set(old);next.delete(project.id);return next;});}
@@ -115,7 +122,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
   if(pending.current.has('accounts')||pending.current.has('accounts-unknown'))return {ok:false,error:{code:'CONFLICT',message:'管理操作处理中或结果待核实；禁止重复提交'}};
   pending.current.add('accounts');
   try{
-   if(action==='add')await api('/api/v1/hunter/accounts','POST',{x_handle:handle,label:'',notes:'',enabled:false},{'idempotency-key':crypto.randomUUID()});
+   if(action==='add')await api('/api/v1/hunter/accounts','POST',{x_handle:handle,label:'',notes:'',enabled:true},{'idempotency-key':crypto.randomUUID()});
    else{const item=(await accountPages()).find(account=>account.x_handle.toLowerCase()===handle.toLowerCase());if(!item)throw new ApiError('NOT_FOUND','未找到指定猎手');
     await api('/api/v1/hunter/accounts/'+item.account_id,action==='remove'?'DELETE':'PATCH',action==='remove'?{}:{enabled:action==='enable'},{'idempotency-key':crypto.randomUUID(),'if-match':'"rev-'+item.revision+'"'});}
    await accountPages();return {ok:true,message:'猎手本地配置已保存；不代表来源覆盖或远端监控已生效。'};

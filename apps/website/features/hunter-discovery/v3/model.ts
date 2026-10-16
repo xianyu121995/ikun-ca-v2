@@ -2,7 +2,7 @@ import seed from './reference/seed.json';
 import type {TableSort} from '@ikun/ui';
 export type Grade = 'S'|'A'|'B'|'C'|'D'|null;
 export type Status = 'pending'|'reviewed'|'joined';
-export interface Project {id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;token:'unknown'|'planned'|'none';notes:string;watch:boolean}
+export interface Project {id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;token:'unknown'|'planned'|'none';notes:string;watch:boolean;monitoringMessage?:string}
 export interface Filters {query:string;time:string;grade:string;status:string}
 export const initialFilters:Filters={query:'',time:'all',grade:'all',status:'all'};
 export const statusText:Record<Status,string>={pending:'待研究',reviewed:'已研究',joined:'已加入监控'};

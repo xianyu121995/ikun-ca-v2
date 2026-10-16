@@ -56,17 +56,7 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   }
   // 2026-10-17 product decision: removing/completing/deleting a homepage project also stops its tweet tracking
   // (the Tracking delete command also removes ikun's own 6551 NEW_TWEET Watch entry). Best-effort, after success.
-  async function stopTracking(projectIds:readonly string[]){
-    const ids=new Set(projectIds);if(!ids.size)return;
-    try{
-      let cursor:string|null=null;const rows:{subscription_id:string;project_id:string;revision:number;desired_state:string}[]=[];
-      do{const response:Response=await fetch('/api/v1/tracking/subscriptions?limit=100'+(cursor?'&cursor='+encodeURIComponent(cursor):''),{headers:{'x-csrf-token':csrf},cache:'no-store',signal:AbortSignal.timeout(10000)});
-        if(!response.ok)return;const value=await response.json();rows.push(...value.data.items);cursor=value.data.next_cursor;}while(cursor&&rows.length<=1000);
-      for(const row of rows.filter(r=>ids.has(r.project_id)&&r.desired_state!=='removed'))
-        await fetch('/api/v1/tracking/subscriptions/'+row.subscription_id,{method:'DELETE',headers:{'content-type':'application/json','x-csrf-token':csrf,'idempotency-key':crypto.randomUUID(),'if-match':`"rev-${row.revision}"`},signal:AbortSignal.timeout(10000)}).catch(()=>undefined);
-    }catch{/* tracking page shows the real state; homepage write already succeeded */}
-  }
-  const thenStop=(ids:readonly string[])=>(result:OperationResult)=>{if(result.state==='succeeded')void stopTracking(ids);return result;};
+  const thenStop=(_ids:readonly string[])=>(result:OperationResult)=>result;
   async function openDetail(id:string){try{setDetail(await read('/api/v1/projects/'+id+'?view=home-v1'));}catch(e){setError(e as PublicError);}}
   const latest=new Map<string,Home>();
   for(const home of [...main.items,...completed.items,...other.items,...events,...(detail?[detail]:[])]){const previous=latest.get(home.project.project_id);if(!previous||home.project.revision>=previous.project.revision)latest.set(home.project.project_id,home);}

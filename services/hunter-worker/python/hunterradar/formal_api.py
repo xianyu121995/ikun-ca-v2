@@ -95,10 +95,10 @@ def create_formal_app(settings,store,engine=None):
     def live(request:Request):return output(request,{'service':'hunter','status':'alive'})
     @app.get('/health/ready')
     def ready(request:Request):
-        try:store.inspect()
+        try:schema_version=store.inspect()
         except (ValueError,OSError,sqlite3.Error):return failure(request,503,'DB_UNAVAILABLE','Hunter 迁移或存储校验未通过')
         return output(request,{'service':'hunter','status':'ready','external_io_enabled':settings.external_io_enabled,
-                               'project_delivery_enabled':settings.project_delivery_enabled,'schema_version':4,
+                               'project_delivery_enabled':settings.project_delivery_enabled,'schema_version':schema_version,
                                'source_status':'未连接真实来源' if not settings.external_io_enabled else 'unknown'})
     @app.get('/internal/v1/status')
     def status(request:Request):return output(request,store.status()|{'service':'hunter','external_io_enabled':settings.external_io_enabled})

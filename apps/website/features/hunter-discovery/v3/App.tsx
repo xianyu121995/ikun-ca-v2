@@ -45,7 +45,7 @@ export default function App({live}:{live?:LiveBinding}={}){
   {key:'bio',header:'主页简介 / 项目线索',render:p=><div className="bio" title={p.bio}>{p.bio||'暂无简介'}</div>},
   {key:'hunters',header:'发现猎手',width:'91px',sortable:true,render:p=><span className="hunter-cell"><span className="hunter-number">{p.hunters} 位</span>猎手</span>},
   {key:'rating',header:'评分',width:'65px',sortable:true,render:p=><ScoreBadge grade={p.grade}/>},
-  {key:'status',header:'研究状态',width:'100px',render:p=><span className={`status ${p.status}`}><i/>{live?.blockedIds.has(p.id)?'结果待核实':statusText[p.status]}</span>},
+  {key:'status',header:'研究状态',width:'100px',render:p=><span className={`status ${p.status}`}><i/>{live?.blockedIds.has(p.id)?'结果待核实':p.monitoringMessage||statusText[p.status]}</span>},
   {key:'actions',header:'操作',width:'130px',align:'right',render:p=><div className="act"><Button size="sm" onClick={()=>{if(live){const value=normalizeHandle(p.handle);if(value)window.open('https://x.com/'+encodeURIComponent(value),'_blank','noopener,noreferrer');else say('X 账号链接暂不可用','warning');}else say(`演示账号：@${p.handle}，仅展示资料，不打开虚构账号`,'info');}}>X 主页 ↗</Button><Button size="sm" className="soft" disabled={pending} onClick={event=>{opener.current=event.currentTarget;requestProject(p.id);}}>研究 / 编辑</Button></div>}
  ];
  const total=live?(live.counts?.total??'—'):Object.keys(hunters).length,active=live?(live.counts?.enabled??'—'):Object.values(hunters).filter(Boolean).length;

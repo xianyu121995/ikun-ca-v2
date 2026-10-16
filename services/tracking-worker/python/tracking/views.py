@@ -40,6 +40,7 @@ def subscription(store, row, *, db=None, fresh_seconds=45):
         "desired_state": row["desired"],
         "observed_state": observed,
         "operation_state": cmd[0] if cmd else "unknown",
+        "error_code": row["error"],
         "connection": "connected"
         if connected
         else "connecting"

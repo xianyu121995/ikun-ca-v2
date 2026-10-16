@@ -25,6 +25,7 @@ class Worker:
         self.stop = asyncio.Event()
         self.worker_id = str(uuid.uuid4())
         self._leased = False
+        self._last_reconcile = 0
 
     def acquire(self):
         if not self.store.lease(self.worker_id, acquire=True):
@@ -42,11 +43,14 @@ class Worker:
             self._leased = False
 
     def owned(self, row, watch):
-        return row["claim"] in ("reserved", "owned") and watch.get("groupName") == self.cfg.watch_group
+        return row["claim"] in ("reserved", "owned") and (
+            watch.get("remark") == "ikun-ca-v2:tracking" or watch.get("groupName") == self.cfg.watch_group
+            or str(watch.get("id")) == (self.cfg.adopted_watch_ids or {}).get(row["handle"])
+        )
 
     @staticmethod
     def pure_tweet(watch):
-        return watch.get("newTweetBol") is True and all(watch.get(k) is False for k in OTHER_FLAGS)
+        return watch.get("newTweetBol") is True and all(watch.get(k) is False for k in OTHER_FLAGS if k != "newTweetQuoteBol")
 
     def fail(self, row, exc: RemoteError):
         attempts = row["attempts"] + 1
@@ -69,7 +73,7 @@ class Worker:
             # An external edit is never silently overwritten, even in our namespace.
             raise RemoteError("remote_flags_conflict", 300)
         if desired_running and not watch:
-            if sum(item.get("newTweetBol") is True for item in snapshot.values()) >= self.cfg.max_watch_slots:
+            if len(snapshot) >= self.cfg.max_watch_slots:
                 raise RemoteError("quota_exhausted", 60)
             if not self.store.observe(row, claim="reserved", status="starting"):
                 return snapshot
@@ -143,13 +147,19 @@ class Worker:
             )
 
     async def reconcile(self):
+        from watch_lock import watch_lock
+        async with watch_lock(self.cfg.db_path):
+            await self._reconcile_locked()
+
+    async def _reconcile_locked(self):
         self.ensure_owner()
         now = time.time()
-        rows = [r for r in self.store.projects(include_removed=True) if r["next_retry"] <= now]
+        rows = [r for r in self.store.projects(include_removed=True) if r["next_retry"] <= now and not (r["desired"] == "removed" and r["remote_state"] == "absent" and r["status"] == "removed")]
         if not rows:
             return
         try:
             snapshot = await self.remote.watches()
+            self._last_reconcile = now
         except RemoteError as exc:
             for row in rows:
                 self.fail(row, exc)
@@ -202,6 +212,9 @@ class Worker:
                     continue
                 if not isinstance(message, dict):
                     continue
+                params = message.get('params')
+                if isinstance(params,dict) and str(params.get('twAccount','')).lower() == '0x2a_ikun':
+                    logging.getLogger('tracking.target.raw').info(json.dumps({'received_at':time.time(),'frame':raw.decode() if isinstance(raw,bytes) else raw},ensure_ascii=False))
                 if message.get("id") == 1:
                     if message.get("result", {}).get("success") is True:
                         ack.set()
@@ -269,7 +282,9 @@ class Worker:
 
     async def ticks(self):
         while not self.stop.is_set():
-            await self.reconcile()
+            rows = self.store.projects(include_removed=True)
+            if time.time()-self._last_reconcile >= min(300,self.cfg.remote_fresh_seconds/2) or any(r['status'] not in ('running','stopped','removed') or r['error'] for r in rows):
+                await self.reconcile()
             await self.pause(self.cfg.reconcile_seconds)
 
     async def pulse(self):

@@ -12,6 +12,7 @@ class Config:
     db_path: Path = Path("data/tracking/tracking.db")
     remote_enabled: bool = False
     dedicated_account: bool = False
+    shared_account_safe: bool = False
     watch_group: str = "ikun-ca-v2-project-tracking"
     token_file: str = ""
     admin_token_file: str = ""
@@ -20,7 +21,7 @@ class Config:
     reconcile_seconds: float = 10
     backfill_seconds: float = 60
     request_interval: float = 0.5
-    heartbeat_seconds: float = 15
+    heartbeat_seconds: float = 3
     heartbeat_timeout: float = 10
     remote_fresh_seconds: float = 45
     host: str = "127.0.0.1"
@@ -30,6 +31,7 @@ class Config:
     auth_cookie_name: str = "__Host-ikun_session"
     service_token_file: str = ""
     max_watch_slots: int = 600
+    adopted_watch_ids: dict[str, str] | None = None
 
     def secret(self, kind: str) -> str:
         env = {

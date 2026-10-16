@@ -16,6 +16,7 @@ type Subscription = {
     revision: number;
     desired_state: string;
     observed_state: string;
+    error_code?: string;
     operation_state: string;
     connection: string;
 };
@@ -38,7 +39,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
     const [subs, setSubs] = useState<Subscription[]>([]), [accounts, setAccounts] = useState<Account[]>([]), [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true), [error, setError] = useState(''), [cursor, setCursor] = useState<string | null>(null), [cursors, setCursors] = useState<(string | null)[]>([null]), [page, setPage] = useState(0), [busy, setBusy] = useState(false);
     const [edit, setEdit] = useState<Subscription | null>(null), [editName, setEditName] = useState(''), [editNotes, setEditNotes] = useState(''), [command, setCommand] = useState('');
-    const [add, setAdd] = useState({ project_id: '', name: '', x_handle: '', notes: '', confirmed: false });
+    const [add, setAdd] = useState({ name: '', x_handle: '', notes: '', rating: 'B', confirmed: false });
     const [filters,setFilters]=useState<Filters>(emptyFilters);
     const [windowFrom,setWindowFrom]=useState<string|null>(null);
     const [totals,setTotals]=useState<{matchedTotal:number;subscriptionCounts:{S:number;A:number;B:number}}|null>(null);
@@ -77,7 +78,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             if (latestView.current !== key)return;
             if(data.items.some((item:Activity)=>!visible.some(row=>row.subscription_id===item.subscription_id)))throw Error("VERSION_CONFLICT · 订阅投影已变化，请刷新");
             const grades=new Map<string,Activity['rating']>(data.items.map((item:Activity)=>[item.subscription_id,item.rating]));
-            const accountRows:Account[]=visible.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.notes,grade:grades.get(row.subscription_id)??null,avatar:row.name.slice(0,1),status:row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.operation_state==='failed'?'failed':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
+            const accountRows:Account[]=visible.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.error_code ? row.notes+' · 失败原因：'+row.error_code : row.notes,grade:grades.get(row.subscription_id)??null,avatar:row.name.slice(0,1),status:row.error_code||row.operation_state==='failed'?'failed':row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
             setPosts(data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url})));
             setTotals({matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating});
             setCursor(data.next_cursor);
@@ -171,7 +172,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             const value = await api('tracking/subscriptions', 'POST', { ...add, x_user_id: null });
             setCommand(value.command_id + ' · ' + value.state);
             close();
-            setAdd({ project_id: '', name: '', x_handle: '', notes: '', confirmed: false });
+            setAdd({ name: '', x_handle: '', notes: '', rating: 'B', confirmed: false });
             await refresh();
         }
         catch (e) {
@@ -216,7 +217,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
                     return null;
                 return <><Button size='sm' disabled={busy} onClick={() => { setEdit(row); setEditName(row.name); setEditNotes(row.notes); }}>编辑</Button><Button size='sm' disabled={busy || row.operation_state === 'unknown'} title={row.operation_state === 'unknown' ? '结果待核实，禁止盲目重试' : undefined} onClick={() => void operate(row, row.desired_state === 'running' ? 'stop' : 'resume')}>{row.desired_state === 'running' ? '停止' : '恢复'}</Button><Button size='sm' disabled={busy} title='把这个项目放到主页“正在做”' onClick={() => void addToHome(row)}>加入主页</Button></>;
             },
-            addForm: close => <form method='post' action='/tracking' onSubmit={event => void create(event, close)}>{error && <Alert tone='danger' title={error}/>}<Input label='已注册项目 ID' value={add.project_id} required onChange={e => setAdd(v => ({ ...v, project_id: e.target.value }))}/><Input label='项目名称' value={add.name} required maxLength={120} onChange={e => setAdd(v => ({ ...v, name: e.target.value }))}/><Input label='X 用户名（不含 @）' value={add.x_handle} required pattern='[A-Za-z0-9_]{1,15}' onChange={e => setAdd(v => ({ ...v, x_handle: e.target.value }))}/><Input label='监控备注' value={add.notes} maxLength={4000} onChange={e => setAdd(v => ({ ...v, notes: e.target.value }))}/><label><input type='checkbox' checked={add.confirmed} onChange={e => setAdd(v => ({ ...v, confirmed: e.target.checked }))} required/>我已人工确认项目与 X 账号</label><Button type='submit' pending={busy}>确认加入监控</Button><Button onClick={close}>取消</Button></form>,
+            addForm: close => <form method='post' action='/tracking' onSubmit={event => void create(event, close)}>{error && <Alert tone='danger' title={error}/>}<Input label='项目名称' value={add.name} required maxLength={120} onChange={e => setAdd(v => ({ ...v, name: e.target.value }))}/><Input label='X 用户名（不含 @）' value={add.x_handle} required pattern='[A-Za-z0-9_]{1,15}' onChange={e => setAdd(v => ({ ...v, x_handle: e.target.value }))}/><Input label='监控备注' value={add.notes} maxLength={4000} onChange={e => setAdd(v => ({ ...v, notes: e.target.value }))}/><label>评分<select value={add.rating} onChange={e=>setAdd(v=>({...v,rating:e.target.value}))}>{['S','A','B'].map(r=><option key={r}>{r}</option>)}</select></label><label><input type='checkbox' checked={add.confirmed} onChange={e => setAdd(v => ({ ...v, confirmed: e.target.checked }))} required/>我已人工确认项目与 X 账号</label><Button type='submit' pending={busy}>确认加入监控</Button><Button onClick={close}>取消</Button></form>,
             pagination: <Panel><span>服务端发布时间排序 · 第 {page + 1} 页 · 匹配 {totals?.matchedTotal??"—"} 条 · 本页 {posts.length} 条</span><Button disabled={page === 0 || busy} onClick={() => { setLoading(true); setPage(v => v - 1); }}>上一页</Button><Button disabled={!cursor || busy} onClick={() => { setLoading(true); setCursors(v => [...v.slice(0, page + 1), cursor]); setPage(v => v + 1); }}>下一页</Button></Panel> }}/>
  <Dialog open={!!edit} title='编辑监控资料' onOpenChange={open => {
             if (!open && !busy)

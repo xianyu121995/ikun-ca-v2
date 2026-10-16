@@ -294,7 +294,14 @@ class Store:
         from .protocol import SCOPE, canonical
         from .retention import TTL_MS, retention_now
 
-        source = "rest" if source == "rest_recovery" else source
+        historical = source in ("adopt_rest_recovery", "adopt_wss_replay")
+        source = (
+            "rest"
+            if source in ("rest_recovery", "adopt_rest_recovery")
+            else "wss"
+            if source == "adopt_wss_replay"
+            else source
+        )
         if tweet.get("author_verified") is not True or tweet.get("tweet_kind") not in (
             "original",
             "quote",
@@ -399,7 +406,10 @@ class Store:
                 (current["subscription_id"], tweet["tweet_id"]),
             ).fetchone()
             if prior:
-                conflicted = prior["type_evidence_version"] == "conflicting-structured-v1"
+                conflicted = "conflicting-structured-v1" in (
+                    prior["type_evidence_version"],
+                    tweet["type_evidence_version"],
+                )
                 kind = (
                     "unknown"
                     if conflicted
@@ -454,6 +464,22 @@ class Store:
                         expiry,
                     ),
                 )
+            context = tweet.get("quoted_tweet")
+            if kind == "quote" and isinstance(context, dict):
+                # Normalized public context belongs to this DB; no raw frame or new schema.
+                from .events import quoted_context
+                normalized = quoted_context({"quotedStatus": {"id": context.get("tweet_id"),
+                    "text": context.get("text"), "userScreenName": context.get("author_handle"),
+                    "userName": context.get("author_name")}})
+                if normalized:
+                    encoded = canonical(normalized)
+                    key = "tracking.quote.v1:" + tweet["tweet_id"]
+                    previous = db.execute("SELECT result FROM receipts WHERE key=?", (key,)).fetchone()
+                    if previous is None:
+                        db.execute("INSERT INTO receipts(key,fingerprint,result,at) VALUES(?,?,?,?)",
+                            (key, hashlib.sha256(encoded.encode()).hexdigest(), encoded, time.time()))
+                        changed = True
+                        db.execute("UPDATE feed_meta SET semantic_revision=semantic_revision+1 WHERE singleton=1")
             if changed:
                 if kind in ("original", "quote"):
                     db.execute(
@@ -465,13 +491,17 @@ class Store:
                         (aid,),
                     ).fetchone()
                 )
-                if first and kind in ("original", "quote"):
+                if first and kind in ("original", "quote") and not historical:
                     change(db, "tracking.activity.created", activity(record))
                 versioned = activity(record) | {
                     "activity_id": activity_id(current["subscription_id"], tweet["tweet_id"]),
                     "tweet_kind": kind,
-                    "replay": not (first and source == "wss" and kind in ("original", "quote")),
-                    "is_live_new": bool(first and source == "wss" and kind in ("original", "quote")),
+                    "replay": not (
+                        first and source == "wss" and kind in ("original", "quote") and not historical
+                    ),
+                    "is_live_new": bool(
+                        first and source == "wss" and kind in ("original", "quote") and not historical
+                    ),
                 }
                 event_type = (
                     "tracking.feed.activity.created.v1"

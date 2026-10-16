@@ -205,9 +205,35 @@ def restore_bundle(folder,destination,*,current,progress=None):
         revisions={r['discovery_id']:r['version'] for r in source.execute('SELECT discovery_id,version FROM discoveries')}
         allocated=source.execute("SELECT seq FROM sqlite_sequence WHERE name='public_changes'").fetchone()
         event_floor=max(allocated[0] if allocated else 0,source.execute('SELECT COALESCE(max(sequence),0) FROM public_changes').fetchone()[0])
-        states={r['key']:r['value'] for r in source.execute('SELECT key,value FROM state') if r['key'].startswith(('provider_intent:','cooldown:'))}
+        states={r['key']:r['value'] for r in source.execute('SELECT key,value FROM state') if r['key'].startswith(('provider_intent:','cooldown:','hunter_sample:'))}
         quotas=_rows(source,'quota');clock=watermark(source,time.time())
         if manifest['schema'].get('4')!='hunter_research_retention':raise ValueError('restore_schema4_bundle_required')
+        source_version=max(metadata(source)[0]);bundle_version=max(int(v) for v in manifest['schema'])
+        if source_version!=bundle_version:raise ValueError('restore_schema_version_mismatch')
+        if source_version>=5:
+            # Never forget a committed offline import's durable IDs/checkpoints.
+            # The mutable seen-time projection is cleaned by the normal TTL path.
+            with sqlite3.connect((Path(folder)/'hunter.db').absolute().as_uri()+'?mode=ro',uri=True,timeout=5) as check:
+                check.row_factory=sqlite3.Row
+                for name in ('hunter_takeover_runs','hunter_takeover_rows','hunter_takeover_conflicts','hunter_takeover_project_refs'):
+                    snapshot_rows=sorted(json.dumps(r,sort_keys=True) for r in _rows(check,name))
+                    current_rows=sorted(json.dumps(r,sort_keys=True) for r in _rows(source,name))
+                    if snapshot_rows!=current_rows:raise ValueError('restore_takeover_checkpoint_mismatch')
+                # Same schema number does not make an older directory/proof
+                # checkpoint safe. Never resurrect a deleted or edited account.
+                prefix = 'legacy_takeover_v2:'
+                def directory_state(db):
+                    return {r['key']: r['value'] for r in db.execute('SELECT key,value FROM state WHERE key GLOB ?', (prefix+'*',))}
+                saved, latest = directory_state(check), directory_state(source)
+                if saved != latest:
+                    raise ValueError('restore_legacy_directory_checkpoint_mismatch')
+                for key in latest:
+                    if key.startswith(prefix+'account:'):
+                        identifier = key.removeprefix(prefix+'account:')
+                        a = check.execute('SELECT * FROM hunters WHERE id=?', (identifier,)).fetchone()
+                        b = source.execute('SELECT * FROM hunters WHERE id=?', (identifier,)).fetchone()
+                        if (dict(a) if a else None) != (dict(b) if b else None):
+                            raise ValueError('restore_legacy_directory_account_mismatch')
         _private_directory(destination.parent)
         prune_restore_staging(destination.parent,max(clock,manifest['highwater_us']))
         # A non-hunter.db filename is permanently inadmissible to Store/serve, even after SIGKILL.

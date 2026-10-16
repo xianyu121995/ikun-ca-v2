@@ -293,8 +293,8 @@ def test_foundation_hunter_database_upgrade_and_checksum(tmp_path):
     os.chmod(path,0o600)
     store=Store(path,initialize=True)
     with store.connect() as db:
-        assert db.execute('SELECT version FROM _schema_migrations ORDER BY version').fetchall()[-1][0]==4
-        assert db.execute('PRAGMA user_version').fetchone()[0]==4
+        assert db.execute('SELECT version FROM _schema_migrations ORDER BY version').fetchall()[-1][0]==5
+        assert db.execute('PRAGMA user_version').fetchone()[0]==5
         db.execute("UPDATE _hunter_migrations SET checksum='tampered'")
     with pytest.raises(ValueError,match='checksum'):
         Store(path)

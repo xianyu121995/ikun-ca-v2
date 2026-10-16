@@ -11,8 +11,8 @@ from .store import Store
 
 
 class ProviderError(Exception):
-    def __init__(self, code, retry_after=0):
-        self.code, self.retry_after = code, retry_after
+    def __init__(self, code, retry_after=0, *, retryable=True):
+        self.code, self.retry_after, self.retryable = code, retry_after, retryable
         super().__init__(code)
 
 
@@ -27,9 +27,34 @@ class Providers:
         if self.owns_client:
             await self.client.aclose()
 
+    async def watch_write(self, endpoint, body):
+        if not self.settings.external_io_enabled or endpoint not in ('twitter_watch_add','twitter_watch_delete'):
+            raise ProviderError('external_io_disabled')
+        self.store.reserve('6551',1,self.settings.daily_6551,self.settings.requests_per_minute,time.time())
+        try:
+            response=await self.client.post('https://ai.6551.io/open/'+endpoint,json=body,headers={'Authorization':'Bearer '+self.settings.token_6551})
+            if response.status_code!=200 or response.json().get('success') is not True:
+                raise ProviderError('watch_mutation_failed',60)
+        except (httpx.HTTPError,ValueError):
+            raise ProviderError('watch_mutation_uncertain',30) from None
+
     async def request(self, operation, username=None):
         if not self.settings.external_io_enabled:
             raise ProviderError('external_io_disabled', 300)
+        return await self._read_only(operation, username)
+
+    async def _read_only(self, operation, username=None, *, sample_permit=None):
+        """Shared transport; formal request keeps its hard gate above.
+
+        With formal IO closed, even this private helper requires the exact
+        reviewed Permit and reserves one bounded operation before transport.
+        """
+        if not self.settings.external_io_enabled:
+            from .sample_only import Permit
+            if (type(sample_permit) is not Permit or not self.settings.require_external_io_disabled or not self.settings.v2_mode
+                    or sample_permit.store.path!=self.store.path):
+                raise ProviderError('external_io_disabled', 300)
+            sample_permit.claim(operation, username)
         now = time.time()
         if operation == 'followings':
             if not self.settings.token_twitterapi:
@@ -48,17 +73,28 @@ class Providers:
                       'headers': {'Authorization': 'Bearer '+self.settings.token_6551}}
         else:
             raise ValueError('unapproved_provider_operation')
-        cooldown = self.store.states().get('cooldown:'+provider, 0)
+        states = self.store.states()
+        blocked = self.store.provider_block(operation, username, states=states)
+        if blocked:
+            raise ProviderError(blocked['code'], retryable=False)
+        cooldown = states.get('cooldown:'+provider, 0)
         if cooldown > now:
             raise ProviderError('provider_cooldown', cooldown-now)
         intent='provider_intent:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest()
-        if self.store.states().get(intent) in ('in_flight','billing_unknown'):
+        if states.get(intent) in ('in_flight','billing_unknown'):
             raise ProviderError('provider_billing_unknown',9999999999-now)
         # Every attempt, including failed/ambiguous requests, reserves budget before IO.
         self.store.reserve(provider, cost, limit, self.settings.requests_per_minute, now)
         self.store.set_state(intent,'in_flight')
         try:
             response = await self.client.request(method, url, **kwargs)
+            if (provider == 'twitterapi' and response.status_code == 402) or response.status_code in (400, 404):
+                code = 'provider_http_'+str(response.status_code)
+                # Keep in_flight until the durable terminal block is committed.
+                # A crash before that commit therefore still forbids blind replay.
+                self.store.block_provider(operation, username, code, intent,
+                                          provider_wide=response.status_code == 402, now=now)
+                raise ProviderError(code, retryable=False)
             self.store.set_state(intent,None)
             if response.status_code == 429:
                 try:

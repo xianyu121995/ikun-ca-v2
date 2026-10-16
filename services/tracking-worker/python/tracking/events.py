@@ -28,6 +28,27 @@ def timestamp(value) -> float | None:
         return None
 
 
+def quoted_context(content):
+    """Only structured context carried by the provider, never fetch a link."""
+    value = next((content.get(k) for k in ("quotedStatus", "quoted_status", "quotedTweet") if isinstance(content.get(k), dict)), None)
+    if value is None:
+        return None
+    user = value.get("user") if isinstance(value.get("user"), dict) else {}
+    author = value.get("userScreenName", value.get("screenName", user.get("screen_name", user.get("screenName"))))
+    identifier = str(value.get("id", value.get("id_str", "")))
+    text = value.get("text", value.get("full_text"))
+    try:
+        author = handle(author)
+    except (ValueError, AttributeError, TypeError):
+        return None
+    if not re.fullmatch(r"[0-9]{1,40}", identifier) or not isinstance(text, str):
+        return None
+    name = value.get("userName", user.get("name", author))
+    return {"tweet_id": identifier, "text": text[:20000], "author_handle": author,
+            "author_name": name[:200] if isinstance(name, str) else author,
+            "url": f"https://x.com/{author}/status/{identifier}"}
+
+
 def normalize(content: dict, username: str, require_author=False, *, event_type="NEW_TWEET") -> dict | None:
     """Map documented 6551 author/boolean fields; never infer type from prose."""
     if not isinstance(content, dict):
@@ -44,18 +65,26 @@ def normalize(content: dict, username: str, require_author=False, *, event_type=
     ):
         return None
     reply, quote, repost = content.get("isReply"), content.get("isQuote"), content.get("isRetweet")
+    type_evidence = "6551-structured-v1"
     flags_valid = all(value is None or type(value) is bool for value in (reply, quote, repost))
     if not flags_valid:
         kind = "unknown"
     elif repost is True or content.get("retweetedStatus") or content.get("retweeted_status"):
         kind = "repost"
-    elif reply is True or content.get("inReplyToStatusId") or content.get("in_reply_to_status_id"):
+    elif (
+        reply is True
+        or content.get("inReplyToStatusId")
+        or content.get("in_reply_to_status_id")
+        or content.get("replyStatus")
+    ):
         kind = "reply"
-    elif event_type == "NEW_TWEET_QUOTE":
-        kind = "unknown" if quote is False else "quote"
-    elif quote is True and reply is False:
+    elif quote is False and (
+        event_type == "NEW_TWEET_QUOTE" or content.get("quotedStatus") or content.get("quoted_status")
+    ):
+        kind, type_evidence = "unknown", "conflicting-structured-v1"
+    elif event_type == "NEW_TWEET_QUOTE" or (quote is True and reply is False):
         kind = "quote"
-    elif reply is False and quote is False and event_type in ("NEW_TWEET", "REST_USER_TWEETS_NO_RETWEETS"):
+    elif event_type == "NEW_TWEET" or (reply is False and quote is False and event_type == "REST_USER_TWEETS_NO_RETWEETS"):
         kind = "original"
     else:
         kind = "unknown"
@@ -71,10 +100,11 @@ def normalize(content: dict, username: str, require_author=False, *, event_type=
         "created_at": created,
         "text": text[:20000],
         "tweet_kind": kind,
-        "type_evidence_version": "6551-structured-v1",
+        "type_evidence_version": type_evidence,
         "author_verified": True,
         "author_handle": username,
         "author_id": author_id,
+        "quoted_tweet": quoted_context(content) if kind == "quote" else None,
     }
 
 

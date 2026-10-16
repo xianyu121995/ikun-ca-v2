@@ -25,6 +25,8 @@ LOG = logging.getLogger('hunterradar')
 
 
 def retry_time(failures, now, error=None):
+    if isinstance(error, ProviderError) and not error.retryable:
+        return None
     if isinstance(error, BudgetExceeded):
         return error.retry_at + random.uniform(1, 5)
     wait = min(300, 5 * 2 ** min(failures, 6)) + random.uniform(0, 3)
@@ -106,6 +108,8 @@ class Engine:
             await self.pause(60)
 
     async def scan_profile(self, row):
+        if self.store.provider_block('profile', row['username']):
+            return
         try:
             payload = await self.providers.request('profile', row['username'])
             user_id, name, count = profile(payload, row['username'])
@@ -118,8 +122,9 @@ class Engine:
 
     async def profile_loop(self):
         while not self.stop.is_set():
+            states = self.store.states()
             for row in self.store.hunters():
-                if row['enabled'] and row['profile_status'] != 'ready' and row['next_profile_at'] <= time.time():
+                if row['enabled'] and row['profile_status'] != 'ready' and row['next_profile_at'] <= time.time() and not self.store.provider_block('profile', row['username'], states=states):
                     await self.scan_profile(row)
                 if self.stop.is_set():
                     break
@@ -137,6 +142,8 @@ class Engine:
             current = self.store.hunter(row['id'])
             if not current['enabled'] or current['generation'] != row['generation']:
                 return
+            if self.store.provider_block('followings', row['username']):
+                return
             try:
                 payload = await self.providers.request('followings', row['username'])
                 result = self.store.apply_poll(row, followings(payload), time.time())
@@ -149,32 +156,27 @@ class Engine:
 
     async def rest_loop(self):
         while not self.stop.is_set():
+            states = self.store.states()
             rows = [row for row in self.store.hunters() if row['enabled'] and row['mode'] == 'REST'
-                    and row['profile_status'] == 'ready' and row['next_poll_at'] <= time.time()]
+                    and row['profile_status'] == 'ready' and row['next_poll_at'] <= time.time()
+                    and not self.store.provider_block('followings', row['username'], states=states)]
             # Return exceptions isolates accounts deleted while waiting for a concurrency slot.
             await asyncio.gather(*(self.poll(row) for row in rows), return_exceptions=True)
             await self.pause(1)
 
     async def watch_loop(self):
+        from .watch import synchronize
+        previous = None
         while not self.stop.is_set():
-            if not any(h['enabled'] and h['mode']=='WSS' for h in self.store.hunters()):
-                await self.pause(5)
-                continue
-            if self.store.states().get('watch_error')=='provider_billing_unknown':
-                await self.pause(30)
-                continue
-            checked = self.store.states().get('watch_checked_at', 0)
-            if time.time()-checked < 6*3600:
-                await self.pause(30)
-                continue
             try:
-                payload = await self.providers.request('watch')
-                self.store.coverage(watch_coverage(payload), time.time())
-                self.store.set_state('watch_error', None)
-                await self.pause(30)
-            except (ProviderError, BudgetExceeded, ValueError) as error:
+                signature = [(h['id'],h['enabled'],h['mode'],h['deleted_at']) for h in self.store.hunters(include_deleted=True)]
+                states = self.store.states()
+                if self.settings.external_io_enabled and (signature != previous or time.time()-states.get('watch_checked_at',0)>=300 or states.get('watch_error')):
+                    await synchronize(self)
+                    previous = signature
+            except (ProviderError, BudgetExceeded, ValueError, TimeoutError) as error:
                 self.store.set_state('watch_error',str(error) if isinstance(error,ProviderError) else type(error).__name__)
-                await self.pause(min(60, max(5, retry_time(3, time.time(), error)-time.time())))
+            await self.pause(5)
 
     async def wss_loop(self):
         failures = 0

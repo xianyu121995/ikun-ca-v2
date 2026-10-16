@@ -26,6 +26,11 @@ def activity_id(sub, tweet_id):
     return "act_" + str(uuid.uuid5(NS, json.dumps(["ikun-main", sub, tweet_id], separators=(",", ":"))))
 
 
+def quote_for(db, tweet_id):
+    row = db.execute("SELECT result FROM receipts WHERE key=?", ("tracking.quote.v1:" + tweet_id,)).fetchone()
+    return json.loads(row[0]) if row else None
+
+
 def iso(ms):
     return datetime.fromtimestamp(ms / 1000, UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
@@ -357,6 +362,7 @@ def _render(db, meta, row, offset, limit, now):
                 "rating_revision": rating["revision"],
                 "tweet_kind": tweet["tweet_kind"],
                 "text": tweet["text"][:20000],
+                "quoted_tweet": quote_for(db, tweet["tweet_id"]) if tweet["tweet_kind"] == "quote" else None,
                 "url": f"https://x.com/{sub['handle']}/status/{tweet['tweet_id']}",
                 "occurred_at": iso(int(tweet["created_at"] * 1000))
                 if tweet["created_at"] is not None

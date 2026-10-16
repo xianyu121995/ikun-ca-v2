@@ -91,9 +91,14 @@ export async function trackingRoute(original: Request) {
             return failure(id, 422, 'VALIDATION_ERROR', '无效 JSON');
         }
         if (suffix === '/subscriptions' && method === 'POST') {
-            if (Object.keys(body).some(k => !['project_id', 'name', 'x_user_id', 'x_handle', 'notes', 'confirmed'].includes(k)) || body.confirmed !== true || typeof body.project_id !== 'string')
+            if (Object.keys(body).some(k => !['project_id', 'name', 'x_user_id', 'x_handle', 'notes', 'rating', 'confirmed'].includes(k)) || body.confirmed !== true)
                 return failure(id, 422, 'VALIDATION_ERROR', '需要人工确认的项目');
-            const canonical = await ipc({ operation: 'get', target: body.project_id, principal, request_id: id }, request.signal);
+            if (typeof body.project_id !== 'string') {
+                const registered = await ipc({operation:'tracking_register',principal,request_id:id,idempotency_key:key,body:{name:body.name,x_handle:body.x_handle,notes:body.notes??'',rating:body.rating??null}},request.signal);
+                if (!registered.ok) return registered;
+                body.project_id=(await registered.json()).data.project_id;
+            }
+            const canonical = await ipc({ operation: 'get', target: body.project_id as string, principal, request_id: id }, request.signal);
             if (!canonical.ok)
                 return canonical;
             const record = (await canonical.json()).data;

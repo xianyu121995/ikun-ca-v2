@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import time
 import uuid
@@ -18,6 +19,7 @@ from .retention import advance,active,retired,micros,TTL_US
 
 APP_ID = 0x494b0201
 WINDOW = 72 * 3600
+LEGACY_DIRECTORY_PREFIX = 'legacy_takeover_v2:'
 ACTIVE_TRANSACTION=ContextVar('hunter_transaction',default=None)
 
 
@@ -47,7 +49,7 @@ class Store:
         inspect(self.path)
 
     def inspect(self):
-        inspect(self.path)
+        return inspect(self.path)
 
     @contextmanager
     def connect(self, write=False):
@@ -155,6 +157,8 @@ class Store:
             if row:
                 if row['deleted_at'] is None:
                     return dict(row)
+                if self.legacy_identity_pending(db, row['id']):
+                    raise Conflict('legacy_identity_pending_review')
                 db.execute("UPDATE hunters SET deleted_at=NULL,enabled=?,note=?,label=?,version=version+1,generation=generation+1,baseline_ready=0,baseline_at=NULL,active_since=? WHERE id=?", (int(enabled),note,label,now,row['id']))
                 identifier = row['id']
             else:
@@ -171,6 +175,8 @@ class Store:
                 raise Missing('hunter_not_found')
             if row['version'] != version:
                 raise Conflict('stale_hunter_version')
+            if enabled and self.legacy_identity_pending(db, identifier):
+                raise Conflict('legacy_identity_pending_review')
             data = dict(row)
             if note is not None:
                 data['note'] = note
@@ -182,7 +188,17 @@ class Store:
                 data.update(enabled=0, deleted_at=now, generation=data['generation'] + 1, baseline_ready=0,baseline_at=None)
             if recheck and data['profile_status'] != 'ready':
                 data['next_profile_at'] = 0
-            fields = ('note','label', 'enabled', 'generation', 'baseline_ready','baseline_at', 'next_poll_at', 'next_profile_at', 'profile_status', 'deleted_at','active_since')
+                # Recheck is an explicit account action, not a provider-wide
+                # payment unblock. Only this account's permanent request blocks.
+                for operation, job in (('profile', 'profile'), ('followings', 'poll')):
+                    key = self.provider_block_keys(operation, row['username'])[1]
+                    saved = db.execute('SELECT value FROM state WHERE key=?', (key,)).fetchone()
+                    block = json.loads(saved[0]) if saved else None
+                    if block and block['state'] == 'blocked' and block['code'] in ('provider_http_400', 'provider_http_404'):
+                        self._release_provider_block(db, key, block, actor, 'account_recheck', now)
+                        data[job+'_error'] = None
+                        data['next_'+job+'_at'] = 0
+            fields = ('note','label', 'enabled', 'generation', 'baseline_ready','baseline_at', 'next_poll_at', 'next_profile_at', 'profile_status', 'deleted_at','active_since','profile_error','poll_error')
             db.execute('UPDATE hunters SET ' + ','.join(k+'=?' for k in fields) + ',version=version+1 WHERE id=?',
                        tuple(data[k] for k in fields) + (identifier,))
             self.audit(db, actor, 'hunter.delete' if delete else 'hunter.update', identifier, now)
@@ -197,7 +213,6 @@ class Store:
             other = db.execute('SELECT id FROM hunters WHERE user_id=? AND id<>?', (user_id, row['id'])).fetchone()
             if other or (current['user_id'] and current['user_id'] != user_id):
                 raise Conflict('hunter_stable_identity_conflict')
-            # The initial successful lookup fixes routing for this hunter.
             if current['profile_status'] == 'ready':
                 return False
             changed = current['mode'] != mode
@@ -217,8 +232,10 @@ class Store:
     def job_failure(self, row, job, code, retry_at):
         assert job in ('profile', 'poll')
         with self.connect(True) as db:
-            db.execute(f'UPDATE hunters SET {job}_failures={job}_failures+1,{job}_error=?,next_{job}_at=? WHERE id=? AND generation=? AND enabled=1 AND deleted_at IS NULL',
-                       (code, retry_at, row['id'], row['generation']))
+            next_time = f',next_{job}_at=?' if retry_at is not None else ''
+            values = (code, retry_at) if retry_at is not None else (code,)
+            db.execute(f'UPDATE hunters SET {job}_failures={job}_failures+1,{job}_error=?{next_time} WHERE id=? AND generation=? AND enabled=1 AND deleted_at IS NULL',
+                       (*values, row['id'], row['generation']))
             if job=='profile' and code=='stable_identity_conflict':
                 db.execute("UPDATE hunters SET profile_status='pending',baseline_ready=0,generation=generation+1 WHERE id=? AND generation=?",(row['id'],row['generation']))
 
@@ -441,13 +458,91 @@ class Store:
                 db.execute('INSERT INTO quota(provider,window,reserved) VALUES(?,?,?) ON CONFLICT(provider,window) DO UPDATE SET reserved=reserved+excluded.reserved', (provider, label, amount))
             db.execute("DELETE FROM quota WHERE window LIKE 'minute:%' AND window<>?", ('minute:'+minute,))
 
+    @staticmethod
+    def provider_block_keys(operation, username=None):
+        if operation not in ('profile', 'watch', 'followings'):
+            raise ValueError('unapproved_provider_operation')
+        provider = 'twitterapi' if operation == 'followings' else '6551'
+        # Reuse provider_intent so the existing restore carries the latest fence.
+        prefix = 'provider_intent:blocked:'+provider
+        account = hashlib.sha256((username or '').casefold().encode()).hexdigest()
+        return prefix, prefix+':'+operation+':'+account
+
+    def provider_block(self, operation, username=None, *, states=None):
+        keys = self.provider_block_keys(operation, username)
+        if states is None:
+            with self.connect() as db:
+                states = {r['key']: json.loads(r['value']) for r in db.execute('SELECT key,value FROM state WHERE key IN (?,?)', keys)}
+        for key in keys:
+            value = states.get(key)
+            if value is not None:
+                if not isinstance(value, dict) or value.get('state') not in ('blocked', 'released') or value.get('code') not in ('provider_http_400','provider_http_402','provider_http_404'):
+                    raise ValueError('invalid_provider_block')
+                if value['state'] == 'blocked':
+                    return value
+        return None
+
+    def block_provider(self, operation, username, code, intent, *, provider_wide=False, now=None):
+        keys = self.provider_block_keys(operation, username)
+        if (provider_wide and (operation != 'followings' or code != 'provider_http_402')
+                or not provider_wide and code not in ('provider_http_400', 'provider_http_404')):
+            raise ValueError('invalid_provider_block_scope')
+        now = time.time() if now is None else now
+        key = keys[0 if provider_wide else 1]
+        with self.connect(True) as db:
+            saved = db.execute('SELECT value FROM state WHERE key=?', (key,)).fetchone()
+            block = json.loads(saved[0]) if saved else None
+            if not block or block['state'] != 'blocked':
+                block = {'block_id': str(uuid.uuid4()), 'state': 'blocked', 'code': code,
+                         'operation': operation, 'blocked_at': now, 'provider_wide': provider_wide}
+                db.execute('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, json.dumps(block)))
+                self.audit(db, 'provider', 'provider.block', key, now, json.dumps({'block_id': block['block_id'], 'code': code}))
+            db.execute('UPDATE state SET value=? WHERE key=?', (json.dumps(None), intent))
+        return block
+
+    @staticmethod
+    def _release_provider_block(db, key, block, actor, reason, now):
+        released = dict(block, state='released', released_at=now, released_by=actor, release_reason=reason)
+        db.execute('UPDATE state SET value=? WHERE key=?', (json.dumps(released), key))
+        Store.audit(db, actor, 'provider.resume', key, now, json.dumps({'block_id': block['block_id'], 'code': block['code'], 'reason': reason}))
+
+    def resume_provider(self, operation, username=None, *, expected_block_id, actor, reason, now=None):
+        """Explicit operator action with a block-ID check; never called by a loop."""
+        if not isinstance(actor, str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', actor) or not isinstance(reason, str) or not re.fullmatch(r'[a-z0-9_]{1,80}', reason):
+            raise ValueError('provider_resume_requires_actor_and_reason')
+        now = time.time() if now is None else now
+        with self.connect(True) as db:
+            for key in self.provider_block_keys(operation, username):
+                saved = db.execute('SELECT value FROM state WHERE key=?', (key,)).fetchone()
+                block = json.loads(saved[0]) if saved else None
+                if block and block.get('block_id') == expected_block_id:
+                    if block['state'] == 'released':
+                        return False
+                    self._release_provider_block(db, key, block, actor, reason, now)
+                    job = 'poll' if block['operation'] == 'followings' else 'profile'
+                    if block['operation'] != 'watch':
+                        where = '' if block['provider_wide'] else ' AND username=?'
+                        values = (block['code'],) if block['provider_wide'] else (block['code'], username)
+                        db.execute(f'UPDATE hunters SET {job}_error=NULL,next_{job}_at=0 WHERE {job}_error=?'+where, values)
+                    return True
+            raise Conflict('provider_block_changed')
+
     def set_state(self, key, value):
+        if key.startswith(LEGACY_DIRECTORY_PREFIX):
+            raise ValueError('legacy_private_state_requires_takeover')
         with self.connect(True) as db:
             db.execute('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, json.dumps(value)))
 
     def states(self):
         with self.connect() as db:
-            return {r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM state')}
+            return {r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM state WHERE key NOT GLOB ?', (LEGACY_DIRECTORY_PREFIX+'*',))}
+
+    @staticmethod
+    def legacy_identity_pending(db, identifier):
+        row = db.execute('SELECT value FROM state WHERE key=?', (LEGACY_DIRECTORY_PREFIX+'account:'+identifier,)).fetchone()
+        if not row:
+            return False
+        return json.loads(row[0]).get('status') != 'verified_current'
 
     def coverage(self, usernames, now):
         with self.connect(True) as db:

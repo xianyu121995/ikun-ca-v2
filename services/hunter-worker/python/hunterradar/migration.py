@@ -10,8 +10,12 @@ from datetime import datetime, timezone
 
 APP_ID=0x494B0201
 SQL_ROOT=Path(__file__).resolve().parents[4]/'schemas/hunter'
-FILES={1:'001_foundation.sql',2:'002_hunterradar.sql',3:'003_b4_protocol.sql',4:'004_research_retention.sql'}
-NAMES={1:'foundation',2:'hunterradar_business',3:'hunter_b4_protocol',4:'hunter_research_retention'}
+FILES={1:'001_foundation.sql',2:'002_hunterradar.sql',3:'003_b4_protocol.sql',4:'004_research_retention.sql',5:'005_legacy_takeover.sql'}
+NAMES={1:'foundation',2:'hunterradar_business',3:'hunter_b4_protocol',4:'hunter_research_retention',5:'hunter_legacy_takeover'}
+LATEST_VERSION=5
+READABLE_VERSIONS=(4,5)
+TAKEOVER_TABLES=('hunter_takeover_runs','hunter_takeover_rows','hunter_takeover_conflicts',
+                 'hunter_takeover_baselines','hunter_takeover_seen_times','hunter_takeover_project_refs')
 
 def location(value, *, require_exists=False):
     path=Path(value).absolute()
@@ -49,10 +53,11 @@ def metadata(db, *, complete=True):
     if not identity or identity[0]!='hunter':raise ValueError('store_owner_mismatch')
     rows=db.execute('SELECT version,name FROM _schema_migrations ORDER BY version').fetchall()
     versions=[row[0] for row in rows]
-    if versions not in ([1],[1,2],[1,2,3],[1,2,3,4]) or any(name!=NAMES[version] for version,name in rows):raise ValueError('unsupported_schema_version')
+    if not versions or max(versions)>LATEST_VERSION or versions!=list(range(1,len(versions)+1)) or any(name!=NAMES[version] for version,name in rows):raise ValueError('unsupported_schema_version')
     user_version=db.execute('PRAGMA user_version').fetchone()[0]
     if user_version>max(versions) or (max(versions)>=2 and user_version!=max(versions)):raise ValueError('unsupported_schema_version')
     tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if 'hunter_takeover_schema' in tables:raise ValueError('unreviewed_parallel_takeover_schema')
     expected=checksums()
     if 'checksum' in columns:
         for version,checksum in db.execute('SELECT version,checksum FROM _schema_migrations'):
@@ -64,16 +69,18 @@ def metadata(db, *, complete=True):
     if 2 in versions:
         old=dict(db.execute('SELECT version,checksum FROM _hunter_migrations'))
         if old!={2:expected[2]}:raise ValueError('hunter_migration_checksum_mismatch')
-    if complete and versions!=[1,2,3,4]:raise ValueError('hunter_migration_required')
+    if complete and max(versions) not in READABLE_VERSIONS:raise ValueError('hunter_migration_required')
+    if max(versions)>=5 and not set(TAKEOVER_TABLES)<=tables:raise ValueError('hunter_migration_required')
     return versions,columns
 
 def inspect(value):
     path=location(value,require_exists=True)
     with sqlite3.connect(path.as_uri()+'?mode=ro',uri=True,timeout=5) as db:
-        metadata(db)
+        versions,_=metadata(db)
         db.execute('SELECT discovery_id,project_json FROM discoveries LIMIT 1').fetchall()
         db.execute('SELECT event_id,command_id,posted FROM task_outbox LIMIT 1').fetchall()
         db.execute('SELECT x_user_id,retired_at_us FROM target_discovery_ledger LIMIT 1').fetchall()
+        return max(versions)
 
 def migrate(value, *, fail_before_commit=False):
     path=location(value)
@@ -89,7 +96,7 @@ def migrate(value, *, fail_before_commit=False):
         tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         if tables:
             versions,columns=metadata(db,complete=False)
-            if 4 not in versions:
+            if max(versions)<LATEST_VERSION:
                 from .retention import backup_bundle,micros
                 import time
                 if 'worker_lease' in tables:
@@ -140,7 +147,7 @@ def migrate(value, *, fail_before_commit=False):
                             db.execute('UPDATE task_outbox SET body_hash=? WHERE id=?',(hashlib.sha256(task['body'].encode()).hexdigest(),task['id']))
                         db.execute("INSERT INTO state(key,value) VALUES('retention_clock_highwater','0')")
                 db.execute('INSERT OR IGNORE INTO _migration_checksums(version,sha256) VALUES(?,?)',(version,hashes[version]))
-            db.execute(f'PRAGMA application_id={APP_ID}');db.execute('PRAGMA user_version=4')
+            db.execute(f'PRAGMA application_id={APP_ID}');db.execute(f'PRAGMA user_version={LATEST_VERSION}')
             metadata(db)
             if db.execute('PRAGMA foreign_key_check').fetchall():raise ValueError('hunter_foreign_key_failure')
             if fail_before_commit:raise ValueError('injected_migration_failure')

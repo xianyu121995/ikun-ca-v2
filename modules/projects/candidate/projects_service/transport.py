@@ -130,7 +130,7 @@ class RatingsQuery(StrictModel):
 
 class Rpc(StrictModel):
     operation: Literal['list','get','create','patch','membership','delete','ingest','receipt','command','reconcile',
-                       'changes','outbox_claim','outbox_result','summary','milestones','completion','completions','restore','ratings']
+                       'tracking_register','changes','outbox_claim','outbox_result','summary','milestones','completion','completions','restore','ratings']
     principal: Principal | None=None
     source: Literal['hunter','tracking'] | None=None
     request_id: str=Field(pattern=r'^[A-Za-z0-9_-]{1,64}$')

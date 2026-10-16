@@ -9,6 +9,7 @@ export function auth(): AuthHttp {
     const store=new AuthStore(environment());
     // Unclassified business APIs remain admin-only until their owner declares read-only routes.
     state.ikunAuth=new AuthHttp(store,[
+      /^\/api\/v1\/system\/health$/,
       /^\/api\/v1\/projects(?:\/prj_[a-f0-9-]{36})?$/,
       /^\/api\/v1\/hunter\/(?:signals|discoveries\/[^/]+)$/,
       /^\/api\/v1\/tracking\/(?:subscriptions(?:\/sub_[a-f0-9-]{36})?|latest|activities)$/,

@@ -111,7 +111,7 @@ export function validateProject(project: ProjectFields): string | null {
   if(project.description.length>4000||project.notes.length>4000)return '简介及备注分别最多 4000 个字符。';
   if(project.category&&project.category.length>80)return '赛道最多 80 个字符。';
   if(project.website_url&&!safeWebsite(project.website_url))return '官网必须为不含账号密码的 http/https 地址。';
-  if(project.rating!==null&&!grades.includes(project.rating))return '请选择有效评分。';
+  if(project.rating!==null&&!(grades as readonly string[]).includes(project.rating))return '请选择有效评分。';
   if(!Object.hasOwn(stages,project.progress_stage))return '请选择有效项目进度。';
   if(project.progress_percent!==null&&(!Number.isFinite(project.progress_percent)||project.progress_percent<0||project.progress_percent>100))return '进度需为 0–100，未知时留空。';
   if(project.token_date){

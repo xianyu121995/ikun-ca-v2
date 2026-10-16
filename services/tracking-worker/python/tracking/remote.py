@@ -44,7 +44,7 @@ class Remote:
         self.last_request = 0.0
 
     def ready(self):
-        if not self.cfg.remote_enabled or not self.cfg.dedicated_account or not self.cfg.secret("token"):
+        if not self.cfg.remote_enabled or not (self.cfg.dedicated_account or self.cfg.shared_account_safe) or not self.cfg.secret("token"):
             raise RemoteError("remote_not_configured")
 
     async def close(self):
@@ -111,8 +111,9 @@ class Remote:
             {
                 "username": username,
                 "groupName": self.cfg.watch_group,
+                "remark": "ikun-ca-v2:tracking",
                 "newTweetBol": True,
-                **{flag: False for flag in OTHER_FLAGS},
+                **{flag: flag == "newTweetQuoteBol" for flag in OTHER_FLAGS},
             },
         )
 

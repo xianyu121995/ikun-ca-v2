@@ -26,6 +26,6 @@ export interface VoiceClock { now(): number; setTimeout(callback: () => void, ms
 export type VoiceStatus = "signed-out" | "unsupported" | "no-local-voice" | "off" | "locked" | "disconnected" | "quiet-hours" | "ready" | "resolving" | "starting" | "speaking" | "failed";
 export interface VoiceSnapshot {
   status: VoiceStatus; enabled: boolean; armed: boolean; connected: boolean; available: VoiceAvailability;
-  queued: number; disabled_subscription_ids: readonly string[]; storage_available: boolean;
+  queued: number; disabled_subscription_ids: readonly string[]; storage_available: boolean; quiet_hours: { enabled: boolean; start: number; end: number };
 }
 export interface VoiceOptions { speech: VoiceSpeechPort; resolveMetadata: ResolveVoiceMetadata; storage?: VoiceStorage; clock?: VoiceClock }

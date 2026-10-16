@@ -1,5 +1,5 @@
 import type { VoiceCandidate, VoiceClock, VoiceIdentity, VoiceOptions, VoiceSession, VoiceSnapshot, VoiceStatus } from "./types.js";
-import { candidateFromFrame, isSubscriptionId, isVoiceQuietHours, nextVoiceBoundaryMs, validSession, verifiedMetadata, VOICE_LIMITS } from "./validation.js";
+import { candidateFromFrame, DEFAULT_QUIET_HOURS, isSubscriptionId, isVoiceQuietHours, nextVoiceBoundaryMs, validHour, validSession, verifiedMetadata, VOICE_LIMITS, type VoiceQuietHours } from "./validation.js";
 import { loadVoicePreferences, saveVoicePreferences, voicePreferenceKey, type VoicePreferences } from "./preferences.js";
 
 const systemClock: VoiceClock = { now: Date.now, setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: handle => clearTimeout(handle as ReturnType<typeof setTimeout>) };
@@ -10,7 +10,7 @@ interface Job extends Pending { generation: number; abort: AbortController; time
 export class TrackingVoiceController {
   private readonly clock: VoiceClock;
   private session: VoiceSession | null = null;
-  private preferences: VoicePreferences = { enabled: false, disabled: new Set() };
+  private preferences: VoicePreferences = { enabled: false, disabled: new Set(), quiet: { ...DEFAULT_QUIET_HOURS } };
   private storageAvailable = true;
   private armed = false;
   private connected = false;
@@ -50,7 +50,7 @@ export class TrackingVoiceController {
   private availability() { try { return this.options.speech.availability(); } catch { return "unsupported" as const; } }
   private same(identity: VoiceIdentity): boolean { return !!this.session && identity.user_id === this.session.user_id && identity.epoch === this.session.epoch; }
   private permitted(now: number): boolean {
-    return !this.disposed && !!this.session && this.preferences.enabled && this.armed && this.connected && !this.failed && this.availability() === "available" && !isVoiceQuietHours(now);
+    return !this.disposed && !!this.session && this.preferences.enabled && this.armed && this.connected && !this.failed && this.availability() === "available" && !isVoiceQuietHours(now, this.preferences.quiet);
   }
   private status(): VoiceStatus {
     if (!this.session || this.disposed) return "signed-out";
@@ -59,11 +59,11 @@ export class TrackingVoiceController {
     if (!this.preferences.enabled) return "off";
     if (!this.connected) return "disconnected";
     if (!this.armed) return "locked";
-    if (isVoiceQuietHours(this.now())) return "quiet-hours";
+    if (isVoiceQuietHours(this.now(), this.preferences.quiet)) return "quiet-hours";
     return this.active?.phase ?? "ready";
   }
   private makeSnapshot(): VoiceSnapshot {
-    return Object.freeze({ status: this.status(), enabled: this.preferences.enabled, armed: this.armed, connected: this.connected, available: this.availability(), queued: this.queue.length + (this.active ? 1 : 0), disabled_subscription_ids: Object.freeze([...this.preferences.disabled]), storage_available: this.storageAvailable });
+    return Object.freeze({ status: this.status(), enabled: this.preferences.enabled, armed: this.armed, connected: this.connected, available: this.availability(), queued: this.queue.length + (this.active ? 1 : 0), disabled_subscription_ids: Object.freeze([...this.preferences.disabled]), storage_available: this.storageAvailable , quiet_hours: Object.freeze({ ...this.preferences.quiet })});
   }
   private publish(): void {
     const value = this.makeSnapshot(); if (JSON.stringify(value) === JSON.stringify(this.snapshot)) return;
@@ -86,7 +86,7 @@ export class TrackingVoiceController {
     this.dropAll(); this.session = next; this.armed = false; this.connected = false; this.failed = false; this.notBefore = Infinity;
     this.events.clear(); this.activities.clear();
     const loaded = next ? loadVoicePreferences(this.options.storage, next.user_id) : null;
-    this.preferences = loaded?.preferences ?? { enabled: false, disabled: new Set() };
+    this.preferences = loaded?.preferences ?? { enabled: false, disabled: new Set(), quiet: { ...DEFAULT_QUIET_HOURS } };
     this.storageAvailable = loaded?.available ?? !!this.options.storage;
     this.publish();
   }
@@ -190,11 +190,17 @@ export class TrackingVoiceController {
     }
     this.clock.clearTimeout(this.timer); this.timer = undefined;
     if (this.session && this.preferences.enabled && this.armed && this.connected && !this.failed && this.availability() === "available" && Number.isFinite(now)) {
-      const boundary = nextVoiceBoundaryMs(now);
-      this.timer = this.clock.setTimeout(() => this.tick(), isVoiceQuietHours(now) ? boundary : Math.min(1000, boundary));
+      const boundary = nextVoiceBoundaryMs(now, this.preferences.quiet);
+      this.timer = this.clock.setTimeout(() => this.tick(), isVoiceQuietHours(now, this.preferences.quiet) ? boundary : Math.min(1000, boundary));
     }
     this.publish();
   }
+  /** Personal browser preference: change or disable the quiet window (Asia/Shanghai hours). */
+  setQuietHours(quiet: VoiceQuietHours): boolean {
+    if (this.disposed || !this.session || typeof quiet.enabled !== "boolean" || !validHour(quiet.start) || !validHour(quiet.end)) return false;
+    this.preferences.quiet = { enabled: quiet.enabled, start: quiet.start, end: quiet.end }; this.persist(); this.tick(); return true;
+  }
+  quietHours(): VoiceQuietHours { return { ...this.preferences.quiet }; }
   destroy(): void {
     if (this.disposed) return;
     this.dropAll(); this.session = null; this.armed = false; this.connected = false; this.disposed = true;

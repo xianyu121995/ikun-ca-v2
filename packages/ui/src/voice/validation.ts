@@ -34,11 +34,19 @@ function dayMs(now: number): number {
   const part = (key: string) => Number(parts.find(p => p.type === key)?.value);
   return ((part("hour") * 60 + part("minute")) * 60 + part("second")) * 1000 + ((now % 1000) + 1000) % 1000;
 }
-export function isVoiceQuietHours(now: number): boolean {
+export interface VoiceQuietHours { enabled: boolean; start: number; end: number }
+/** Default 22:00–08:00 Asia/Shanghai; the user can change or disable it (2026-10-17 owner decision). */
+export const DEFAULT_QUIET_HOURS: VoiceQuietHours = Object.freeze({ enabled: true, start: 22, end: 8 });
+export const validHour = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 23;
+export function isVoiceQuietHours(now: number, quiet: VoiceQuietHours = DEFAULT_QUIET_HOURS): boolean {
   if (!Number.isFinite(now)) return true;
-  const time = dayMs(now); return time >= 22 * 3600_000 || time < 8 * 3600_000;
+  if (!quiet.enabled || quiet.start === quiet.end) return false;
+  const time = dayMs(now), start = quiet.start * 3600_000, end = quiet.end * 3600_000;
+  return start < end ? time >= start && time < end : time >= start || time < end;
 }
-export function nextVoiceBoundaryMs(now: number): number {
-  const time = dayMs(now);
-  return time < 8 * 3600_000 ? 8 * 3600_000 - time : time < 22 * 3600_000 ? 22 * 3600_000 - time : 32 * 3600_000 - time;
+export function nextVoiceBoundaryMs(now: number, quiet: VoiceQuietHours = DEFAULT_QUIET_HOURS): number {
+  if (!quiet.enabled || quiet.start === quiet.end) return 3600_000;
+  const time = dayMs(now), day = 24 * 3600_000;
+  const until = (hour: number) => { const target = hour * 3600_000; return target > time ? target - time : target + day - time; };
+  return Math.min(until(quiet.start), until(quiet.end));
 }

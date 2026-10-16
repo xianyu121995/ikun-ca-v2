@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TrackingVoiceController } from "../controller.ts";
-import { candidateFromFrame, isVoiceQuietHours, VOICE_LIMITS } from "../validation.ts";
+import { candidateFromFrame, isVoiceQuietHours, nextVoiceBoundaryMs, VOICE_LIMITS } from "../validation.ts";
 import { voicePreferenceKey } from "../preferences.ts";
 import { createWebSpeechPort, bindVoiceBrowserLifecycle } from "../browser.ts";
 import { VoiceControls } from "../controls.tsx";
@@ -139,7 +139,7 @@ test("metadata completed at 22 or a backwards wall clock cannot reopen a quiet q
 });
 test("stored preference is user-isolated, contains no notes/session/events, and never unlocks another page", async () => {
   const storage = new MemoryStorage(); const f = fixture({ storage }); f.enable(); f.voice.setSubscriptionEnabled("sub_" + uuid(2), false); f.send(); await flush();
-  const raw = storage.getItem(voicePreferenceKey(session.user_id)); assert.deepEqual(Object.keys(JSON.parse(raw)).sort(), ["version", "enabled", "disabled_subscription_ids"].sort()); assert.ok(!raw.includes("真实")); assert.ok(!raw.includes(session.epoch)); f.voice.destroy();
+  const raw = storage.getItem(voicePreferenceKey(session.user_id)); assert.deepEqual(Object.keys(JSON.parse(raw)).sort(), ["version", "enabled", "disabled_subscription_ids", "quiet_hours"].sort()); assert.ok(!raw.includes("真实")); assert.ok(!raw.includes(session.epoch)); f.voice.destroy();
   const otherPage = fixture({ storage }); assert.equal(otherPage.voice.getSnapshot().enabled, true); assert.equal(otherPage.voice.getSnapshot().armed, false); assert.equal(otherPage.send(), false); otherPage.voice.destroy();
   const otherUser = fixture({ storage, session: { ...session, user_id: "usr_" + uuid(2) } }); assert.equal(otherUser.voice.getSnapshot().enabled, false); assert.deepEqual(otherUser.voice.getSnapshot().disabled_subscription_ids, []); otherUser.voice.destroy();
 });
@@ -170,4 +170,16 @@ test("browser lifecycle cancels pagehide/freeze, reloads personal storage, and d
   const cleanup = bindVoiceBrowserLifecycle(f.voice, target); f.enable(); target.dispatchEvent(new Event("pagehide")); assert.equal(f.voice.getSnapshot().armed, false);
   f.voice.setStreamConnected(true, session); f.enable(); target.document.dispatchEvent(new Event("freeze")); assert.equal(f.voice.getSnapshot().armed, false);
   f.voice.setStreamConnected(true, session); f.enable(); const event = new Event("storage"); event.key = voicePreferenceKey(session.user_id); target.dispatchEvent(event); assert.equal(f.voice.getSnapshot().armed, false); cleanup(); assert.equal(f.voice.getSnapshot().status, "signed-out"); assert.equal(f.clock.timers.size, 0);
+});
+
+test("owner-configurable quiet hours: custom window, same-day window and disabled", () => {
+  const at = iso => Date.parse(iso);
+  const night = { enabled: true, start: 0, end: 7 };
+  assert.equal(isVoiceQuietHours(at("2026-10-16T16:30:00.000Z"), night), true);   // 00:30 Shanghai
+  assert.equal(isVoiceQuietHours(at("2026-10-16T23:30:00.000Z"), night), false);  // 07:30 Shanghai
+  const noon = { enabled: true, start: 12, end: 14 };
+  assert.equal(isVoiceQuietHours(at("2026-10-17T04:30:00.000Z"), noon), true);    // 12:30 Shanghai
+  assert.equal(isVoiceQuietHours(at("2026-10-17T07:00:00.000Z"), noon), false);   // 15:00 Shanghai
+  assert.equal(isVoiceQuietHours(at("2026-10-16T16:30:00.000Z"), { enabled: false, start: 22, end: 8 }), false);
+  assert.equal(nextVoiceBoundaryMs(at("2026-10-17T04:30:00.000Z"), noon), 90 * 60_000);
 });

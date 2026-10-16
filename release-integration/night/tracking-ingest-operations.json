@@ -1,5 +1,5 @@
 {
-  "state": "OPS_REVIEWED_0b0_WITH_POSTCHECK_DIAGNOSTICS_PENDING_FINAL_REVIEW",
+  "state": "PASS_EXACT_CANDIDATE_ACTIVATED_AND_AUDITED",
   "Projects_source": "6067658d6092e4d046a8691e8f2f93b34c717801",
   "Projects_control": "2c55f927bcbcc0d2b47472d84156ffa38826876b",
   "website_from": "19863b2af031fc2592bb6d73b7161efc77b0bd1d",
@@ -37,5 +37,7 @@
     "release-integration/scripts/prepare_tracking_ingest_public_viewer.py": "1c52aa807ff390e309a908acbe279b815ec6b1f89558d9fb4d3575ec5ef50f8d",
     "release-integration/scripts/audit_tracking_ingest_runtime.py": "43371ef446b83c559423faaae011456bd15ce5a79fc848d7815341a5c00baf22",
     "release-integration/scripts/probe_tracking_ingest_runtime.py": "ef5bdbf826136e815b35d6bf47342b64fa76e84713561d735bc7ee1da2efe1dc"
-  }
+  },
+  "final_activation_control": "99109bf878837b4522ae114454c53c0aa89f6bce",
+  "deployed_candidate": "0ce180c33ea4be350ac57daa7dbfa5b5221e58cb"
 }

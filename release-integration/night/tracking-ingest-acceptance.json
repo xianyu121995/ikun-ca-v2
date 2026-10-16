@@ -1,5 +1,5 @@
 {
-  "state": "PASS_LOCAL_PENDING_FINAL_ROOT_REVIEW_AND_ACTIVATION",
+  "state": "PASS_WEBSITE_RECEIVER_PROTECTED_V2_PUBLIC",
   "Projects_source": "6067658d6092e4d046a8691e8f2f93b34c717801",
   "Projects_control": "2c55f927bcbcc0d2b47472d84156ffa38826876b",
   "integration_runtime_source_commit": "0b0f4549758b74ec5defc06493054f41d80d439d",
@@ -94,9 +94,8 @@
     "voice admin390"
   ],
   "original_voice_evidence_unchanged": true,
-  "runtime_website_still": "19863b2af031fc2592bb6d73b7161efc77b0bd1d",
-  "deployment_process_started": false,
-  "public_probes_executed": false,
+  "deployment_process_started": true,
+  "public_probes_executed": true,
   "live_fixture_event_posts": 0,
   "real_provider_calls": 0,
   "real_sound": false,
@@ -104,5 +103,230 @@
   "pending_writeback": "BLOCKED_FROZEN_OWNER_GAP",
   "expired404": "unknown",
   "main_unchanged": "63e8a2857241c6a76226f21435e40db9736a1e7e",
-  "recorded_at": "2026-10-16T07:23:02.172048+00:00"
+  "recorded_at": "2026-10-16T07:23:02.172048+00:00",
+  "deployed_candidate": "0ce180c33ea4be350ac57daa7dbfa5b5221e58cb",
+  "activation_control": "99109bf878837b4522ae114454c53c0aa89f6bce",
+  "public_receipt": "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-acceptance.json",
+  "public_receipt_sha256": "d41b93500af1d4cd69fcaac8abdc51b39ba0e27054ab14ba39e2825da46bd1fd",
+  "public_evidence_sha256": {
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/deployment.json": "b76f12710f0c0462ff35516d98aac54ce1bbb0806173bb91231e361c1fac1fb9",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/runtime-probes.json": "10f7eeb1e6d5b06cd756cd9a995c6312a5b5335860a645bc826b714c193a2a8b",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/final-runtime-audit.json": "52858c2667721974201a4f2ee71e336c5ac6ff24139b6462dd4ee5197bc2470f",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/final-backup-and-preservation.json": "9839f6e0334ec5e7ef1ab87b14aa18418894b9bd03807b83cf4591b42a4c38f3",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-admin-ui.txt": "b13362213ccb958411290196587b7310ca0e71d60765cb6f00cbc8bbc17b66d4",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-admin-tracking.png": "cbbe6f25fe4fdd23ef5d1d1e8b0c4f59212835dec491cf4ad9017cc589cc718f",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-admin.json": "45beeb1a7e8cb0dbe900f2c5b7b7e3ac577540cbfc7382430d75b6b247f62e9b",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-user-home.txt": "266b5e638e45f1cebcfb3e8a899ff2f097c3637f60f1b72c71c5cbe623c8b2c2",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-user-home.png": "c653d77742f9cb50941bbb3f504994115e041a9f47193c5de10c9690555359f2",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-user-tracking.txt": "34d6271deb93249a233f47e956a8a61131e776b0f76bc252c44e17da95880beb",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-user-tracking.png": "12f531cdda68660f55e40db2bba423d7383a15ead044e578934d130b8806fecc",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-user-api.json": "14e2fe1d984f41c5138932b422bb71c12c2bb611e496bfa6f7f75383263f9d7d",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-sse-revocation.json": "d6a485aaec8aa9a9f1e44faacb6d11289b2a95708e328cc9645ebdf5c8578a50",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-disabled.json": "d199c39acba158e374ff89a791e7d9a1a1c0b5787e705530a87f4e352d160064",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-admin-final.json": "b48426f0bca6ea1f8d7f9492e21d96188809fbdc88a8beb753bb0513bc9a66b4",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-temp-cycle.json": "b73228dafe73e93c76c4e4170ffbcff7d9e18fffb9add51b7f2b13b2f0b8160c",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/public-unauthorized-http.json": "09a0cf162b9b22c3af5006919719c1931b03746714a8f7321a8501c25c108b42",
+    "release-integration/.runtime/tracking-ingest/public-evidence-1792136175415559000/local-acceptance-before-activation.json": "21ad82746062ea4907c72381bda2fa25bc967cae4aa2613e039c9edd73a9d4af"
+  },
+  "public_acceptance_at": "2026-10-16T07:36:15.415037+00:00",
+  "runtime_probe_statuses": [
+    401,
+    401,
+    403,
+    422,
+    404
+  ],
+  "Projects_all_table_fingerprints_unchanged": true,
+  "worker_files_before": {
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/config/hunter.environment.json": "247e402790c023dbcf4dcb7beb5f75a24301cd21c7de3070cb4acb835c0488cb",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/config/tracking.environment.json": "bd9105fe4737b90e9bf5bbce8ad4cfdae5cf22bb8c89b24f3a138a7d044e6b2b",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/config/tracking/tracking.json": "9e06debdfc0b2baba8bfc265fa796d4e3b333cfc48591ed4ba4e1a414108caee",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/plans/hunter/75b81a2b5210e41bdf8522467c7fba2a6a6e693c/worker.json": "e3b13cad5ba255ddf76182326b90622896e489e18bf29b351aa1a2735c9f87a2",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/plans/tracking/64088893841122491aba508fdb514507db3d9339/worker.json": "e87f5bbfbc2f7a4540b858988353d0dca355a687d16ececd96e3f43d6d0af494",
+    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.hunter.plist": "0d5a9721d342f0a21b6dee33c4951318ac9cb955c240e7d30aa8eb740bc317e1",
+    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.tracking.plist": "29921315bf346f76fa4914d72b1c631c9678b3ab1b48dd58c24c90377d501e21"
+  },
+  "worker_pids_before": {
+    "web": 67800,
+    "hunter": 2608,
+    "tracking": 25225,
+    "tunnel": 39523
+  },
+  "worker_pids_after": {
+    "web": 87924,
+    "hunter": 2608,
+    "tracking": 25225,
+    "tunnel": 39523
+  },
+  "databases": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/auth/auth.db",
+      "device": 16777229,
+      "inode": 20187691,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652484,
+      "user_version": 2
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/projects/projects.db",
+      "device": 16777229,
+      "inode": 20187927,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652483,
+      "user_version": 2
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/hunter/hunter.db",
+      "device": 16777229,
+      "inode": 20535150,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652481,
+      "user_version": 4
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/tracking/tracking.db",
+      "device": 16777229,
+      "inode": 20685563,
+      "mode": "0600",
+      "links": 1,
+      "integrity": "ok",
+      "application_id": 1229652482,
+      "user_version": 4,
+      "business_change_rows": 0
+    }
+  },
+  "health": {
+    "web": {
+      "service": "website",
+      "status": "ready",
+      "business_enabled": true,
+      "profile": "c0-lite",
+      "workers_enabled": true,
+      "workers": {
+        "hunter": {
+          "configured": true
+        },
+        "tracking": {
+          "configured": true
+        }
+      }
+    },
+    "hunter": {
+      "service": "hunter",
+      "status": "ready",
+      "external_io_enabled": false,
+      "project_delivery_enabled": true,
+      "schema_version": 4,
+      "source_status": "未连接真实来源"
+    },
+    "tracking": {
+      "service": "tracking",
+      "status": "ready",
+      "schema_version": 4,
+      "external_collection_enabled": false,
+      "source_state": "unconfigured"
+    }
+  },
+  "all_temporary_accounts": {
+    "temporary_enabled": false,
+    "temporary_role": "user",
+    "admin_enabled": true,
+    "admin_role": "superadmin",
+    "B3_temporary_count": 2,
+    "B3_temporary_enabled": false,
+    "voice_temporary_count": 1,
+    "voice_temporary_enabled": false,
+    "ingest_temporary_count": 1,
+    "ingest_temporary_enabled": false
+  },
+  "temporary_credential_retired": true,
+  "backup_before": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-before-ec2ad782c8df4964893b89f78708e57b/auth.db",
+      "sha256": "751e2c06542c66e747be63fd83790a164cf269c5873f1e7b38306d091db6adb6",
+      "integrity": "ok"
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-before-ec2ad782c8df4964893b89f78708e57b/projects.db",
+      "sha256": "66973f7d19233254af69b4e0908900931d1768893d65a8218bfec54a237a28e5",
+      "integrity": "ok"
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-before-ec2ad782c8df4964893b89f78708e57b/hunter.db",
+      "sha256": "2714e902449081ef63326a3e3e3b6083c52e37af9d40485462f983599ce13e46",
+      "integrity": "ok"
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-before-ec2ad782c8df4964893b89f78708e57b/tracking.db",
+      "sha256": "c756913ecd5f3c9705140976e72bd851b5b81eaf495d5764e85c3682f394e3f9",
+      "integrity": "ok"
+    }
+  },
+  "backup_after": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-after-09cf60e8d86c4ed7b97cd4a8aae6d500/auth.db",
+      "sha256": "751e2c06542c66e747be63fd83790a164cf269c5873f1e7b38306d091db6adb6",
+      "integrity": "ok"
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-after-09cf60e8d86c4ed7b97cd4a8aae6d500/projects.db",
+      "sha256": "66973f7d19233254af69b4e0908900931d1768893d65a8218bfec54a237a28e5",
+      "integrity": "ok"
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-after-09cf60e8d86c4ed7b97cd4a8aae6d500/hunter.db",
+      "sha256": "bc5d0933bc7bac9f86c9fe1e089b874bc4935bb6fb4fe481f87e88b0a85ae0f6",
+      "integrity": "ok"
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-after-09cf60e8d86c4ed7b97cd4a8aae6d500/tracking.db",
+      "sha256": "2b99386081ad6f3e34132f71b768e2c76eb3d7f982cad5ef631b448099525183",
+      "integrity": "ok"
+    }
+  },
+  "backup_final": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-public-accepted-e5811e0cf1f342d9bb6fa55352bdb843/auth.db",
+      "sha256": "7107dff4f63508ca6fbb6e2cdf9c161744b09f365b46352d6383978288561e48",
+      "integrity": "ok"
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-public-accepted-e5811e0cf1f342d9bb6fa55352bdb843/projects.db",
+      "sha256": "66973f7d19233254af69b4e0908900931d1768893d65a8218bfec54a237a28e5",
+      "integrity": "ok"
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-public-accepted-e5811e0cf1f342d9bb6fa55352bdb843/hunter.db",
+      "sha256": "d319ebde800c83cda0c199e6c9ff2775ce76f13d3a2f7648b20f71473aaa1656",
+      "integrity": "ok"
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/tracking-ingest-public-accepted-e5811e0cf1f342d9bb6fa55352bdb843/tracking.db",
+      "sha256": "67eaee026c9fd6e83af02463127f8f6aba4b7d8387e28f3d9a64d80d0e5c0ba6",
+      "integrity": "ok"
+    }
+  },
+  "backup_hashes_verified": 12,
+  "production_profile": {
+    "NODE_ENV": "production",
+    "NODE_OPTIONS": "--max-old-space-size=768",
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "loopback_port": "4000",
+    "RunAtLoad": true,
+    "KeepAlive": true,
+    "ThrottleInterval": 30
+  },
+  "owned_rss_mib_snapshot": 164.2,
+  "rollback": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/rollbacks/19863b2af031fc2592bb6d73b7161efc77b0bd1d-20261016-152706",
+  "production_rollback_executed": false,
+  "new_credential_field": "PROJECTS_INGEST_TRACKING_TOKEN",
+  "new_secret_in_launchd_argv_or_logs": false,
+  "runtime_website_before_activation": "19863b2af031fc2592bb6d73b7161efc77b0bd1d",
+  "current_website_release": "0ce180c33ea4be350ac57daa7dbfa5b5221e58cb"
 }

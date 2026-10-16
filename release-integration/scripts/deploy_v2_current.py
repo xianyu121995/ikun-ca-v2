@@ -66,6 +66,8 @@ def activate_hunters(release):
 
 def main():
     os.umask(0o077)
+    for role in ('web','hunter','tracking-live','tunnel'):
+        if run(['/bin/launchctl','print','system/ca.ikun.v2.c0lite.'+role],check=False).returncode==0:raise RuntimeError('System daemon detected; use a privileged system-domain upgrade. No duplicate GUI job will be started.')
     assert run(['git','branch','--show-current']).stdout.strip()=='codex/integration'
     assert not run(['git','status','--porcelain']).stdout.strip()
     assert run(['git','rev-parse','main']).stdout.strip()=='63e8a2857241c6a76226f21435e40db9736a1e7e'

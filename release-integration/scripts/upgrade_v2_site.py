@@ -12,6 +12,7 @@ from v2_maintenance import backup,private,atomic
 
 def main():
     os.umask(0o077)
+    if run(['/bin/launchctl','print','system/ca.ikun.v2.c0lite.web'],check=False).returncode==0:raise RuntimeError('System daemon detected; use a privileged system-domain upgrade. No duplicate GUI job will be started.')
     assert run(['git','branch','--show-current']).stdout.strip()=='codex/integration'
     assert not run(['git','status','--porcelain']).stdout.strip()
     sha=run(['git','rev-parse','HEAD']).stdout.strip()

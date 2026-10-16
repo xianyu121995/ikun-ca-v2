@@ -23,6 +23,9 @@ def main():
     os.umask(0o077)
     parser=argparse.ArgumentParser();parser.add_argument('roles',nargs='+',choices=['hunter','tracking']);args=parser.parse_args()
     assert not subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip()
+    for role in args.roles:
+        label='ca.ikun.v2.c0lite.'+('tracking-live' if role=='tracking' else 'hunter')
+        if launch('print','system/'+label).returncode==0:raise RuntimeError('System daemon detected; use a privileged system-domain upgrade. No duplicate GUI job will be started.')
     sha=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
     release=V2/'worker-releases'/sha;release.mkdir(parents=True,mode=0o700)
     archive=subprocess.check_output(['git','archive',sha],cwd=ROOT);subprocess.run(['/usr/bin/tar','-x','-C',str(release)],input=archive,check=True)

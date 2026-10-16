@@ -39,6 +39,8 @@ def job(label,args,*,interval=None,calendar=None):
     if interval:value['StartInterval']=interval
     elif calendar:value['StartCalendarInterval']=calendar
     else:value.update(KeepAlive=True,ThrottleInterval=30)
+    for name in ('StandardOutPath','StandardErrorPath'):
+        log=Path(value[name]);fd=os.open(log,os.O_CREAT|os.O_APPEND|os.O_WRONLY|os.O_NOFOLLOW,0o600);os.close(fd);log.chmod(0o600)
     path=AGENTS/(label+'.plist');path.write_bytes(plistlib.dumps(value));path.chmod(0o600)
     return path
 

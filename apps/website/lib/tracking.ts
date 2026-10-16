@@ -76,6 +76,16 @@ export async function trackingRoute(original: Request) {
             if (!new RegExp('^/(?:subscriptions(?:/sub_' + uuid + ')?|latest|activities)$').test(suffix))
                 return failure(id, 404, 'NOT_FOUND', '路径不存在');
             const out = await trackingService(suffix.slice(1) + url.search, id, { signal: request.signal, headers: request.headers.has('last-event-id') ? { 'last-event-id': request.headers.get('last-event-id')! } : {} });
+            if (out.ok && suffix === '/subscriptions') {
+                const value=await out.json();
+                const rows=value.data.items as {project_id:string;rating?:string|null}[];
+                const catalog=await ipc({operation:'ratings',contract:'tracking-ratings-v1',principal,request_id:id,body:{project_ids:[...new Set(rows.map(r=>r.project_id))],expected_catalog_version:null}},request.signal);
+                if(!catalog.ok)return catalog;
+                const ratings=(await catalog.json()).data.items as {project_id:string;rating:string|null}[];
+                const map=new Map(ratings.map(r=>[r.project_id,r.rating]));
+                for(const row of rows){const rating=map.get(row.project_id);row.rating=rating&&['S','A','B'].includes(rating)?rating:null;}
+                return Response.json(value,{headers:{'cache-control':'no-store','x-request-id':id}});
+            }
             return new Response(out.body, { status: out.status, headers: { 'content-type': out.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store', 'x-request-id': id, ...(out.headers.get('etag') ? { etag: out.headers.get('etag')! } : {}), ...(out.headers.get('retry-after') ? {'retry-after':out.headers.get('retry-after')!} : {}) } });
         }
         if (url.search)

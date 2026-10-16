@@ -17,6 +17,7 @@ type Subscription = {
     desired_state: string;
     observed_state: string;
     error_code?: string;
+    rating?: 'S'|'A'|'B'|null;
     operation_state: string;
     connection: string;
 };
@@ -78,7 +79,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             if (latestView.current !== key)return;
             if(data.items.some((item:Activity)=>!visible.some(row=>row.subscription_id===item.subscription_id)))throw Error("VERSION_CONFLICT · 订阅投影已变化，请刷新");
             const grades=new Map<string,Activity['rating']>(data.items.map((item:Activity)=>[item.subscription_id,item.rating]));
-            const accountRows:Account[]=visible.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.error_code ? row.notes+' · 失败原因：'+row.error_code : row.notes,grade:grades.get(row.subscription_id)??null,avatar:row.name.slice(0,1),status:row.error_code||row.operation_state==='failed'?'failed':row.desired_state==='running'&&row.observed_state==='running'&&row.connection==='connected'?'running':row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
+            const accountRows:Account[]=visible.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.error_code ? row.notes+' · 失败原因：'+row.error_code : row.notes,grade:row.rating===undefined?grades.get(row.subscription_id)??null:row.rating,avatar:row.name.slice(0,1),status:row.error_code||row.operation_state==='failed'?'failed':row.desired_state==='running'&&row.observed_state==='running'&&row.connection==='connected'?'running':row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
             setPosts(data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url})));
             setTotals({matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating});
             setCursor(data.next_cursor);

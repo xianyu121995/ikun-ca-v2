@@ -3,3 +3,6 @@
 body { margin:0; }
 button,input,select,textarea { font:inherit; }
 a { color:inherit; }
+
+/* 2026-10-17 owner request: whole site 20% larger (owner was using 120% browser zoom). */
+html { zoom: 1.2; }

@@ -200,7 +200,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
         }
     }
     const connected=subs.some(row=>row.connection==='connected');
-    return <><Alert title={connected?'实时来源已连接':'实时来源未连接'} />{fixture&&!connected&&<Alert title='本地模式 · 尚未连接实时来源' />}{error && <Alert tone='danger' title={error}/>} {command && <Alert title={command}/>}<TrackingVoiceSettings controller={voice.controller} subscriptions={subs.map(row => ({ subscription_id: row.subscription_id, label: row.notes || row.name }))}/><TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
+    return <>{!connected && !fixture && <Alert tone='warning' title='实时来源未连接' />}{fixture&&!connected&&<Alert title='本地模式 · 尚未连接实时来源' />}{error && <Alert tone='danger' title={error}/>} {command && (!command.startsWith('cmd_') || command.includes('名额不足')) && <Alert title={command.startsWith('cmd_') ? command.replace(/^cmd_\S+\s·\s/, '') : command}/>}<TrackingVoiceSettings controller={voice.controller} subscriptions={subs.map(row => ({ subscription_id: row.subscription_id, label: row.notes || row.name }))}/><TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
             const row = subs.find(r => r.subscription_id === id);
             if (row && !(await operate(row, 'remove')))
                 throw Error('移除未确认');

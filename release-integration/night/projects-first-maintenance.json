@@ -1,0 +1,92 @@
+{
+  "state": "READY_FOR_ROOT_EXACT_REVIEW_NOT_EXECUTED",
+  "phase": "projects_first_09af_5afc_v1",
+  "owner_source": "09afbcfd7ba7d809750d4b27c7599c952335b35f",
+  "package_sha256": "5afc6a274db8a1ec162a43660db8b5ee24a5058074afbd6f308bd32e302cec7e",
+  "manifest_sha256": "8f5a453a705dbe0ba4c3957c94098ba05684a95b1ef54ca16243fa90aa8fac1f",
+  "decisions_sha256": "79a3bb0b2d6177842c15ed0aa1461a1eb1c2056754085cd0d429409da0f98388",
+  "rehearsal_sha256": "5364810e3dcdc79790781cc7539dbfbe295facfaa98460cc5138cb4377f21ffd",
+  "tool_source_sha256": "6d594df36f3067609a607f78161b32084fef1b38e72c7126f647d8014268898c",
+  "tests": {
+    "count": 32,
+    "passed": true,
+    "receipt": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first-tests/run-1792149523491786000/receipt.json",
+      "sha256": "e13e4e561586d2b6596a072ca8ba5648339cfc18284536f6e46d610832701f4e"
+    },
+    "log": {
+      "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first-tests/run-1792149523491786000/unittest.log",
+      "sha256": "a706a208a66a8a25a8179604d858f13aab7f0a1242a2bf566a697e896b17bf1a",
+      "bytes": 4884
+    },
+    "scope": "fixtures only; not summed with prior suites or original owner rehearsal"
+  },
+  "read_only_plan": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/execution-plan-v3.json",
+    "sha256": "cf75f9ca903ae4168eadbd9df6cd7f2e066cf8cbe1dd10b3b4a3c08ff27a21c1",
+    "staged_owner_git_files": 44,
+    "initial_web": {
+      "pid": 87924,
+      "ppid": 1,
+      "uid": 501,
+      "started_utc": "2026-10-16T07:27:09+00:00",
+      "executable": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/toolchains/node24/bin/node",
+      "cwd": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/releases/0ce180c33ea4be350ac57daa7dbfa5b5221e58cb"
+    },
+    "initial_tree_pids": [
+      87924,
+      87976,
+      87978,
+      87986,
+      87987
+    ],
+    "initial_socket": {
+      "path": "/private/tmp/ikp-R8jWuG/p.sock",
+      "holder_pids": [
+        87978
+      ],
+      "mode": "0600"
+    }
+  },
+  "read_only_status": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/readonly-status-v3-before-execution.json",
+    "sha256": "e66cc3e9344ae4167d1eeb1564693a23805d6c81701fc07c247eddb32b5a5b72",
+    "state": "not_started",
+    "journal_written": false
+  },
+  "source_files_sha256": {
+    "release-integration/scripts/projects_first_maintenance.py": "6d594df36f3067609a607f78161b32084fef1b38e72c7126f647d8014268898c",
+    "release-integration/scripts/test_projects_first_maintenance.py": "acdbd99c1057880cf8b6ca486ce7c8898ad85dcd4867f6f12fd50747f41aaa8c",
+    "release-integration/scripts/takeover_backup.py": "b54bd2b2d338f936b638e44d1f0bf561f74227eef8f2ac60af335fe8dab15b24",
+    "release-integration/scripts/takeover_operator.py": "1aec79cffa47446cca09e9c470c558f158ff4b3eb365855e5bdd192ccba1a13a"
+  },
+  "execution_command_after_commit": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/reviewed-execution-command.json",
+  "operations_performed": {
+    "stopped_services": 0,
+    "runtime_database_connections_in_prepare_and_status": 0,
+    "runtime_backups": 0,
+    "runtime_imports": 0,
+    "provider_calls": 0,
+    "new_wss": 0,
+    "Watch_writes": 0,
+    "next_builds": 0,
+    "runtime_release_changes": 0
+  },
+  "execution_boundaries": {
+    "website_only_label": "ca.ikun.v2.c0lite.web",
+    "website_preserved_release": "0ce180c33ea4be350ac57daa7dbfa5b5221e58cb",
+    "workers_pids_preserved": [
+      2608,
+      25225
+    ],
+    "workers_external_io_enabled": false,
+    "auth_imported": false,
+    "schema_version": 2,
+    "physical_database_inodes_preserved": true,
+    "old_operator_execute_called": false
+  },
+  "private_phase_output": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1",
+  "formal_export_exists": false,
+  "root_exact_review_required": true,
+  "cross_thread_report": "rejected by automatic approval; no retry; root reads local handoff"
+}

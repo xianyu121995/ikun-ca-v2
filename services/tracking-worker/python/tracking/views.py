@@ -56,7 +56,7 @@ def subscription(store, row, *, db=None, fresh_seconds=45):
     }
 
 
-def page(store, kind, query):
+def page(store, kind, query, *, fresh_seconds=45):
     allowed = (
         {"q", "include_removed", "cursor", "limit"}
         if kind == "subscriptions"
@@ -129,7 +129,7 @@ def page(store, kind, query):
 
             if after:
                 rows = [r for r in rows if key(r) > after]
-            items = [subscription(store, r, db=db) for r in rows[:limit]]
+            items = [subscription(store, r, db=db, fresh_seconds=fresh_seconds) for r in rows[:limit]]
         else:
             descending = kind == "latest"
             clauses = ["t.expires_at_ms>?", "t.tweet_kind IN ('original','quote')", "t.author_verified=1"]

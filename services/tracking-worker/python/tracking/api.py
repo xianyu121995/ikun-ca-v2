@@ -181,7 +181,7 @@ def create_app(cfg: Config, store: Store | None = None):
 
     @app.get("/internal/v1/subscriptions", dependencies=[Depends(service)])
     def subscriptions(request: Request):
-        return reply(request, page(store, "subscriptions", dict(request.query_params)))
+        return reply(request, page(store, "subscriptions", dict(request.query_params),fresh_seconds=cfg.remote_fresh_seconds))
 
     @app.get("/internal/v1/subscriptions/{subscription_id}", dependencies=[Depends(service)])
     def detail(subscription_id: str, request: Request):
@@ -244,7 +244,7 @@ def create_app(cfg: Config, store: Store | None = None):
                     subscription_id,
                 ),
             )
-            data = subscription(store, by_sub(subscription_id, db), db=db)
+            data = subscription(store, by_sub(subscription_id, db), db=db,fresh_seconds=cfg.remote_fresh_seconds)
             commands.change(db, "tracking.subscription.updated", data)
             db.execute(
                 "INSERT INTO public_receipts(actor_id,route,key,body_hash,response,created_at) VALUES(?,?,?,?,?,?)",

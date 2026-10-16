@@ -461,3 +461,15 @@ async def test_legacy_generation_ids_and_order_preserved_with_structured_input(c
     assert len(observations) == 2 and observations[0]["activity_id"] != observations[1]["activity_id"]
     # Legacy generation observations remain distinct; published-v1 folding is tested separately.
     assert len(page(store, "latest", {})["items"]) == 5
+
+
+@pytest.mark.asyncio
+async def test_list_and_detail_share_configured_watch_freshness(cfg,store,worker,vendor):
+    from dataclasses import replace
+    with TestClient(create_app(replace(cfg,remote_fresh_seconds=660),store)) as c:
+        sid=submit(c,envelope()).json()['data']['subscription_id']
+        await worker.reconcile()
+        row=store.get(PID);store.observe(row,observed_at=time.time()-60)
+        listing=c.get('/internal/v1/subscriptions',headers=HEAD).json()['data']['items'][0]
+        detail=c.get('/internal/v1/subscriptions/'+sid,headers=HEAD).json()['data']
+        assert listing['observed_state']==detail['observed_state']=='running'

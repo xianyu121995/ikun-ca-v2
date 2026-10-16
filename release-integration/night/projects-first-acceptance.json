@@ -1,0 +1,205 @@
+{
+  "state": "PASS_PROJECTS_FIRST_RUNTIME_IMPORT",
+  "executed_candidate": "4089c9043f36ff8cd5b2c003293bc66f5e5627cf",
+  "root_review": "8d550f6",
+  "root_actual_acceptance": "fc537a6",
+  "main_unchanged": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+  "actual_execution_receipt": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/final-receipt.json",
+    "sha256": "bd437fb7dee3c99bf651aa38eede5daa11055c2084f1f068397aa4ef86a715c2",
+    "bytes": 24561
+  },
+  "independent_recheck": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/PROJECTS-FIRST-ACTUAL-HANDOFF.json",
+    "sha256": "a7c65f0c7bd15a5298006f026bb4b2b2388d6947afd7ee0d093fb2ead99ab741"
+  },
+  "owner_apply_receipt": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/projects-apply-receipt.json",
+    "sha256": "b4ddabddb450c49fb88abf56a88b13f36be5951b032389a52303d98126dff3bf",
+    "bytes": 616852
+  },
+  "formal_projects_export": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/projects-export.json",
+    "sha256": "603ed92675b3d116efe118850689dde6c57e6bc55576197ed34da0d74e83463c",
+    "bytes": 7766
+  },
+  "public_smoke": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/public-post-import-smoke.json",
+    "sha256": "c349aa9044577e17ca8ca8cf915035d4444b411d1ebda370ec89f674e0f3e02f"
+  },
+  "new_direct_human_approval": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/direct-human-approval-01a14477.json",
+    "sha256": "b31ace914371aaabc9553006bf99c7e0ab847daa0dd6714d5bc66f7551839347",
+    "bytes": 1256
+  },
+  "prior_automatic_refusal": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/maintenance-approval-blocked-1792149740107713000.json",
+    "sha256": "d1d76197b5920bc3e5adc8c420d51640d33d04819d546e128d10f18fbcc26f96",
+    "bytes": 4685
+  },
+  "source_accounting": {
+    "imported": 32,
+    "deduplicated": 0,
+    "quarantined": 1412,
+    "excluded": 40
+  },
+  "source_total": 1484,
+  "owner_counts": {
+    "created_projects": 32,
+    "new_mappings": 32,
+    "new_identity_aliases": 1,
+    "new_quarantine_records": 1412,
+    "new_field_quarantine_groups": 1444
+  },
+  "projects_before": 1,
+  "projects_after": 33,
+  "new_unique_canonical_count": 32,
+  "rehearsal_ids_reused": 0,
+  "Auth_unchanged": true,
+  "original_projects_rows_preserved": true,
+  "other_10_projects_tables_exact": true,
+  "same_package_reconcile_new_zero": true,
+  "schema_version_projects": 2,
+  "schema_versions": {
+    "auth": 2,
+    "projects": 2,
+    "hunter": 4,
+    "tracking": 4
+  },
+  "backup_count": 12,
+  "backups": {
+    "before_online": {
+      "auth": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/before_online_1-0bba8a9d06994fda9a2625f610752b1b/auth/snapshot.sqlite",
+        "sha256": "826fd01a675932fe6049cd30f5f8428473468f21cecb9d2c611f0b0bc430ae03",
+        "bytes": 77824
+      },
+      "projects": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/before_online_1-0bba8a9d06994fda9a2625f610752b1b/projects/snapshot.sqlite",
+        "sha256": "d745b518ccf80fb8e780383e20f392232d075f3f7d7948f91de8166e4642b968",
+        "bytes": 143360
+      },
+      "hunter": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/before_online_1-0bba8a9d06994fda9a2625f610752b1b/hunter/snapshot.sqlite",
+        "sha256": "f8c99a1422a0b900060c73fbd0ace93d25bb01c465d03a0697a3515af6acba8e",
+        "bytes": 225280
+      },
+      "tracking": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/before_online_1-0bba8a9d06994fda9a2625f610752b1b/tracking/snapshot.sqlite",
+        "sha256": "d9fba9de4fb8bc7e427f02482996d064722be11f45215eefa9909ec09fd6290f",
+        "bytes": 176128
+      }
+    },
+    "stopped": {
+      "auth": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/stopped_window_1-fee27b6c989c4895adbb33a1f2e8ceac/auth/snapshot.sqlite",
+        "sha256": "826fd01a675932fe6049cd30f5f8428473468f21cecb9d2c611f0b0bc430ae03",
+        "bytes": 77824
+      },
+      "projects": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/stopped_window_1-fee27b6c989c4895adbb33a1f2e8ceac/projects/snapshot.sqlite",
+        "sha256": "d745b518ccf80fb8e780383e20f392232d075f3f7d7948f91de8166e4642b968",
+        "bytes": 143360
+      },
+      "hunter": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/stopped_window_1-fee27b6c989c4895adbb33a1f2e8ceac/hunter/snapshot.sqlite",
+        "sha256": "9725cbcbfa5c30d32152e9f81067f3dd1040f316ee59029000be6947f74ea9b6",
+        "bytes": 225280
+      },
+      "tracking": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/stopped_window_1-fee27b6c989c4895adbb33a1f2e8ceac/tracking/snapshot.sqlite",
+        "sha256": "bc397a2753cd92e5b8d02e233821a2a1961c2c248dc863849a4b0361974fd78e",
+        "bytes": 176128
+      }
+    },
+    "after_import": {
+      "auth": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/after_import_1-58fab59783a7402281128739cd52f79e/auth/snapshot.sqlite",
+        "sha256": "826fd01a675932fe6049cd30f5f8428473468f21cecb9d2c611f0b0bc430ae03",
+        "bytes": 77824
+      },
+      "projects": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/after_import_1-58fab59783a7402281128739cd52f79e/projects/snapshot.sqlite",
+        "sha256": "4336e149d6d17270abd622d39651b6d0c220d467f44035835e1eab29e080260d",
+        "bytes": 1576960
+      },
+      "hunter": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/after_import_1-58fab59783a7402281128739cd52f79e/hunter/snapshot.sqlite",
+        "sha256": "9725cbcbfa5c30d32152e9f81067f3dd1040f316ee59029000be6947f74ea9b6",
+        "bytes": 225280
+      },
+      "tracking": {
+        "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/projects-first/09af-5afc-v1/after_import_1-58fab59783a7402281128739cd52f79e/tracking/snapshot.sqlite",
+        "sha256": "7345dfa4e245ed2501216dc71ad18c533f320ede2381b7ae3e8f5f914628d15d",
+        "bytes": 176128
+      }
+    }
+  },
+  "website_pid_before": 87924,
+  "website_pid_after": 54011,
+  "website_tree_after": [
+    54011,
+    54012,
+    54014,
+    54018,
+    54019
+  ],
+  "website_source_unchanged": "0ce180c33ea4be350ac57daa7dbfa5b5221e58cb",
+  "website_build": "X0CYNNjMlhJWNcjEpx1PF",
+  "website_source_hashes_verified": 331,
+  "website_compiled_hashes_verified": 271,
+  "stop_intent_to_verified_restore_seconds": 11.88,
+  "this_is_not_measured_request_downtime": true,
+  "worker_pids_unchanged": {
+    "hunter": 2608,
+    "tracking": 25225
+  },
+  "readiness": {
+    "web": {
+      "status": 200
+    },
+    "hunter": {
+      "status": 200,
+      "external_io_enabled": false
+    },
+    "tracking": {
+      "status": 200,
+      "external_collection_enabled": false
+    }
+  },
+  "public_ui": {
+    "original_admin_session_valid": true,
+    "tracking_page_reloaded": true,
+    "tracking_voice_enabled": false,
+    "tracking_voice_status": "语音已关闭",
+    "tracking_subscription_count": 0,
+    "tracking_tweet_count": 0,
+    "homepage_active_projects_visible": 2,
+    "homepage_other_projects": 31,
+    "homepage_completed_count": 0,
+    "business_edit_actions_clicked": false,
+    "actual_sound": false,
+    "mode": "native Chrome accessibility observations, not an HTTP status assertion"
+  },
+  "unauthorized_http_final": "Cloudflare Access login page200, not application200",
+  "temporary_users_remaining_disabled": 5,
+  "temporary_users_created_or_reenabled": 0,
+  "ordinary_user_mutation_retest_this_phase": false,
+  "runtime_database_overwrites": 0,
+  "new_provider_calls": 0,
+  "new_WSS_connections": 0,
+  "Watch_writes": 0,
+  "next_builds": 0,
+  "old_stop_repeated": false,
+  "new_hunter_intake_only": {
+    "source": "f9e3c6cbf7c44676c37ef973389e6176777640ce",
+    "receipt": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-directory-rehearsal/intake-1792150068812437000/INTAKE-ONLY.json",
+    "sha256": "8746c5d82dcf70efb4242aab3502c88722ea42e3947a2ab105e3d74dcb1f2b95",
+    "runtime_migration": false
+  },
+  "remaining": [
+    "Hunter independent native maintenance exact package pending review",
+    "Tracking final real Projects map and owner inputs pending review",
+    "No real-source end-to-end, delivery/ACK acceptance, audible speech, long-duration load or main-domain release"
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "state": "PREPARATION_ONLY_PENDING_BOUND_INPUTS_AND_EXECUTION_REVIEW",
+  "execution_id": "IKUN-ONLY-2026-10-16",
+  "source_manifest": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/c0-lite-control/var/takeover-execution/final-inputs/source-manifest-v1.json",
+    "sha256": "8f5a453a705dbe0ba4c3957c94098ba05684a95b1ef54ca16243fa90aa8fac1f",
+    "assets_hash_verified": 10,
+    "pg_dump_sha256": "d0e25f6472aca37ff408ff4ff8219fb6953ab698e053add40dc14e7f44431d46",
+    "historical_watch_is_current_provider_proof": false
+  },
+  "preflight": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/preflight-1792145989342.json",
+    "sha256": "c514d0aa3eefdc5f6281d7ac674c91a82025363f9df76b94148bd1258046c229",
+    "source_sha256": "11363d458b5cc3f6f7a043936f38bd862b2a47f3752244fcc7071ebb4579ce07"
+  },
+  "approved_candidates": {
+    "projects": {
+      "commit": "09afbcfd7ba7d809750d4b27c7599c952335b35f",
+      "receipt_commit": "09afbcfd7ba7d809750d4b27c7599c952335b35f",
+      "receipt_path": "modules/projects/integration/evidence/takeover-rev2-check.json",
+      "receipt_sha256": "13ce517b10fbd48e05ec6efcce7b8bb54eb0cee9f4f8780a409f1c8c8cc32dbd",
+      "source_count_verified": 59,
+      "evidence_count_verified": 6
+    },
+    "hunter_takeover": {
+      "commit": "bf94dd0f93a75c2d8c7e8ebc58a642bf698016ac",
+      "receipt_commit": "bf94dd0f93a75c2d8c7e8ebc58a642bf698016ac",
+      "receipt_path": "services/hunter-worker/python/docs/takeover/receipt.json",
+      "receipt_sha256": "8e891c768dce2327dc9faa9d2225c1eb68aeafaf0538dde074d591193e096383",
+      "source_count_verified": 20,
+      "evidence_count_verified": 0
+    },
+    "hunter_sample": {
+      "commit": "613262279996700fd9418b8037cf1eb6ff38551e",
+      "receipt_commit": "613262279996700fd9418b8037cf1eb6ff38551e",
+      "receipt_path": "services/hunter-worker/python/docs/sample-only/receipt.json",
+      "receipt_sha256": "28e10f32790952572fe42ebb1c9897c3dfdf057969d8aed3d9363b674c78aab0",
+      "source_count_verified": 19,
+      "evidence_count_verified": 0
+    },
+    "tracking_takeover": {
+      "commit": "70c138d3fcc440a94b19b0ba79f0b3795f6e202e",
+      "receipt_commit": "9c3a2c2cfe88bdc0025c73afd058f4c5efb94fe4",
+      "receipt_path": "services/tracking-worker/python/TAKEOVER-EVIDENCE.json",
+      "receipt_sha256": "3dd817cdf3b3024aef89e0b97cc8636732283601c54b24e6d7fd9180b64cfb68",
+      "source_count_verified": 67,
+      "evidence_count_verified": 6
+    }
+  },
+  "bridge_tests": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/bridge-tests/run-1792145340298598000/receipt.json",
+    "sha256": "7c495c3ad37e0d829737fb24adea2a4d67e85835174b685636db5d08c27a8182",
+    "passed": 18,
+    "fixtures_only": true
+  },
+  "tool_source_sha256": {
+    "release-integration/scripts/preflight_v2_takeover.py": "11363d458b5cc3f6f7a043936f38bd862b2a47f3752244fcc7071ebb4579ce07",
+    "release-integration/scripts/takeover_hunter_map_bridge.py": "4ffed26cdde0a6cdbbb2e5b5c80f1313992234d959c7d999b25e796f88ea8a4a",
+    "release-integration/scripts/test_takeover_hunter_map_bridge.py": "abd7ffaa5c5e41b4600adb4ac2c39b40646f88e00923de16a6a3d11d76a87dfd"
+  },
+  "live_v2": {
+    "release": {
+      "sha": "0ce180c33ea4be350ac57daa7dbfa5b5221e58cb",
+      "build_id": "X0CYNNjMlhJWNcjEpx1PF",
+      "source_hashes_verified": 331,
+      "compiled_hashes_verified": 271
+    },
+    "jobs": {
+      "web": {
+        "label": "ca.ikun.v2.c0lite.web",
+        "pid": 87924,
+        "tree_pids": [
+          87924,
+          87976,
+          87978,
+          87986,
+          87987
+        ]
+      },
+      "hunter": {
+        "label": "ca.ikun.v2.c0lite.hunter",
+        "pid": 2608,
+        "tree_pids": [
+          2608
+        ]
+      },
+      "tracking": {
+        "label": "ca.ikun.v2.c0lite.tracking",
+        "pid": 25225,
+        "tree_pids": [
+          25225,
+          25229,
+          25230
+        ]
+      }
+    },
+    "databases": {
+      "auth": {
+        "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/auth/auth.db",
+        "device": 16777229,
+        "inode": 20187691,
+        "mode": "0600",
+        "links": 1,
+        "last_sealed_application_id": 1229652484,
+        "last_sealed_user_version": 2,
+        "live_database_opened": false
+      },
+      "projects": {
+        "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/projects/projects.db",
+        "device": 16777229,
+        "inode": 20187927,
+        "mode": "0600",
+        "links": 1,
+        "last_sealed_application_id": 1229652483,
+        "last_sealed_user_version": 2,
+        "live_database_opened": false
+      },
+      "hunter": {
+        "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/hunter/hunter.db",
+        "device": 16777229,
+        "inode": 20535150,
+        "mode": "0600",
+        "links": 1,
+        "last_sealed_application_id": 1229652481,
+        "last_sealed_user_version": 4,
+        "live_database_opened": false
+      },
+      "tracking": {
+        "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/data/tracking/tracking.db",
+        "device": 16777229,
+        "inode": 20685563,
+        "mode": "0600",
+        "links": 1,
+        "last_sealed_application_id": 1229652482,
+        "last_sealed_user_version": 4,
+        "live_database_opened": false
+      }
+    },
+    "ipc_sockets": {
+      "managed_projects": {
+        "path": "/private/tmp/ikp-R8jWuG/p.sock",
+        "is_socket": true,
+        "mode": "0600",
+        "holder_pids": [
+          87978
+        ]
+      }
+    },
+    "backup_assets_verified": 66,
+    "sealed_sqlite_backups_rechecked": 14,
+    "health": {
+      "web": {
+        "status": 200
+      },
+      "hunter": {
+        "status": 200,
+        "external_io_enabled": false
+      },
+      "tracking": {
+        "status": 200,
+        "external_collection_enabled": false
+      }
+    }
+  },
+  "protected_before_maintenance": {
+    "protected": {
+      "Alpha": {
+        "pid": 9034,
+        "started_utc": "2026-10-10T12:26:54+00:00"
+      },
+      "old_supervisor": {
+        "pid": 79489,
+        "started_utc": "2026-10-14T21:11:10+00:00"
+      },
+      "old_Postgres": {
+        "pid": 79494,
+        "started_utc": "2026-10-14T21:11:10+00:00"
+      },
+      "old_Tunnel": {
+        "pid": 79502,
+        "started_utc": "2026-10-14T21:11:10+00:00"
+      },
+      "v2_web": {
+        "pid": 87924,
+        "started_utc": "2026-10-16T07:27:09+00:00"
+      },
+      "v2_Hunter": {
+        "pid": 2608,
+        "started_utc": "2026-10-15T18:50:24+00:00"
+      },
+      "v2_Tracking": {
+        "pid": 25225,
+        "started_utc": "2026-10-15T19:46:33+00:00"
+      },
+      "v2_Tunnel": {
+        "pid": 39523,
+        "started_utc": "2026-10-15T15:40:19+00:00"
+      }
+    },
+    "alpha": {
+      "pid": 9034,
+      "connected": true,
+      "last_pong_at": 1792145980.838054,
+      "pong_age_seconds": 12.567,
+      "reconnects": 281,
+      "observed_at": "2026-10-16T10:19:53.404667+00:00",
+      "new_wss_connections_by_operator": 0
+    },
+    "observed_at": "2026-10-16T10:19:53.404677+00:00"
+  },
+  "sealed_guard_scope": "Pre-maintenance only; do not reuse old v2 PID invariants after an approved v2 restart. Permanent old-side protection must remain separate.",
+  "projects_importer_sha256": "a675256adda1c08e0f85bca9767853e71afb907169dfbc0129a6f2c2eb7e8f9a",
+  "tracking_map_owner_entry": "services/tracking-worker/python/integration/convert-takeover-map.py",
+  "tracking_map_contract_field": "source_manifest_sha256",
+  "hunter_map_owner_entry": "release-integration/scripts/takeover_hunter_map_bridge.py",
+  "held_bindings": [
+    "root-approved per-ID Projects decisions file and SHA",
+    "final three-domain ownership/baseline/identity/business input files and SHA",
+    "Projects apply receipt/export/package SHA generated only after actual commit",
+    "final maintenance execution source SHA and exact stop/start/publish/owner CLI argv",
+    "post-import schema5 backup and compatible Hunter release binding"
+  ],
+  "current_actions": {
+    "runtime_db_connections": 0,
+    "runtime_db_writes": 0,
+    "new_live_backups": 0,
+    "service_mutations": 0,
+    "imports": 0,
+    "schema_upgrades": 0,
+    "code_files_received_into_domains": 0,
+    "builds": 0,
+    "provider_calls": 0,
+    "new_wss_connections": 0,
+    "Watch_writes": 0
+  },
+  "operator_continues_legacy_execute": false
+}

@@ -335,6 +335,8 @@ class Store:
                 warning = 'poll_gap_may_miss_followings'
             db.execute('''UPDATE hunters SET baseline_ready=1,last_poll_at=?,next_poll_at=?,poll_failures=0,
                 poll_error=NULL,poll_warning=? WHERE id=?''', (now, next_hour, warning, row['id']))
+            # Consume the paid response atomically with its baseline/events and hourly schedule.
+            db.execute('DELETE FROM state WHERE key=?', ('provider_result:followings:'+hashlib.sha256(row['username'].encode()).hexdigest(),))
             return {'baseline': not bool(current['baseline_ready']), 'new': count, 'warning': warning}
 
     def aggregate(self, now=None, limit=200, offset=0):

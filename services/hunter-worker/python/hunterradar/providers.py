@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import json
 import hashlib
 from email.utils import parsedate_to_datetime
 
@@ -62,7 +63,8 @@ class Providers:
             provider, cost, limit = 'twitterapi', 60, self.settings.daily_twitterapi
             method, url = 'GET', 'https://api.twitterapi.io/twitter/user/followings'
             kwargs = {'params': {'userName': username, 'cursor': '', 'pageSize': 20},
-                      'headers': {'X-API-Key': self.settings.token_twitterapi}}
+                      'headers': {'X-API-Key': self.settings.token_twitterapi},
+                      'timeout': httpx.Timeout(max(60, self.settings.timeout), connect=self.settings.timeout, pool=self.settings.timeout)}
         elif operation in ('profile', 'watch'):
             if not self.settings.token_6551:
                 raise ProviderError('6551_token_missing', 300)
@@ -74,6 +76,17 @@ class Providers:
         else:
             raise ValueError('unapproved_provider_operation')
         states = self.store.states()
+        result_key = 'provider_result:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest()
+        pending = states.get(result_key) if operation == 'followings' else None
+        generation = None
+        if operation == 'followings':
+            with self.store.connect() as db:
+                account = db.execute('SELECT id,generation FROM hunters WHERE username=?',(username,)).fetchone()
+                generation = [account['id'],account['generation']] if account else None
+        if pending:
+            if pending.get('generation') != generation or now-pending['received_at'] > 3600:
+                raise ProviderError('provider_result_requires_reconciliation',9999999999-now)
+            return pending['payload']
         blocked = self.store.provider_block(operation, username, states=states)
         if blocked:
             raise ProviderError(blocked['code'], retryable=False)
@@ -86,6 +99,7 @@ class Providers:
         # Every attempt, including failed/ambiguous requests, reserves budget before IO.
         self.store.reserve(provider, cost, limit, self.settings.requests_per_minute, now)
         self.store.set_state(intent,'in_flight')
+        started = time.monotonic()
         try:
             response = await self.client.request(method, url, **kwargs)
             if (provider == 'twitterapi' and response.status_code == 402) or response.status_code in (400, 404):
@@ -95,7 +109,10 @@ class Providers:
                 self.store.block_provider(operation, username, code, intent,
                                           provider_wide=response.status_code == 402, now=now)
                 raise ProviderError(code, retryable=False)
-            self.store.set_state(intent,None)
+            if response.status_code == 200 and operation == 'followings':
+                pass  # Keep the billing fence until the successful payload is durable.
+            else:
+                self.store.set_state(intent,None)
             if response.status_code == 429:
                 try:
                     wait = min(86400, max(60, int(response.headers.get('retry-after', '60'))))
@@ -114,11 +131,19 @@ class Providers:
             payload = response.json()
             if not isinstance(payload, dict) or payload.get('success') is False or payload.get('status') == 'error':
                 raise ProviderError('provider_application_error', 300)
+            if operation == 'followings':
+                with self.store.connect(True) as db:
+                    for key, value in ((result_key, {'payload':payload,'received_at':time.time(),'generation':generation}),(intent,None)):
+                        db.execute('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,json.dumps(value)))
             return payload
-        except (httpx.ReadTimeout,httpx.WriteTimeout,httpx.ReadError,httpx.WriteError,httpx.RemoteProtocolError):
+        except (httpx.ReadTimeout,httpx.WriteTimeout,httpx.ReadError,httpx.WriteError,httpx.RemoteProtocolError) as error:
+            self.store.set_state('provider_failure:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest(), {'kind':type(error).__name__,'elapsed_seconds':round(time.monotonic()-started,3),'at':time.time()})
             self.store.set_state(intent,'billing_unknown')
             raise ProviderError('provider_billing_unknown',9999999999-time.time()) from None
-        except (httpx.HTTPError, ValueError):
+        except (httpx.HTTPError, ValueError) as error:
+            if operation == 'followings' and isinstance(error, ValueError):
+                self.store.set_state(intent,'billing_unknown')
+                raise ProviderError('provider_billing_unknown',9999999999-time.time()) from None
             self.store.set_state(intent,None)
             # Do not log exceptions containing URLs, token query strings or provider bodies.
             raise ProviderError('provider_transport_or_json_error', 30) from None

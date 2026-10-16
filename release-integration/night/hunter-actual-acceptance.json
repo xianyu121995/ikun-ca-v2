@@ -1,0 +1,42 @@
+{
+  "state": "PASS_HUNTER_DIRECTORY_RUNTIME_IMPORT",
+  "completed_at_Asia_Shanghai": "2026-10-16T20:59:27.216994+08:00",
+  "candidate": "9a53f73f6c2c3f588497c35018074549723ef7d6",
+  "owner_source": "f9e3c6cbf7c44676c37ef973389e6176777640ce",
+  "package_sha256": "90b8b3b0970cafa80c076fbf679370144d7b5b9b660668422252d8c4b239800f",
+  "receipt": {
+    "path": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/integration/release-integration/.runtime/v2-maintenance/hunter-first/f9-90b-v1/final-receipt.json",
+    "sha256": "1e7c15c7eb3f8f737f1a41ae938546a1559356bce86f63589069efc9102faa6c",
+    "bytes": 26857
+  },
+  "schema": 5,
+  "original_hunters_preserved": 2,
+  "new_disabled_pending": 88,
+  "hunters_total": 90,
+  "new_private_facts": 6575,
+  "new_private_receipts": 6575,
+  "replay_new": [
+    0,
+    0,
+    0
+  ],
+  "successful_window_runtime_backups": 13,
+  "all_attempts_runtime_backups": 21,
+  "external_io_enabled": false,
+  "native_reader": "F9",
+  "stop_intent_to_restored_seconds": 12.575,
+  "provider_calls": 0,
+  "Watch_writes": 0,
+  "database_overwrites": 0,
+  "migrated_domains": [
+    "projects",
+    "hunter"
+  ],
+  "remaining": [
+    "Tracking native maintenance not approved or executed",
+    "real provider sample not run",
+    "whole site real end-to-end and 24h acceptance pending"
+  ],
+  "hunter_pid": 78559,
+  "tracking_actual_actions": 0
+}

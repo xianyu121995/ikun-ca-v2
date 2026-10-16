@@ -1,5 +1,5 @@
 {
-  "state": "LOCAL_ACCEPTED_DEPLOYMENT_BLOCKED_BY_AUTOMATIC_APPROVAL",
+  "state": "PASS_VOICE_PROTECTED_V2_WEB_ONLY_PUBLIC",
   "source_candidate_before_handoff": "ee67190d5ac83f87f90dbd188e9b41239460eb33",
   "business_wiring_commit": "5e32a35663036997812ebe8c758220f885015b0a",
   "immutable_browser_evidence_commit": "6e6e7b6d3692b8e4b108fbba3b823c7a028096ce",
@@ -13,24 +13,19 @@
   "voice_library_tests": 32,
   "counts_not_cumulative": true,
   "private_final_screenshot_directory": "release-integration/.runtime/night-voice/run-1792095246818597000",
-  "public_voice_acceptance": "NOT_EXECUTED",
-  "deployment_process_started": false,
-  "voice_release_created": false,
-  "voice_temporary_account_created": false,
+  "public_voice_acceptance": "PASS_DEFAULT_OFF_ROLES_REVOCATION_ACCESS",
+  "deployment_process_started": true,
+  "voice_release_created": true,
+  "voice_temporary_account_created": true,
   "real_sound": false,
   "real_provider_calls": 0,
-  "automatic_approval_rejections": [
-    "现有可信用户内容未明确批准这次语音版本部署，不能仅依据助手或总管转述放行。",
-    "夜间放行仅来自工具读取结果和助手转述，不能建立可信授权；原始用户未经明确批准不得发布正式环境仍适用。"
-  ],
-  "attempted_command": "python3.11 release-integration/scripts/upgrade_voice_site.py --candidate ee67190d5ac83f87f90dbd188e9b41239460eb33",
-  "current_website_release": "64088893841122491aba508fdb514507db3d9339",
-  "current_website_build": "QTLRQ2vGatyCJCEhtFEVA",
+  "current_website_release": "19863b2af031fc2592bb6d73b7161efc77b0bd1d",
+  "current_website_build": "toKW74u9T1cCk_lyTUZXo",
   "worker_jobs": {
     "web": {
       "label": "ca.ikun.v2.c0lite.web",
       "loaded": true,
-      "pid": 25136
+      "pid": 67800
     },
     "hunter": {
       "label": "ca.ikun.v2.c0lite.hunter",
@@ -93,9 +88,156 @@
   },
   "B3_temporary_accounts_enabled": false,
   "original_admin_enabled": true,
-  "read_only_post_refusal_audit": "release-integration/.runtime/night-voice/post-refusal-runtime-audit-1792095623021608000.json",
-  "read_only_post_refusal_audit_sha256": "58d03d38eb4b6c3138d9fd2e6f5ed4fcc1b47c8d1edf396c0405540c810c59fd",
-  "historical_B3_audit_note": "B3 fixed latest-audit path was overwritten by this later read-only audit; original historical hash remains in B3 acceptance, do not claim original bytes still exist at latest pointer. Independent B3 public evidence and tracked summary are unchanged.",
-  "deployment_requires": "explicit approval in this chat for the final candidate; no further attempts or indirect execution before approval",
-  "main_unchanged": "63e8a2857241c6a76226f21435e40db9736a1e7e"
+  "deployment_requires": "Satisfied for approved candidate19863 only; later changes need their own authorization.",
+  "main_unchanged": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+  "historical_preapproval": {
+    "state": "LOCAL_ACCEPTED_DEPLOYMENT_BLOCKED_BY_AUTOMATIC_APPROVAL",
+    "automatic_approval_rejections": [
+      "现有可信用户内容未明确批准这次语音版本部署，不能仅依据助手或总管转述放行。",
+      "夜间放行仅来自工具读取结果和助手转述，不能建立可信授权；原始用户未经明确批准不得发布正式环境仍适用。"
+    ],
+    "attempted_command": "python3.11 release-integration/scripts/upgrade_voice_site.py --candidate ee67190d5ac83f87f90dbd188e9b41239460eb33",
+    "current_website_release": "64088893841122491aba508fdb514507db3d9339",
+    "current_website_build": "QTLRQ2vGatyCJCEhtFEVA",
+    "read_only_post_refusal_audit": "release-integration/.runtime/night-voice/post-refusal-runtime-audit-1792095623021608000.json",
+    "read_only_post_refusal_audit_sha256": "58d03d38eb4b6c3138d9fd2e6f5ed4fcc1b47c8d1edf396c0405540c810c59fd",
+    "historical_B3_audit_note": "B3 fixed latest-audit path was overwritten by this later read-only audit; original historical hash remains in B3 acceptance, do not claim original bytes still exist at latest pointer. Independent B3 public evidence and tracked summary are unchanged."
+  },
+  "approved_candidate": "19863b2af031fc2592bb6d73b7161efc77b0bd1d",
+  "approval": "direct human approval in this chat",
+  "voice_temporary_account_enabled": false,
+  "temporary_credentials_retired": true,
+  "public_acceptance_at": "2026-10-16T06:14:25.216725+00:00",
+  "public_receipt": "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-verification.json",
+  "public_receipt_sha256": "386c83acaab4102abbb2f2fed35d3e6b90435528b11d222b48a23175d6e9c4fe",
+  "private_evidence_sha256": {
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-admin-ui.txt": "4ad62d00788c80fd762a7c03a4559377667cc17fb2a04b45bbe8561c550aed9d",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-admin-tracking.png": "994be1c799876321b87b9d8350748c2ca6a1f4ca8cfa6dea445cfbac1680a178",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-admin.json": "108061f0660dcde95bebb0281cf2aa9373383c5c68c99496bebc2b1b7d483d3e",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-user-home.txt": "fd03284a7b6b59b8ed8028d4ab681e656980c3c482692525bf22766621996ffe",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-user-tracking.txt": "4465f68fa361ac0cc61ef5e63b7823b848c9223b6722780155df63b7d49a976d",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-user-tracking.png": "4b31093220772755978e46b2be6cdd067ceba1664e6630fe082ffb6601b64964",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-user-drawer.txt": "83ecdad995c9a316dfac2bd08f29323cb3d94e7fecbbfbe4c64b1c09efc7a35a",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-user-api.json": "28ff64e6a392ccf522852aa8cba6918b252611b1400e710ef24f5eb5a32ff6ca",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-sse-revocation.json": "6995bf5d920fb941333e7cbbc111d7cf9113bebb33fa1dba1e19098b201edea3",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-disabled.json": "d199c39acba158e374ff89a791e7d9a1a1c0b5787e705530a87f4e352d160064",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-guest-gate.json": "27faafd144532063c310f6a669da03cf7682a506fb507934f5cd76154efec3ab",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-unauthorized-http.json": "c2cf673adb284610c89b1eaee78805c1eeb8b1227c46e1c8f1bbd237a9889e65",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/public-admin-final.json": "b48426f0bca6ea1f8d7f9492e21d96188809fbdc88a8beb753bb0513bc9a66b4",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/final-backup-and-profile.json": "cde71f1c34b918486cf9ca7e16199203889abc04d7964f8dc60dc11333d8434c",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/deployment.json": "6752ddda5af9882f585fd6cb266311680ced38735b37a35f07bae8ac5a95032d",
+    "release-integration/.runtime/night-voice/public-run-1792131265215463000/final-runtime-audit-1792131122088850000.json": "1c781704ae4e0741254a7ffcc91368322c248b05eb534ab47de4f4b40fb5543d"
+  },
+  "backup_before": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-before-57b14f1cc8794b5aa4c7e97d2ac33116/auth.db",
+      "sha256": "8347dd15dd6987b26a508de6ec023338700c4971bf0958d251e58519768a819d",
+      "integrity": "ok"
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-before-57b14f1cc8794b5aa4c7e97d2ac33116/projects.db",
+      "sha256": "66973f7d19233254af69b4e0908900931d1768893d65a8218bfec54a237a28e5",
+      "integrity": "ok"
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-before-57b14f1cc8794b5aa4c7e97d2ac33116/hunter.db",
+      "sha256": "914b34bcf427ed6b93e6b18c7c0b456ae53717a077a0e676b389dba9361b1fbb",
+      "integrity": "ok"
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-before-57b14f1cc8794b5aa4c7e97d2ac33116/tracking.db",
+      "sha256": "4306ff29ee0d15f41163fa0bc84509d6dd210e1394e1e122592722027f6c4dca",
+      "integrity": "ok"
+    }
+  },
+  "backup_after": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-after-c2921c0944a249d8963106bd2ac8a678/auth.db",
+      "sha256": "edc9eba01037701223d588192257fbb7699f818f872d12f50771bb931ba557af",
+      "integrity": "ok"
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-after-c2921c0944a249d8963106bd2ac8a678/projects.db",
+      "sha256": "66973f7d19233254af69b4e0908900931d1768893d65a8218bfec54a237a28e5",
+      "integrity": "ok"
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-after-c2921c0944a249d8963106bd2ac8a678/hunter.db",
+      "sha256": "903e0e4ea509fa1d6e4930dfbfcbcc7582a190edc31114dacba6972d63c77f50",
+      "integrity": "ok"
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-after-c2921c0944a249d8963106bd2ac8a678/tracking.db",
+      "sha256": "fed02245615adbefef0d107831cce18c94cb844a21b9c7db11106f5a75fefab8",
+      "integrity": "ok"
+    }
+  },
+  "backup_final": {
+    "auth": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-public-accepted-c1946b1bd4e1446abdcd00926e06a300/auth.db",
+      "sha256": "f14f0acaec58a0400ed36974ea060d2548f6faff02091482b07b89c5767cd777",
+      "integrity": "ok"
+    },
+    "projects": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-public-accepted-c1946b1bd4e1446abdcd00926e06a300/projects.db",
+      "sha256": "66973f7d19233254af69b4e0908900931d1768893d65a8218bfec54a237a28e5",
+      "integrity": "ok"
+    },
+    "hunter": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-public-accepted-c1946b1bd4e1446abdcd00926e06a300/hunter.db",
+      "sha256": "7395d35c8accb0c0b4443099e9b5ce0a8627402d9932322af40b0e80bcdd51ed",
+      "integrity": "ok"
+    },
+    "tracking": {
+      "path": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/backups/voice-public-accepted-c1946b1bd4e1446abdcd00926e06a300/tracking.db",
+      "sha256": "c8beb11caeb9b88372e89d9dad3d0f84f70e46e76f25267cb61edce88d88ceba",
+      "integrity": "ok"
+    }
+  },
+  "backup_hashes_verified": 12,
+  "worker_file_sha256": {
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/config/hunter.environment.json": "247e402790c023dbcf4dcb7beb5f75a24301cd21c7de3070cb4acb835c0488cb",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/config/tracking.environment.json": "bd9105fe4737b90e9bf5bbce8ad4cfdae5cf22bb8c89b24f3a138a7d044e6b2b",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/plans/hunter/75b81a2b5210e41bdf8522467c7fba2a6a6e693c/worker.json": "e3b13cad5ba255ddf76182326b90622896e489e18bf29b351aa1a2735c9f87a2",
+    "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/plans/tracking/64088893841122491aba508fdb514507db3d9339/worker.json": "e87f5bbfbc2f7a4540b858988353d0dca355a687d16ececd96e3f43d6d0af494",
+    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.hunter.plist": "0d5a9721d342f0a21b6dee33c4951318ac9cb955c240e7d30aa8eb740bc317e1",
+    "/Users/lvlei/Library/LaunchAgents/ca.ikun.v2.c0lite.tracking.plist": "29921315bf346f76fa4914d72b1c631c9678b3ab1b48dd58c24c90377d501e21"
+  },
+  "worker_pids_before": {
+    "web": 25136,
+    "hunter": 2608,
+    "tracking": 25225
+  },
+  "worker_pids_after": {
+    "web": 67800,
+    "hunter": 2608,
+    "tracking": 25225
+  },
+  "production_profile": {
+    "NODE_ENV": "production",
+    "NODE_OPTIONS": "--max-old-space-size=768",
+    "bind_from_launcher": "127.0.0.1",
+    "PORT": "4000",
+    "NEXT_TELEMETRY_DISABLED": "1",
+    "launchd": {
+      "KeepAlive": true,
+      "RunAtLoad": true,
+      "ThrottleInterval": 30,
+      "ProcessType": "Background",
+      "LowPriorityIO": null,
+      "Nice": 5
+    }
+  },
+  "rollback_directory": "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/rollbacks/64088893841122491aba508fdb514507db3d9339-20261016-140458",
+  "rollback_executed": false,
+  "owned_rss_mib_snapshot": 181.0,
+  "browser_test_corrections": [
+    "Native window activation was stale; fresh observations and app reselection restored input. No admin credential read.",
+    "First SSE console parser had regex syntax error before fetch; corrected line parser established one test stream, heartbeat only."
+  ],
+  "remaining_limits": [
+    "No actual sound or real provider acceptance.",
+    "Tracking ingest remains501 and frozen Tracking has no delivery/claim/ACK loop.",
+    "Worker watchdog configured; no worker restart or failure injection in this upgrade."
+  ]
 }

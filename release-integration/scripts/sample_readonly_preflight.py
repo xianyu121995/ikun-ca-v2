@@ -57,6 +57,10 @@ def watch_result(envelope,normalized,capacity,ownership,profile):
  return {'watch_total':len(rows),'legacy_ownership_anchors_matched':anchors,**capacity,'test_handle_already_present':current is not None,'test_watch_ownership':owner,'new_slot_possible':current is None and capacity['available']>0,'current_watch_mutation_allowed':False}
 
 
+def credential_field(plan):
+ field=plan.get('credential_field','OPENNEWS_TOKEN');require(field in ('OPENNEWS_TOKEN','TWITTER_API_TOKEN'),'6551_CREDENTIAL_FIELD_NOT_APPROVED');return field
+
+
 def credentials_presence(path):
  path=Path(path);exists=path.is_file();result={'file_exists':exists,'values_read':False}
  if exists:
@@ -65,7 +69,7 @@ def credentials_presence(path):
 
 
 def binding(path,expected):
- require(sha(ops.private_file(path))==expected,'PREFLIGHT_PLAN_CHANGED');plan=read_json(path)
+ require(sha(ops.private_file(path))==expected,'PREFLIGHT_PLAN_CHANGED');plan=read_json(path);credential_field(plan)
  require(plan['target']==TARGET and plan['max_provider_attempts']==2 and plan['watch_writes']==0 and plan['new_wss_connections']==0,'PREFLIGHT_SCOPE_CHANGED')
  require(sha(__file__)==plan['tool_source_sha256'],'PREFLIGHT_TOOL_CHANGED')
  for relative,h in plan['helper_files'].items():require(sha(ops.ROOT/relative)==h,'PREFLIGHT_HELPER_CHANGED')
@@ -83,7 +87,7 @@ async def run(plan,out):
  presence=credentials_presence(plan['credential_source']);require(presence.get('private_regular_owned'),'PRIVATE_CREDENTIAL_SOURCE_REQUIRED')
  before=ops.peers(ops.TrackingOps(None),plan['peer_plan']);ops.TrackingOps(None).ready();baseline=before['alpha']['reconnects']
  require(os.environ.get('IKUN_TRACKING_EXTERNAL_IO_DISABLED')!='1','PREFLIGHT_CHILD_ENV_CLOSED')
- values=read_env(Path(plan['credential_source']));token=values.get('OPENNEWS_TOKEN');require(token,'OPENNEWS_TOKEN_MISSING')
+ values=read_env(Path(plan['credential_source']));token=values.get(credential_field(plan));require(token,'6551_CREDENTIAL_FIELD_MISSING')
  previous=os.environ.get('IKUN_TRACKING_6551_TOKEN');os.environ['IKUN_TRACKING_6551_TOKEN']=token
  remote=Remote(Config(remote_enabled=True,dedicated_account=False,adopt_only=True,request_interval=.5),transport=httpx.AsyncHTTPTransport(retries=0,trust_env=False));captured={};step=None;attempts=[]
  async def capture(response):

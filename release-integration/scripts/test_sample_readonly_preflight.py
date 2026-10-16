@@ -47,10 +47,10 @@ class ReadonlyPreflight(unittest.TestCase):
   rows=[self.row]+[{**self.row,'id':str(i),'twAccount':'fixture_'+str(i)}for i in range(599)];result=self.check(rows);self.assertEqual(result['new_tweet_used'],600);self.assertFalse(result['new_slot_possible'])
  def test_excluded_renamed_alpha_watch_is_rejected(self):
   with self.assertRaisesRegex(m.SafeFailure,'ALPHA_OR_EXCLUDED'):self.check([self.row,{**self.row,'id':'alpha-1','twAccount':m.TARGET}])
- def run_mock_transport(self,first_status=200):
+ def run_mock_transport(self,first_status=200,field='OPENNEWS_TOKEN'):
   with tempfile.TemporaryDirectory(dir='/private/tmp') as root:
-   directory=Path(root);directory.chmod(0o700);credential=directory/'fixture.env';credential.write_text('OPENNEWS_TOKEN=fixture-not-a-real-provider-credential-000000\n');credential.chmod(0o600);ownership=directory/'ownership.json';m.atomic(ownership,self.ownership)
-   tracking=m.ops.V2/'releases'/m.ops.SOURCE/'services/tracking-worker/python';hunter=m.ops.V2/'releases/f9e3c6cbf7c44676c37ef973389e6176777640ce/services/hunter-worker/python';plan={'tracking_python_root':str(tracking),'hunter_python_root':str(hunter),'credential_source':str(credential),'peer_plan':{},'ownership':{'path':str(ownership)}};calls=[]
+   directory=Path(root);directory.chmod(0o700);credential=directory/'fixture.env';credential.write_text(field+'=fixture-not-a-real-provider-credential-000000\n');credential.chmod(0o600);ownership=directory/'ownership.json';m.atomic(ownership,self.ownership)
+   tracking=m.ops.V2/'releases'/m.ops.SOURCE/'services/tracking-worker/python';hunter=m.ops.V2/'releases/f9e3c6cbf7c44676c37ef973389e6176777640ce/services/hunter-worker/python';plan={'tracking_python_root':str(tracking),'hunter_python_root':str(hunter),'credential_source':str(credential),'credential_field':field,'peer_plan':{},'ownership':{'path':str(ownership)}};calls=[]
    def handler(request):
     calls.append((request.url.path,json.loads(request.content)))
     if request.url.path.endswith('twitter_user_info'):return httpx.Response(first_status,json=self.profile if first_status==200 else {'success':False,'message':'synthetic rate limit'})
@@ -64,6 +64,10 @@ class ReadonlyPreflight(unittest.TestCase):
    return calls
  def test_original_remote_uses_two_raw_reads_with_top_total_no_database(self):
   self.assertEqual(len(self.run_mock_transport()),2)
+ def test_existing_hunter_alias_drives_only_6551_client(self):
+  self.assertEqual(len(self.run_mock_transport(field='TWITTER_API_TOKEN')),2)
+ def test_rest_key_is_not_an_approved_6551_alias(self):
+  with self.assertRaisesRegex(m.SafeFailure,'6551_CREDENTIAL_FIELD_NOT_APPROVED'):m.credential_field({'credential_field':'TWITTERAPI_IO_API_KEY'})
  def test_429_consumes_one_attempt_and_never_retries_or_reads_watch(self):
   self.assertEqual(len(self.run_mock_transport(429)),1)
  def test_credentials_check_never_reads_values(self):

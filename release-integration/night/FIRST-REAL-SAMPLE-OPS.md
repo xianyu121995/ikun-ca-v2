@@ -48,3 +48,19 @@ Hunter绑定入口：`sample_hunter_argv.py --static ... --static-sha256 ... --i
 当前已进入22:00–08:00静音时段，严格保留。今晚最多证明网页数据和夜间静音；实际新推听感须非静音时段单列，不能回播夜间历史或清一次fence冒充。整体真实链路、听感、24小时稳定仍未验收。
 
 计数补正：setup_watch_read_attempts=1仅代表实际before一读；不再要求/伪造watch_after快照。add原回执必须提供真实新id和已分配twGroupId，实际已审request/返回字段须足够构造完整expected flags；不足报ADD_RECEIPT_ASSIGNED_GROUP_UNPROVEN或ADD_EXPECTED_FLAGS_INCOMPLETE，停止发许可。观察段原三读不变，原Remote.watches归一化后的实际行由原reconcile/strict-active/额度验证后才连WSS，不能把expected proof说成已回查事实。
+
+## v3：仅本次自有测试 Watch 的离线补正包
+
+原 v1/v2 保持原样。v3 来源 `b358ebbcea079c12650400f66d50dc6cb85cdc42`，常驻307d不变。仅代码固定历史 SHA `751ec6790b3096f3b533e7c1e87d28a614bd22cdbb7c24d86e093b815cd01d57` 的本次授权创建条目可准入；不是通用既有 Watch 接纳。历史为 before115→after116、唯一新增、既有115零变化，原 add 不含条目id，独立回查提供真实id/twGroupId/所有flags；原请求与回执各自保存。创建 intent 原时间 `2026-10-16T14:55:36.569380Z` 精确固定，不续写。
+
+**显式语义变化待总管最终审查：** v3 的 operator_watch_created_at 只作固定历史证据，不再要求该历史时刻在当前300秒内。新鲜门禁改为 fresh profile、fresh完整Watch回查、当前root授权，以及本轮原BFF Projects/Tracking创建均≤300秒；原观察段仍自行独立回查/strict-active/600容量核验，有限WSS/租约/退出恢复/nonce防重放不变。fresh完整Watch必须原集合一致、除测试条目外其他行完全不变，测试条目唯一ID/handle/group/createdAt/所有flags不变。Alpha/exclusions仍校验。
+
+供应商Watch没有稳定X用户ID字段，不能猜字段或把Watch id冒充XID。v3以固定首次profile.userId与fresh profile.userId相同、fresh screenName=0x2a_ikun，以及原Watch ID/handle/组/flags不变联合绑定；原观察段profile再次校验。若要求Watch本身独立返回XID，当前供应商形状不支持，应停下另审，不能假称已提供。
+
+静态准备文件 `next-stage/sample-static.v3.private.json`、源码收件 `prepared-v3-b358ebb/tracking`；原static和704收件均保留。源码指纹 `db4888f5374c61033059f57ef322dbaacb1d3be65e09dd90266e1b30c070ce94`。本轮未生成授权或sample nonce。
+
+下一轮 late 仍绑定原raw watch_before/watch_creation/watch_request及本轮fresh setup_profile、原Projects正式reconcile、原Tracking停止窗口snapshot/command_id；另加 owned_watch_history(保存的固定历史包path/hash)、watch_reconcile(新的完整原回执path/hash)、watch_reconcile_observed_at(实际回查时间)。watch_created_at 必须原intent时刻，identity_observed_at/approved_at为当轮事实。操作工具均改用v3静态文件及其新hash，输出arm-v3/tracking；原alpha witness尚未启动，需当轮实际新证据。
+
+**下一次预算：fresh profile1 + 完整Watch1；原观察段3只读 + 1有限WSS；新Watch写0。绝不再add、删改、重建或清旧fence。** 当前累计实际provider请求6次=旧预检2只读+本轮profile1/Watch before1/add1/补证Watch1；其中只读5、写1，WSS0。Hunter延期；用户重新待命且总管批准准确操作包前保持不执行。
+
+离线结果分列：原样本111通过，胶水12通过，真实历史形状离线校验通过（保存的旧回查，不是fresh证明；无网络/DB连接/native动作）。原CLI --source-fingerprint匹配。只表示操作包离线ready，不是实际READY；未停服务或创建Projects/Tracking记录。

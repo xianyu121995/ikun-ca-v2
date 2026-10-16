@@ -28,3 +28,11 @@ Tracking 原 worktree 提交 b728f1e990896133359e89b5c5a9d1bad793bfce：保留 v
 真实创建 intent=1792162536.56938，上海时间2026-10-16 22:55:36.569，严格300秒截至23:00:36.569。实际执行已停止，不取得新profile、不创建Projects/Tracking记录、不停服、不mint、不发WSS。v2不放宽创建新鲜性。
 
 下一项仅离线准备v3候选：把该次已证明自有Watch的创建时间作为不可变历史证据，fresh profile/唯一完整回查/明确授权仍≤300秒。此变化必须显式复审放行；当前不具备真实运行许可。
+
+## v3 操作包离线 ready（尚未实测）
+
+源码 b358ebbcea079c12650400f66d50dc6cb85cdc42；原样本111项、胶水12项通过，分列不累计。原准确源码已重新收件，原CLI指纹 db4888f5374c61033059f57ef322dbaacb1d3be65e09dd90266e1b30c070ce94。真实历史形状离线校验通过，原intent浮点时间往返精确、固定SHA/唯一新增/组flags成立；使用保存旧回查，非fresh。私有回执 prepared-v3-b358ebb/OFFLINE-ACTUAL-HISTORY-VALIDATION.json。
+
+v3唯一例外：本次固定历史SHA的自有Watch创建时刻为不可变历史；fresh profile/当前完整Watch/当前root授权与原BFF记录仍≤300秒，原观察段独立门禁保留。Watch无XID字段，稳定XID由固定首次profile与fresh profile绑定，Watch仅有真实ID/handle，未伪造字段。具体语义和下一次准确预算见FIRST-REAL-SAMPLE-OPS末节，待总管简审。
+
+累计真实请求6次（5只读、1新Watch），本轮没有额外执行。WSS0、停服0、Projects/Tracking新记录0、授权mint0。下一次只freshprofile1+完整Watch1，原观察3读+1有限WSS，新增Watch0。用户选择先补正，重新待命之前禁止实测。

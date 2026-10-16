@@ -40,6 +40,25 @@ def readback_evidence(before,creation,request,reconcile):
  return {'contract':'tracking-watch-add-readback-evidence-v2','success':True,'before':before,'add':creation,'request':request,'reconcile':reconcile},row
 
 
+def owned_reproof_evidence(history,fresh,profile,observed_at,created_at,expected_history_sha256):
+ from datetime import datetime
+ import hashlib
+ canonical=json.dumps(history,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode()
+ require(hashlib.sha256(canonical).hexdigest()==expected_history_sha256,'EXACT_ROOT_OWNED_HISTORY_REQUIRED')
+ _,old=readback_evidence(history['before'],history['add'],history['request'],history['reconcile'])
+ require(history['intent'].get('endpoint')=='twitter_watch_add'and history['intent'].get('attempt')==1 and datetime.fromisoformat(created_at.replace('Z','+00:00')).timestamp()==history['intent']['at'],'ORIGINAL_CREATION_TIME_REQUIRED')
+ require(profile.get('success')is True and profile['data'].get('userId')==history['profile']['data']['userId'] and profile['data'].get('screenName','').lower()=='0x2a_ikun','FRESH_STABLE_ID_DIFFERS')
+ def index(envelope):
+  rows=envelope.get('data');require(envelope.get('success')is True and isinstance(rows,list)and type(envelope.get('total'))is int and envelope['total']==len(rows),'COMPLETE_OWNED_WATCH_READ_REQUIRED');result={str(r['id']):r for r in rows};require(len(result)==len(rows),'DUPLICATE_WATCH_ID');return result
+ before,after,current=(index(x)for x in(history['before'],history['reconcile'],fresh));own=str(old['id'])
+ require(after.keys()-before.keys()=={own}and not before.keys()-after.keys()and all(before[k]==after[k]for k in before),'HISTORICAL_DELTA_NOT_SINGLE_OWNED_ADD')
+ require(current.keys()==after.keys()and all(current[k]==after[k]for k in after if k!=own),'OTHER_WATCH_CHANGED_STOP')
+ row=current[own];require(sum(str(r.get('twAccount','')).lower()=='0x2a_ikun'for r in current.values())==1 and str(row.get('twAccount','')).lower()=='0x2a_ikun','FRESH_TARGET_NOT_UNIQUE')
+ require(row.get('twGroupId')==old.get('twGroupId')and row.get('createdAt')==old.get('createdAt')and {k:v for k,v in row.items()if k.endswith('Bol')}=={k:v for k,v in old.items()if k.endswith('Bol')},'FRESH_WATCH_GROUP_FLAGS_OR_CREATION_DIFFERS')
+ require(sum(r.get('newTweetBol')is True for r in current.values())<=600,'READBACK_CAPACITY_EXCEEDED')
+ return {'contract':'tracking-owned-watch-reproof-evidence-v3','success':True,'history':history,'fresh_reconcile':fresh,'observed_at':observed_at},row
+
+
 def mint(static,late):
  source=static['tracking_source'];sys.path.insert(0,str(Path(source['code_root'])/'services/tracking-worker/python'))
  from tracking.new_test import NewAuthorization,NewProof,ProjectsReconcileEnvelope,Exclusions
@@ -47,7 +66,7 @@ def mint(static,late):
  from tracking.protocol import Command
  from tracking.takeover import private_path,read_private,digest
  from tracking.events import timestamp
- require((source['source_commit']=='704e6214ba7b2dff79ec372249bf47e2b9eb7c04' or (static.get('sample_proof_version')==2 and source['source_commit']=='b728f1e990896133359e89b5c5a9d1bad793bfce')),'FROZEN_TRACKING_SAMPLE_REQUIRED')
+ require((source['source_commit']=='704e6214ba7b2dff79ec372249bf47e2b9eb7c04' or (static.get('sample_proof_version')==2 and source['source_commit']=='b728f1e990896133359e89b5c5a9d1bad793bfce') or (static.get('sample_proof_version')==3 and source['source_commit']=='b358ebbcea079c12650400f66d50dc6cb85cdc42')),'FROZEN_TRACKING_SAMPLE_REQUIRED')
  require('watch_after'not in late,'SETUP_MUST_NOT_CONSUME_OBSERVATION_WATCH_READ')
  require(all(k in late for k in LATE) and all(k in late for k in ('identity_observed_at','watch_created_at','approved_at','create_command_id')),'ACTUAL_LATE_RECEIPTS_REQUIRED')
  def data(key):
@@ -65,8 +84,14 @@ def mint(static,late):
  require(row['handle']==static['target'] and row['x_user_id']==user_id and row['generation']==row['revision']==1 and command['subscription_id']==row['subscription_id'],'NEW_SUBSCRIPTION_IDENTITY_DIFFERS')
  def watches(key):
   envelope=data(key);require(envelope.get('success')is True,'REAL_WATCH_RESPONSE_REQUIRED');rows=envelope['data'];rows=rows if isinstance(rows,list)else rows.get('list',rows.get('items'));require(isinstance(rows,list),'WATCH_LIST_REQUIRED');return rows
- before=watches('watch_before');version2='watch_reconcile'in late
- if version2:
+ before=watches('watch_before');version3=static.get('sample_proof_version')==3;version2='watch_reconcile'in late and not version3
+ if version3:
+  from tracking.new_test import NewProofV3,OWNED_WATCH_HISTORY_SHA256
+  require('owned_watch_history'in late and 'watch_reconcile'in late and 'watch_reconcile_observed_at'in late,'REAL_V3_REPROOF_RECEIPTS_REQUIRED');history=data('owned_watch_history')
+  require(history['before']==data('watch_before')and history['add']==data('watch_creation')and history['request']==data('watch_request'),'HISTORICAL_RAW_RECEIPTS_DIFFER')
+  evidence,watch=owned_reproof_evidence(history,data('watch_reconcile'),profile,late['watch_reconcile_observed_at'],late['watch_created_at'],OWNED_WATCH_HISTORY_SHA256)
+  evidence_path=private_dir(static['output'])/'watch-owned-reproof-evidence-v3.json';require(not evidence_path.exists(),'READBACK_EVIDENCE_ALREADY_EXISTS');atomic(evidence_path,evidence);creation_artifact=artifact(evidence_path)
+ elif version2:
   require(static.get('sample_proof_version')==2,'EXPLICIT_V2_STATIC_REQUIRED')
   from tracking.new_test import NewProofV2
   evidence,watch=readback_evidence(data('watch_before'),data('watch_creation'),data('watch_request'),data('watch_reconcile'))
@@ -74,9 +99,9 @@ def mint(static,late):
  else:watch=expected_new_watch(static['target'],before,data('watch_creation'),data('watch_request'));creation_artifact=late['watch_creation']
  negative=Exclusions.model_validate(read_private(static['exclusions'],sha(private_path(static['exclusions']))));require(static['target']not in {x.lower()for x in negative.excluded_handles}and user_id not in negative.excluded_x_user_ids and str(watch['id'])not in negative.excluded_watch_ids,'TEST_ACCOUNT_EXCLUDED')
  initial=private_path(static['alpha_initial']);alpha=AlphaState.model_validate(read_private(initial,sha(initial)));expected_exclusions=digest({'handles':sorted({x.lower()for x in negative.excluded_handles}),'watch_ids':sorted(negative.excluded_watch_ids),'x_user_ids':sorted(negative.excluded_x_user_ids)});require(alpha.healthy and alpha.exclusions_sha256==expected_exclusions,'ALPHA_INITIAL_DIFFERS')
- clocks=[timestamp(x)for x in (late['identity_observed_at'],late['watch_created_at'],late['approved_at'],record['created_at'],projects.data.completed_at)]+[row['created_at']];now=time.time();require(all(x is not None and -1<=now-x<240 for x in clocks),'LATE_FACTS_ALREADY_TOO_OLD');seconds=min(static['max_tracking_seconds'],int(min(clocks)+295-now));require(seconds>=30,'INSUFFICIENT_FRESH_SAMPLE_WINDOW')
+ clocks=[timestamp(x)for x in (late['identity_observed_at'],late['watch_reconcile_observed_at'] if version3 else late['watch_created_at'],late['approved_at'],record['created_at'],projects.data.completed_at)]+[row['created_at']];now=time.time();require(all(x is not None and -1<=now-x<240 for x in clocks),'LATE_FACTS_ALREADY_TOO_OLD');seconds=min(static['max_tracking_seconds'],int(min(clocks)+295-now));require(seconds>=30,'INSUFFICIENT_FRESH_SAMPLE_WINDOW')
  approved=timestamp(late['approved_at']);require(approved>=max(clocks[:2]+[row['created_at']]),'ACTUAL_FINAL_APPROVAL_REQUIRED')
- proof={'contract':'tracking-new-test-account-proof-v1','origin':'new-test-account','authorization_id':static['tracking_authorization_id'],**{k:row[k]for k in ('project_id','subscription_id','x_user_id','generation','revision')},'x_handle':static['target'],'subscription_created_at':iso(row['created_at']),'create_command_id':command['command_id'],'create_command_body_sha256':command['body_hash'],'approved_at':late['approved_at'],'identity_observed_at':late['identity_observed_at'],'projects_creation_receipt_sha256':late['projects_reconcile']['sha256'],'projects_create_idempotency_key':projects.data.idempotency_key,'projects_create_original_request_id':projects.data.original_request_id,'projects_create_contract':projects.data.contract,'projects_create_completed_at':projects.data.completed_at,'setup_profile_sha256':late['setup_profile']['sha256'],'operator_watch_creation_evidence_sha256':late['watch_creation']['sha256'],'operator_watch_created_at':late['watch_created_at'],'operator_new_owned_watch':True,'watch_id':str(watch['id']),'groups':{k:watch[k]for k in ('twGroupId','groupName')if k in watch},'flags':{k:v for k,v in watch.items()if k.endswith('Bol')},'setup_profile_attempts':1,'setup_watch_read_attempts':1,'setup_watch_write_attempts':1};proof.update(contract='tracking-new-test-account-proof-v2',setup_watch_read_attempts=2,operator_watch_creation_evidence_sha256=creation_artifact['sha256']) if version2 else None;proof=(NewProofV2 if version2 else NewProof).model_validate(proof).model_dump()
+ proof={'contract':'tracking-new-test-account-proof-v1','origin':'new-test-account','authorization_id':static['tracking_authorization_id'],**{k:row[k]for k in ('project_id','subscription_id','x_user_id','generation','revision')},'x_handle':static['target'],'subscription_created_at':iso(row['created_at']),'create_command_id':command['command_id'],'create_command_body_sha256':command['body_hash'],'approved_at':late['approved_at'],'identity_observed_at':late['identity_observed_at'],'projects_creation_receipt_sha256':late['projects_reconcile']['sha256'],'projects_create_idempotency_key':projects.data.idempotency_key,'projects_create_original_request_id':projects.data.original_request_id,'projects_create_contract':projects.data.contract,'projects_create_completed_at':projects.data.completed_at,'setup_profile_sha256':late['setup_profile']['sha256'],'operator_watch_creation_evidence_sha256':late['watch_creation']['sha256'],'operator_watch_created_at':late['watch_created_at'],'operator_new_owned_watch':True,'watch_id':str(watch['id']),'groups':{k:watch[k]for k in ('twGroupId','groupName')if k in watch},'flags':{k:v for k,v in watch.items()if k.endswith('Bol')},'setup_profile_attempts':1,'setup_watch_read_attempts':1,'setup_watch_write_attempts':1};proof.update(contract='tracking-new-test-account-proof-v2',setup_watch_read_attempts=2,operator_watch_creation_evidence_sha256=creation_artifact['sha256']) if version2 else None;proof.update(contract='tracking-new-test-account-proof-v3',setup_watch_read_attempts=2,operator_watch_creation_evidence_sha256=creation_artifact['sha256'],historical_watch_evidence_sha256=OWNED_WATCH_HISTORY_SHA256,watch_reconcile_observed_at=late['watch_reconcile_observed_at'],fresh_watch_read_attempts=1) if version3 else None;proof=(NewProofV3 if version3 else NewProofV2 if version2 else NewProof).model_validate(proof).model_dump()
  out=private_dir(static['output']);require(not (out/'authorization.json').exists()and not (out/'proof.json').exists(),'LATE_AUTHORIZATION_ALREADY_MINTED');atomic(out/'proof.json',proof)
  authorization={'contract':'tracking-sample-new-test-v1','execution_id':'IKUN-ONLY-2026-10-16','authorization_id':static['tracking_authorization_id'],'candidate_commit':source['source_commit'],'source_set_sha256':source['fingerprint']['source_set_sha256'],'issued_at':iso(now),'expires_at':iso(now+seconds),'max_seconds':seconds,**{k:row[k]for k in ('project_id','subscription_id','x_user_id','generation','revision')},'x_handle':static['target'],'alpha_initial_sha256':sha(initial),'new_test_proof_sha256':sha(out/'proof.json'),'projects_creation_receipt_sha256':late['projects_reconcile']['sha256'],'setup_profile_sha256':late['setup_profile']['sha256'],'exclusions_sha256':sha(private_path(static['exclusions']))};authorization=NewAuthorization.model_validate(authorization).model_dump();atomic(out/'authorization.json',authorization)
  argv=[source['python'],str(Path(source['code_root'])/'services/tracking-worker/python/integration/sample-tracking.py'),'--config',static['config'],'--authorization',str(out/'authorization.json'),'--authorization-sha256',sha(out/'authorization.json'),'--alpha-state',static['alpha_rolling'],'--alpha-initial-state',static['alpha_initial'],'--new-test-proof',str(out/'proof.json'),'--projects-creation-receipt',late['projects_reconcile']['path'],'--setup-profile',late['setup_profile']['path'],'--watch-creation-receipt',creation_artifact['path'],'--exclusions',static['exclusions'],'--execute','--serve'];atomic(out/'original-cli-argv.private.json',argv)

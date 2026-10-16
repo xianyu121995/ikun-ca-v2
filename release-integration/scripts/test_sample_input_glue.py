@@ -71,5 +71,24 @@ class SampleGlue(unittest.TestCase):
     elif fault=='missing_id':del after['data'][-1]['id']
     with self.assertRaises((SafeFailure,KeyError)):t.readback_evidence(before,added,request,after)
 
+ def owned_history_fixture(self):
+  before,added,request,after=self.readback_fixture();history,_=t.readback_evidence(before,added,request,after);history['intent']={'endpoint':'twitter_watch_add','attempt':1,'at':1000.25};history['profile']={'success':True,'data':{'screenName':'0x2a_ikun','userId':'12345'}};after['data'][-1]['createdAt']='1970-01-01T00:16:40.250000+00:00';return history
+ def test_v3_pins_history_and_preserves_actual_old_creation_timestamp(self):
+  import copy
+  history=self.owned_history_fixture();digest=hashlib.sha256(json.dumps(history,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()).hexdigest();fresh=copy.deepcopy(history['reconcile']);e,row=t.owned_reproof_evidence(history,fresh,history['profile'],'2026-10-16T15:00:00+00:00','1970-01-01T00:16:40.250000+00:00',digest);self.assertIs(e['history'],history);self.assertIs(e['fresh_reconcile'],fresh);self.assertEqual(row['id'],'new')
+ def test_v3_rejects_history_substitution_and_foreign_current_entries(self):
+  import copy
+  for fault in ('hash','created','group','flags','extra','existing_change','profile'):
+   with self.subTest(fault=fault):
+    history=self.owned_history_fixture();digest=hashlib.sha256(json.dumps(history,sort_keys=True,separators=(',',':'),ensure_ascii=False).encode()).hexdigest();fresh=copy.deepcopy(history['reconcile']);profile=copy.deepcopy(history['profile']);created='1970-01-01T00:16:40.250000+00:00'
+    if fault=='hash':digest='0'*64
+    elif fault=='created':created='2026-10-16T15:00:00+00:00'
+    elif fault=='group':fresh['data'][-1]['twGroupId']=99
+    elif fault=='flags':fresh['data'][-1]['newFlwBol']=True
+    elif fault=='extra':fresh['data'].append({'id':'foreign'});fresh['total']+=1
+    elif fault=='existing_change':fresh['data'][0]['newTweetBol']=False
+    elif fault=='profile':profile['data']['userId']='999'
+    with self.assertRaises(SafeFailure):t.owned_reproof_evidence(history,fresh,profile,'2026-10-16T15:00:00+00:00',created,digest)
+
 
 if __name__=='__main__':unittest.main()

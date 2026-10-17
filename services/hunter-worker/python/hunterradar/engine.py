@@ -9,6 +9,8 @@ import os
 import random
 import re
 import sqlite3
+import traceback
+from pathlib import Path
 from urllib.parse import urlsplit
 import time
 from urllib.parse import quote
@@ -75,6 +77,18 @@ class Engine:
             await self.providers.close()
             original_store.release_worker(owner)
 
+    def record_loop_error(self, name, error):
+        # Frames contain no arguments/locals; never log raw exception text or credentials.
+        frames = traceback.extract_tb(error.__traceback__)
+        reasons = {'cross_store_transaction_forbidden', 'hunter_migration_required',
+                   'symlinked_database_path_forbidden', 'database_must_be_private_regular_file',
+                   'unsafe_hunter_permissions', 'legacy_private_state_requires_takeover'}
+        reason = str(error) if isinstance(error, ValueError) and str(error) in reasons else None
+        detail = {'loop': name, 'type': type(error).__name__, 'reason': reason,
+                  'at': time.time(), 'frames': [f'{Path(f.filename).name}:{f.lineno}:{f.name}' for f in frames]}
+        self.store.set_state('worker_error_detail', detail)
+        LOG.warning('worker_loop_detail %s', json.dumps(detail))
+
     async def supervise(self, name, fn):
         while not self.stop.is_set():
             try:
@@ -87,13 +101,23 @@ class Engine:
             except Exception as error:
                 code = name+':'+type(error).__name__
                 self.store.set_state('worker_error', code)
+                self.record_loop_error(name, error)
                 LOG.warning('worker_loop_failed %s', code)
                 await self.pause(5)
 
     async def heartbeat_loop(self):
+        successes = 0
         while not self.stop.is_set():
             self.store.renew_worker()
             self.store.set_state('worker_heartbeat', time.time())
+            successes += 1
+            if successes >= 3:
+                # Only a recovered heartbeat may clear its own sticky error.
+                with self.store.transaction():
+                    error = self.store.states().get('worker_error')
+                    if isinstance(error, str) and error.startswith('heartbeat:'):
+                        self.store.set_state('worker_error_last_recovery', {'error': error, 'at': time.time()})
+                        self.store.set_state('worker_error', None)
             await self.pause(3)
 
     async def retention_loop(self):
@@ -175,6 +199,7 @@ class Engine:
                     await synchronize(self)
                     previous = signature
             except (ProviderError, BudgetExceeded, ValueError, TimeoutError) as error:
+                if isinstance(error, ValueError):self.record_loop_error('watch', error)
                 self.store.set_state('watch_error',str(error) if isinstance(error,ProviderError) else type(error).__name__)
             await self.pause(5)
 

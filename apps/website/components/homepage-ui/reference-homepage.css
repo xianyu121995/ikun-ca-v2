@@ -149,9 +149,10 @@
   .hpv2-preview .projects-home-access { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
   .hpv2-preview .hpv2-root { flex:1; min-height:0; display:flex; flex-direction:column; }
   .hpv2-preview .hpv2-root > * { flex-shrink:0; }
-  .hpv2-preview .hpv2-events { max-height:180px; overflow:auto; }
+  .hpv2-preview .hpv2-events { max-height:110px; overflow:auto; }
+  .hpv2-preview .hpv2-events > .ik-panel-head { min-height:40px; padding-top:4px; padding-bottom:4px; }
   .hpv2-preview .hpv2-events .ik-empty { padding:10px; gap:4px; }
-  .hpv2-preview .hpv2-events .ik-empty-icon { width:28px; height:28px; margin:0; }
+  .hpv2-preview .hpv2-events .ik-empty-icon { display:none; }
   .hpv2-preview .hpv2-events .ik-empty h3 { margin:4px 0; font-size:12px; }
   .hpv2-preview .hpv2-projects { flex:1; min-height:0; display:flex; flex-direction:column; }
   .hpv2-preview .hpv2-projects > .ik-panel-head { flex:none; }

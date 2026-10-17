@@ -12,7 +12,7 @@ import './reference-homepage.css';
 const awaiting=(result:OperationResult|null)=>!!result&&['accepted','pending','running','unknown'].includes(result.state);
 const operationLabels={accepted:'已受理，等待结果',pending:'等待执行',running:'操作处理中',unknown:'结果待核实',succeeded:'操作已确认完成',failed:'操作未完成'} as const;
 const isMain=(view:ProjectView)=>view.record.home_membership==='active'&&['S','A','B'].includes(view.record.rating||'');
-const pageSize=9;
+const DEFAULT_PAGE_SIZE=9;
 function ResultMessage({result,busy,onReconcile}:{result:OperationResult|null;busy:boolean;onReconcile?:()=>void}){
   if(!result)return null;
   return <Alert tone={result.state==='succeeded'?'success':result.state==='failed'?'danger':'warning'} title={operationLabels[result.state]} code={result.error?.code} requestId={result.request_id||undefined} action={awaiting(result)&&onReconcile?<Button size="sm" pending={busy} onClick={onReconcile}>核对结果</Button>:undefined}>{result.error?.message}{awaiting(result)&&<p>保留原操作记录，先核对结果，不重复写入。</p>}</Alert>;
@@ -38,6 +38,7 @@ export default function ReferenceHomepage({context,data,callbacks={},milestones=
   }),[projection,query,sort,milestones,server]);
   const filtered=server?active:localFiltered;
   const total=server?server.total:filtered.length;
+  const pageSize=server?.pageSize??DEFAULT_PAGE_SIZE;
   const pages=Math.max(1,Math.ceil(total/pageSize)),currentPage=server?server.page:Math.min(page,pages);
   const shown=server?active:filtered.slice((currentPage-1)*pageSize,currentPage*pageSize);
   const chosen=shown.filter(view=>selected.has(view.key));

@@ -15,7 +15,7 @@ const emptySummary={tracked_total:0,by_rating:{S:0,A:0,B:0},completed_total:0,ot
 type Pending={key:string;path:string;method:string;contract:string};
 function publicError(value:unknown):PublicError{const data=value as {error?:{code?:string;message?:string;retryable?:boolean};request_id?:string};return {code:data?.error?.code??'UPSTREAM_UNAVAILABLE',message:data?.error?.message??'项目数据暂不可用',retryable:data?.error?.retryable===true,request_id:data?.request_id??null};}
 async function read(path:string,signal?:AbortSignal){const response=await fetch(path,{signal,cache:'no-store'});const value=await response.json();if(!response.ok)throw publicError(value);return value.data;}
-function params(query:MainQuery){const out=new URLSearchParams({view:'home-v1',collection:'tracked',limit:'9',sort:query.sort,direction:query.direction});for(const key of ['q','rating','progress_stage','discovered_on'] as const)if(query[key]&&query[key]!=='all')out.set(key,query[key]);return out;}
+function params(query:MainQuery,limit=9){const out=new URLSearchParams({view:'home-v1',collection:'tracked',limit:String(limit),sort:query.sort,direction:query.direction});for(const key of ['q','rating','progress_stage','discovered_on'] as const)if(query[key]&&query[key]!=='all')out.set(key,query[key]);return out;}
 
 export default function ProjectsHome({context,csrf,userId}:{context:HomepageContext;csrf:string;userId:string}){
   const canWrite=canEdit(context);
@@ -24,16 +24,23 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   const [detail,setDetail]=useState<Home|null>(null),[error,setError]=useState<PublicError|null>(null),[loading,setLoading]=useState(true),[version,setVersion]=useState(0),[page,setPage]=useState(1);
   const [completedIndex,setCompletedIndex]=useState(1),[otherIndex,setOtherIndex]=useState(1);
   const [completedLoaded,setCompletedLoaded]=useState(0),[otherLoaded,setOtherLoaded]=useState(0);
+  const [limit,setLimit]=useState(9);const fitRef=useRef<()=>void>(()=>{});
   const mainCursors=useRef<(string|null)[]>([null]),completedCursors=useRef<(string|null)[]>([null]),otherCursors=useRef<(string|null)[]>([null]);
   const epoch=useRef(0),pending=useRef<Pending|null>(null);const storageKey='ikun-project-operation:'+userId;
   useEffect(()=>{try{const raw=sessionStorage.getItem(storageKey);if(raw)pending.current=JSON.parse(raw);}catch{}},[storageKey]);
   const persist=(value:Pending|null)=>{pending.current=value;try{if(value)sessionStorage.setItem(storageKey,JSON.stringify(value));else sessionStorage.removeItem(storageKey);}catch{}};
   const reload=()=>setVersion(v=>v+1);
   useEffect(()=>{const generation=++epoch.current;const abort=new AbortController();setLoading(true);setError(null);
-    const search=params(query);const cursor=mainCursors.current[page-1];if(cursor)search.set('cursor',cursor);
+    const search=params(query,limit);const cursor=mainCursors.current[page-1];if(cursor)search.set('cursor',cursor);
     read('/api/v1/projects?'+search,abort.signal).then(data=>{if(generation===epoch.current){setMain(data);mainCursors.current[page]=data.next_cursor;}}).catch(e=>{if(!abort.signal.aborted&&generation===epoch.current)setError(e);}).finally(()=>{if(generation===epoch.current)setLoading(false);});
     return()=>abort.abort();
-  },[query,page,version]);
+  },[query,page,version,limit]);
+  // Fill the table: rows per page follow the available height (owner request).
+  useEffect(()=>{if(typeof ResizeObserver==='undefined')return;let ro:ResizeObserver|null=null,timer:ReturnType<typeof setTimeout>|undefined;
+    const fit=fitRef.current=()=>{const box=document.querySelector('.hpv2-project-grid .ik-table-scroll');const rows=box?.querySelectorAll('tbody tr');if(!box||!rows||rows.length<2)return;const last=rows[rows.length-1].getBoundingClientRect(),first=rows[0].getBoundingClientRect();const rowH=(last.bottom-first.top)/rows.length;if(!(rowH>10))return;const free=box.getBoundingClientRect().bottom-last.bottom;const n=Math.max(5,Math.min(100,rows.length+Math.floor((free+2)/rowH)));setLimit(old=>{if(old===n)return old;mainCursors.current=[null];setPage(1);return n;});};
+    const attach=()=>{const box=document.querySelector('.hpv2-project-grid .ik-table-scroll');if(!box){timer=setTimeout(attach,300);return;}ro=new ResizeObserver(()=>{clearTimeout(timer);timer=setTimeout(fit,150);});ro.observe(box);};attach();
+    return()=>{ro?.disconnect();clearTimeout(timer);};},[]);
+  useEffect(()=>{if(!loading){const t=setTimeout(()=>fitRef.current(),50);return()=>clearTimeout(t);}},[loading]);
   useEffect(()=>{const abort=new AbortController();const suffix=query.discovered_on?'?discovered_on='+query.discovered_on:'';read('/api/v1/projects/home-summary'+suffix,abort.signal).then(setSummary).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[query.discovered_on,version]);
   useEffect(()=>{const abort=new AbortController();const search=new URLSearchParams({window_days:windowDays,limit:'3'});if(query.rating!=='all')search.set('rating',query.rating);read('/api/v1/projects/milestones?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setEvents(data.items.map((p:Home)=>({...p,completion:null})));setAsOf(data.as_of_date);}}).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[query.rating,windowDays,version]);
   useEffect(()=>{const abort=new AbortController();const search=new URLSearchParams({view:'home-v1',collection:'completed',limit:'9'});const cursor=completedCursors.current[completedIndex-1];if(cursor)search.set('cursor',cursor);read('/api/v1/projects?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setCompleted(data);setCompletedLoaded(completedIndex);completedCursors.current[completedIndex]=data.next_cursor;}}).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[completedIndex,version]);
@@ -71,7 +78,7 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   return <div className="projects-home-access" data-project-access={canWrite?'write':'readonly'}><ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
     callbacks={{...mutations,onReconcile:reconcile,
       onQueryChange:(q:HomepageQuery)=>change({q:q.q,rating:q.rating,progress_stage:q.progress_stage}),onDiscoveryDateChange:day=>change({discovered_on:day??''}),onReload:reload}}
-    server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,hasNext:!!main.next_cursor,summary,
+    server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,pageSize:limit,hasNext:!!main.next_cursor,summary,
       onSort:value=>change({sort:value.key,direction:value.direction}),canPage,onPage:next=>{if(canPage(next))setPage(next);},onWindow:setWindow,onDetail:id=>void openDetail(id),
       completedPagination:pagination(completedIndex,completedLoaded,completed.total,completed.next_cursor,completedCursors.current,setCompletedIndex),otherPagination:pagination(otherIndex,otherLoaded,other.total,other.next_cursor,otherCursors.current,setOtherIndex)}}/></div>;
 }

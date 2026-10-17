@@ -149,3 +149,21 @@
 .compactQuote a { color:var(--ik-info); }
 .compactMissing { font-size:10.5px; color:var(--ik-muted); }
 .tweetCompact .media { width:240px; height:120px; }
+
+/* Keep the live desktop workspace inside the zoom-adjusted viewport. */
+@media (min-width: 1000px) and (min-height: 600px) {
+  .workspace { height:calc(100dvh / var(--ik-zoom, 1)); overflow:hidden; }
+  .workspace > :global(.ik-shell) { height:100%; min-height:0; overflow:hidden; }
+  .workspace :global(.ik-main) { height:100%; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .workspace :global(.ik-main > section[aria-label="推文语音设置"]) { flex:none; max-height:140px; overflow:auto; padding:8px 16px; gap:6px; font-size:11px; }
+  .workspace :global(.ik-main > .ik-alert) { flex:none; }
+  .page { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .topbar { flex:none; }
+  .content { flex:1; min-height:0; display:flex; flex-direction:column; padding-top:12px; padding-bottom:10px; }
+  .content > * { flex-shrink:0; }
+  .content :global(.ik-page-header) { margin-bottom:10px; }
+  .content > .feedSection { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .feedHeading { flex:none; }
+  .feed { flex:1; min-height:0; overflow:auto; }
+  .feedFooter,.footer { flex:none; }
+}

@@ -140,3 +140,22 @@
 .hpv2-event-time-fields { display:flex; align-items:flex-end; gap:9px; }
 .hpv2-event-time-fields>.ik-field { flex:1; min-width:0; }
 .hpv2-event-time-fields>.ik-field:last-child { flex:0 0 105px; }
+
+/* Live desktop workspace: viewport height belongs to the shell; tables scroll inside it. */
+@media (min-width: 1000px) and (min-height: 600px) {
+  .hpv2-preview > .ik-shell { height:calc(100dvh / var(--ik-zoom, 1)); min-height:0; overflow:hidden; }
+  .hpv2-preview > .ik-shell > .ik-main { height:100%; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; padding-bottom:10px; }
+  .hpv2-preview > .ik-shell > .ik-main > header { flex:none; padding:8px!important; }
+  .hpv2-preview .hpv2-root { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .hpv2-preview .hpv2-root > * { flex-shrink:0; }
+  .hpv2-preview .hpv2-events { max-height:180px; overflow:auto; }
+  .hpv2-preview .hpv2-events .ik-empty { padding:10px; gap:4px; }
+  .hpv2-preview .hpv2-events .ik-empty-icon { width:28px; height:28px; margin:0; }
+  .hpv2-preview .hpv2-events .ik-empty h3 { margin:4px 0; font-size:12px; }
+  .hpv2-preview .hpv2-projects { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .hpv2-preview .hpv2-projects > .ik-panel-head { flex:none; }
+  .hpv2-preview .hpv2-projects > .ik-panel-body { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .hpv2-preview .hpv2-table-toolbar,.hpv2-preview .hpv2-table-footer { flex:none; }
+  .hpv2-preview .hpv2-project-grid { flex:1; min-height:0; overflow:hidden; }
+  .hpv2-preview .hpv2-project-grid .ik-table-scroll { height:100%; max-height:none; overflow:auto; }
+}

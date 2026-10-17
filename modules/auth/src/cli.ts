@@ -27,10 +27,10 @@ async function hidden(prompt: string): Promise<string> {
 async function main() {
   const {values,positionals}=parseArgs({allowPositionals:true,options:{username:{type:"string"}}});
   const command=positionals[0];
-  const commands=["bootstrap","create","disable","enable","reset-password","recover-admin","list","migrate"];
+  const commands=["bootstrap","create","create-admin","disable","enable","reset-password","recover-admin","list","migrate"];
   if (positionals.length!==1 || !commands.includes(command??"") ||
       (!["migrate","list"].includes(command??"") && !values.username) || (["migrate","list"].includes(command??"") && values.username))
-    throw new Error("USAGE: cli.js bootstrap|create|disable|enable|reset-password|recover-admin --username NAME | list | migrate");
+    throw new Error("USAGE: cli.js bootstrap|create|create-admin|disable|enable|reset-password|recover-admin --username NAME | list | migrate");
   // OS account and private filesystem permissions are the authority; no web session is needed.
   if (command!=="migrate" && (!process.stdin.isTTY || !process.stdout.isTTY)) throw new Error("AUTH_TTY_REQUIRED");
   const store=new LocalAccounts(environment(),command==="bootstrap" || command==="migrate");
@@ -42,7 +42,7 @@ async function main() {
       const value=await hidden("初始密码（至少10字符）：");
       if (value!==await hidden("再次输入密码：")) throw new Error("AUTH_PASSWORD_MISMATCH");
       if(command==="bootstrap") await store.bootstrap(values.username!,value);
-      else if(command==="create") await store.create(values.username!,value);
+      else if(command==="create" || command==="create-admin") await store.create(values.username!,value,command==="create-admin");
       else await store.reset(values.username!,value,command==="recover-admin");
     }
     console.log("本地账号操作完成；新建或重置后必须在网页修改初始密码。密码不会输出或记录。");

@@ -89,13 +89,16 @@ test('admin recovery needs no web session, revokes sessions and forces password 
  const recovered=await e.store.login('root_admin',changed);assert.equal(recovered.actor.must_change_password,true);
  await user(e);await assert.rejects(e.store.reset('viewer',changed,true),x=>x.status===409);
 }));
-test('last active superadmin cannot be disabled; schema supports future multiple admins safely',()=>fixture(async e=>{
+test('last active superadmin cannot be disabled; multiple admins allowed',()=>fixture(async e=>{
  assert.throws(()=>e.store.setEnabled('root_admin',false),x=>x.status===409);
  const {record}=await user(e);e.store.db.prepare("UPDATE auth_users SET role='superadmin',enabled=0 WHERE id=?").run(record.id);
- assert.throws(()=>e.store.setEnabled('viewer',true),x=>x.status===409);
- // Synthetic future-policy fixture only; production CLI has no role-changing command.
- e.store.db.prepare('UPDATE auth_users SET enabled=1 WHERE id=?').run(record.id);
+ e.store.setEnabled('viewer',true);
  e.store.setEnabled('viewer',false);assert.throws(()=>e.store.setEnabled('root_admin',false),x=>x.status===409);
+}));
+test('local create-admin makes a second superadmin that must change password',()=>fixture(async e=>{
+ const made=await e.store.create('co_admin',initial,true);assert.equal(made.role,'superadmin');assert.equal(made.must_change_password,true);
+ assert.equal(e.store.list().filter(x=>x.role==='superadmin'&&x.enabled).length,2);
+ e.store.setEnabled('co_admin',false);assert.throws(()=>e.store.setEnabled('root_admin',false),x=>x.status===409);
 }));
 test('local list uses a strict safe projection and audit contains no credentials',()=>fixture(async e=>{
  await user(e);const list=e.store.list();assert.equal(list.length,2);

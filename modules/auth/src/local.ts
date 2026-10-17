@@ -8,10 +8,8 @@ export class LocalAccounts extends AuthStore {
     if (!row) throw new AuthError(404,'NOT_FOUND','用户不存在');
     return this.target(String(row.id));
   }
-  private adminSlot(excluding?:string) {
-    // Policy for B1; schema keeps a role column and supports multiple admins in a future release.
-    if(this.db.prepare("SELECT 1 FROM auth_users WHERE role='superadmin' AND enabled=1 AND id<>?").get(excluding??''))
-      throw new AuthError(409,'CONFLICT','当前阶段只允许一个有效超级管理员');
+  private adminSlot(_excluding?:string) {
+    // Owner decision 2026-10-17: multiple active superadmins are allowed (private site, owner + trusted co-admin).
   }
   list() {
     return this.db.prepare('SELECT id AS user_id,username,role,enabled,must_change_password,version AS revision FROM auth_users ORDER BY created_at,id').all();
@@ -26,12 +24,12 @@ export class LocalAccounts extends AuthStore {
       this.audit('local_bootstrap',null,result.id);return result;
     });
   }
-  async create(name:string,value:string) {
+  async create(name:string,value:string,admin=false) {
     name=username(name);password(value);const hash=await hashPassword(value);
     return this.tx(()=>{
       if(!this.db.prepare("SELECT 1 FROM auth_users WHERE role='superadmin' AND enabled=1").get())
         throw new AuthError(409,'CONFLICT','请先初始化或恢复超级管理员');
-      const result=this.addUser(name,hash,'user',true);this.audit('local_create',null,result.id);return result;
+      const result=this.addUser(name,hash,admin?'superadmin':'user',true);this.audit(admin?'local_create_admin':'local_create',null,result.id);return result;
     });
   }
   setEnabled(name:string,enabled:boolean) {

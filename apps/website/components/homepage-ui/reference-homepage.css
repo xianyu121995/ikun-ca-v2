@@ -146,6 +146,7 @@
   .hpv2-preview > .ik-shell { height:calc(100dvh / var(--ik-zoom, 1)); min-height:0; overflow:hidden; }
   .hpv2-preview > .ik-shell > .ik-main { height:100%; min-height:0; display:flex; flex-direction:column; overflow:hidden; padding-top:10px; padding-bottom:10px; }
   .hpv2-preview > .ik-shell > .ik-main > header { flex:none; padding:8px!important; }
+  .hpv2-preview .projects-home-access { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
   .hpv2-preview .hpv2-root { flex:1; min-height:0; display:flex; flex-direction:column; }
   .hpv2-preview .hpv2-root > * { flex-shrink:0; }
   .hpv2-preview .hpv2-events { max-height:180px; overflow:auto; }

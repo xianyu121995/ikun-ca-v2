@@ -172,7 +172,7 @@ class FormalService:
                     command='cmd_'+str(uuid.uuid4());event_id='evt_'+str(uuid.uuid4())
                     identity=db.execute('SELECT entity_key FROM target_identities WHERE anchor=?',(row['target'],)).fetchone()
                     project=data.project.model_dump(mode='json')
-                    event={'schema_version':1,'event_id':event_id,'source':'hunter','event_type':'hunter.monitoring_requested','occurred_at':iso(stamp),'received_at':iso(stamp),'tenant_id':SCOPE,'project_id':None,'correlation_id':'cor_'+str(uuid.uuid4()),
+                    event={'schema_version':1,'event_id':event_id,'source':'hunter','event_type':'hunter.monitoring_requested','occurred_at':iso(row['first_discovered_at'] or stamp),'received_at':iso(stamp),'tenant_id':SCOPE,'project_id':None,'correlation_id':'cor_'+str(uuid.uuid4()),
                         'payload':{'command_id':command,'discovery_id':identifier,'source_entity_key':identity['entity_key'],'confirmed':True,'actor':principal.model_dump(),'project':project,'x_user_id':current['x_user_id'],'x_handle':current['x_handle']}}
                     serialized=canonical(event)
                     db.execute('INSERT INTO task_outbox(id,target,idempotency_key,request_key,request_hash,body,confirmed_by,confirmed_at,event_id,command_id,request_id,updated_at,discovery_id,target_x_user_id,source_entity_key,body_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',

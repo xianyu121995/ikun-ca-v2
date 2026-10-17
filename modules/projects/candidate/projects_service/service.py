@@ -1,4 +1,5 @@
 """B2 transaction and transport adapter around the original CRUD and source resolver."""
+from datetime import timezone
 import hashlib
 import json
 import re
@@ -221,8 +222,10 @@ class Service:
             fields=payload.project
             for key in aliases:
                 imported=CoreProjectImport(source=event.source,external_id=key,explicit_add=True,project_id=target,project=fields.core())
+                # Hunter sends the discovery's first-seen time as occurred_at; it becomes the project's 发现时间.
+                found=event.occurred_at.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ') if event.occurred_at else None
                 result,_=core.import_project(con,imported,payload.actor.user_id,SCOPE,include_removed=True,
-                    extras={**fields.extras(),'home_membership':'hidden','discovered_at':None})
+                    extras={**fields.extras(),'home_membership':'hidden','discovered_at':found})
                 target=result['id']
             command={'schema_version':1,'command_id':payload.command_id,'tenant_id':SCOPE,'actor':payload.actor.model_dump(),
                      'operation':'tracking.create','project_id':target,'subscription_id':None,'expected_revision':None,

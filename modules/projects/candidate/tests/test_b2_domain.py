@@ -122,7 +122,7 @@ def test_crud_revision_membership_identity_independent(domain):
     assert removed['home_membership']=='removed' and removed['progress_stage']=='researching'
     restored=call(domain,'membership',target=p['project_id'],body={'action':'add'},if_match='"rev-3"',idempotency_key=uid())[1]
     assert restored['project_id']==p['project_id'] and restored['progress_percent']==32.5
-    with domain.db.connect() as con:assert con.execute('SELECT COUNT(*) FROM tracking_outbox').fetchone()[0]==0
+    with domain.db.connect() as con:assert con.execute('SELECT COUNT(*) FROM tracking_outbox').fetchone()[0]==1
 
 def test_receipt_concurrent_replay_and_conflict(domain):
     key=uid()
@@ -180,7 +180,7 @@ def test_event_atomic_dedup_removed_reimport_no_manual_overwrite(domain):
     with pytest.raises(DomainError):call(domain,'ingest',principal=None,source='hunter',body=conflict)
     with domain.db.connect() as con:
         assert con.execute('SELECT COUNT(*) FROM projects').fetchone()[0]==1
-        assert con.execute('SELECT COUNT(*) FROM tracking_outbox').fetchone()[0]==1
+        assert con.execute('SELECT COUNT(*) FROM tracking_outbox').fetchone()[0]==2
     with pytest.raises(DomainError):call(domain,'ingest',principal=None,source='tracking',body=e)
 
 def test_outbox_unknown_reconciles_before_repost(domain):
@@ -258,3 +258,10 @@ def test_legacy_credentials_require_review_instead_of_copying_auth(domain,tmp_pa
 @pytest.mark.parametrize('value',['2026-01-01T00:00:00Z',0,True])
 def test_calendar_date_does_not_accept_timestamp(value):
     with pytest.raises(ValidationError):Fields.model_validate({**FIELDS,'token_date':value,'token_date_status':'confirmed'})
+
+
+def test_hunter_first_discovered_at_is_preserved(domain):
+    e=event();e['occurred_at']='2026-10-14T08:12:34.123Z'
+    result=call(domain,'ingest',principal=None,source='hunter',body=e)[1]
+    p=call(domain,'get',target=result['project_id'])[1]
+    assert p['discovered_at']=='2026-10-14T08:12:34.123000Z'

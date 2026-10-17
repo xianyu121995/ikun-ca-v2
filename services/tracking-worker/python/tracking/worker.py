@@ -68,6 +68,27 @@ class Worker:
 
     async def reconcile_one(self, row, snapshot):
         watch = snapshot.get(row["handle"])
+        if row["handle"] in (self.cfg.shared_watch_ids or {}):
+            # Explicit read permission never grants add/update/delete authority.
+            running = row["desired"] == "running"
+            if running:
+                if not watch:
+                    raise RemoteError("shared_watch_missing", 300)
+                if str(watch.get("id")) != self.cfg.shared_watch_ids[row["handle"]]:
+                    raise RemoteError("shared_watch_identity_changed", 300)
+                if watch.get("newTweetBol") is not True or any(
+                    watch.get(k) for k in ("isPaused", "isSuspended", "isBlacked")
+                ):
+                    raise RemoteError("shared_watch_not_enabled", 300)
+            self.store.observe(
+                row, remote_state="active" if running else "absent",
+                observed_at=time.time(), claim="none",
+                status="running" if running else row["desired"],
+                error=None, attempts=0, next_retry=0,
+                baseline_ready=1, coverage="possible_gap",
+            )
+            # Stopping/removing only detaches locally; no paid REST backfill either.
+            return snapshot
         if watch and not self.owned(row, watch):
             raise RemoteError("ownership_conflict", 300)
         desired_running = row["desired"] == "running"
@@ -188,7 +209,8 @@ class Worker:
             return False
         username, tweet = event
         row = next((r for r in self.store.projects() if r["handle"] == username), None)
-        if not row or row["desired"] != "running" or row["claim"] != "owned":
+        shared = row and row["handle"] in (self.cfg.shared_watch_ids or {}) and row["status"] == "running"
+        if not row or row["desired"] != "running" or not (row["claim"] == "owned" or shared):
             return False
         if (
             row["remote_state"] != "active"

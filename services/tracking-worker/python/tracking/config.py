@@ -31,6 +31,7 @@ class Config:
     auth_cookie_name: str = "__Host-ikun_session"
     service_token_file: str = ""
     max_watch_slots: int = 600
+    shared_watch_ids: dict[str, str] | None = None
     adopted_watch_ids: dict[str, str] | None = None
 
     def secret(self, kind: str) -> str:
@@ -106,4 +107,14 @@ class Config:
                 raise ValueError(f"invalid {name}")
         if cfg.remote_fresh_seconds < 2 * cfg.reconcile_seconds:
             raise ValueError("remote_fresh_seconds must cover at least two reconcile intervals")
+        if cfg.shared_watch_ids is not None:
+            import re
+            if not isinstance(cfg.shared_watch_ids, dict) or any(
+                not isinstance(k, str) or not re.fullmatch(r"[a-z0-9_]{1,15}", k)
+                or not isinstance(v, str) or not v.isdigit()
+                for k, v in cfg.shared_watch_ids.items()
+            ):
+                raise ValueError("invalid shared_watch_ids")
+            if set(cfg.shared_watch_ids) & set(cfg.adopted_watch_ids or {}):
+                raise ValueError("shared watches cannot be adopted")
         return cfg

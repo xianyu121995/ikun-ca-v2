@@ -94,6 +94,7 @@ class FormalService:
                         sql+=" AND instr(lower(d.name||' '||d.description||' '||d.notes||' '||COALESCE(d.project_json,'')||' '||COALESCE(i.current_handle,d.target)||' '||COALESCE((SELECT description FROM follow_events e WHERE e.target=d.target ORDER BY e.id DESC LIMIT 1),'')),lower(?))>0";params.append(filters['q'].strip())
                     if filters.get('rating','all')!='all':
                         sql+=" AND CASE WHEN d.project_json IS NOT NULL THEN COALESCE(json_extract(d.project_json,'$.rating'),'unrated') WHEN d.rating IN ('S','A','B','C','D') THEN d.rating ELSE 'unrated' END=?";params.append(filters['rating'])
+                    if filters.get('review_state','all')!='ignored':sql+=' AND d.ignored=0'
                     if filters.get('review_state','all')!='all':
                         sql+=" AND CASE WHEN o.id IS NOT NULL THEN 'tracking' WHEN d.ignored=1 THEN 'ignored' WHEN d.project_json IS NOT NULL OR d.name<>'' THEN 'reviewed' ELSE 'pending' END=?";params.append(filters['review_state'])
                     for key,op in [('since','>='),('until','<=')]:
@@ -128,8 +129,11 @@ class FormalService:
                 if not active(db,row,stamp):raise Missing('discovery_not_found')
                 if row['version']!=version:raise Failure(409,'VERSION_CONFLICT','发现记录已变更')
                 current=discovery_dto(db,row['target'],stamp)
-                project=ProjectFields.model_validate(current['project']|body).model_dump(mode='json')
-                db.execute('UPDATE discoveries SET project_json=?,version=version+1,updated_at=? WHERE discovery_id=?',(canonical(project),stamp,identifier))
+                fields={k:v for k,v in body.items() if k!='ignored'}
+                if 'ignored' in body:db.execute('UPDATE discoveries SET ignored=? WHERE discovery_id=?',(int(body['ignored']),identifier))
+                project=ProjectFields.model_validate(current['project']|fields).model_dump(mode='json') if fields or row['project_json'] else None
+                if project is not None:db.execute('UPDATE discoveries SET project_json=? WHERE discovery_id=?',(canonical(project),identifier))
+                db.execute('UPDATE discoveries SET version=version+1,updated_at=? WHERE discovery_id=?',(stamp,identifier))
                 self.store.audit(db,principal.user_id,'discovery.research.patch',identifier,stamp,canonical({'before_revision':version,'after_revision':version+1,'fields':sorted(body),'body_hash':hashed,'request_id':request_id}))
                 self.store.change(db,row['target'],stamp)
                 output={'discovery_id':identifier,'revision':version+1,'saved_at':iso(stamp)};status=200;etag=f'"rev-{version+1}"'

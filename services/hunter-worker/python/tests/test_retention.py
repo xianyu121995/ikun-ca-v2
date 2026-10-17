@@ -71,7 +71,7 @@ def test_patch_valid_field_boundaries(store,field,value):
  {'token_date':'2028-02-29'},{'token_date':None,'token_date_status':'confirmed'},
  {'token_date':'2028-02-29T00:00:00Z','token_date_status':'confirmed'},
  {'discovery_id':'forged'},{'project_id':'prj_fake'},{'x_user_id':'123'},{'tenant_id':'other'},{'actor':'forged'},
- {'ignored':True},{'revision':1},{'review_state':'reviewed'},{'followers':5000},
+ {'ignored':'yes'},{'revision':1},{'review_state':'reviewed'},{'followers':5000},
 ])
 def test_patch_invalid_fields_atomic(store,body):
     from pydantic import ValidationError
@@ -459,3 +459,15 @@ def test_location_still_refuses_symlinked_sidecar(store,tmp_path):
     sidecar.symlink_to(target)
     with pytest.raises(ValueError,match='symlinked'):location(store.path,require_exists=True)
     assert target.read_text()=='Synthetic'
+
+def test_ignore_hides_discovery_from_default_list_only(store):
+    dto,path=resource(store);svc=FormalService(store)
+    before=[i['discovery_id'] for i in svc.page('signals',{},NOW)['items']]
+    assert dto['discovery_id'] in before
+    status,_,_=write(store,path,{'ignored':True},dto['revision'])
+    assert status==200
+    current=FormalService(Store(store.path)).discovery(dto['discovery_id'],NOW)
+    assert current['review_state']=='ignored' and current['revision']==dto['revision']+1
+    assert dto['discovery_id'] not in [i['discovery_id'] for i in svc.page('signals',{},NOW)['items']]
+    assert dto['discovery_id'] in [i['discovery_id'] for i in svc.page('signals',{'review_state':'ignored'},NOW)['items']]
+    with pytest.raises(Exception):write(store,path,{'ignored':'yes'},current['revision'])

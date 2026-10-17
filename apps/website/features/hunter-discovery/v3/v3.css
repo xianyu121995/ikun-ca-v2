@@ -128,3 +128,5 @@
 @media(max-width:980px){.hunter-v3 .ik-nav{display:grid;gap:0;}.hunter-v3 .ik-nav-link{flex:none;min-width:0;min-height:40px;}.hunter-v3 .ik-sidebar{border-right:1px solid #203443;border-bottom:0;}.hunter-v3 .ik-brand {margin:0;}}
 @media(min-width:981px) and (max-width:1179px){.hunter-v3 .ik-brand-text,.hunter-v3 .ik-nav-label,.hunter-v3 .ik-nav-link>span {display:block;}.hunter-v3 .ik-sidebar-footer {display:flex;}.hunter-v3 .ik-brand {margin:0;}.hunter-v3 .ik-nav-link {justify-content:flex-start;padding:0 13px;}}
 @media(max-width:1350px){.hunter-v3 .ik-table {min-width:770px!important;}}
+.hunter-v3 .score-buttons .ik-button[data-grade="ignore"] {color:#e38b8b;border-color:#5a2f35;}
+.hunter-v3 .score-buttons .ik-button[data-grade="ignore"]:hover {background:#3a1d22;color:#ffb3b3;}

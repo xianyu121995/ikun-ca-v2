@@ -14,7 +14,7 @@ export interface LiveBinding{
  projects:Project[];role:'superadmin'|'user';loading:boolean;refreshing:boolean;error:string|null;
  fixture:boolean;nextCursor:string|null;previous:boolean;blockedIds:ReadonlySet<string>;
  counts:{total:number;enabled:number}|null;
- confirm:(project:Project)=>Promise<Outcome>;save:(project:Project)=>Promise<Outcome>;manage:(action:'add'|'enable'|'disable'|'remove',handle:string)=>Promise<Outcome>;
+ confirm:(project:Project)=>Promise<Outcome>;ignore:(project:Project)=>Promise<Outcome>;addHome:(project:Project)=>Promise<Outcome>;save:(project:Project)=>Promise<Outcome>;manage:(action:'add'|'enable'|'disable'|'remove',handle:string)=>Promise<Outcome>;
  refresh:()=>void;next:()=>void;back:()=>void;
  filter:(key:string,value:string)=>void;
 }
@@ -43,6 +43,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
     item.monitoring_message=sub?.error_code?'失败：'+sub.error_code:item.monitoring_state==='succeeded'?'追踪中':sub?.desired_state==='removed'?'追踪已移除':sub?.desired_state==='stopped'?'追踪已停止':sub?'监听连接中':'订阅投递中或追踪服务暂不可用';
    }
    if(version!==generation.current)return;setRecords(page.items);setNextCursor(page.next_cursor);
+   for(const item of page.items)if(item.project_id&&homeWanted.current.has(item.discovery_id))void homeAdd(item.project_id).then(()=>forgetHome(item.discovery_id)).catch(()=>{});
   }catch(e){if(controller.signal.aborted)return;setError(e instanceof Error?e.message:'列表不可用');}
   finally{if(version===generation.current){setLoading(false);setRefreshing(false);}}
  }
@@ -69,6 +70,15 @@ export default function HunterController({session,fixture=false}:{session:Sessio
   };
   return()=>{closed=true;source.close();abort.abort();clearTimeout(timer);};
  },[cursor,query,revoked,session.role]);
+ const homeWanted=useRef<Set<string>>((()=>{try{return new Set<string>(JSON.parse(localStorage.getItem('ikun-hunter-home-wanted')||'[]'));}catch{return new Set<string>();}})());
+ const keepHome=()=>{try{localStorage.setItem('ikun-hunter-home-wanted',JSON.stringify([...homeWanted.current]));}catch{/* per-browser convenience only */}};
+ const forgetHome=(id:string)=>{homeWanted.current.delete(id);keepHome();};
+ async function homeAdd(projectId:string){
+  const project=await api('/api/v1/projects/'+encodeURIComponent(projectId));
+  if(project.home_membership==='active')return 'already';
+  await api('/api/v1/projects/'+encodeURIComponent(projectId)+'/home-membership','POST',{action:'add'},{'if-match':'"rev-'+project.revision+'"','idempotency-key':crypto.randomUUID()});
+  return 'added';
+ }
  const manageable=!revoked&&session.role==='superadmin'&&!session.must_change_password&&session.capabilities.can_manage_hunter;
  async function save(project:Project):Promise<Outcome>{
   if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};
@@ -112,6 +122,32 @@ export default function HunterController({session,fixture=false}:{session:Sessio
    return {ok:false,error:{code,message:e instanceof Error?e.message:'确认结果待核实；禁止重复提交'}};
   }finally{pending.current.delete(project.id);}
  }
+ async function ignore(project:Project):Promise<Outcome>{
+  if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};
+  const row=records.find(item=>item.discovery_id===project.id);if(!row)return {ok:false,error:{code:'NOT_FOUND',message:'发现记录已不可用，请刷新核对'}};
+  if(pending.current.has(project.id))return {ok:false,error:{code:'CONFLICT',message:'操作正在核对'}};
+  pending.current.add(project.id);
+  try{
+   await api('/api/v1/hunter/discoveries/'+encodeURIComponent(project.id),'PATCH',{ignored:true},{'if-match':'"rev-'+row.revision+'"','idempotency-key':crypto.randomUUID()});
+   setRecords(old=>old.filter(item=>item.discovery_id!==project.id));
+   return {ok:true,message:'已忽略「'+project.name+'」，不再显示。'};
+  }catch(e){return {ok:false,error:{code:e instanceof ApiError?e.code:'UPSTREAM_TIMEOUT',message:e instanceof Error?e.message:'忽略未确认，请刷新核对'}};}
+  finally{pending.current.delete(project.id);}
+ }
+ async function addHome(project:Project):Promise<Outcome>{
+  if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};
+  const row=records.find(item=>item.discovery_id===project.id);if(!row)return {ok:false,error:{code:'NOT_FOUND',message:'发现记录已不可用，请刷新核对'}};
+  if(row.project_id){
+   try{const result=await homeAdd(row.project_id);return {ok:true,message:result==='already'?'「'+project.name+'」已在主页':'「'+project.name+'」已加入主页'};}
+   catch(e){return {ok:false,error:{code:e instanceof ApiError?e.code:'UPSTREAM_TIMEOUT',message:e instanceof Error?e.message:'加入主页未确认'}};}
+  }
+  // Not tracked yet: owner decision — join tracking, then add to home once the project exists.
+  homeWanted.current.add(project.id);keepHome();
+  if(row.review_state==='tracking'||pending.current.has(project.id))return {ok:true,message:'已在加入追踪中；项目建好后会自动放到主页。'};
+  const joined=await confirm(project);
+  if(!joined.ok){if(!['UPSTREAM_TIMEOUT'].includes(joined.error.code))forgetHome(project.id);return joined;}
+  return {ok:true,message:'已提交加入追踪；项目建好后会自动放到主页。'};
+ }
  async function accountPages(){
   let cursor:string|null=null;const accounts:HunterAccountDTO[]=[];
   do{const page=await api('/api/v1/hunter/accounts?limit=100'+(cursor?'&cursor='+encodeURIComponent(cursor):''));accounts.push(...page.items);cursor=page.next_cursor;}while(cursor);
@@ -132,7 +168,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
  const projects:Project[]=records.map(toProject);
  const updateFilter=(key:string,value:string)=>{setCursor(null);setHistory([]);setQuery(old=>{const next={...old};if(key==='query'){if(value)next.q=value;else delete next.q;}if(key==='grade'){if(value!=='all')next.rating=value==='none'?'unrated':value;else delete next.rating;}if(key==='status'){if(value!=='all')next.review_state=value==='joined'?'tracking':value;else delete next.review_state;}if(key==='time'){delete next.since;delete next.until;if(value!=='all'){next.since=new Date(Date.now()-Number(value)*3600000).toISOString();next.until=new Date().toISOString();}}return next;});};
  const binding:LiveBinding={projects,role:revoked?'user':session.role,loading,refreshing,error,fixture,nextCursor,previous:history.length>0,counts,filter:updateFilter,
-  blockedIds:new Set([...blockedIds,...researchUnknown,...records.filter(item=>!!item.monitoring_state&&item.monitoring_state!=='failed').map(item=>item.discovery_id)]),confirm,save,manage,refresh:()=>{void load();},
+  blockedIds:new Set([...blockedIds,...researchUnknown,...records.filter(item=>!!item.monitoring_state&&item.monitoring_state!=='failed').map(item=>item.discovery_id)]),confirm,ignore,addHome,save,manage,refresh:()=>{void load();},
   next:()=>{if(nextCursor&&!refreshing&&!loading){setHistory(old=>[...old,cursor]);setCursor(nextCursor);}},back:()=>{if(history.length&&!refreshing&&!loading){setCursor(history.at(-1)!);setHistory(old=>old.slice(0,-1));}}};
  return <App live={binding}/>;
 }

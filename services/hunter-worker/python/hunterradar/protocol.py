@@ -76,6 +76,8 @@ class ResearchPatch(Strict):
     progress_percent:float|None=Field(default=None,ge=0,le=100,strict=True,allow_inf_nan=False)
     token_date:date|None=None
     token_date_status:Literal['confirmed','estimated','unconfirmed']=None
+    # Owner decision 2026-10-17: '忽略' hides the discovery from the default list (not part of ProjectFields).
+    ignored:StrictBool=None
     @field_validator('name')
     @classmethod
     def name_valid(cls,value):return ProjectFields.nonempty(value)

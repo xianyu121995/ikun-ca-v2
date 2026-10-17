@@ -23,7 +23,7 @@
 .hpv2-root.ik-theme .ik-table td { height:44px; padding:5px 10px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .hpv2-root.ik-theme .ik-table tbody tr:nth-child(even) { background:#111f292e; }
 .hpv2-root.ik-theme .ik-table tbody tr:hover { background:#16312f48; }
-.hpv2-root.ik-theme .ik-table-scroll { max-height:58dvh; }
+.hpv2-root.ik-theme .ik-table-scroll { max-height:calc(58dvh / var(--ik-zoom, 1)); }
 .hpv2-root.ik-theme .hpv2-events .ik-table-scroll { max-height:none; }
 .hpv2-root.ik-theme .hpv2-events thead th { height:0; min-height:0; padding:0; line-height:0; border:0; font-size:0; }
 .hpv2-root.ik-theme .hpv2-events .ik-table td { height:44px; padding:5px 16px; }
@@ -77,7 +77,7 @@
 .hpv2-root.ik-theme>.ik-alert { margin-bottom:12px; }
 .hpv2-readonly { margin:0 0 12px!important; color:var(--ik-secondary); font-size:11px; }
 .hpv2-root.ik-theme .ik-dialog { width:min(620px,calc(100% - 24px)); }
-.hpv2-root.ik-theme .ik-dialog:has(.hpv2-editor) { position:fixed; top:0; bottom:0; right:0; left:auto; height:100dvh; width:min(410px,calc(100vw - 12px)); max-height:100dvh; margin:0; border-radius:0; border-top:0; border-bottom:0; border-right:0; }
+.hpv2-root.ik-theme .ik-dialog:has(.hpv2-editor) { position:fixed; top:0; bottom:0; right:0; left:auto; height:calc(100dvh / var(--ik-zoom, 1)); width:min(410px,calc(calc(100vw / var(--ik-zoom, 1)) - 12px)); max-height:calc(100dvh / var(--ik-zoom, 1)); margin:0; border-radius:0; border-top:0; border-bottom:0; border-right:0; }
 .hpv2-root.ik-theme .ik-dialog:has(.hpv2-editor) .ik-dialog-head { position:sticky; top:0; z-index:2; background:var(--ik-raised); padding:16px 18px; }
 .hpv2-root.ik-theme .ik-dialog:has(.hpv2-editor) .ik-dialog-head h2 { font-size:17px; }
 .hpv2-root.ik-theme .ik-dialog:has(.hpv2-editor) .ik-dialog-body { padding:16px 18px 20px; }
@@ -130,7 +130,7 @@
   .hpv2-root.ik-theme .hpv2-search { flex:1; min-width:170px; width:auto; }
   .hpv2-root.ik-theme .hpv2-table-toolbar>.ik-field { flex:1; }
   .hpv2-root.ik-theme .hpv2-events .ik-table-scroll { max-height:250px; }
-  .hpv2-root.ik-theme .ik-table-scroll { max-height:65dvh; }
+  .hpv2-root.ik-theme .ik-table-scroll { max-height:calc(65dvh / var(--ik-zoom, 1)); }
   .hpv2-table-footer { padding:10px 12px; }
   .hpv2-footline { font-size:9px; }
 }

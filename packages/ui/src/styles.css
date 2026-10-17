@@ -76,8 +76,8 @@
 .ik-theme .ik-page-header > div > p:not(.ik-eyebrow) { color: var(--ik-secondary); margin-top: 6px; }
 .ik-theme .ik-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
 .ik-theme .ik-toolbar .ik-field { min-width: 130px; }
-.ik-theme.ik-shell { display: grid; grid-template-columns: var(--ik-sidebar-width) minmax(0, 1fr); min-height: 100dvh; }
-.ik-theme .ik-sidebar { position: sticky; top: 0; display: flex; flex-direction: column; height: 100dvh; padding: 26px 12px 16px; background: var(--ik-nav); border-right: 1px solid var(--ik-border); }
+.ik-theme.ik-shell { display: grid; grid-template-columns: var(--ik-sidebar-width) minmax(0, 1fr); min-height: calc(100dvh / var(--ik-zoom, 1)); }
+.ik-theme .ik-sidebar { position: sticky; top: 0; display: flex; flex-direction: column; height: calc(100dvh / var(--ik-zoom, 1)); padding: 26px 12px 16px; background: var(--ik-nav); border-right: 1px solid var(--ik-border); }
 .ik-theme .ik-brand { display: flex; align-items: center; gap: 10px; color: var(--ik-text); margin: 0 12px 36px; text-decoration: none; }
 .ik-theme .ik-brand:hover { text-decoration: none; }
 .ik-theme .ik-brand-mark { width: 34px; height: 34px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid #446359; color: var(--ik-accent); border-radius: 8px; font-size: 17px; font-weight: 650; letter-spacing: -1px; background: #14251f; }
@@ -105,7 +105,7 @@
 .ik-theme .ik-skip-link { position: fixed; top: -100px; left: 16px; z-index: 200; padding: 10px 16px; color: var(--ik-on-accent); background: var(--ik-accent); border-radius: 6px; }
 .ik-theme .ik-skip-link:focus { top: 12px; }
 .ik-theme .ik-table-block { min-width: 0; }
-.ik-theme .ik-table-scroll { max-width: 100%; overflow: auto; max-height: 70dvh; scrollbar-color: #455265 var(--ik-bg); scrollbar-width: thin; }
+.ik-theme .ik-table-scroll { max-width: 100%; overflow: auto; max-height: calc(70dvh / var(--ik-zoom, 1)); scrollbar-color: #455265 var(--ik-bg); scrollbar-width: thin; }
 .ik-theme .ik-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
 .ik-theme .ik-table th { position: sticky; top: 0; z-index: 1; min-height: 40px; padding: 11px 16px; font-size: 11px; font-weight: 500; color: var(--ik-secondary); background: var(--ik-raised); border-bottom: 1px solid var(--ik-border); text-align: left; white-space: nowrap; }
 .ik-theme .ik-table td { padding: 13px 16px; height: 48px; border-bottom: 1px solid #212c38; vertical-align: middle; overflow-wrap: anywhere; }
@@ -132,7 +132,7 @@
 .ik-theme .ik-empty { padding: 24px; display: grid; justify-items: center; gap: 8px; text-align: center; }
 .ik-theme .ik-empty p { color: var(--ik-muted); max-width: 420px; font-size: 12px; }
 .ik-theme .ik-empty-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--ik-border); border-radius: 8px; color: var(--ik-muted); margin-bottom: 4px; }
-.ik-theme.ik-dialog { width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 48px); padding: 0; margin: auto; border: 1px solid var(--ik-control-border); border-radius: var(--ik-dialog-radius); background: var(--ik-raised); color: var(--ik-text); box-shadow: 0 24px 80px #0008; overflow: auto; }
+.ik-theme.ik-dialog { width: min(560px, calc(100% - 32px)); max-height: calc(calc(100dvh / var(--ik-zoom, 1)) - 48px); padding: 0; margin: auto; border: 1px solid var(--ik-control-border); border-radius: var(--ik-dialog-radius); background: var(--ik-raised); color: var(--ik-text); box-shadow: 0 24px 80px #0008; overflow: auto; }
 .ik-theme.ik-dialog::backdrop { background: #03070cbe; }
 .ik-theme .ik-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px; border-bottom: 1px solid var(--ik-border); }
 .ik-theme .ik-dialog-head h2 { font-size: 16px; }
@@ -143,7 +143,7 @@
 .ik-theme .ik-toast { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px; background: var(--ik-tone-bg); color: var(--ik-tone); border: 1px solid var(--ik-tone); border-radius: 8px; box-shadow: 0 8px 24px #0005; pointer-events: auto; }
 .ik-theme .ik-toast p { font-size: 12px; margin-top: 3px; }
 .ik-theme .ik-toast .ik-button { color: inherit; }
-.ik-theme.ik-auth-layout { display: grid; place-items: center; min-height: 100dvh; padding: 32px 16px; }
+.ik-theme.ik-auth-layout { display: grid; place-items: center; min-height: calc(100dvh / var(--ik-zoom, 1)); padding: 32px 16px; }
 .ik-theme .ik-login { width: min(420px, 100%); }
 .ik-theme .ik-auth-brand { justify-content: center; margin: 0 0 28px; }
 .ik-theme .ik-login .ik-panel-body { padding: 28px; }

@@ -71,7 +71,7 @@
 .pager { display:flex; gap:7px; flex-wrap:wrap; }
 .pager :global(.ik-button) { min-width:29px; height:29px; padding:0 8px; }
 .footer { margin-top:10px; border-top:1px solid var(--ik-border); padding-top:12px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:15px; color:var(--ik-muted); font-size:10px; }
-.managerScope :global(.ik-dialog) { position:fixed; top:0; right:0; bottom:0; left:auto; width:min(750px,calc(100vw - 30px)); height:100dvh; max-height:100dvh; margin:0; border-radius:0; overflow:hidden; }
+.managerScope :global(.ik-dialog) { position:fixed; top:0; right:0; bottom:0; left:auto; width:min(750px,calc(calc(100vw / var(--ik-zoom, 1)) - 30px)); height:calc(100dvh / var(--ik-zoom, 1)); max-height:calc(100dvh / var(--ik-zoom, 1)); margin:0; border-radius:0; overflow:hidden; }
 .managerScope :global(.ik-dialog[open]) { display:flex; flex-direction:column; }
 .managerScope :global(.ik-dialog-head) { padding:23px 23px 18px; flex-shrink:0; }
 .managerScope :global(.ik-dialog-head h2) { font-size:21px; border-left:4px solid var(--ik-accent); padding-left:12px; }

@@ -31,7 +31,7 @@
 .eventHead, .event > summary { display:grid; grid-template-columns:130px 220px minmax(0,1fr) 36px; align-items:center; gap:16px; padding:0 16px; }
 .eventHead { min-height:38px; background:var(--ik-raised); border-top:1px solid var(--ik-border); border-bottom:1px solid var(--ik-border); color:var(--ik-muted); font-size:11px; }
 .eventHead > :last-child { text-align:right; }
-.workspace .eventList { list-style:none; margin:0; padding:0; max-height:min(700px,70dvh); overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--ik-control-border) var(--ik-panel); }
+.workspace .eventList { list-style:none; margin:0; padding:0; max-height:min(700px,calc(70dvh / var(--ik-zoom, 1))); overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--ik-control-border) var(--ik-panel); }
 .eventList > li { border-bottom:1px solid var(--ik-border); }
 .eventList > li:last-child { border-bottom:0; }
 .event > summary { min-height:52px; list-style:none; cursor:pointer; font-size:13px; }

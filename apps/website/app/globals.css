@@ -5,4 +5,6 @@ button,input,select,textarea { font:inherit; }
 a { color:inherit; }
 
 /* 2026-10-17 owner request: whole site 20% larger (owner was using 120% browser zoom). */
-html { zoom: 1.2; }
+/* Whole site 20% larger. Viewport units are divided by --ik-zoom so full-height panels still fit the window. */
+:root { --ik-zoom: 1.2; }
+html { zoom: var(--ik-zoom); }

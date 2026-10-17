@@ -19,7 +19,7 @@
 .hp2-toolbar .ik-input { font-size:12px; }
 .hp2-toolbar .hp2-sort { margin-left:auto; }
 .hp2-root.ik-theme .ik-table { table-layout:fixed; }
-.hp2-root.ik-theme .ik-table-scroll { max-height:calc(100dvh - 340px); min-height:280px; }
+.hp2-root.ik-theme .ik-table-scroll { max-height:calc(calc(100dvh / var(--ik-zoom, 1)) - 340px); min-height:280px; }
 .hp2-root.ik-theme .ik-table td { padding:10px 12px; height:56px; font-size:13px; }
 .hp2-root.ik-theme .ik-table th { padding:10px 12px; }
 .hp2-root.ik-theme .ik-table td:first-child,.hp2-root.ik-theme .ik-table th:first-child { padding-left:20px; }
@@ -94,7 +94,7 @@
   .hp2-search-slot { width:100%; max-width:none; flex-basis:100%; }
   .hp2-toolbar .ik-field { flex:1; min-width:135px; }
   .hp2-toolbar .hp2-sort { margin-left:0; }
-  .hp2-root.ik-theme .ik-table-scroll { min-height:350px; max-height:65dvh; }
+  .hp2-root.ik-theme .ik-table-scroll { min-height:350px; max-height:calc(65dvh / var(--ik-zoom, 1)); }
   .hp2-table-footer { padding:11px 12px; font-size:9px; }
   .hp2-form { padding:16px; gap:14px; }
   .hp2-form-grid { gap:12px; }
@@ -164,7 +164,7 @@
 .hp2-root.ik-theme .ik-table td { padding:6px 10px; height:44px; font-size:13px; line-height:1.4; }
 .hp2-root.ik-theme .ik-table th { padding:8px 10px; }
 .hp2-root.ik-theme .ik-table td:first-child,.hp2-root.ik-theme .ik-table th:first-child { padding-left:16px; }
-.hp2-root.ik-theme .ik-table-scroll { min-height:180px; max-height:64dvh; }
+.hp2-root.ik-theme .ik-table-scroll { min-height:180px; max-height:calc(64dvh / var(--ik-zoom, 1)); }
 .hp2-avatar { width:26px; height:26px; font-size:12px; border-radius:50%; }
 .hp2-root.ik-theme .hp2-project-name { gap:8px; }
 .hp2-project-name strong { font-size:12px; }
@@ -203,6 +203,6 @@
   .hp2-root.ik-theme .hp2-tabs { gap:15px; }
   .hp2-root.ik-theme .hp2-toolbar .ik-field { flex:1; min-width:120px; }
   .hp2-grade-filters { flex-basis:100%; }
-  .hp2-root.ik-theme .ik-table-scroll { max-height:65dvh; }
+  .hp2-root.ik-theme .ik-table-scroll { max-height:calc(65dvh / var(--ik-zoom, 1)); }
 }
 .hp2-root.ik-theme .hp2-actions .ik-button { padding:3px; gap:4px; font-size:11px; }

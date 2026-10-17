@@ -61,7 +61,7 @@ class Engine:
         self.store.set_state('worker_error', None)
         loops = [asyncio.create_task(self.supervise(name, fn)) for name, fn in
                  [('profiles', self.profile_loop), ('rest', self.rest_loop), ('wss', self.wss_loop),
-                  ('watch', self.watch_loop), ('outbox', self.outbox_loop), ('heartbeat', self.heartbeat_loop),('retention',self.retention_loop)]]
+                  ('watch', self.watch_loop), ('outbox', self.outbox_loop), ('heartbeat', self.heartbeat_loop),('retention',self.retention_loop),('ai',self.ai_loop)]]
         try:
             await self.stop.wait()
         finally:
@@ -119,6 +119,20 @@ class Engine:
                         self.store.set_state('worker_error_last_recovery', {'error': error, 'at': time.time()})
                         self.store.set_state('worker_error', None)
             await self.pause(3)
+
+    async def ai_loop(self):
+        # AI prefill is optional: failures are logged and retried, never surfaced as worker errors.
+        from .ai_prefill import run_pass
+        failures = {}
+        while not self.stop.is_set():
+            try:
+                stored = await asyncio.to_thread(run_pass, self.store, failures)
+            except LeaseLost:
+                raise
+            except Exception as error:  # noqa: BLE001
+                LOG.warning('hunter_ai_pass_failed %s', type(error).__name__)
+                stored = 0
+            await self.pause(2 if stored else 15)
 
     async def retention_loop(self):
         while not self.stop.is_set():

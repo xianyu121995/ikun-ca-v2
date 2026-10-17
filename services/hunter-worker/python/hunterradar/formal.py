@@ -12,6 +12,8 @@ from .protocol import AccountCreate,AccountPatch,Failure,MonitoringRequest,Princ
 from .retention import PROTOCOL,TTL_US,micros,active,watermark
 from .store import Conflict,Missing,WINDOW
 
+from .ai_prefill import suggestion as ai_suggestion
+
 def discovery_dto(db,target,now):
     now=watermark(db,now)/1e6
     row=db.execute('SELECT * FROM discoveries WHERE target=?',(target,)).fetchone()
@@ -25,7 +27,7 @@ def discovery_dto(db,target,now):
         project=legacy_project(row,profile),x_user_id=identity['x_user_id'] if identity else None,x_handle=identity['current_handle'] if identity else target,
         profile_bio=profile.get('description') or '',followers=None,signal_count=counts[0],first_seen_at=iso(counts[1]),last_seen_at=iso(counts[2]),
         discovered_at=iso(row['first_discovered_at']),review_state='tracking' if task else 'ignored' if row['ignored'] else 'reviewed' if row['project_json'] or row['name'] else 'pending',
-        monitoring_state=task['public_state'] if task else None,revision=row['version'])
+        monitoring_state=task['public_state'] if task else None,revision=row['version'],ai_suggestion=ai_suggestion(db,row['discovery_id']))
 
 def account_dto(db,row,now):
     states={r['key']:json.loads(r['value']) for r in db.execute("SELECT key,value FROM state WHERE key IN ('worker_heartbeat','last_pong_at','wss_state')")}

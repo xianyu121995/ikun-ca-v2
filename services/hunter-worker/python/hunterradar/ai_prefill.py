@@ -1,0 +1,78 @@
+"""AI Chinese prefill for new Hunter discoveries (owner decision 2026-10-18).
+
+Suggestions are stored in the state table as 'ai:<discovery_id>' and only shown as a draft in the
+drawer; nothing is saved to the project or tracked until the owner clicks save. No rating is suggested.
+"""
+from __future__ import annotations
+
+import json
+import logging
+import re
+import time
+
+from . import gemini
+
+PREFIX = 'ai:'
+PROMPT = (
+    "你是加密货币/Web3 项目研究助手。根据下面 X 账号的名称和简介，用简体中文帮我预填项目资料。要求：\n"
+    "- name：一句很短的中文项目名，概括它是做什么的、在哪条链上，风格例如“SOL上的AI审计发射台”“HYP高性能L2”“RWA农业游戏”，不超过 16 个字；看不出来就用原名。\n"
+    "- website：简介里明确出现的官网域名（如 vaultstreet.fun），没有就给空字符串，不要编造。\n"
+    "- description：一到两句中文简介，说明项目做什么，基于简介内容，不要编造。\n"
+    "- notes：一句中文备注，点出值得关注的信号（如代币、白名单、测试网、空投、NFT、即将上线），没有就给空字符串。\n"
+    "只输出 JSON：{\"name\": ..., \"website\": ..., \"description\": ..., \"notes\": ...}\n\n"
+)
+DOMAIN = re.compile(r'^(?:https?://)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)(?:/\S*)?$', re.I)
+
+
+def suggestion(db, discovery_id):
+    row = db.execute('SELECT value FROM state WHERE key=?', (PREFIX + discovery_id,)).fetchone()
+    if not row:
+        return None
+    try:
+        value = json.loads(row[0])
+    except ValueError:
+        return None
+    return value if isinstance(value, dict) and value.get('name') else None
+
+
+def clean(value: dict, handle: str, bio: str) -> dict:
+    def text(key, limit):
+        v = value.get(key)
+        return v.strip()[:limit] if isinstance(v, str) else ''
+    website = text('website', 200)
+    match = DOMAIN.match(website)
+    # Only keep a domain that actually appears in the bio (never invented).
+    website = ('https://' + match.group(1).lower()) if match and match.group(1).lower() in bio.lower() else ''
+    return {'name': text('name', 60) or handle, 'website': website, 'description': text('description', 600),
+            'notes': text('notes', 300), 'generated_at': time.time()}
+
+
+def run_pass(store, failures: dict, limit=3) -> int:
+    if not gemini.enabled():
+        return 0
+    from .formal import FormalService
+    now = time.time()
+    items = FormalService(store).page('signals', {'limit': '100'})['items']
+    with store.connect() as db:
+        done = {r[0][len(PREFIX):] for r in db.execute("SELECT key FROM state WHERE key LIKE 'ai:%'")}
+    todo = [i for i in items if i['review_state'] == 'pending' and i['discovery_id'] not in done
+            and failures.get(i['discovery_id'], 0) <= now][:limit]
+    stored = 0
+    for item in todo:
+        bio = item.get('profile_bio') or ''
+        payload = {'x_handle': item['x_handle'], 'name': item['project']['name'], 'bio': bio[:2000]}
+        try:
+            value = gemini.generate_json(PROMPT + json.dumps(payload, ensure_ascii=False))
+        except gemini.AIUnavailable as exc:
+            failures[item['discovery_id']] = now + (600 if str(exc) == 'ai_rate_limited' else 120)
+            logging.getLogger(__name__).warning('hunter_ai_prefill_%s', exc)
+            if str(exc) in ('ai_not_configured', 'ai_key_rejected', 'ai_network'):
+                break
+            continue
+        store.set_state(PREFIX + item['discovery_id'], clean(value, item['x_handle'], bio))
+        failures.pop(item['discovery_id'], None)
+        stored += 1
+    # Drop suggestions whose discovery no longer exists (72h retention).
+    with store.connect(True) as db:
+        db.execute("DELETE FROM state WHERE key LIKE 'ai:%' AND substr(key,4) NOT IN (SELECT discovery_id FROM discoveries)")
+    return stored

@@ -9,7 +9,7 @@ type Session={role:'superadmin'|'user';csrf_token:string;must_change_password:bo
 type PublicError={code:string;message:string};
 type Outcome={ok:true;message:string;project?:Project}|{ok:false;error:PublicError};
 const toProject=(row:DiscoveryDTO):Project=>({id:row.discovery_id,name:row.project.name,handle:row.x_handle,bio:row.profile_bio,hunters:row.signal_count,grade:row.project.rating as Grade,
- status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,token:'unknown',notes:row.project.notes,watch:row.monitoring_state==='succeeded',monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message});
+ status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,token:'unknown',notes:row.project.notes,watch:row.monitoring_state==='succeeded',monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message,ai:(row as DiscoveryDTO & {ai_suggestion?:Project['ai']}).ai_suggestion??null});
 export interface LiveBinding{
  projects:Project[];role:'superadmin'|'user';loading:boolean;refreshing:boolean;error:string|null;
  fixture:boolean;nextCursor:string|null;previous:boolean;blockedIds:ReadonlySet<string>;

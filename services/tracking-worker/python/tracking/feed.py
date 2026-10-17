@@ -26,6 +26,9 @@ def activity_id(sub, tweet_id):
     return "act_" + str(uuid.uuid5(NS, json.dumps(["ikun-main", sub, tweet_id], separators=(",", ":"))))
 
 
+from .translate import translation_for
+
+
 def quote_for(db, tweet_id):
     row = db.execute("SELECT result FROM receipts WHERE key=?", ("tracking.quote.v1:" + tweet_id,)).fetchone()
     return json.loads(row[0]) if row else None
@@ -363,6 +366,7 @@ def _render(db, meta, row, offset, limit, now):
                 "tweet_kind": tweet["tweet_kind"],
                 "text": tweet["text"][:20000],
                 "quoted_tweet": quote_for(db, tweet["tweet_id"]) if tweet["tweet_kind"] == "quote" else None,
+                "translation_zh": translation_for(db, tweet["tweet_id"]),
                 "url": f"https://x.com/{sub['handle']}/status/{tweet['tweet_id']}",
                 "occurred_at": iso(int(tweet["created_at"] * 1000))
                 if tweet["created_at"] is not None

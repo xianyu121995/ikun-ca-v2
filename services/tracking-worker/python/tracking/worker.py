@@ -340,9 +340,23 @@ class Worker:
                         delay = min(300, max(1, retry[0] / 1000 - time.time()))
             await self.pause(delay)
 
+    async def translations(self):
+        # Owner decision 2026-10-18: push first, translate afterwards; failures never affect the feed.
+        from .translate import run_pass
+
+        failures: dict = {}
+        while not self.stop.is_set():
+            try:
+                stored = await asyncio.to_thread(run_pass, self.store, failures)
+            except Exception:  # noqa: BLE001 - translation must never stop the worker
+                logging.getLogger(__name__).warning("tracking_translate_pass_failed")
+                stored = 0
+            await self.pause(1 if stored else 3)
+
     async def run(self):
         self.acquire()
         tasks = [
+            asyncio.create_task(self.translations()),
             asyncio.create_task(self.ticks()),
             asyncio.create_task(self.streams()),
             asyncio.create_task(self.pulse()),

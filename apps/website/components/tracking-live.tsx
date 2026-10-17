@@ -21,7 +21,7 @@ type Subscription = {
     operation_state: string;
     connection: string;
 };
-type Activity = {quoted_tweet?:Post['quoted_tweet'];tweet_kind?:string;activity_id:string;subscription_id:string;project_id:string;name:string;x_handle:string;notes:string;rating:'S'|'A'|'B';rating_revision:number;text:string;occurred_at:string|null;received_at:string;sort_at:string;sort_basis:string;url:string};
+type Activity = {translation_zh?:Post['translation_zh'];quoted_tweet?:Post['quoted_tweet'];tweet_kind?:string;activity_id:string;subscription_id:string;project_id:string;name:string;x_handle:string;notes:string;rating:'S'|'A'|'B';rating_revision:number;text:string;occurred_at:string|null;received_at:string;sort_at:string;sort_basis:string;url:string};
 export function TrackingLive({ csrf, canManage, username, voiceSession, fixture = false }: {
     csrf: string;
     canManage: boolean;
@@ -80,7 +80,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             if(data.items.some((item:Activity)=>!visible.some(row=>row.subscription_id===item.subscription_id)))throw Error("VERSION_CONFLICT · 订阅投影已变化，请刷新");
             const grades=new Map<string,Activity['rating']>(data.items.map((item:Activity)=>[item.subscription_id,item.rating]));
             const accountRows:Account[]=visible.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.error_code ? row.notes+' · 失败原因：'+row.error_code : row.notes,grade:row.rating===undefined?grades.get(row.subscription_id)??null:row.rating,avatar:row.name.slice(0,1),status:row.error_code||row.operation_state==='failed'?'failed':row.desired_state==='running'&&row.observed_state==='running'&&row.connection==='connected'?'running':row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
-            setPosts(data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url})));
+            setPosts(data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,translation_zh:item.translation_zh??null,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url})));
             setTotals({matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating});
             setCursor(data.next_cursor);
             setSubs(rows);
@@ -120,6 +120,8 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
                 catch { }
             }
             clearTimeout(eventTimer);eventTimer=setTimeout(()=>void refresh(),250);
+            // Translation arrives a few seconds after the push; pick it up without waiting for the 15s poll.
+            if (event.type === 'tracking.feed.activity.created.v1') { setTimeout(()=>void refresh(),5000); setTimeout(()=>void refresh(),12000); }
         };
         for (const type of ['tracking.feed.activity.created.v1','tracking.feed.activity.updated.v1', 'tracking.subscription.updated', 'command.updated'])
             events.addEventListener(type, reload);

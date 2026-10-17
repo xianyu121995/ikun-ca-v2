@@ -13,6 +13,7 @@ export interface Post {
   ui_key: string; account_key: string; published_at: string | null;
   quoted_tweet?: {tweet_id:string;text:string;author_handle:string;author_name:string;url:string}|null;
   tweet_kind?:string;
+  translation_zh?:{text:string;quote:string|null}|null;
   body: string; important: boolean | null; original_url?:string; media_available?:boolean; received_at?:string; comments: string; reposts: string; likes: string;
   media: Media | null;
 }

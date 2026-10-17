@@ -284,6 +284,7 @@ def purge(db, ids):
             ),
         )
     db.execute("DELETE FROM receipts WHERE key IN (SELECT 'tracking.quote.v1:' || value FROM json_each(?))", (encoded,))
+    db.execute("DELETE FROM receipts WHERE key IN (SELECT 'tracking.zh.v1:' || value FROM json_each(?))", (encoded,))
     db.execute("DELETE FROM tweets WHERE tweet_id" + membership, (encoded,))
     db.execute("DELETE FROM tweets_legacy WHERE tweet_id" + membership, (encoded,))
     db.execute("DELETE FROM changes WHERE json_extract(data,'$.tweet_id')" + membership, (encoded,))

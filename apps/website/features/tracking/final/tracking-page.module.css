@@ -167,3 +167,5 @@
   .feed { flex:1; min-height:0; overflow:auto; }
   .feedFooter,.footer { flex:none; }
 }
+
+.workspace .compactOriginal { margin:0; font-size:11px; color:var(--ik-muted); line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

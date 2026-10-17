@@ -130,3 +130,4 @@
 @media(max-width:1350px){.hunter-v3 .ik-table {min-width:770px!important;}}
 .hunter-v3 .score-buttons .ik-button[data-grade="ignore"] {color:#e38b8b;border-color:#5a2f35;}
 .hunter-v3 .score-buttons .ik-button[data-grade="ignore"]:hover {background:#3a1d22;color:#ffb3b3;}
+.hunter-v3 .drawer-note.ai-note {border-color:#2b5f55;background:#0f2a26;color:#8fe3cf;margin-bottom:8px;}

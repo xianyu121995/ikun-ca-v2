@@ -39,3 +39,11 @@ def test_website_kept_only_when_in_bio():
     out = ai_prefill.clean({'name': 'X', 'website': 'https://VaultStreet.fun/app'}, 'h', 'play at vaultstreet.fun')
     assert out['website'] == 'https://vaultstreet.fun'
     assert ai_prefill.clean({'name': 'X', 'website': 'fake.io'}, 'h', 'no links')['website'] == ''
+
+
+def test_website_from_recent_tweet_links_skips_third_party():
+    tweets = [{'text': 'Testnet live', 'links': ['https://pindar.finance/app', 'https://x.com/i/article/1', 'https://t.me/pindar']}]
+    domains = ai_prefill.link_domains(tweets)
+    assert domains == ['pindar.finance']
+    assert ai_prefill.clean({'name': 'P', 'website': 'pindar.finance'}, 'h', '', domains)['website'] == 'https://pindar.finance'
+    assert ai_prefill.recent_tweets(None, 'h') == []

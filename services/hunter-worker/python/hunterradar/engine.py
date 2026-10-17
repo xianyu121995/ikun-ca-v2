@@ -126,7 +126,7 @@ class Engine:
         failures = {}
         while not self.stop.is_set():
             try:
-                stored = await asyncio.to_thread(run_pass, self.store, failures)
+                stored = await asyncio.to_thread(run_pass, self.store, failures, 3, self.settings)
             except LeaseLost:
                 raise
             except Exception as error:  # noqa: BLE001

@@ -15,7 +15,7 @@ import pytest
 from hunterradar.config import Settings
 from hunterradar.engine import Engine
 from hunterradar.formal import FormalService
-from hunterradar.migration import APP_ID,FILES,NAMES,SQL_ROOT,checksums,migrate,statements
+from hunterradar.migration import APP_ID,FILES,NAMES,SQL_ROOT,LATEST_VERSION,checksums,migrate,statements
 from hunterradar.protocol import Failure,canonical
 from hunterradar.providers import Providers
 from hunterradar.retention import TTL_US,WINDOW_US,backup_bundle,micros,restore_bundle,validate_bundle
@@ -436,7 +436,7 @@ def test_readiness_reports_no_real_source_and_internal_delivery_separately(store
     with client(store) as c:
         body=c.get('/health/ready').json()['data']
         assert body['source_status']=='未连接真实来源' and body['external_io_enabled'] is False
-        assert body['schema_version']==4 and body['project_delivery_enabled'] is False
+        assert body['schema_version']==LATEST_VERSION and body['project_delivery_enabled'] is False
     cfg=Settings(v2_mode=True,external_io_enabled=False,require_external_io_disabled=True,project_delivery_enabled=True,project_url='http://127.0.0.1/internal/v1/ingest/hunter',project_token='x'*32,delivery_protocol='v2-event')
     assert cfg.project_delivery_enabled and not cfg.external_io_enabled
 

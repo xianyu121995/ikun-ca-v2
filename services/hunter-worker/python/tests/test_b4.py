@@ -59,7 +59,7 @@ def test_foundation_ledger_compatibility(tmp_path,extended):
         values=[1,'foundation','2026-10-15']+([checksums()[1]] if extended else [])
         db.execute(f"INSERT INTO _schema_migrations({names}) VALUES({','.join('?' for _ in values)})",values)
     os.chmod(path,0o600);migrate(path);migrate(path);inspect(path)
-    with sqlite3.connect(path) as db:assert db.execute('SELECT count(*) FROM _migration_checksums').fetchone()[0]==4
+    with sqlite3.connect(path) as db:assert db.execute('SELECT count(*) FROM _migration_checksums').fetchone()[0]==len(FILES)
 
 def test_candidate_upgrade_preserves_data(tmp_path):
     path=tmp_path.resolve()/'hunter.db'

@@ -56,5 +56,5 @@ def test_site_reader_text_and_doc_links(monkeypatch):
     assert 'x()' not in site_reader._text(raw)
     assert site_reader.doc_links('https://pindar.finance/', raw, ['https://pindar.gitbook.io/docs']) == ['https://pindar.gitbook.io/docs', 'https://pindar.finance/docs/intro']
     assert site_reader.bio_domains('Play at VaultStreet.fun and @someone.eth') == ['vaultstreet.fun']
-    monkeypatch.setattr(site_reader, 'public_host', lambda host: False)
+    monkeypatch.setattr(site_reader, 'public_host', lambda host, proxy=None: False)
     assert site_reader.fetch('http://127.0.0.1/', None) == (None, '')

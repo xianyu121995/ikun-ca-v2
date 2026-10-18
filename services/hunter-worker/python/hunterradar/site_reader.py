@@ -18,16 +18,25 @@ DOC_HOSTS = ('gitbook.io', 'notion.site', 'mirror.xyz', 'medium.com', 'paragraph
 BIO_DOMAIN = re.compile(r'(?<![@\w])((?:[a-z0-9-]+\.)+(?:com|io|xyz|fun|finance|app|org|net|ai|gg|so|co|dev|money|trade|network|fi|art|world|club|me|tech|game|games|exchange|capital|labs|market))\b', re.I)
 
 
-def public_host(host: str) -> bool:
+def public_host(host: str, proxy=None) -> bool:
     try:
         infos = socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)
     except (OSError, UnicodeError):
         return False
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
-            return False
-    return bool(infos)
+    addresses = [ipaddress.ip_address(info[4][0]) for info in infos]
+    fake = ipaddress.ip_network('198.18.0.0/15')
+    # Clash Fake-IP is not the destination address. Resolve through public DNS via
+    # the configured proxy; never treat the reserved range itself as public.
+    if addresses and all(ip.version == 4 and ip in fake for ip in addresses) and proxy:
+        try:
+            with httpx.Client(proxy=proxy, verify=ssl.create_default_context(), timeout=4, follow_redirects=False) as client:
+                reply = client.get('https://cloudflare-dns.com/dns-query',
+                                   params={'name': host, 'type': 'A'}, headers={'Accept':'application/dns-json'})
+                if reply.status_code != 200:return False
+                value = reply.json()
+                addresses = [ipaddress.ip_address(a['data']) for a in value.get('Answer', []) if a.get('type') in (1,28)]
+        except (httpx.HTTPError, ValueError, KeyError, TypeError):return False
+    return bool(addresses) and all(ip.is_global and not ip.is_multicast for ip in addresses)
 
 
 def bio_domains(bio: str):
@@ -53,7 +62,7 @@ def fetch(url: str, proxy: str | None, timeout=12.0):
                           headers={'User-Agent': 'Mozilla/5.0 (Macintosh) ikun-research/1.0', 'Accept': 'text/html'}) as client:
             for hop in range(5):
                 parts = urlsplit(url)
-                if parts.scheme not in ('http', 'https') or parts.username or parts.password or not parts.hostname or not public_host(parts.hostname):
+                if parts.scheme not in ('http', 'https') or parts.username or parts.password or not parts.hostname or not public_host(parts.hostname, proxy):
                     return None, ''
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:return None, ''

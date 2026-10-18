@@ -106,9 +106,10 @@ def health(root=V2):
         if any(r.get('error_code') for r in active):errors.append('追踪任务失败，请查看账号管理')
         if active and any(r['connection']!='connected' for r in active):errors.append('追踪监听中断')
         with sqlite3.connect('file:'+str(root/'data/hunter/hunter.db')+'?mode=ro',uri=True) as db:
-            states={k:json.loads(v) for k,v in db.execute("SELECT key,value FROM state WHERE key IN ('worker_heartbeat','watch_error','worker_error','wss_state')")}
+            states={k:json.loads(v) for k,v in db.execute("SELECT key,value FROM state WHERE key IN ('worker_heartbeat','watch_error','watch_error_since','worker_error','wss_state')")}
             if time.time()-states.get('worker_heartbeat',0)>30:errors.append('猎手引擎心跳中断')
-            if states.get('watch_error'):errors.append('猎手 Watch 同步异常')
+            # Owner request 2026-10-18: a single slow 6551 call retried within minutes is not an alert; only >15 min.
+            if states.get('watch_error') and time.time()-(states.get('watch_error_since') or 0)>900:errors.append('猎手 Watch 同步异常（已持续 15 分钟以上）')
             if states.get('worker_error'):errors.append('猎手引擎任务异常')
             if db.execute("SELECT count(*) FROM hunters WHERE enabled=1 AND deleted_at IS NULL AND (poll_error IS NOT NULL OR profile_error IS NOT NULL)").fetchone()[0]:errors.append('猎手采集存在失败任务')
     except Exception:errors.append('监控任务健康状态无法读取')

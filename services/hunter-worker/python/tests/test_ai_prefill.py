@@ -97,3 +97,12 @@ def test_profile_website_from_twitterapi_entities(monkeypatch):
     payload['data']['entities']['url']['urls'][0]['expanded_url'] = 'https://linktr.ee/x'
     assert ai_prefill.profile_website(S(), 'x') is None
     assert ai_prefill.profile_website(None, 'x') is None
+
+
+def test_watch_error_since_tracks_start_and_clears(store):
+    store.set_state('watch_error', 'TimeoutError')
+    first = store.states()['watch_error_since']
+    store.set_state('watch_error', 'TimeoutError')
+    assert store.states()['watch_error_since'] == first
+    store.set_state('watch_error', None)
+    assert 'watch_error_since' not in store.states()

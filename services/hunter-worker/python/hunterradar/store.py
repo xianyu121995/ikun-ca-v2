@@ -553,6 +553,12 @@ class Store:
             raise ValueError('legacy_private_state_requires_takeover')
         with self.connect(True) as db:
             db.execute('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, json.dumps(value)))
+            if key == 'watch_error':
+                # Remember when the current Watch problem started so health can ignore short transient timeouts.
+                if value:
+                    db.execute("INSERT OR IGNORE INTO state(key,value) VALUES('watch_error_since',?)", (json.dumps(time.time()),))
+                else:
+                    db.execute("DELETE FROM state WHERE key='watch_error_since'")
 
     def states(self):
         with self.connect() as db:

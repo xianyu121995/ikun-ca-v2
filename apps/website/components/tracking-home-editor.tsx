@@ -30,7 +30,14 @@ export function TrackingHomeEditor({ target, csrf, onClose, onSaved }: { target:
   async function aiFill() {
     if (!target) return; setAiBusy(true); setError('');
     try {
-      const r = await api('/api/v1/ai/extract-time', { method: 'POST', headers: { 'idempotency-key': crypto.randomUUID() }, body: JSON.stringify({ text: target.tweet, quote: target.quote ?? null, received_at: target.received_at ?? null }) });
+      let r = await api('/api/v1/ai/extract-time', { method: 'POST', headers: { 'idempotency-key': crypto.randomUUID() }, body: JSON.stringify({ text: target.tweet, quote: target.quote ?? null, received_at: target.received_at ?? null }) });
+      const job = r.job;
+      const deadline = Date.now() + 250_000;
+      while (r.pending) {
+        if (Date.now() > deadline) throw new Error('AI 识别超时，请稍后再试');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        r = await api('/api/v1/ai/extract-time?job=' + encodeURIComponent(job));
+      }
       if (!r.date) setError('AI 没有在这条推文里找到明确的时间'); else { setDate(r.date); setHour(r.hour ?? ''); if (r.title) setTitle(r.title); setStatus(r.status === 'confirmed' ? 'confirmed' : 'estimated'); }
     } catch (e) { setError((e as Error).message); } finally { setAiBusy(false); }
   }

@@ -1,4 +1,5 @@
 /** Owner decision 2026-10-19: AI reads a tweet and returns the important time in Beijing time (Codex / ChatGPT Pro). */
+import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -15,9 +16,21 @@ async function settings() {
 }
 const fail = (status: number, code: string, message: string) => Response.json({ error: { code, message } }, { status, headers: { 'cache-control': 'no-store' } });
 
+type Job = { owner: string; at: number; result?: Response };
+const shared = globalThis as typeof globalThis & { ikunTimeJobs?: Map<string, Job> };
+const jobs = shared.ikunTimeJobs ??= new Map<string, Job>();
+export async function GET(request: Request) {
+  return withAuth(request, async () => {
+    const actor = requireSuperadmin(request);
+    const job = jobs.get(new URL(request.url).searchParams.get('job') ?? '');
+    if (!job || job.owner !== actor.user_id) return fail(404, 'AI_JOB_EXPIRED', '识别任务已过期，请重新识别');
+    return job.result?.clone() ?? Response.json({ data: { pending: true } }, { status: 202 });
+  });
+}
+
 export async function POST(request: Request) {
   return withAuth(request, async () => {
-    requireSuperadmin(request);
+    const actor = requireSuperadmin(request);
     let body: { text?: unknown; quote?: unknown; received_at?: unknown };
     try { body = await request.json(); } catch { return fail(422, 'VALIDATION_ERROR', '请求格式不正确'); }
     const text = typeof body.text === 'string' ? body.text.slice(0, 4000) : '';
@@ -31,12 +44,19 @@ export async function POST(request: Request) {
     const prompt = `你是加密项目研究助手。从下面推文里找出项目即将发生的最重要时间点（如 TGE、发币、白名单、Mint、主网/测试网上线、空投快照）。\n` +
       `现在是北京时间 ${now}。把时间换算成北京时间（UTC+8）；"明天/今晚/周一"等相对时间按推文接收时间 ${typeof body.received_at === 'string' ? body.received_at : '未知'} 推算。\n` +
       `只输出一个 JSON：{"date":"YYYY-MM-DD 或 null","hour":"00-23 两位数 或 null（没写具体时刻就 null）","title":"不超过 20 字的中文事件说明","status":"confirmed（推文明确给出时间）或 estimated（推测/大概）"}。找不到时间就 date 为 null。不要运行任何命令。\n\n推文：${text}${quote ? `\n被引用推文：${quote}` : ''}`;
+    for (const [key, job] of jobs) if (Date.now() - job.at > 10 * 60_000) jobs.delete(key);
+    const existing = [...jobs].find(([, job]) => job.owner === actor.user_id && !job.result);
+    if (existing) return Response.json({ data: { pending: true, job: existing[0] } }, { status: 202 });
+    if (jobs.size >= 100) return fail(429, 'AI_BUSY', '识别任务较多，请稍后再试');
+    const id = randomUUID(), job: Job = { owner: actor.user_id, at: Date.now() };
+    jobs.set(id, job);
+    void (async (): Promise<Response> => {
     const work = await mkdtemp(join(tmpdir(), 'ikun-ai-'));
     try {
       const out = join(work, 'out.txt');
       const env: NodeJS.ProcessEnv = { NODE_ENV: 'production', HOME: homedir(), PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin', LANG: 'en_US.UTF-8' };
       if (typeof cfg.proxy === 'string' && /^(https?|socks5h?):\/\/[A-Za-z0-9.-]+:\d{1,5}$/.test(cfg.proxy)) Object.assign(env, { HTTPS_PROXY: cfg.proxy, HTTP_PROXY: cfg.proxy, https_proxy: cfg.proxy, http_proxy: cfg.proxy });
-      await new Promise<void>((resolve, reject) => execFile(binary, ['exec', '--skip-git-repo-check', '--sandbox', 'read-only', '-o', out, prompt], { cwd: work, env, timeout: 150_000, maxBuffer: 4 << 20 }, err => err ? reject(err) : resolve()));
+      await new Promise<void>((resolve, reject) => execFile(binary, ['exec', '--skip-git-repo-check', '--sandbox', 'read-only', '-o', out, prompt], { cwd: work, env, timeout: 240_000, maxBuffer: 4 << 20 }, err => err ? reject(err) : resolve()));
       let raw = (await readFile(out, 'utf8')).trim().replace(/^```(?:json)?\s*|\s*```$/g, '');
       const s = raw.indexOf('{'), e = raw.lastIndexOf('}'); if (s >= 0 && e > s) raw = raw.slice(s, e + 1);
       const v = JSON.parse(raw);
@@ -45,5 +65,7 @@ export async function POST(request: Request) {
       return Response.json({ data: { date, hour, title: typeof v.title === 'string' ? v.title.slice(0, 60) : '', status: v.status === 'confirmed' ? 'confirmed' : 'estimated' } }, { headers: { 'cache-control': 'no-store' } });
     } catch { return fail(502, 'AI_FAILED', 'AI 识别失败，请稍后再试或手动填写'); }
     finally { await rm(work, { recursive: true, force: true }); }
+    })().then(result => { job.result = result; }).catch(() => { job.result = fail(502, 'AI_FAILED', 'AI 识别失败，请稍后再试'); });
+    return Response.json({ data: { pending: true, job: id } }, { status: 202, headers: { 'cache-control': 'no-store' } });
   });
 }

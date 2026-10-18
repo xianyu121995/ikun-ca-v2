@@ -5,7 +5,7 @@ import { LogoutButton } from './auth/forms';
 import { TrackingPage } from '../features/tracking/final/tracking-page';
 import { emptyFilters, type Account, type Post, type Filters } from '../features/tracking/final/model';
 import { coalescedRefresh } from '../lib/coalesced-refresh';
-import { TrackingVoiceSettings } from './tracking-voice';
+import { TrackingHomeEditor, type EditTarget } from './tracking-home-editor';
 import { useSiteVoice } from './voice-dock';
 import type { VoiceSession } from '@ikun/ui';
 type Subscription = {
@@ -42,6 +42,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
     if (!refreshRef.current)
         refreshRef.current = coalescedRefresh(() => pull.current());
     const refresh = refreshRef.current;
+    const [homeEdit, setHomeEdit] = useState<EditTarget | null>(null);
     const [subs, setSubs] = useState<Subscription[]>([]), [accounts, setAccounts] = useState<Account[]>([]), [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true), [error, setError] = useState(''), [cursor, setCursor] = useState<string | null>(null), [cursors, setCursors] = useState<(string | null)[]>([null]), [page, setPage] = useState(0), [busy, setBusy] = useState(false);
     const [edit, setEdit] = useState<Subscription | null>(null), [editName, setEditName] = useState(''), [editNotes, setEditNotes] = useState(''), [command, setCommand] = useState('');
@@ -207,7 +208,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
         }
     }
     const connected=subs.some(row=>row.connection==='connected');
-    return <>{!connected && !fixture && <Alert tone='warning' title='实时来源未连接' />}{fixture&&!connected&&<Alert title='本地模式 · 尚未连接实时来源' />}{error && <Alert tone='danger' title={error}/>} {command && (!command.startsWith('cmd_') || command.includes('名额不足')) && <Alert title={command.startsWith('cmd_') ? command.replace(/^cmd_\S+\s·\s/, '') : command}/>}<TrackingVoiceSettings controller={voice.controller} subscriptions={subs.map(row => ({ subscription_id: row.subscription_id, label: row.notes || row.name }))}/><TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
+    return <>{!connected && !fixture && <Alert tone='warning' title='实时来源未连接' />}{fixture&&!connected&&<Alert title='本地模式 · 尚未连接实时来源' />}{error && <Alert tone='danger' title={error}/>} {command && (!command.startsWith('cmd_') || command.includes('名额不足')) && <Alert title={command.startsWith('cmd_') ? command.replace(/^cmd_\S+\s·\s/, '') : command}/>}<TrackingPage mode='live' accounts={accounts} posts={posts} loading={loading} onAdd={async () => { throw Error('使用人工确认项目表单'); }} onRemove={async (id) => {
             const row = subs.find(r => r.subscription_id === id);
             if (row && !(await operate(row, 'remove')))
                 throw Error('移除未确认');
@@ -217,7 +218,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             },
             postActions: post => {
                 const row = subs.find(r => r.subscription_id === post.account_key);
-                return row ? <Button size='sm' variant='ghost' disabled={busy} title='把这个项目放到主页“正在做”' onClick={() => void addToHome(row)}>加入主页</Button> : null;
+                return row ? <><Button size='sm' variant='ghost' disabled={busy} title='把这个项目放到主页“正在做”' onClick={() => void addToHome(row)}>加入主页</Button>{canManage && <Button size='sm' variant='ghost' disabled={busy} title='直接编辑主页上的重要时间、进度和备注' onClick={() => setHomeEdit({ project_id: row.project_id, name: row.name, tweet: post.translation_zh?.text ? post.translation_zh.text + '\n原文：' + post.body : post.body, quote: post.quoted_tweet?.text ?? null, received_at: post.received_at })}>编辑主页</Button>}</> : null;
             },
             manageActions: account => {
                 const row = subs.find(r => r.subscription_id === account.ui_key);
@@ -230,5 +231,6 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
  <Dialog open={!!edit} title='编辑监控资料' onOpenChange={open => {
             if (!open && !busy)
                 setEdit(null);
-        }} pending={busy}><Input label='项目名称' value={editName} onChange={e => setEditName(e.target.value)}/><Input label='监控备注' value={editNotes} onChange={e => setEditNotes(e.target.value)}/><Button onClick={() => void save()} pending={busy}>保存资料</Button></Dialog></>;
+        }} pending={busy}><Input label='项目名称' value={editName} onChange={e => setEditName(e.target.value)}/><Input label='监控备注' value={editNotes} onChange={e => setEditNotes(e.target.value)}/><Button onClick={() => void save()} pending={busy}>保存资料</Button></Dialog>
+ <TrackingHomeEditor target={homeEdit} csrf={csrf} onClose={() => setHomeEdit(null)} onSaved={message => setCommand(message)} /></>;
 }

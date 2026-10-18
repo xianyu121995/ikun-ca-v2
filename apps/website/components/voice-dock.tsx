@@ -28,6 +28,12 @@ export function VoiceDock({ children }: { children: ReactNode }) {
 function Live({ session, children }: { session: VoiceSession; children: ReactNode }) {
   const voice = useTrackingVoice(session);
   const [open, setOpen] = useState(false);
+  const [subs, setSubs] = useState<{ subscription_id: string; label: string }[]>([]);
+  // Per-account voice switches (moved here from the tracking page; owner decision 2026-10-19).
+  useEffect(() => { if (!open) return; let stop = false; (async () => { const out: { subscription_id: string; label: string }[] = []; let cursor: string | null = null;
+    do { const r: Response = await fetch('/api/v1/tracking/subscriptions?limit=100' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), { cache: 'no-store' }); if (!r.ok) break;
+      const v = (await r.json()).data; for (const row of v.items ?? []) if (row.desired_state !== 'removed') out.push({ subscription_id: row.subscription_id, label: (row.name || row.x_handle) + (row.x_handle ? ' @' + row.x_handle : '') }); cursor = v.next_cursor ?? null; } while (cursor);
+    if (!stop) setSubs(out); })().catch(() => {}); return () => { stop = true; }; }, [open]);
   useEffect(() => {
     const events = new EventSource('/api/v1/tracking/events');
     const opened = () => voice.connected(true);
@@ -47,7 +53,7 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
   }, [controller]);
   return <VoiceContext.Provider value={controller}>{children}
     {controller && <div className="ikun-voice-dock" data-state={status}>
-      {open && <div className="ikun-voice-panel"><VoiceControls controller={controller} /></div>}
+      {open && <div className="ikun-voice-panel"><VoiceControls controller={controller} subscriptions={subs} /></div>}
       <button type="button" className="ikun-voice-fab" aria-expanded={open} title="实时推文语音"
         onClick={event => { if (status === 'locked') controller.enableFromGesture(event.nativeEvent); else setOpen(o => !o); }}>
         {status === 'on' ? '🔊' : status === 'locked' ? '🔈' : '🔇'}<span className="ikun-voice-label">{status === 'on' ? ' 语音开' : status === 'locked' ? ' 点我恢复语音' : ' 语音关'}</span>

@@ -1,6 +1,6 @@
 'use client';
 /** Owner decision 2026-10-19: upcoming milestones as a horizontal timeline (S/A/B colors, live "now" marker). */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { ProjectView } from '../../features/homepage/types';
 import type { ProjectMilestone } from '../../features/homepage/reference-types';
 
@@ -25,12 +25,13 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
   const pos = (t: number) => Math.min(100, Math.max(0, ((t - start) / span) * 100));
   const groups = new Map<string, typeof items>();
   for (const it of items) { if (it.t > end) continue; const key = `${it.event.date}-${it.event.hour ?? 'x'}`; groups.set(key, [...(groups.get(key) ?? []), it]); }
+  const trackHeight = Math.max(54, Math.max(0, ...[...groups.values()].map(list => Math.min(list.length, MAX_STACK))) * 29 + 20);
   const ticks: number[] = [];
   const firstDay = Date.parse(`${bj(now).toISOString().slice(0, 10)}T00:00:00+08:00`) + DAY;
   const step = span > 40 * DAY ? 7 * DAY : span > 14 * DAY ? 2 * DAY : DAY;
   for (let t = firstDay; t < end; t += step) ticks.push(t);
   const nowLabel = `${pad(bj(now).getUTCHours())}:${pad(bj(now).getUTCMinutes())}`;
-  return <div className="hpv2-timeline" role="list" aria-label="近期重要时间线">
+  return <div className="hpv2-timeline" style={{"--hpv2-track-height": `${trackHeight}px`} as CSSProperties} role="list" aria-label="近期重要时间线">
     <div className="hpv2-tl-track">
       {ticks.map(t => <span key={t} className="hpv2-tl-tick" style={{ left: `${pos(t)}%` }}><i />{`${bj(t).getUTCMonth() + 1}/${bj(t).getUTCDate()}`}</span>)}
       <span className="hpv2-tl-now" style={{ left: '0%' }} title="现在（北京时间）"><b>现在 {nowLabel}</b></span>

@@ -10,7 +10,10 @@ a { color:inherit; }
 html { zoom: var(--ik-zoom); }
 
 /* Site-wide voice dock (owner decision 2026-10-18). */
-.ikun-voice-dock { position:fixed; right:16px; bottom:16px; z-index:900; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+.ikun-voice-dock { position:fixed; left:12px; bottom:12px; z-index:900; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+/* The dock sits at the bottom of the left sidebar (owner: bottom-right covered pagination); reserve space there. */
+.ik-theme .ik-sidebar { padding-bottom:56px !important; }
+@media (max-width:980px) { .ikun-voice-fab .ikun-voice-label { display:none; } }
 .ikun-voice-fab { border:1px solid #29424f; background:#0d1c27; color:#cfe6ee; border-radius:999px; padding:7px 12px; font-size:11px; cursor:pointer; box-shadow:0 6px 18px #0008; }
 .ikun-voice-dock[data-state="on"] .ikun-voice-fab { border-color:#27dabb; color:#8fe3cf; }
 .ikun-voice-dock[data-state="locked"] .ikun-voice-fab { border-color:#ffc479; color:#ffc479; }

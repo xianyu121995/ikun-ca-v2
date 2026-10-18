@@ -50,7 +50,7 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
       {open && <div className="ikun-voice-panel"><VoiceControls controller={controller} /></div>}
       <button type="button" className="ikun-voice-fab" aria-expanded={open} title="实时推文语音"
         onClick={event => { if (status === 'locked') controller.enableFromGesture(event.nativeEvent); else setOpen(o => !o); }}>
-        {status === 'on' ? '🔊 语音开' : status === 'locked' ? '🔈 点我恢复语音' : '🔇 语音关'}
+        {status === 'on' ? '🔊' : status === 'locked' ? '🔈' : '🔇'}<span className="ikun-voice-label">{status === 'on' ? ' 语音开' : status === 'locked' ? ' 点我恢复语音' : ' 语音关'}</span>
       </button>
     </div>}
   </VoiceContext.Provider>;

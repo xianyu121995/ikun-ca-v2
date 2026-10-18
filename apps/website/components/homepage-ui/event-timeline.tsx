@@ -25,7 +25,7 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
   const pos = (t: number) => Math.min(100, Math.max(0, ((t - start) / span) * 100));
   const groups = new Map<string, typeof items>();
   for (const it of items) { if (it.t > end) continue; const key = `${it.event.date}-${it.event.hour ?? 'x'}`; groups.set(key, [...(groups.get(key) ?? []), it]); }
-  const trackHeight = Math.max(54, Math.max(0, ...[...groups.values()].map(list => Math.min(list.length, MAX_STACK))) * 29 + 20);
+  const trackHeight = Math.max(170, Math.max(0, ...[...groups.values()].map(list => Math.min(list.length, MAX_STACK))) * 40 + 40);
   const ticks: number[] = [];
   const firstDay = Date.parse(`${bj(now).toISOString().slice(0, 10)}T00:00:00+08:00`) + DAY;
   const step = span > 40 * DAY ? 7 * DAY : span > 14 * DAY ? 2 * DAY : DAY;

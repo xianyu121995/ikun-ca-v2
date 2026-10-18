@@ -30,7 +30,7 @@ export default function App({live}:{live?:LiveBinding}={}){
  function openModal(value:NonNullable<Modal>){lastModalTrigger.current=document.activeElement as HTMLElement;setModal(value);}
  function closeModal(){if(busy.current)return;const was=modal;setModal(null);if(was?.kind==='hunter-confirm'){setModal({kind:'manager'});return;}requestAnimationFrame(()=>lastModalTrigger.current?.isConnected&&lastModalTrigger.current.focus());}
  // Owner decision 2026-10-18: AI Chinese prefill fills only empty fields of not-yet-reviewed projects; saving stays manual.
- function withAi(p:Project):Project{const ai=p.ai;if(!ai||p.status!=='pending')return {...p};return {...p,name:ai.name||p.name,website:p.website||ai.website,description:p.description||ai.description,notes:p.notes||ai.notes};}
+ function withAi(p:Project):Project{const ai=p.ai;if(!ai||p.status!=='pending')return {...p};return {...p,name:ai.name||p.name,website:p.website||ai.website,description:(!p.description.trim()||p.description.trim()===p.bio.trim())&&ai.description?ai.description:p.description,notes:p.notes||ai.notes};}
  function changeProject(id:string|null){setSelected(id);setDraft(id?withAi(projects.find(p=>p.id===id)!):null);setErrors({});if(id)requestAnimationFrame(()=>nameRef.current?.focus());else requestAnimationFrame(()=>opener.current?.isConnected&&opener.current.focus());}
  function requestProject(id:string|null){if(busy.current)return;if(dirty){openModal({kind:'discard',next:id});return;}changeProject(id);}
  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!modal&&selected){event.preventDefault();requestProject(null);}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[modal,selected,dirty,projects,pending]);

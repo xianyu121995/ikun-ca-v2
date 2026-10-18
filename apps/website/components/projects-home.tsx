@@ -20,10 +20,15 @@ function params(query:MainQuery,limit=9){const out=new URLSearchParams({view:'ho
 export default function ProjectsHome({context,csrf,userId}:{context:HomepageContext;csrf:string;userId:string}){
   const canWrite=canEdit(context);
   const [query,setQuery]=useState(initial),[main,setMain]=useState<Page>(emptyPage),[completed,setCompleted]=useState<Page>(emptyPage),[other,setOther]=useState<Page>(emptyPage);
-  const [summary,setSummary]=useState(emptySummary),[events,setEvents]=useState<Home[]>([]),[asOf,setAsOf]=useState<string>(),[windowDays,setWindow]=useState('all');
+  const [summary,setSummary]=useState(emptySummary),[events,setEvents]=useState<Home[]>([]),[asOf,setAsOf]=useState<string>(),[windowDays,setWindow]=useState('7'),[xHandles,setXHandles]=useState<Record<string,string>>({});
   const [detail,setDetail]=useState<Home|null>(null),[error,setError]=useState<PublicError|null>(null),[loading,setLoading]=useState(true),[version,setVersion]=useState(0),[page,setPage]=useState(1);
   const [completedIndex,setCompletedIndex]=useState(1),[otherIndex,setOtherIndex]=useState(1);
   const [completedLoaded,setCompletedLoaded]=useState(0),[otherLoaded,setOtherLoaded]=useState(0);
+  // X account per project comes from the tracking subscriptions (owner: link each project to its X profile).
+  useEffect(()=>{const abort=new AbortController();(async()=>{const map:Record<string,string>={};let cursor:string|null=null;
+    do{const data:any=await read('/api/v1/tracking/subscriptions?limit=100'+(cursor?'&cursor='+encodeURIComponent(cursor):''),abort.signal);
+      for(const row of data.items??[])if(row.project_id&&row.x_handle&&row.desired_state!=='removed')map[row.project_id]=row.x_handle;cursor=data.next_cursor??null;}while(cursor);
+    if(!abort.signal.aborted)setXHandles(map);})().catch(()=>{});return()=>abort.abort();},[version]);
   const [limit,setLimit]=useState(9);const fitRef=useRef<()=>void>(()=>{});
   const mainCursors=useRef<(string|null)[]>([null]),completedCursors=useRef<(string|null)[]>([null]),otherCursors=useRef<(string|null)[]>([null]);
   const epoch=useRef(0),pending=useRef<Pending|null>(null);const storageKey='ikun-project-operation:'+userId;
@@ -42,7 +47,7 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
     return()=>{ro?.disconnect();clearTimeout(timer);if(onResize)window.removeEventListener('resize',onResize);};},[]);
   useEffect(()=>{if(!loading){const t=setTimeout(()=>fitRef.current(),50);return()=>clearTimeout(t);}},[loading]);
   useEffect(()=>{const abort=new AbortController();const suffix=query.discovered_on?'?discovered_on='+query.discovered_on:'';read('/api/v1/projects/home-summary'+suffix,abort.signal).then(setSummary).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[query.discovered_on,version]);
-  useEffect(()=>{const abort=new AbortController();const search=new URLSearchParams({window_days:windowDays,limit:'3'});if(query.rating!=='all')search.set('rating',query.rating);read('/api/v1/projects/milestones?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setEvents(data.items.map((p:Home)=>({...p,completion:null})));setAsOf(data.as_of_date);}}).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[query.rating,windowDays,version]);
+  useEffect(()=>{const abort=new AbortController();const search=new URLSearchParams({window_days:windowDays,limit:'100'});if(query.rating!=='all')search.set('rating',query.rating);read('/api/v1/projects/milestones?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setEvents(data.items.map((p:Home)=>({...p,completion:null})));setAsOf(data.as_of_date);}}).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[query.rating,windowDays,version]);
   useEffect(()=>{const abort=new AbortController();const search=new URLSearchParams({view:'home-v1',collection:'completed',limit:'9'});const cursor=completedCursors.current[completedIndex-1];if(cursor)search.set('cursor',cursor);read('/api/v1/projects?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setCompleted(data);setCompletedLoaded(completedIndex);completedCursors.current[completedIndex]=data.next_cursor;}}).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[completedIndex,version]);
   useEffect(()=>{const abort=new AbortController();const search=new URLSearchParams({view:'home-v1',collection:'other',limit:'9'});const cursor=otherCursors.current[otherIndex-1];if(cursor)search.set('cursor',cursor);read('/api/v1/projects?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setOther(data);setOtherLoaded(otherIndex);otherCursors.current[otherIndex]=data.next_cursor;}}).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[otherIndex,version]);
   function change(next:Partial<MainQuery>){mainCursors.current=[null];setPage(1);setQuery(q=>({...q,...next}));}
@@ -78,7 +83,7 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   return <div className="projects-home-access" data-project-access={canWrite?'write':'readonly'}><ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
     callbacks={{...mutations,onReconcile:reconcile,
       onQueryChange:(q:HomepageQuery)=>change({q:q.q,rating:q.rating,progress_stage:q.progress_stage}),onDiscoveryDateChange:day=>change({discovered_on:day??''}),onReload:reload}}
-    server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,pageSize:limit,hasNext:!!main.next_cursor,summary,
+    server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,pageSize:limit,xHandles,hasNext:!!main.next_cursor,summary,
       onSort:value=>change({sort:value.key,direction:value.direction}),canPage,onPage:next=>{if(canPage(next))setPage(next);},onWindow:setWindow,onDetail:id=>void openDetail(id),
       completedPagination:pagination(completedIndex,completedLoaded,completed.total,completed.next_cursor,completedCursors.current,setCompletedIndex),otherPagination:pagination(otherIndex,otherLoaded,other.total,other.next_cursor,otherCursors.current,setOtherIndex)}}/></div>;
 }

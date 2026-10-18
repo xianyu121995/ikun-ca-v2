@@ -1,11 +1,12 @@
 'use client';
-import { useEffect, useState, useRef, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, useRef, type FormEvent } from 'react';
 import { Alert, Button, Dialog, Input, Panel } from '@ikun/ui';
 import { LogoutButton } from './auth/forms';
 import { TrackingPage } from '../features/tracking/final/tracking-page';
 import { emptyFilters, type Account, type Post, type Filters } from '../features/tracking/final/model';
 import { coalescedRefresh } from '../lib/coalesced-refresh';
-import { useTrackingVoice, TrackingVoiceSettings } from './tracking-voice';
+import { TrackingVoiceSettings } from './tracking-voice';
+import { useSiteVoice } from './voice-dock';
 import type { VoiceSession } from '@ikun/ui';
 type Subscription = {
     subscription_id: string;
@@ -29,7 +30,11 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
     voiceSession: VoiceSession;
     fixture?:boolean;
 }) {
-    const voice = useTrackingVoice(voiceSession);
+    // Voice now lives in the site-wide dock (root layout); this page only shows its settings.
+    void voiceSession;
+    const site = useSiteVoice();
+    const voice = useMemo(() => ({ controller: site, connected: (_state: boolean) => {}, consume: (_event: MessageEvent) => {},
+        verifyIdentity: async () => {}, revoke: () => { site?.setSession(null); } }), [site]);
     const queryView=useRef<string|null>(null);
     useEffect(()=>{queryView.current??='qv1_'+crypto.randomUUID();},[]);
     const pull = useRef<() => Promise<void>>(async () => { });

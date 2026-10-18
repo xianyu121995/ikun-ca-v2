@@ -1,13 +1,17 @@
 'use client';
 import { Children, cloneElement, isValidElement, useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { Alert, Button, Input, LoginPanel, Panel, type NavigationLinkProps } from '@ikun/ui';
+import Link from 'next/link';
 
 /** Receiving-only wording approved by the owner; preserve the frozen shared UI. */
-export function WorkspaceLink({children,...props}:NavigationLinkProps) {
-  if(props.href!=='/tracking')return <a {...props}>{children}</a>;
-  return <a {...props} aria-label="猎手项目追踪" title="猎手项目追踪">{Children.map(children,child=>
+// Owner decision 2026-10-18: workspace pages switch without a full reload so the site-wide voice keeps playing.
+const WORKSPACE=new Set(['/','/hunter','/tracking']);
+function A(p:NavigationLinkProps){return WORKSPACE.has(p.href)?<Link {...p} href={p.href}/>:<a {...p}/>;}
+export function WorkspaceLink({children,href,...props}:NavigationLinkProps) {
+  if(href!=='/tracking')return <A {...props} href={href}>{children}</A>;
+  return <A {...props} href={href} aria-label="猎手项目追踪" title="猎手项目追踪">{Children.map(children,child=>
     isValidElement<{children?:ReactNode}>(child)&&child.type==='span'
-      ?cloneElement(child,undefined,'猎手项目追踪'):child)}</a>;
+      ?cloneElement(child,undefined,'猎手项目追踪'):child)}</A>;
 }
 
 async function call(path:string,data:object,csrf?:string) {

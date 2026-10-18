@@ -9,8 +9,9 @@ test('unknown rating, time and percent stay unknown without changing progress/me
   assert.equal(view.record.rating,null);assert.equal(view.discoveredLabel,'未知');assert.equal(view.percentLabel,'未知');
   assert.equal(view.record.progress_stage,'todo');assert.equal(view.record.home_membership,'removed');assert.equal(JSON.stringify(input),before);
 });
-test('ratings include D/null, percent zero is distinct from null and is not derived from stage',()=>{
-  const d=toProjectView(phase2Fixtures()[7],'demo');assert.equal(d.record.rating,'D');assert.equal(d.percentLabel,'0%');
+test('ratings reject D and preserve null, percent zero is distinct from null and is not derived from stage',()=>{
+  assert.throws(()=>toProjectView(phase2Fixtures()[7],'demo'));
+  const b=toProjectView({...phase2Fixtures()[7],rating:'B'},'demo');assert.equal(b.record.rating,'B');assert.equal(b.percentLabel,'0%');
   const inconsistentButTruthful=toProjectView({...phase2Fixtures()[8],progress_percent:null},'demo');
   assert.equal(inconsistentButTruthful.progressLabel,'已完成');assert.equal(inconsistentButTruthful.percentLabel,'未知');
 });

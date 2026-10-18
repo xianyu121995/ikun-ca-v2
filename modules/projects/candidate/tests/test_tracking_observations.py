@@ -1,3 +1,4 @@
+import sys
 """Frozen c4de Tracking wire -> Projects metadata inbox; no worker DB or publisher."""
 import concurrent.futures
 from contextlib import contextmanager
@@ -223,7 +224,7 @@ def test_real_tracking_route_and_http_reconcile(tmp_path):
         'hunter_event':hunter_event(name='hunter regression control'),'cases':samples},ensure_ascii=False))
     shutil.copyfile(ROOT/'modules/projects/integration/website/lib/projects.ts',ROOT/'modules/projects/.preview/apps/website/lib/projects.ts')
     import os
-    env={**os.environ,'DATA_ROOT':str(data),'PROJECTS_PYTHON':str(ROOT/'modules/projects/candidate/.venv/bin/python'),
+    env={**os.environ,'DATA_ROOT':str(data),'PROJECTS_PYTHON':sys.executable,
          'B2_BUILD_SHA':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'TI_FIXTURE':str(fixture)}
     node='/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node'
     result=subprocess.run([node,'--import',str(ROOT/'modules/projects/.preview/node_modules/tsx/dist/loader.mjs'),

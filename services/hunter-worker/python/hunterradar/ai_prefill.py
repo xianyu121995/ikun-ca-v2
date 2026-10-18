@@ -109,6 +109,7 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
         external = settings is not None and getattr(settings, 'external_io_enabled', False)
         site = read_project(candidates[0] if candidates else None, cfg.get('proxy'),
                             [l for t in tweets for l in t.get('links', [])]) if external else {'site': '', 'docs': ''}
+        logging.getLogger(__name__).info('hunter_ai_sources handle=%s site_chars=%d docs_chars=%d', item['x_handle'], len(site['site']), len(site['docs']))
         domains = list(dict.fromkeys(candidates + domains))
         payload = {'x_handle': item['x_handle'], 'name': item['project']['name'], 'bio': bio[:2000],
                    'tweets': [t['text'] for t in tweets], 'links': domains,

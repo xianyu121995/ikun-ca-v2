@@ -6,6 +6,8 @@ import html
 import ipaddress
 import re
 import socket
+import time
+import ssl
 from urllib.parse import urljoin, urlsplit
 
 import httpx
@@ -45,22 +47,30 @@ def _text(raw: str):
 def fetch(url: str, proxy: str | None, timeout=12.0):
     """Returns (final_url, html_text) or (None, '')."""
     try:
-        parts = urlsplit(url)
-        if parts.scheme not in ('http', 'https') or not parts.hostname or not public_host(parts.hostname):
-            return None, ''
-        with httpx.Client(proxy=proxy, timeout=timeout, follow_redirects=True, max_redirects=4,
+        deadline = time.monotonic() + timeout
+        with httpx.Client(proxy=proxy, verify=ssl.create_default_context(), timeout=timeout,
+                          follow_redirects=False,
                           headers={'User-Agent': 'Mozilla/5.0 (Macintosh) ikun-research/1.0', 'Accept': 'text/html'}) as client:
-            with client.stream('GET', url) as response:
-                final = str(response.url)
-                host = urlsplit(final).hostname or ''
-                if response.status_code != 200 or 'html' not in response.headers.get('content-type', '') or not public_host(host):
+            for hop in range(5):
+                parts = urlsplit(url)
+                if parts.scheme not in ('http', 'https') or parts.username or parts.password or not parts.hostname or not public_host(parts.hostname):
                     return None, ''
-                chunks, size = [], 0
-                for chunk in response.iter_bytes():
-                    size += len(chunk); chunks.append(chunk)
-                    if size > MAX_BYTES:
-                        break
-                return final, b''.join(chunks).decode(response.encoding or 'utf-8', errors='replace')
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:return None, ''
+                with client.stream('GET', url, timeout=remaining) as response:
+                    if response.is_redirect:
+                        if hop == 4 or not response.headers.get('location'):return None, ''
+                        url = urljoin(url, response.headers['location'])
+                        continue
+                    if response.status_code != 200 or 'html' not in response.headers.get('content-type', ''):
+                        return None, ''
+                    chunks, size = [], 0
+                    for chunk in response.iter_bytes(chunk_size=65536):
+                        if time.monotonic() >= deadline:return None, ''
+                        chunk = chunk[:MAX_BYTES-size]
+                        chunks.append(chunk);size += len(chunk)
+                        if size >= MAX_BYTES:break
+                    return str(response.url), b''.join(chunks).decode(response.encoding or 'utf-8', errors='replace')
     except (httpx.HTTPError, ValueError, UnicodeError, OSError):
         return None, ''
 

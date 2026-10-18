@@ -194,3 +194,5 @@
   .hpv2-preview .hpv2-root { overflow-y:auto; }
   .hpv2-preview .hpv2-projects { min-height:340px; flex-shrink:0; }
 }
+.hpv2-detail-x { margin-left:auto; display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid var(--ik-border); border-radius:6px; color:var(--ik-info, #59c6f2); font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; }
+.hpv2-detail-x:hover { border-color:currentColor; }

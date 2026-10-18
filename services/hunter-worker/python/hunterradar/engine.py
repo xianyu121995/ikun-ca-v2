@@ -159,6 +159,7 @@ class Engine:
                                    9999999999 if isinstance(error,Conflict) else retry_time(row['profile_failures'], time.time(), error))
 
     async def profile_loop(self):
+        successes = 0
         while not self.stop.is_set():
             states = self.store.states()
             for row in self.store.hunters():
@@ -166,6 +167,14 @@ class Engine:
                     await self.scan_profile(row)
                 if self.stop.is_set():
                     break
+            successes += 1
+            self.store.set_state('profiles_checked_at', time.time())
+            if successes >= 3:
+                with self.store.transaction():
+                    error = self.store.states().get('worker_error')
+                    if isinstance(error, str) and error.startswith('profiles:'):
+                        self.store.set_state('worker_error_last_recovery', {'error': error, 'at': time.time()})
+                        self.store.set_state('worker_error', None)
             await self.pause(2)
 
     async def poll(self, row):

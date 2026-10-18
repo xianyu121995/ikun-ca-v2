@@ -26,6 +26,10 @@ def location(value, *, require_exists=False):
         except FileNotFoundError:
             if require_exists and part==path:raise ValueError('hunter_migration_required') from None
             continue # SQLite may remove WAL/SHM normally between connections.
+        # SQLite can unlink a WAL/SHM between pathname lookup and lstat.
+        # A zero-link sidecar is already detached; main DB and hardlinks still fail closed.
+        if part in files[1:] and stat.S_ISREG(entry.st_mode) and entry.st_nlink == 0:
+            continue
         observed[part]=entry
         if stat.S_ISLNK(entry.st_mode):raise ValueError('symlinked_database_path_forbidden')
         if not stat.S_ISDIR(entry.st_mode) and (not stat.S_ISREG(entry.st_mode) or entry.st_nlink!=1):raise ValueError('database_must_be_private_regular_file')

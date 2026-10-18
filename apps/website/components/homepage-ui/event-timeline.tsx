@@ -25,7 +25,7 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
   const pos = (t: number) => Math.min(100, Math.max(0, ((t - start) / span) * 100));
   const groups = new Map<string, typeof items>();
   for (const it of items) { if (it.t > end) continue; const key = `${it.event.date}-${it.event.hour ?? 'x'}`; groups.set(key, [...(groups.get(key) ?? []), it]); }
-  const trackHeight = Math.max(170, Math.max(0, ...[...groups.values()].map(list => Math.min(list.length, MAX_STACK))) * 40 + 40);
+  const trackHeight = Math.max(70, Math.max(0, ...[...groups.values()].map(list => Math.min(list.length, MAX_STACK))) * 36 + 22);
   const ticks: number[] = [];
   const firstDay = Date.parse(`${bj(now).toISOString().slice(0, 10)}T00:00:00+08:00`) + DAY;
   const step = span > 40 * DAY ? 7 * DAY : span > 14 * DAY ? 2 * DAY : DAY;
@@ -35,13 +35,13 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
     <div className="hpv2-tl-track">
       {ticks.map(t => <span key={t} className="hpv2-tl-tick" style={{ left: `${pos(t)}%` }}><i />{`${bj(t).getUTCMonth() + 1}/${bj(t).getUTCDate()}`}</span>)}
       <span className="hpv2-tl-now" style={{ left: '0%' }} title="现在（北京时间）"><b>现在 {nowLabel}</b></span>
-      {[...groups.entries()].map(([key, list]) => <div key={key} className="hpv2-tl-stack" style={{ left: `${pos(list[0].t)}%` }}>
+      {[...groups.entries()].map(([key, list]) => <div key={key} className="hpv2-tl-stack" data-right={pos(list[0].t) > 72 || undefined} style={{ left: `${pos(list[0].t)}%` }}>
         {list.slice(0, list.length > MAX_STACK ? MAX_STACK - 1 : MAX_STACK).map(it => {
           const e = it.event, d = bj(it.t);
           const label = `${it.project.record.name} · ${e.title || '重要事件'} · ${d.getUTCMonth() + 1}/${d.getUTCDate()} ${e.hour ? e.hour + '时' : '（未定小时）'} · ${e.status === 'confirmed' ? '已确认' : '预计'}`;
           return <button key={it.project.key} type="button" role="listitem" className="hpv2-tl-dot" data-hourless={!e.hour || undefined}
-            style={{ background: COLORS[it.project.record.rating!] }} title={label} aria-label={label} onClick={() => onOpen(it.project.key)}>
-            {it.project.record.name.slice(0, 1)}</button>;
+            style={{ '--tl-color': COLORS[it.project.record.rating!] } as CSSProperties} title={label} aria-label={label} onClick={() => onOpen(it.project.key)}>
+            <i>{it.project.record.name.slice(0, 1)}</i><span>{it.project.record.name}</span>{e.hour ? <small>{e.hour}时</small> : null}</button>;
         })}
         {list.length > MAX_STACK && <span className="hpv2-tl-more" title={list.slice(MAX_STACK - 1).map(it => it.project.record.name).join('、')}>+{list.length - MAX_STACK + 1}</span>}
       </div>)}

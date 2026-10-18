@@ -169,10 +169,13 @@
 .hpv2-tl-tick i { position:absolute; left:50%; bottom:24px; width:1px; height:var(--hpv2-track-height, 150px); background:color-mix(in srgb, var(--ik-border) 55%, transparent); }
 .hpv2-tl-now { position:absolute; top:0; bottom:-2px; width:2px; background:#ff6b6b; z-index:3; }
 .hpv2-tl-now b { position:absolute; top:-2px; left:6px; font-size:12px; font-weight:700; color:#ff8d8d; white-space:nowrap; }
-.hpv2-tl-stack { position:absolute; bottom:6px; transform:translateX(-50%); display:flex; flex-direction:column-reverse; align-items:center; gap:6px; z-index:2; }
-.hpv2-tl-dot { width:34px; height:34px; border-radius:50%; border:2px solid #0b1721; color:#101820; font-weight:800; font-size:15px; cursor:pointer; display:grid; place-items:center; box-shadow:0 2px 6px #0007; padding:0; }
-.hpv2-tl-dot[data-hourless] { outline:2px dashed #cfe6ee99; outline-offset:1px; }
-.hpv2-tl-dot:hover { transform:scale(1.15); }
+.hpv2-tl-stack { position:absolute; bottom:6px; transform:translateX(-50%); display:flex; flex-direction:column-reverse; align-items:center; gap:6px; z-index:2; align-items:flex-start; transform:none; }
+.hpv2-tl-dot { display:flex; align-items:center; gap:6px; max-width:190px; height:30px; padding:0 10px 0 3px; border-radius:15px; border:1px solid var(--tl-color); background:color-mix(in srgb, var(--tl-color) 16%, #0b1721); color:var(--ik-text); cursor:pointer; box-shadow:0 2px 6px #0007; white-space:nowrap; font-size:12px; }
+.hpv2-tl-dot i { flex:none; width:24px; height:24px; border-radius:50%; background:var(--tl-color); color:#101820; font-style:normal; font-weight:800; font-size:12px; display:grid; place-items:center; }
+.hpv2-tl-dot span { min-width:0; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+.hpv2-tl-dot small { flex:none; color:var(--ik-muted); font-size:11px; }
+.hpv2-tl-dot[data-hourless] { border-style:dashed; }
+.hpv2-tl-dot:hover { filter:brightness(1.25); z-index:4; position:relative; }
 .hpv2-tl-more { font-size:12px; color:var(--ik-muted); }
 .hpv2-tl-empty { margin:-100px 0 70px; text-align:center; color:var(--ik-muted); font-size:13px; }
 .hpv2-tl-legend { display:flex; gap:16px; align-items:center; margin-top:34px; font-size:12px; color:var(--ik-muted); }
@@ -183,3 +186,6 @@
 .hpv2-xlink:hover { color:var(--ik-text); border-color:var(--ik-text); }
 .hpv2-name-cell { display:flex; align-items:center; min-width:0; }
 .hpv2-name-cell .hpv2-project-name { min-width:0; }
+.hpv2-tl-stack[data-right] { transform:translateX(-100%); align-items:flex-end; }
+.hpv2-tl-stack::after { content:''; position:absolute; left:0; bottom:-6px; width:2px; height:6px; background:var(--ik-muted); }
+.hpv2-tl-stack[data-right]::after { left:auto; right:0; }

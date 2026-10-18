@@ -189,3 +189,8 @@
 .hpv2-tl-stack[data-right] { transform:translateX(-100%); align-items:flex-end; }
 .hpv2-tl-stack::after { content:''; position:absolute; left:0; bottom:-6px; width:2px; height:6px; background:var(--ik-muted); }
 .hpv2-tl-stack[data-right]::after { left:auto; right:0; }
+/* Keep the project grid usable when the timeline and filters exceed a short viewport. */
+@media (min-width:1000px) and (min-height:600px) {
+  .hpv2-preview .hpv2-root { overflow-y:auto; }
+  .hpv2-preview .hpv2-projects { min-height:340px; flex-shrink:0; }
+}

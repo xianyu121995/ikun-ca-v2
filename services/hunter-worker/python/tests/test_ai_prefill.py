@@ -78,3 +78,22 @@ def test_codex_provider_runs_cli_and_parses_json(monkeypatch, tmp_path):
     import pytest
     with pytest.raises(gemini.AIUnavailable) as e: gemini.generate_json('p')
     assert str(e.value) == 'ai_rate_limited'
+
+
+def test_profile_website_from_twitterapi_entities(monkeypatch):
+    import httpx
+    class S: token_twitterapi = 'k'; external_io_enabled = True
+    payload = {'data': {'entities': {'url': {'urls': [{'expanded_url': 'https://www.conso.xyz/'}]}}}}
+    class R:
+        status_code = 200
+        def json(self): return payload
+    class C:
+        def __init__(self, **kw): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def get(self, *a, **kw): return R()
+    monkeypatch.setattr(httpx, 'Client', C)
+    assert ai_prefill.profile_website(S(), 'conso_xyz') == 'conso.xyz'
+    payload['data']['entities']['url']['urls'][0]['expanded_url'] = 'https://linktr.ee/x'
+    assert ai_prefill.profile_website(S(), 'x') is None
+    assert ai_prefill.profile_website(None, 'x') is None

@@ -65,6 +65,26 @@ def recent_tweets(settings, handle, limit=8):
     return out[:limit]
 
 
+def profile_website(settings, handle):
+    """The website field of the X profile (twitterapi.io user/info entities.url). Read-only; failures return None."""
+    token = getattr(settings, 'token_twitterapi', '') if settings is not None else ''
+    if not token or not getattr(settings, 'external_io_enabled', False):
+        return None
+    try:
+        with httpx.Client(timeout=15) as client:
+            response = client.get('https://api.twitterapi.io/twitter/user/info', params={'userName': handle},
+                                  headers={'X-API-Key': token})
+        data = response.json().get('data') if response.status_code == 200 else None
+        urls = (((data or {}).get('entities') or {}).get('url') or {}).get('urls') or []
+        for item in urls:
+            host = (urlsplit(item.get('expanded_url') or '').hostname or '').lower().removeprefix('www.')
+            if host and not any(host == d or host.endswith('.' + d) for d in THIRD_PARTY):
+                return host
+    except (httpx.HTTPError, ValueError, AttributeError, TypeError):
+        return None
+    return None
+
+
 def link_domains(tweets):
     found = []
     for t in tweets:
@@ -105,14 +125,16 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
         cached = store.states().get(cache_key)
         if cached and now - cached.get('at', 0) < 3600:
             tweets = cached.get('tweets', [])
+            profile_site = cached.get('profile')
         else:
             # Fence the attempt before paid IO; a crash cannot trigger immediate replay.
             store.set_state(cache_key, {'at': now, 'tweets': []})
             tweets = recent_tweets(settings, item['x_handle'])
-            store.set_state(cache_key, {'at': now, 'tweets': tweets})
+            profile_site = profile_website(settings, item['x_handle'])
+            store.set_state(cache_key, {'at': now, 'tweets': tweets, 'profile': profile_site})
         domains = link_domains(tweets)
         from .site_reader import bio_domains, read_project
-        candidates = [d for d in bio_domains(bio) + domains if not any(d == t or d.endswith('.' + t) for t in THIRD_PARTY)]
+        candidates = [d for d in ([profile_site] if profile_site else []) + bio_domains(bio) + domains if not any(d == t or d.endswith('.' + t) for t in THIRD_PARTY)]
         cfg = gemini.settings() or {}
         external = settings is not None and getattr(settings, 'external_io_enabled', False)
         site = read_project(candidates[0] if candidates else None, cfg.get('proxy'),

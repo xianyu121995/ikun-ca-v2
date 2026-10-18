@@ -29,8 +29,8 @@ test('search notes, combined filters, sorting and clear empty results',async({pa
   await page.getByRole('button',{name:'清除筛选',exact:true}).click();
   await page.getByLabel('项目排序').selectOption('discoveredOn:desc');await expect(page.locator('tbody tr').first()).toContainText('Echo Identity');
   await page.getByLabel('项目排序').selectOption('progress:desc');await expect(page.locator('tbody tr').first()).toContainText('Flux Garden');
-  await page.getByRole('button',{name:'发现时间',exact:true}).click();await expect(page.locator('tbody tr').first()).toContainText('Echo Identity');
-  await page.getByRole('button',{name:'发现时间',exact:true}).click();await expect(page.locator('tbody tr').first()).toContainText('Cobalt Play');
+  await page.getByRole('button',{name:'发现',exact:true}).click();await expect(page.locator('tbody tr').first()).toContainText('Echo Identity');
+  await page.getByRole('button',{name:'发现',exact:true}).click();await expect(page.locator('tbody tr').first()).toContainText('Cobalt Play');
   await page.getByRole('textbox',{name:'搜索项目'}).fill('no-such-project');await expect(page.getByRole('heading',{name:'没有匹配的项目'})).toBeVisible();
   await page.locator('.hp-empty').getByRole('button',{name:'清除筛选'}).click();await expect(page.locator('tbody tr')).toHaveCount(12);
 });

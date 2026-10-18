@@ -3,7 +3,7 @@ import {validateFields} from './view-model';
 import type {EditorDraft,ProjectMilestone} from './reference-types';
 
 // Owner decision 2026-10-19: fixed project types; '' / null = 未分类.
-export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛'] as const;
+export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛','链游'] as const;
 export const referenceStageLabels={todo:'待开始',researching:'研究中',watching:'持续跟踪',participating:'参与中',completed:'已完成',paused:'已暂停'} as const;
 export function dateNumber(value:string|null|undefined):number|null {
   if(!value||!/^\d{4}-\d{2}-\d{2}$/.test(value))return null;
@@ -52,5 +52,6 @@ export function upcomingProjects(projects:readonly ProjectView[],milestones:read
   }).sort((a,b)=>(milestoneNumber(a.event)!-milestoneNumber(b.event)!)||a.project.key.localeCompare(b.project.key)).slice(0,3);
 }
 export function shortDiscovery(label:string):string {
-  return label==='未知'?'未知':label.slice(5,10)+' '+label.slice(11,13)+'时';
+  // Compact (owner 2026-10-19): 10/17 14时
+  return label==='未知'?'未知':label.slice(5,10).replace('-','/')+' '+label.slice(11,13)+'时';
 }

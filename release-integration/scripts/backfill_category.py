@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-off (owner 2026-10-19): let AI classify existing projects into NFT / 发射台 / 新协议 / 撸毛.
+"""One-off (owner 2026-10-19): let AI classify existing projects into NFT / 发射台 / 新协议 / 撸毛 / 链游.
 
 Usage: backfill_category.py [--apply] [--all-memberships]
 Dry run by default (prints the AI guess per project). Only touches projects whose category is
@@ -15,9 +15,9 @@ ROOT = Path.home() / 'Library/Application Support/ikun-ca-v2-c0-lite'
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'services/hunter-worker/python'))
 from hunterradar import gemini  # noqa: E402
 
-TYPES = ('NFT', '发射台', '新协议', '撸毛')
-PROMPT = ("你是加密货币/Web3 项目研究助手。根据下面项目资料，判断项目类型，只能从 NFT、发射台、新协议、撸毛 四个里选一个最贴切的："
-          "撸毛=主要玩法是做任务/交互/测试网拿空投积分；发射台=帮别人发币/发项目的平台；NFT=以 NFT 为核心；新协议=其他新的链上协议/产品/基础设施。"
+TYPES = ('NFT', '发射台', '新协议', '撸毛', '链游')
+PROMPT = ("你是加密货币/Web3 项目研究助手。根据下面项目资料，判断项目类型，只能从 NFT、发射台、新协议、撸毛、链游 五个里选一个最贴切的："
+          "撸毛=主要玩法是做任务/交互/测试网拿空投积分；发射台=帮别人发币/发项目的平台；NFT=以 NFT 为核心；链游=区块链游戏/GameFi；新协议=其他新的链上协议/产品/基础设施。"
           "实在判断不了给空字符串。只输出 JSON：{\"category\": ...}\n\n")
 
 

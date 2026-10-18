@@ -163,7 +163,7 @@ def test_receipt_contract_route_actor_scope_and_restart(domain):
     with pytest.raises(DomainError) as exc:call(domain,'reconcile',target=uid(),query=query)
     assert exc.value.status==404
 
-@pytest.mark.parametrize('category',['NFT','发射台','新协议','撸毛',None])
+@pytest.mark.parametrize('category',['NFT','发射台','新协议','撸毛','链游',None])
 def test_home_category_filter(domain,category):
     wanted=home_create(domain,name='分类项目',category=category)['project']
     home_create(domain,name='其他项目',category='NFT' if category!='NFT' else '新协议')

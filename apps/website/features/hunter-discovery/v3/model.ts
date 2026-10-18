@@ -4,7 +4,7 @@ export type Grade = 'S'|'A'|'B'|'C'|'D'|null;
 export type Status = 'pending'|'reviewed'|'joined';
 export interface AiDraft {name:string;website:string;description:string;notes:string;category?:string}
 // Owner decision 2026-10-19: 项目类型 replaces the never-opened 代币计划 field ('' = 未分类).
-export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛'] as const;
+export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛','链游'] as const;
 export interface Project {ai?:AiDraft|null;id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;category:string;notes:string;watch:boolean;monitoringMessage?:string}
 export interface Filters {query:string;time:string;grade:string;status:string}
 export const initialFilters:Filters={query:'',time:'all',grade:'all',status:'all'};

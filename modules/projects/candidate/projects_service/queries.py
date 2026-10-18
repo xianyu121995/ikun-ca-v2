@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from .db import DomainError, project_predicates
 from .transport import SCOPE
 
-PROJECT_TYPES=('NFT','发射台','新协议','撸毛')
+PROJECT_TYPES=('NFT','发射台','新协议','撸毛','链游')
 
 
 def canonical(value):
@@ -33,7 +33,7 @@ def filters(query):
     out={'q':query.get('q','').strip(),'rating':query.get('rating'),'progress_stage':query.get('progress_stage'),
          'home_membership':query.get('home_membership','active'),'sort':query.get('sort','discovered'),
          'direction':query.get('direction','desc'),'discovered_on':query.get('discovered_on'),'collection':query.get('collection'),'category':query.get('category')}
-    # Owner decision 2026-10-19: project type filter (NFT/发射台/新协议/撸毛, 'none' = 未分类).
+    # Owner decision 2026-10-19: project type filter (NFT/发射台/新协议/撸毛/链游, 'none' = 未分类).
     if out['category'] is not None and out['category'] not in PROJECT_TYPES+('none',):
         raise DomainError(422,'VALIDATION_ERROR','项目类型筛选不正确')
     out['membership_explicit']='home_membership' in query

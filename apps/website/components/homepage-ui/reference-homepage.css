@@ -198,8 +198,8 @@
 .hpv2-detail-x:hover { border-color:currentColor; }
 
 /* Owner 2026-10-19: project type tag + filter, inline progress / important time editing. */
-.hpv2-type { flex:none; margin-left:4px; padding:1px 6px; border-radius:999px; font-size:11px; line-height:16px; font-weight:700; border:1px solid currentColor; white-space:nowrap; }
-.hpv2-type-0 { color:#c084fc; } .hpv2-type-1 { color:#f59e5b; } .hpv2-type-2 { color:#60a5fa; } .hpv2-type-3 { color:#4ade80; }
+.hpv2-type { flex:none; display:inline-block; padding:1px 6px; border-radius:999px; font-size:11px; line-height:16px; font-weight:700; border:1px solid currentColor; white-space:nowrap; }
+.hpv2-type-0 { color:#c084fc; } .hpv2-type-1 { color:#f59e5b; } .hpv2-type-2 { color:#60a5fa; } .hpv2-type-3 { color:#4ade80; } .hpv2-type-4 { color:#f472b6; }
 .hpv2-type-filters { border-left:1px solid var(--ik-border); padding-left:8px; }
 .hpv2-inline-stage { appearance:none; -webkit-appearance:none; cursor:pointer; font:inherit; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; border:1px solid currentColor; background:transparent; }
 .hpv2-inline-stage option { color:var(--ik-text); background:var(--ik-surface, #111827); }
@@ -210,3 +210,8 @@
 .hpv2-inline-pen { opacity:0; font-size:11px; color:var(--ik-muted); }
 .hpv2-inline-time:hover .hpv2-inline-pen, .hpv2-inline-time:focus-visible .hpv2-inline-pen { opacity:1; }
 .hpv2-time-edit { display:grid; gap:12px; min-width:min(420px, 80vw); }
+
+/* Owner 2026-10-19: compact time columns, wider project name. */
+.hpv2-type-none { color:var(--ik-muted); }
+.hpv2-compact-time { white-space:nowrap; letter-spacing:-0.2px; }
+.hpv2-inline-time, .hpv2-root .hpv2-project-grid td .hpv2-found { white-space:nowrap; }

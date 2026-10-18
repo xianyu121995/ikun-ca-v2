@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import ssl
 from pathlib import Path
 
 import httpx
@@ -61,7 +62,7 @@ def generate_json(prompt: str, *, timeout: float = 25.0) -> dict:
     if _WORKING["model"] in models:
         models.remove(_WORKING["model"]); models.insert(0, _WORKING["model"])
     try:
-        with httpx.Client(proxy=cfg["proxy"], timeout=timeout, trust_env=cfg["proxy"] is None) as client:
+        with httpx.Client(proxy=cfg["proxy"], verify=ssl.create_default_context(), timeout=timeout, trust_env=cfg["proxy"] is None) as client:
             for model in models:
                 response = client.post(ENDPOINT.format(model=model), headers=headers, json=body)
                 if response.status_code == 400 and "thinkingConfig" in body["generationConfig"]:

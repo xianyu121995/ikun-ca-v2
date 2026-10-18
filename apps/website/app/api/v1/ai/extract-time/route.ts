@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { withAuth, requireSuperadmin } from '../../../../../../../../modules/auth/dist/src/server.js';
+import { withAuth, requireSuperadmin } from '../../../../../../../modules/auth/dist/src/server.js';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 

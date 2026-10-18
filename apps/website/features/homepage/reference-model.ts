@@ -2,6 +2,8 @@ import type {ProjectView} from './types';
 import {validateFields} from './view-model';
 import type {EditorDraft,ProjectMilestone} from './reference-types';
 
+// Owner decision 2026-10-19: fixed project types; '' / null = 未分类.
+export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛'] as const;
 export const referenceStageLabels={todo:'待开始',researching:'研究中',watching:'持续跟踪',participating:'参与中',completed:'已完成',paused:'已暂停'} as const;
 export function dateNumber(value:string|null|undefined):number|null {
   if(!value||!/^\d{4}-\d{2}-\d{2}$/.test(value))return null;

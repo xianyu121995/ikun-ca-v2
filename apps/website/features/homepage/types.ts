@@ -68,6 +68,7 @@ export interface HomepageQuery {
   rating: 'all' | 'unrated' | typeof ratings[number];
   progress_stage: 'all' | ProgressStage;
   home_membership: HomeMembership;
+  category?: string; // 'all' | one of PROJECT_TYPES | 'none'
 }
 export const initialQuery: HomepageQuery = {q:'', rating:'all', progress_stage:'all', home_membership:'active'};
 export interface ProjectView {

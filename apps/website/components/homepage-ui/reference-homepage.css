@@ -196,3 +196,17 @@
 }
 .hpv2-detail-x { margin-left:auto; display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:1px solid var(--ik-border); border-radius:6px; color:var(--ik-info, #59c6f2); font-size:12px; font-weight:600; text-decoration:none; white-space:nowrap; }
 .hpv2-detail-x:hover { border-color:currentColor; }
+
+/* Owner 2026-10-19: project type tag + filter, inline progress / important time editing. */
+.hpv2-type { flex:none; margin-left:4px; padding:1px 6px; border-radius:999px; font-size:11px; line-height:16px; font-weight:700; border:1px solid currentColor; white-space:nowrap; }
+.hpv2-type-0 { color:#c084fc; } .hpv2-type-1 { color:#f59e5b; } .hpv2-type-2 { color:#60a5fa; } .hpv2-type-3 { color:#4ade80; }
+.hpv2-type-filters { border-left:1px solid var(--ik-border); padding-left:8px; }
+.hpv2-inline-stage { appearance:none; -webkit-appearance:none; cursor:pointer; font:inherit; font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; border:1px solid currentColor; background:transparent; }
+.hpv2-inline-stage option { color:var(--ik-text); background:var(--ik-surface, #111827); }
+.hpv2-inline-stage--success { color:#4ade80; } .hpv2-inline-stage--warning { color:#fbbf24; } .hpv2-inline-stage--info { color:#60a5fa; }
+.hpv2-inline-stage:hover, .hpv2-inline-stage:focus-visible { background:color-mix(in srgb, currentColor 14%, transparent); outline:none; }
+.hpv2-inline-time { cursor:pointer; font:inherit; color:inherit; background:transparent; border:1px dashed transparent; border-radius:6px; padding:2px 6px; margin-left:-6px; display:inline-flex; gap:6px; align-items:center; }
+.hpv2-inline-time:hover, .hpv2-inline-time:focus-visible { border-color:var(--ik-border); outline:none; }
+.hpv2-inline-pen { opacity:0; font-size:11px; color:var(--ik-muted); }
+.hpv2-inline-time:hover .hpv2-inline-pen, .hpv2-inline-time:focus-visible .hpv2-inline-pen { opacity:1; }
+.hpv2-time-edit { display:grid; gap:12px; min-width:min(420px, 80vw); }

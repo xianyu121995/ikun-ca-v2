@@ -8,14 +8,14 @@ import {canEdit} from '../features/homepage/view-model';
 import './projects-home-access.css';
 type Home={project:ProjectRecordProjection;milestone:Omit<ProjectMilestone,'project_id'>;completion:null|{previous_stage:ArchiveNote['previous_stage'];completed_at:string}};
 type Page={items:Home[];total:number;next_cursor:string|null};
-type MainQuery={q:string;rating:string;progress_stage:string;discovered_on:string;sort:string;direction:'asc'|'desc'};
+type MainQuery={q:string;rating:string;progress_stage:string;discovered_on:string;category:string;sort:string;direction:'asc'|'desc'};
 const emptyPage:Page={items:[],total:0,next_cursor:null};
-const initial:MainQuery={q:'',rating:'all',progress_stage:'all',discovered_on:'',sort:'discovered',direction:'desc'};
+const initial:MainQuery={q:'',rating:'all',progress_stage:'all',discovered_on:'',category:'all',sort:'discovered',direction:'desc'};
 const emptySummary={tracked_total:0,by_rating:{S:0,A:0,B:0},completed_total:0,other_total:0};
 type Pending={key:string;path:string;method:string;contract:string};
 function publicError(value:unknown):PublicError{const data=value as {error?:{code?:string;message?:string;retryable?:boolean};request_id?:string};return {code:data?.error?.code??'UPSTREAM_UNAVAILABLE',message:data?.error?.message??'项目数据暂不可用',retryable:data?.error?.retryable===true,request_id:data?.request_id??null};}
 async function read(path:string,signal?:AbortSignal){const response=await fetch(path,{signal,cache:'no-store'});const value=await response.json();if(!response.ok)throw publicError(value);return value.data;}
-function params(query:MainQuery,limit=9){const out=new URLSearchParams({view:'home-v1',collection:'tracked',limit:String(limit),sort:query.sort,direction:query.direction});for(const key of ['q','rating','progress_stage','discovered_on'] as const)if(query[key]&&query[key]!=='all')out.set(key,query[key]);return out;}
+function params(query:MainQuery,limit=9){const out=new URLSearchParams({view:'home-v1',collection:'tracked',limit:String(limit),sort:query.sort,direction:query.direction});for(const key of ['q','rating','progress_stage','discovered_on','category'] as const)if(query[key]&&query[key]!=='all')out.set(key,query[key]);return out;}
 
 export default function ProjectsHome({context,csrf,userId}:{context:HomepageContext;csrf:string;userId:string}){
   const canWrite=canEdit(context);
@@ -69,6 +69,20 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   // 2026-10-17 product decision: removing/completing/deleting a homepage project also stops its tweet tracking
   // (the Tracking delete command also removes ikun's own 6551 NEW_TWEET Watch entry). Best-effort, after success.
   const thenStop=(_ids:readonly string[])=>(result:OperationResult)=>result;
+  // Owner 2026-10-19: inline edits in the table. Last save wins: always PATCH against the freshest revision.
+  async function quickEdit(id:string,body:Record<string,unknown>):Promise<string|null>{
+    if(!canWrite)return '当前账号只读';
+    for(let attempt=0;attempt<2;attempt++){
+      let fresh:Home;try{fresh=await read('/api/v1/projects/'+encodeURIComponent(id)+'?view=home-v1');}catch(e){return (e as PublicError).message;}
+      try{const response=await fetch('/api/v1/projects/'+encodeURIComponent(id)+'?view=home-v1',{method:'PATCH',headers:{'content-type':'application/json','x-csrf-token':csrf,'idempotency-key':crypto.randomUUID(),'if-match':`"rev-${fresh.project.revision}"`},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
+        const value=await response.json();
+        if(response.ok){reload();return null;}
+        if(response.status===409&&attempt===0)continue;
+        return publicError(value).message;
+      }catch{reload();return '保存结果未确认，已刷新，请核对';}
+    }
+    return '项目刚被修改，请重试';
+  }
   async function openDetail(id:string){try{setDetail(await read('/api/v1/projects/'+id+'?view=home-v1'));}catch(e){setError(e as PublicError);}}
   const latest=new Map<string,Home>();
   for(const home of [...main.items,...completed.items,...other.items,...events,...(detail?[detail]:[])]){const previous=latest.get(home.project.project_id);if(!previous||home.project.revision>=previous.project.revision)latest.set(home.project.project_id,home);}
@@ -82,8 +96,8 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
       onArchive:targets=>write('/api/v1/projects/completions','POST',{items:targets.map(t=>({project_id:t.project_id,revision:t.revision}))}).then(thenStop(targets.map(t=>t.project_id))),onRestore:target=>write('/api/v1/projects/'+target.project_id+'/restore','POST',{},target)}:{};
   return <div className="projects-home-access" data-project-access={canWrite?'write':'readonly'}><ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
     callbacks={{...mutations,onReconcile:reconcile,
-      onQueryChange:(q:HomepageQuery)=>change({q:q.q,rating:q.rating,progress_stage:q.progress_stage}),onDiscoveryDateChange:day=>change({discovered_on:day??''}),onReload:reload}}
-    server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,pageSize:limit,xHandles,hasNext:!!main.next_cursor,summary,
+      onQueryChange:(q:HomepageQuery)=>change({q:q.q,rating:q.rating,progress_stage:q.progress_stage,category:q.category??'all'}),onDiscoveryDateChange:day=>change({discovered_on:day??''}),onReload:reload}}
+    server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,pageSize:limit,xHandles,onQuickEdit:canWrite?quickEdit:undefined,hasNext:!!main.next_cursor,summary,
       onSort:value=>change({sort:value.key,direction:value.direction}),canPage,onPage:next=>{if(canPage(next))setPage(next);},onWindow:setWindow,onDetail:id=>void openDetail(id),
       completedPagination:pagination(completedIndex,completedLoaded,completed.total,completed.next_cursor,completedCursors.current,setCompletedIndex),otherPagination:pagination(otherIndex,otherLoaded,other.total,other.next_cursor,otherCursors.current,setOtherIndex)}}/></div>;
 }

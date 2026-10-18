@@ -9,6 +9,8 @@ from zoneinfo import ZoneInfo
 from .db import DomainError, project_predicates
 from .transport import SCOPE
 
+PROJECT_TYPES=('NFT','发射台','新协议','撸毛')
+
 
 def canonical(value):
     return json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False)
@@ -23,14 +25,17 @@ def record(row):
 
 
 def filters(query):
-    allowed={'q','rating','progress_stage','home_membership','cursor','limit','sort','direction','discovered_on','collection'}
+    allowed={'q','rating','progress_stage','home_membership','cursor','limit','sort','direction','discovered_on','collection','category'}
     if set(query)-allowed:
         raise DomainError(422,'VALIDATION_ERROR','查询字段不受支持')
     if not isinstance(query.get('q',''),str):
         raise DomainError(422,'VALIDATION_ERROR','搜索格式不正确')
     out={'q':query.get('q','').strip(),'rating':query.get('rating'),'progress_stage':query.get('progress_stage'),
          'home_membership':query.get('home_membership','active'),'sort':query.get('sort','discovered'),
-         'direction':query.get('direction','desc'),'discovered_on':query.get('discovered_on'),'collection':query.get('collection')}
+         'direction':query.get('direction','desc'),'discovered_on':query.get('discovered_on'),'collection':query.get('collection'),'category':query.get('category')}
+    # Owner decision 2026-10-19: project type filter (NFT/发射台/新协议/撸毛, 'none' = 未分类).
+    if out['category'] is not None and out['category'] not in PROJECT_TYPES+('none',):
+        raise DomainError(422,'VALIDATION_ERROR','项目类型筛选不正确')
     out['membership_explicit']='home_membership' in query
     if not isinstance(out['q'],str) or len(out['q'])>200 or out['rating'] not in (None,'S','A','B','C','D','unrated') or out['progress_stage'] not in (None,'todo','researching','watching','participating','completed','paused'):
         raise DomainError(422,'VALIDATION_ERROR','搜索或筛选格式不正确')
@@ -76,6 +81,10 @@ def page(con,query,contract='phase2-v1.0.0'):
     completed="(home_membership='removed' AND progress='completed')"
     if options['collection']:
         clauses.append({'tracked':tracked,'completed':completed,'other':f'NOT ({tracked} OR {completed})'}[options['collection']])
+    if options['category']=='none':
+        clauses.append("(category IS NULL OR category='')")
+    elif options['category']:
+        clauses.append('category=?');args.append(options['category'])
     if options['discovered_on']:
         day=date.fromisoformat(options['discovered_on'])
         start=datetime.combine(day,time.min,ZoneInfo('Asia/Shanghai'))

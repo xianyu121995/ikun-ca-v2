@@ -9,7 +9,7 @@ type Session={role:'superadmin'|'user';csrf_token:string;must_change_password:bo
 type PublicError={code:string;message:string};
 type Outcome={ok:true;message:string;project?:Project}|{ok:false;error:PublicError};
 const toProject=(row:DiscoveryDTO):Project=>({id:row.discovery_id,name:row.project.name,handle:row.x_handle,bio:row.profile_bio,hunters:row.signal_count,grade:row.project.rating as Grade,
- status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,token:'unknown',notes:row.project.notes,watch:row.monitoring_state==='succeeded',monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message,ai:(row as DiscoveryDTO & {ai_suggestion?:Project['ai']}).ai_suggestion??null});
+ status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,category:row.project.category||'',notes:row.project.notes,watch:row.monitoring_state==='succeeded',monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message,ai:(row as DiscoveryDTO & {ai_suggestion?:Project['ai']}).ai_suggestion??null});
 export interface LiveBinding{
  projects:Project[];role:'superadmin'|'user';loading:boolean;refreshing:boolean;error:string|null;
  fixture:boolean;nextCursor:string|null;previous:boolean;blockedIds:ReadonlySet<string>;
@@ -84,7 +84,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
   if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};
   const row=records.find(item=>item.discovery_id===project.id);if(!row)return {ok:false,error:{code:'NOT_FOUND',message:'发现记录已不可用，请刷新核对'}};
   if(pending.current.has(project.id))return {ok:false,error:{code:'CONFLICT',message:'操作正在核对'}};
-  const body={name:project.name,description:project.description,website_url:project.website||null,notes:project.notes,rating:project.grade},serialized=JSON.stringify(body);
+  const body={name:project.name,description:project.description,website_url:project.website||null,notes:project.notes,rating:project.grade,category:project.category||null},serialized=JSON.stringify(body);
   let operation=researchOps.current.get(project.id);
   if(operation&&operation.body!==serialized)return {ok:false,error:{code:'CONFLICT',message:'原保存结果待核实，请保持原草稿重试核对'}};
   if(!operation){operation={key:crypto.randomUUID(),body:serialized,revision:row.revision};researchOps.current.set(project.id,operation);}
@@ -106,7 +106,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
   if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};
   const row=records.find(item=>item.discovery_id===project.id);if(!row)return {ok:false,error:{code:'NOT_FOUND',message:'发现记录不在当前页'}};
   if(pending.current.has(project.id)||blockedIds.has(project.id)||researchOps.current.has(project.id))return {ok:false,error:{code:'CONFLICT',message:'该操作已提交或待核实，请核对原结果'}};
-  const fields:ProjectFields={...row.project,name:project.name,description:project.description,website_url:project.website||null,notes:project.notes,rating:project.grade};
+  const fields:ProjectFields={...row.project,name:project.name,description:project.description,website_url:project.website||null,notes:project.notes,rating:project.grade,category:project.category||null};
   const body={confirmed:true,project:fields};const serialized=JSON.stringify(body);let operation=operations.current.get(project.id);
   if(operation&&operation.body!==serialized)return {ok:false,error:{code:'CONFLICT',message:'原确认结果尚未核实，不能替换资料重试'}};
   if(!operation){operation={key:crypto.randomUUID(),body:serialized};operations.current.set(project.id,operation);}

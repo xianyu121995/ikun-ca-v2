@@ -73,7 +73,7 @@ def run_pass(store, failures: dict, now=None) -> int:
         except gemini.AIUnavailable as exc:
             failures[r["tweet_id"]] = now + (300 if str(exc) == "ai_rate_limited" else 60)
             logging.getLogger(__name__).warning("tracking_translate_%s", exc)
-            if str(exc) in ("ai_not_configured", "ai_key_rejected", "ai_network", "ai_rate_limited"):
+            if str(exc) in ("ai_not_configured", "ai_key_rejected", "ai_network", "ai_rate_limited", "ai_codex_missing"):
                 break
             continue
         encoded = json.dumps(result, ensure_ascii=False, separators=(",", ":"), sort_keys=True)

@@ -38,12 +38,18 @@ def settings():
         return None
     if not isinstance(data, dict) or data.get("enabled") is False:
         return None
+    proxy = data.get("proxy") if isinstance(data.get("proxy"), str) and re.fullmatch(r"(https?|socks5h?)://[A-Za-z0-9.\-]+:\d{1,5}", data.get("proxy")) else None
+    if data.get("provider") == "codex":
+        # Owner decision 2026-10-18: use the owner's ChatGPT Pro login through the official `codex exec` CLI.
+        model = data.get("codex_model") if isinstance(data.get("codex_model"), str) and re.fullmatch(r"[A-Za-z0-9._\-]{1,80}", data.get("codex_model")) else None
+        binary = data.get("codex_bin") if isinstance(data.get("codex_bin"), str) and data.get("codex_bin").startswith("/") else None
+        return {"provider": "codex", "model": model, "proxy": proxy, "codex_bin": binary}
     key = data.get("api_key")
     if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z0-9_.\-]{20,300}", key):
         return None
     model = data.get("model") if isinstance(data.get("model"), str) and re.fullmatch(r"[A-Za-z0-9._\-]{1,80}", data.get("model")) else "gemini-flash-latest"
     proxy = data.get("proxy") if isinstance(data.get("proxy"), str) and re.fullmatch(r"(https?|socks5h?)://[A-Za-z0-9.\-]+:\d{1,5}", data.get("proxy")) else None
-    return {"api_key": key, "model": model, "proxy": proxy}
+    return {"provider": "gemini", "api_key": key, "model": model, "proxy": proxy}
 
 
 def cooldown_path():
@@ -57,14 +63,80 @@ def cooling():
 
 
 def enabled():
-    return settings() is not None and not cooling()
+    cfg = settings()
+    return cfg is not None and (cfg["provider"] == "codex" or not cooling())
+
+
+CODEX_CANDIDATES = ("/opt/homebrew/bin/codex", "/usr/local/bin/codex", "/Applications/Codex.app/Contents/Resources/codex",
+                    "/Applications/ChatGPT.app/Contents/Resources/codex")
+
+
+def codex_binary(cfg):
+    import shutil
+    for path in ([cfg.get("codex_bin")] if cfg.get("codex_bin") else []) + list(CODEX_CANDIDATES) + [shutil.which("codex") or ""]:
+        if path and os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
+def extract_json(text: str) -> dict:
+    text = re.sub(r"^```(?:json)?\s*|\s*```$", "", (text or "").strip())
+    try:
+        value = json.loads(text)
+    except ValueError:
+        start, end = text.find("{"), text.rfind("}")
+        if start < 0 or end <= start:
+            raise AIUnavailable("ai_bad_output") from None
+        try:
+            value = json.loads(text[start:end + 1])
+        except ValueError:
+            raise AIUnavailable("ai_bad_output") from None
+    if not isinstance(value, dict):
+        raise AIUnavailable("ai_bad_output")
+    return value
+
+
+def codex_json(prompt: str, cfg, timeout: float = 240.0) -> dict:
+    import subprocess
+    import tempfile
+    binary = codex_binary(cfg)
+    if not binary:
+        raise AIUnavailable("ai_codex_missing")
+    home = str(Path.home())
+    env = {"HOME": home, "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin", "LANG": "en_US.UTF-8"}
+    if cfg.get("proxy"):
+        env.update(HTTPS_PROXY=cfg["proxy"], HTTP_PROXY=cfg["proxy"], https_proxy=cfg["proxy"], http_proxy=cfg["proxy"])
+    with tempfile.TemporaryDirectory(prefix="ikun-ai-") as work:
+        out = os.path.join(work, "out.txt")
+        args = [binary, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "-o", out]
+        if cfg.get("model"):
+            args += ["-m", cfg["model"]]
+        args.append(prompt + "\n\n只输出一个 JSON 对象，不要运行任何命令，不要输出其他文字。")
+        try:
+            done = subprocess.run(args, cwd=work, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise AIUnavailable("ai_codex_timeout") from None
+        except OSError:
+            raise AIUnavailable("ai_codex_missing") from None
+        if done.returncode != 0:
+            err = done.stderr.decode("utf-8", "replace").lower()
+            raise AIUnavailable("ai_rate_limited" if ("rate limit" in err or "usage limit" in err or "429" in err)
+                                else "ai_key_rejected" if ("login" in err or "unauthorized" in err or "401" in err) else "ai_codex_failed")
+        try:
+            text = Path(out).read_text(encoding="utf-8")
+        except OSError:
+            text = done.stdout.decode("utf-8", "replace")
+    return extract_json(text)
 
 
 def generate_json(prompt: str, *, timeout: float = 25.0) -> dict:
-    if cooling():raise AIUnavailable('ai_rate_limited')
     cfg = settings()
     if cfg is None:
         raise AIUnavailable("ai_not_configured")
+    if cfg["provider"] == "codex":
+        return codex_json(prompt, cfg)
+    if cooling():raise AIUnavailable('ai_rate_limited')
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json",
                                  "thinkingConfig": {"thinkingBudget": 0}}}

@@ -1,5 +1,5 @@
 #!/bin/zsh
-# ikun.ca AI 设置（双击运行）。Gemini 密钥只在本窗口隐藏输入，只保存在本机，不会发送给 Claude 或 Codex。
+# ikun.ca AI 设置（双击运行）。可选 Codex（用你的 ChatGPT Pro 登录）或 Gemini（密钥只在本窗口隐藏输入，只存本机）。
 CFG="$HOME/Library/Application Support/ikun-ca-v2-c0-lite/config/ai.json"
 PY=/Users/lvlei/.local/bin/python3.11
 [[ -x "$PY" ]] || PY=/usr/bin/python3
@@ -8,10 +8,10 @@ import json,sys
 try: d=json.load(open(sys.argv[1]))
 except Exception: print("当前状态：未设置"); raise SystemExit
 k=d.get("api_key","")
-print("当前状态：", "已启用" if d.get("enabled",True) else "已停用", "| 密钥：", (k[:4]+"…"+k[-4:]) if k else "无", "| 代理：", d.get("proxy") or "不走代理", "| 模型：", d.get("model","gemini-flash-latest"))
+print("当前状态：", "已启用" if d.get("enabled",True) else "已停用", "| 使用：", "Codex（ChatGPT Pro）" if d.get("provider")=="codex" else "Gemini", "| Gemini 密钥：", (k[:4]+"…"+k[-4:]) if k else "无", "| 代理：", d.get("proxy") or "不走代理")
 PYEOF
 }
-save(){ IKUN_KEY="$1" IKUN_PROXY="$2" IKUN_ENABLED="$3" "$PY" - "$CFG" <<'PYEOF'
+save(){ IKUN_KEY="$1" IKUN_PROXY="$2" IKUN_ENABLED="$3" IKUN_PROVIDER="$4" "$PY" - "$CFG" <<'PYEOF'
 import json,os,sys
 p=sys.argv[1]
 try: d=json.load(open(p))
@@ -19,6 +19,7 @@ except Exception: d={}
 if os.environ["IKUN_KEY"]: d["api_key"]=os.environ["IKUN_KEY"]
 d["proxy"]=os.environ["IKUN_PROXY"] or None
 d["enabled"]=os.environ["IKUN_ENABLED"]=="1"
+if os.environ.get("IKUN_PROVIDER"): d["provider"]=os.environ["IKUN_PROVIDER"]
 d.setdefault("provider","gemini"); d.setdefault("model","gemini-flash-latest")
 tmp=p+".tmp"; fd=os.open(tmp,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
 with os.fdopen(fd,"w") as f: json.dump(d,f)
@@ -40,6 +41,8 @@ while true; do
   echo "3) 测试连接"
   echo "4) 停用 AI"
   echo "5) 重新启用 AI"
+  echo "6) 改用 Codex（ChatGPT Pro 登录，不需要密钥）"
+  echo "7) 改用 Gemini"
   echo "0) 退出"
   read "c?请输入数字: "
   cur_proxy=$("$PY" -c "import json,sys;print((json.load(open(sys.argv[1])).get('proxy') or ''))" "$CFG" 2>/dev/null || echo "http://127.0.0.1:7897")
@@ -50,7 +53,9 @@ while true; do
     3) [[ -f "$CFG" ]] && testkey || echo "还没有设置密钥。" ;;
     4) save "" "$cur_proxy" 0 ;;
     5) save "" "$cur_proxy" 1 ;;
+    6) save "" "$cur_proxy" 1 codex ;;
+    7) save "" "$cur_proxy" 1 gemini ;;
     0) exit 0 ;;
-    *) echo "请输入 0-5" ;;
+    *) echo "请输入 0-7" ;;
   esac
 done

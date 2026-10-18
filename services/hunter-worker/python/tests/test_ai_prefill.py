@@ -58,3 +58,23 @@ def test_site_reader_text_and_doc_links(monkeypatch):
     assert site_reader.bio_domains('Play at VaultStreet.fun and @someone.eth') == ['vaultstreet.fun']
     monkeypatch.setattr(site_reader, 'public_host', lambda host, proxy=None: False)
     assert site_reader.fetch('http://127.0.0.1/', None) == (None, '')
+
+
+def test_codex_provider_runs_cli_and_parses_json(monkeypatch, tmp_path):
+    import subprocess
+    cfg = tmp_path / 'ai.json'; cfg.write_text(json.dumps({'enabled': True, 'provider': 'codex', 'codex_bin': '/bin/true'}))
+    monkeypatch.setenv('IKUN_AI_CONFIG', str(cfg))
+    assert gemini.enabled() and gemini.settings()['provider'] == 'codex'
+    seen = {}
+    def fake_run(args, cwd, env, **kw):
+        seen['args'] = args
+        out = args[args.index('-o') + 1]
+        open(out, 'w').write('```json\n{"name": "测试", "website": "", "description": "简介", "notes": ""}\n```')
+        return subprocess.CompletedProcess(args, 0, b'', b'')
+    monkeypatch.setattr(subprocess, 'run', fake_run)
+    value = gemini.generate_json('prompt')
+    assert value['name'] == '测试' and seen['args'][1] == 'exec' and '--sandbox' in seen['args']
+    monkeypatch.setattr(subprocess, 'run', lambda args, **kw: subprocess.CompletedProcess(args, 1, b'', b'You have hit your usage limit'))
+    import pytest
+    with pytest.raises(gemini.AIUnavailable) as e: gemini.generate_json('p')
+    assert str(e.value) == 'ai_rate_limited'

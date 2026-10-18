@@ -127,7 +127,7 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
         except gemini.AIUnavailable as exc:
             failures[item['discovery_id']] = now + (600 if str(exc) == 'ai_rate_limited' else 120)
             logging.getLogger(__name__).warning('hunter_ai_prefill_%s', exc)
-            if str(exc) in ('ai_not_configured', 'ai_key_rejected', 'ai_network', 'ai_rate_limited'):
+            if str(exc) in ('ai_not_configured', 'ai_key_rejected', 'ai_network', 'ai_rate_limited', 'ai_codex_missing'):
                 break
             continue
         store.set_state(PREFIX + item['discovery_id'], clean(value, item['x_handle'], bio, domains))

@@ -30,7 +30,7 @@ import json,sys,subprocess
 d=json.load(open(sys.argv[1])); args=["curl","-s","-o","/dev/null","-w","%{http_code}","--max-time","15","-H","x-goog-api-key: "+d["api_key"]]
 if d.get("proxy"): args+=["-x",d["proxy"]]
 code=subprocess.run(args+["https://generativelanguage.googleapis.com/v1beta/models"],capture_output=True,text=True).stdout
-print({"200":"✅ 连接成功，密钥有效。","400":"❌ 密钥格式不对。","403":"❌ 密钥被拒绝（可能填错或已删除）。","000":"❌ 连不上 Google：检查 Clash 是否开着、代理端口是否正确。"}.get(code,"❓ 返回 "+code))
+print({"200":"✅ 连接成功，密钥有效。","400":"❌ 密钥格式不对。","401":"❌ 密钥被拒绝（401）。新版 AQ. 密钥在部分账号上有这个问题，见说明。","403":"❌ 密钥被拒绝（可能填错或已删除）。","000":"❌ 连不上 Google：检查 Clash 是否开着、代理端口是否正确。"}.get(code,"❓ 返回 "+code))
 PYEOF
 }
 while true; do
@@ -45,7 +45,7 @@ while true; do
   cur_proxy=$("$PY" -c "import json,sys;print((json.load(open(sys.argv[1])).get('proxy') or ''))" "$CFG" 2>/dev/null || echo "http://127.0.0.1:7897")
   [[ -z "$cur_proxy" && ! -f "$CFG" ]] && cur_proxy="http://127.0.0.1:7897"
   case "$c" in
-    1) read -s "k?粘贴 Gemini 密钥（以 AIza 开头，输入时不显示）: "; echo; [[ "$k" == AIza* ]] && save "$k" "$cur_proxy" 1 || echo "看起来不是 Gemini 密钥，未保存。" ;;
+    1) read -s "k?粘贴 Gemini 密钥（以 AQ. 或 AIza 开头，输入时不显示）: "; echo; k="${k//[[:space:]]/}"; [[ "$k" == AQ.* || "$k" == AIza* ]] && save "$k" "$cur_proxy" 1 || echo "看起来不是 Gemini 密钥，未保存。" ;;
     2) read "p?Clash 端口号（直接回车用 7897；输入 0 表示不走代理）: "; [[ -z "$p" ]] && p=7897; if [[ "$p" == 0 ]]; then save "" "" 1; else save "" "http://127.0.0.1:$p" 1; fi ;;
     3) [[ -f "$CFG" ]] && testkey || echo "还没有设置密钥。" ;;
     4) save "" "$cur_proxy" 0 ;;

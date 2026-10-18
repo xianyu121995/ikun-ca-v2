@@ -20,6 +20,10 @@ DEFAULT_PATH = Path.home() / "Library/Application Support/ikun-ca-v2-c0-lite/con
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 
+FALLBACK_MODELS = ("gemini-flash-latest", "gemini-3.8-flash", "gemini-2.5-flash")
+_WORKING = {"model": None}
+
+
 class AIUnavailable(Exception):
     """Raised with a short code only (no secrets)."""
 
@@ -33,7 +37,7 @@ def settings():
     if not isinstance(data, dict) or data.get("enabled") is False:
         return None
     key = data.get("api_key")
-    if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z0-9_\-]{20,200}", key):
+    if not isinstance(key, str) or not re.fullmatch(r"[A-Za-z0-9_.\-]{20,300}", key):
         return None
     model = data.get("model") if isinstance(data.get("model"), str) and re.fullmatch(r"[A-Za-z0-9._\-]{1,80}", data.get("model")) else "gemini-flash-latest"
     proxy = data.get("proxy") if isinstance(data.get("proxy"), str) and re.fullmatch(r"(https?|socks5h?)://[A-Za-z0-9.\-]+:\d{1,5}", data.get("proxy")) else None
@@ -52,14 +56,22 @@ def generate_json(prompt: str, *, timeout: float = 25.0) -> dict:
             "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json",
                                  "thinkingConfig": {"thinkingBudget": 0}}}
     headers = {"x-goog-api-key": cfg["api_key"], "content-type": "application/json"}
-    url = ENDPOINT.format(model=cfg["model"])
+    # AI Studio now issues "AQ." auth keys as well as legacy "AIza" keys; both go in x-goog-api-key.
+    models = [cfg["model"]] + [m for m in FALLBACK_MODELS if m != cfg["model"]]
+    if _WORKING["model"] in models:
+        models.remove(_WORKING["model"]); models.insert(0, _WORKING["model"])
     try:
         with httpx.Client(proxy=cfg["proxy"], timeout=timeout, trust_env=cfg["proxy"] is None) as client:
-            response = client.post(url, headers=headers, json=body)
-            if response.status_code == 400:
-                # Some models reject thinkingConfig; retry once without it.
-                body["generationConfig"].pop("thinkingConfig", None)
-                response = client.post(url, headers=headers, json=body)
+            for model in models:
+                response = client.post(ENDPOINT.format(model=model), headers=headers, json=body)
+                if response.status_code == 400 and "thinkingConfig" in body["generationConfig"]:
+                    # Some models reject thinkingConfig; retry once without it.
+                    body["generationConfig"].pop("thinkingConfig", None)
+                    response = client.post(ENDPOINT.format(model=model), headers=headers, json=body)
+                if response.status_code != 404:
+                    if response.status_code == 200:
+                        _WORKING["model"] = model
+                    break
     except httpx.HTTPError:
         raise AIUnavailable("ai_network") from None
     if response.status_code == 429:

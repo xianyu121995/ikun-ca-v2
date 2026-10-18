@@ -18,10 +18,10 @@ from . import gemini
 PREFIX = 'ai:'
 PROMPT = (
     "你是加密货币/Web3 项目研究助手。根据下面 X 账号的名称和简介，用简体中文帮我预填项目资料。要求：\n"
-    "资料包括：账号名称、简介、最近几条推文（tweets）以及推文里出现过的外部链接（links）。\n"
+    "资料包括：账号名称、简介、最近几条推文（tweets）、推文里出现过的外部链接（links），以及官网首页文字（site）和官网文档/白皮书页文字（docs，如有）。优先依据官网和文档判断项目具体做什么。\n"
     "- name：一句很短的中文项目名，概括它是做什么的、在哪条链上，风格例如“SOL上的AI审计发射台”“HYP高性能L2”“RWA农业游戏”，不超过 16 个字；看不出来就用原名。\n"
     "- website：从简介或 links 里挑出项目自己的官网域名（如 pindar.finance），不要选 x.com、t.co、linktr.ee、discord、telegram、github、medium 这类第三方站点，没有就给空字符串，不要编造。\n"
-    "- description：一到两句中文简介，说明项目做什么、进展到哪（如测试网/主网），基于简介和推文，不要编造。\n"
+    "- description：两到三句中文简介，说明项目具体做什么（产品/机制/所在链）、进展到哪（如测试网/主网），依据官网文档、简介和推文，不要编造。\n"
     "- notes：一句中文备注，点出值得关注的信号（如代币、白名单、测试网、空投、NFT、即将上线），没有就给空字符串。\n"
     "只输出 JSON：{\"name\": ..., \"website\": ..., \"description\": ..., \"notes\": ...}\n\n"
 )
@@ -103,8 +103,16 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
         bio = item.get('profile_bio') or ''
         tweets = recent_tweets(settings, item['x_handle'])
         domains = link_domains(tweets)
+        from .site_reader import bio_domains, read_project
+        candidates = [d for d in bio_domains(bio) + domains if not any(d == t or d.endswith('.' + t) for t in THIRD_PARTY)]
+        cfg = gemini.settings() or {}
+        external = settings is not None and getattr(settings, 'external_io_enabled', False)
+        site = read_project(candidates[0] if candidates else None, cfg.get('proxy'),
+                            [l for t in tweets for l in t.get('links', [])]) if external else {'site': '', 'docs': ''}
+        domains = list(dict.fromkeys(candidates + domains))
         payload = {'x_handle': item['x_handle'], 'name': item['project']['name'], 'bio': bio[:2000],
-                   'tweets': [t['text'] for t in tweets], 'links': domains}
+                   'tweets': [t['text'] for t in tweets], 'links': domains,
+                   'site': site['site'], 'docs': site['docs']}
         try:
             value = gemini.generate_json(PROMPT + json.dumps(payload, ensure_ascii=False))
         except gemini.AIUnavailable as exc:

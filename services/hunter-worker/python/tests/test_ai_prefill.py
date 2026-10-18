@@ -47,3 +47,14 @@ def test_website_from_recent_tweet_links_skips_third_party():
     assert domains == ['pindar.finance']
     assert ai_prefill.clean({'name': 'P', 'website': 'pindar.finance'}, 'h', '', domains)['website'] == 'https://pindar.finance'
     assert ai_prefill.recent_tweets(None, 'h') == []
+
+
+def test_site_reader_text_and_doc_links(monkeypatch):
+    from hunterradar import site_reader
+    raw = '<html><head><title>Pindar</title><meta name="description" content="Funding rate markets"></head><body><script>x()</script><a href="/docs/intro">Docs</a><a href="https://x.com/p">x</a><p>Fixed and floating legs.</p></body></html>'
+    assert site_reader._text(raw).startswith('Pindar | Funding rate markets')
+    assert 'x()' not in site_reader._text(raw)
+    assert site_reader.doc_links('https://pindar.finance/', raw, ['https://pindar.gitbook.io/docs']) == ['https://pindar.gitbook.io/docs', 'https://pindar.finance/docs/intro']
+    assert site_reader.bio_domains('Play at VaultStreet.fun and @someone.eth') == ['vaultstreet.fun']
+    monkeypatch.setattr(site_reader, 'public_host', lambda host: False)
+    assert site_reader.fetch('http://127.0.0.1/', None) == (None, '')

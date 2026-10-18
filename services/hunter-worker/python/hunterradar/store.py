@@ -552,8 +552,15 @@ class Store:
         if key.startswith(LEGACY_DIRECTORY_PREFIX):
             raise ValueError('legacy_private_state_requires_takeover')
         with self.connect(True) as db:
+            previous = db.execute('SELECT value FROM state WHERE key=?', (key,)).fetchone() if key == 'watch_error' else None
+            old = json.loads(previous[0]) if previous else None
             db.execute('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, json.dumps(value)))
             if key == 'watch_error':
+                if old != value:
+                    row = db.execute("SELECT value FROM state WHERE key='watch_error_history'").fetchone()
+                    history = json.loads(row[0]) if row else []
+                    history.append({'at':time.time(), 'from':old, 'to':value})
+                    db.execute("INSERT INTO state(key,value) VALUES('watch_error_history',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (json.dumps(history[-512:]),))
                 # Remember when the current Watch problem started so health can ignore short transient timeouts.
                 if value:
                     db.execute("INSERT OR IGNORE INTO state(key,value) VALUES('watch_error_since',?)", (json.dumps(time.time()),))

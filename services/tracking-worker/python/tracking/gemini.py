@@ -13,6 +13,7 @@ import json
 import os
 import re
 import ssl
+import time
 from pathlib import Path
 
 import httpx
@@ -45,11 +46,22 @@ def settings():
     return {"api_key": key, "model": model, "proxy": proxy}
 
 
+def cooldown_path():
+    cfg = Path(os.environ.get("IKUN_AI_CONFIG") or DEFAULT_PATH)
+    return cfg.parent.parent / "ops/ai.cooldown.json"
+
+
+def cooling():
+    try:return json.loads(cooldown_path().read_text()).get('until', 0) > time.time()
+    except (OSError, ValueError, TypeError):return False
+
+
 def enabled():
-    return settings() is not None
+    return settings() is not None and not cooling()
 
 
 def generate_json(prompt: str, *, timeout: float = 25.0) -> dict:
+    if cooling():raise AIUnavailable('ai_rate_limited')
     cfg = settings()
     if cfg is None:
         raise AIUnavailable("ai_not_configured")
@@ -76,6 +88,20 @@ def generate_json(prompt: str, *, timeout: float = 25.0) -> dict:
     except httpx.HTTPError:
         raise AIUnavailable("ai_network") from None
     if response.status_code == 429:
+        delay = 300.0
+        try:
+            details = response.json().get('error', {}).get('details', [])
+            for item in details:
+                wait = item.get('retryDelay', '')
+                if isinstance(wait, str) and re.fullmatch(r'[0-9.]+s', wait):delay = max(delay, float(wait[:-1]))
+                if any('PerDay' in v.get('quotaId', '') for v in item.get('violations', [])):
+                    delay = max(delay, (int(time.time()) // 86400 + 1) * 86400 - time.time() + 60)
+        except (ValueError, TypeError):pass
+        path = cooldown_path();path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        tmp = path.with_name(path.name + '.' + str(os.getpid()) + '.tmp')
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, 'w') as out:json.dump({'until':time.time()+delay, 'reason':'ai_rate_limited'}, out)
+        os.replace(tmp, path)
         raise AIUnavailable("ai_rate_limited")
     if response.status_code in (401, 403):
         raise AIUnavailable("ai_key_rejected")

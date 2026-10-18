@@ -101,7 +101,15 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
     stored = 0
     for item in todo:
         bio = item.get('profile_bio') or ''
-        tweets = recent_tweets(settings, item['x_handle'])
+        cache_key = 'ai_input:' + item['x_handle']
+        cached = store.states().get(cache_key)
+        if cached and now - cached.get('at', 0) < 3600:
+            tweets = cached.get('tweets', [])
+        else:
+            # Fence the attempt before paid IO; a crash cannot trigger immediate replay.
+            store.set_state(cache_key, {'at': now, 'tweets': []})
+            tweets = recent_tweets(settings, item['x_handle'])
+            store.set_state(cache_key, {'at': now, 'tweets': tweets})
         domains = link_domains(tweets)
         from .site_reader import bio_domains, read_project
         candidates = [d for d in bio_domains(bio) + domains if not any(d == t or d.endswith('.' + t) for t in THIRD_PARTY)]
@@ -119,7 +127,7 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
         except gemini.AIUnavailable as exc:
             failures[item['discovery_id']] = now + (600 if str(exc) == 'ai_rate_limited' else 120)
             logging.getLogger(__name__).warning('hunter_ai_prefill_%s', exc)
-            if str(exc) in ('ai_not_configured', 'ai_key_rejected', 'ai_network'):
+            if str(exc) in ('ai_not_configured', 'ai_key_rejected', 'ai_network', 'ai_rate_limited'):
                 break
             continue
         store.set_state(PREFIX + item['discovery_id'], clean(value, item['x_handle'], bio, domains))

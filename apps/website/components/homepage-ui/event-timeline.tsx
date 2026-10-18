@@ -1,6 +1,6 @@
 'use client';
 /** Owner decision 2026-10-19: upcoming milestones as a horizontal timeline (S/A/B colors, live "now" marker). */
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { ProjectView } from '../../features/homepage/types';
 import type { ProjectMilestone } from '../../features/homepage/reference-types';
 
@@ -13,6 +13,15 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const bj = (ms: number) => new Date(ms + 8 * HOUR);
 
 export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; days: number | null; onOpen: (key: string) => void }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [trackWidth, setTrackWidth] = useState(700);
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setTrackWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
   const items = useMemo(() => rows.filter(r => r.event.date && ['S', 'A', 'B'].includes(r.project.record.rating ?? ''))
@@ -25,17 +34,28 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
   const pos = (t: number) => Math.min(100, Math.max(0, ((t - start) / span) * 100));
   const groups = new Map<string, typeof items>();
   for (const it of items) { if (it.t > end) continue; const key = `${it.event.date}-${it.event.hour ?? 'x'}`; groups.set(key, [...(groups.get(key) ?? []), it]); }
-  const trackHeight = Math.max(70, Math.max(0, ...[...groups.values()].map(list => Math.min(list.length, MAX_STACK))) * 36 + 22);
+  const occupied: {left:number;right:number;lane:number;height:number}[] = [];
+  const lanes = new Map<string, number>();
+  for (const [key, list] of groups) {
+    const anchor = pos(list[0].t) * trackWidth / 100;
+    const left = pos(list[0].t) > 72 ? anchor - 190 : anchor;
+    const right = left + 198, height = Math.min(list.length, MAX_STACK);
+    let lane = 0;
+    while (occupied.some(r => left < r.right && right > r.left && lane < r.lane + r.height && lane + height > r.lane)) lane++;
+    occupied.push({left,right,lane,height});
+    lanes.set(key,lane);
+  }
+  const trackHeight = Math.max(70, Math.max(0, ...occupied.map(r => r.lane + r.height)) * 36 + 22);
   const ticks: number[] = [];
   const firstDay = Date.parse(`${bj(now).toISOString().slice(0, 10)}T00:00:00+08:00`) + DAY;
   const step = span > 40 * DAY ? 7 * DAY : span > 14 * DAY ? 2 * DAY : DAY;
   for (let t = firstDay; t < end; t += step) ticks.push(t);
   const nowLabel = `${pad(bj(now).getUTCHours())}:${pad(bj(now).getUTCMinutes())}`;
   return <div className="hpv2-timeline" style={{"--hpv2-track-height": `${trackHeight}px`} as CSSProperties} role="list" aria-label="近期重要时间线">
-    <div className="hpv2-tl-track">
+    <div className="hpv2-tl-track" ref={trackRef}>
       {ticks.map(t => <span key={t} className="hpv2-tl-tick" style={{ left: `${pos(t)}%` }}><i />{`${bj(t).getUTCMonth() + 1}/${bj(t).getUTCDate()}`}</span>)}
       <span className="hpv2-tl-now" style={{ left: '0%' }} title="现在（北京时间）"><b>现在 {nowLabel}</b></span>
-      {[...groups.entries()].map(([key, list]) => <div key={key} className="hpv2-tl-stack" data-right={pos(list[0].t) > 72 || undefined} style={{ left: `${pos(list[0].t)}%` }}>
+      {[...groups.entries()].map(([key, list]) => <div key={key} className="hpv2-tl-stack" data-right={pos(list[0].t) > 72 || undefined} style={{ left: `${pos(list[0].t)}%`, bottom: 6 + (lanes.get(key) ?? 0) * 36 }}>
         {list.slice(0, list.length > MAX_STACK ? MAX_STACK - 1 : MAX_STACK).map(it => {
           const e = it.event, d = bj(it.t);
           const label = `${it.project.record.name} · ${e.title || '重要事件'} · ${d.getUTCMonth() + 1}/${d.getUTCDate()} ${e.hour ? e.hour + '时' : '（未定小时）'} · ${e.status === 'confirmed' ? '已确认' : '预计'}`;

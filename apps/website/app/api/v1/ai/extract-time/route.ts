@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const work = await mkdtemp(join(tmpdir(), 'ikun-ai-'));
     try {
       const out = join(work, 'out.txt');
-      const env: Record<string, string> = { HOME: homedir(), PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin', LANG: 'en_US.UTF-8' };
+      const env: NodeJS.ProcessEnv = { NODE_ENV: 'production', HOME: homedir(), PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin', LANG: 'en_US.UTF-8' };
       if (typeof cfg.proxy === 'string' && /^(https?|socks5h?):\/\/[A-Za-z0-9.-]+:\d{1,5}$/.test(cfg.proxy)) Object.assign(env, { HTTPS_PROXY: cfg.proxy, HTTP_PROXY: cfg.proxy, https_proxy: cfg.proxy, http_proxy: cfg.proxy });
       await new Promise<void>((resolve, reject) => execFile(binary, ['exec', '--skip-git-repo-check', '--sandbox', 'read-only', '-o', out, prompt], { cwd: work, env, timeout: 150_000, maxBuffer: 4 << 20 }, err => err ? reject(err) : resolve()));
       let raw = (await readFile(out, 'utf8')).trim().replace(/^```(?:json)?\s*|\s*```$/g, '');

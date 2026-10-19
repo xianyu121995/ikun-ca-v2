@@ -119,7 +119,7 @@ def main():
         owner=json.loads((V2/'owner.json').read_text());owner['candidate_sha']=sha;atomic(V2/'owner.json',owner)
         # launchd uses the Mac's verified Asia/Shanghai system timezone.
         maintenance=release/'release-integration/scripts/v2_maintenance.py'
-        for label,action,options in [('ca.ikun.v2.c0lite.health','health',{'interval':300}),('ca.ikun.v2.c0lite.backup','backup',{'calendar':{'Hour':4,'Minute':0}})]:
+        for label,action,options in [('ca.ikun.v2.c0lite.health','health',{'interval':60}),('ca.ikun.v2.c0lite.backup','backup',{'calendar':{'Hour':4,'Minute':0}})]:
             stop(label);load(job(label,[PYTHON,maintenance,action],**options))
         print('v2 deployed:',sha,'rollback:',rollback,flush=True)
     except BaseException:

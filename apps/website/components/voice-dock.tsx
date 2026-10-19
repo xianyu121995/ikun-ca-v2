@@ -51,6 +51,23 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
     const update = () => { const s = controller.getSnapshot(); setStatus(!s.enabled ? 'off' : s.armed ? 'on' : 'locked'); };
     update(); return controller.subscribe(update);
   }, [controller]);
+  // Owner 2026-10-19: voice is ON by default and only off when the user turns it off. Browsers only allow audio
+  // after a real click, so the first click anywhere on the site arms it — unless this
+  // account explicitly turned voice off (stored preference with enabled=false).
+  useEffect(() => {
+    if (!controller) return;
+    const key = 'ikun.voice.v1.' + encodeURIComponent(session.user_id);
+    const arm = (event: Event) => {
+      if ((event.target as Element | null)?.closest?.('.ikun-voice-dock')) return;
+      const s = controller.getSnapshot();
+      if (s.armed) return;
+      let stored: string | null = null; try { stored = window.localStorage.getItem(key); } catch { /* storage blocked: treat as default-on */ }
+      if (!s.enabled && stored !== null) return; // user chose 语音关
+      controller.enableFromGesture(event);
+    };
+    document.addEventListener('click', arm, true);
+    return () => document.removeEventListener('click', arm, true);
+  }, [controller, session.user_id]);
   return <VoiceContext.Provider value={controller}>{children}
     {controller && <div className="ikun-voice-dock" data-state={status}>
       {open && <div className="ikun-voice-panel"><VoiceControls controller={controller} subscriptions={subs} /></div>}

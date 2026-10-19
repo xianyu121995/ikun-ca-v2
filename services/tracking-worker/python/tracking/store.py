@@ -183,6 +183,16 @@ class Store:
                     db.execute("ROLLBACK")
                 raise
 
+    def adopt_watch(self, row: dict, watch_id) -> bool:
+        """Fence ownership and its audit in one transaction; do not mutate remote flags."""
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            changed = db.execute("UPDATE projects SET claim='owned' WHERE project_id=? AND revision=? AND claim!='owned'", (row['project_id'],row['revision'])).rowcount
+            if changed:
+                db.execute("INSERT INTO audit(project_id,actor,action,at,detail) VALUES(?,?,?,?,?)", (row['project_id'],'tracking-worker','watch_adopted',time.time(),json.dumps({'handle':row['handle'],'watch_id':str(watch_id),'flags_preserved':True})))
+            db.execute("COMMIT")
+            return bool(changed)
+
     def observe(self, row: dict, **changes) -> bool:
         from .commands import change, observed
         from .views import subscription

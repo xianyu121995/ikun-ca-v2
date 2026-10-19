@@ -42,7 +42,19 @@ class Worker:
             self.store.lease(self.worker_id, release=True)
             self._leased = False
 
+    def adoptable(self, row):
+        return row['handle'] in (self.cfg.adoptable_handles or ()) and row['handle'] not in (self.cfg.shared_watch_ids or {})
+
+    def usable_watch(self, row, watch):
+        if self.adoptable(row):
+            return watch.get('newTweetBol') is True and not any(watch.get(k) for k in ('isPaused','isSuspended','isBlacked'))
+        return self.pure_tweet(watch)
+
     def owned(self, row, watch):
+        if row['handle'] in (self.cfg.shared_watch_ids or {}):
+            return False
+        if self.adoptable(row):
+            return True
         if str(watch.get("id")) == (self.cfg.adopted_watch_ids or {}).get(row["handle"]):
             return True
         return row["claim"] in ("reserved", "owned") and (
@@ -92,7 +104,13 @@ class Worker:
         if watch and not self.owned(row, watch):
             raise RemoteError("ownership_conflict", 300)
         desired_running = row["desired"] == "running"
-        if watch and not self.pure_tweet(watch):
+        if watch and self.adoptable(row):
+            if self.store.adopt_watch(row, watch.get('id')):
+                log.info('watch_adopted handle=%s watch_id=%s flags_preserved=true',row['handle'],watch.get('id'))
+                row = {**row, 'claim':'owned'}
+            if desired_running and not self.usable_watch(row,watch):
+                raise RemoteError('adopted_watch_not_enabled',300)
+        if watch and not self.adoptable(row) and not self.pure_tweet(watch):
             # An external edit is never silently overwritten, even in our namespace.
             raise RemoteError("remote_flags_conflict", 300)
         if desired_running and not watch:
@@ -123,7 +141,7 @@ class Worker:
             watch = snapshot.get(row["handle"])
             if watch and not self.owned(row, watch):
                 raise RemoteError("ownership_conflict", 300)
-            matches = (bool(watch) and self.pure_tweet(watch)) if desired_running else watch is None
+            matches = (bool(watch) and self.usable_watch(row,watch)) if desired_running else watch is None
             if not matches:
                 raise error or RemoteError("remote_verification_failed")
         state = "active" if watch else "absent"
@@ -137,8 +155,9 @@ class Worker:
             error=None,
             attempts=0,
             next_retry=0,
+            **({'baseline_ready':1,'coverage':'possible_gap'} if self.adoptable(row) and desired_running else {}),
         )
-        if updated and desired_running:
+        if updated and desired_running and not self.adoptable(row):
             await self.backfill({**row, "remote_state": state, "claim": claim})
         return snapshot
 
@@ -353,8 +372,15 @@ class Worker:
                 stored = 0
             await self.pause(1 if stored else 3)
 
+    def retry_adoptions(self):
+        for row in self.store.projects():
+            if self.adoptable(row) and row['desired']=='running' and row['error']=='ownership_conflict':
+                # Recheck authorization with a fresh snapshot; keep the error until verified.
+                self.store.observe(row,next_retry=0)
+
     async def run(self):
         self.acquire()
+        self.retry_adoptions()
         tasks = [
             asyncio.create_task(self.translations()),
             asyncio.create_task(self.ticks()),

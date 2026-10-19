@@ -72,3 +72,12 @@ def test_admitted_release_external_io_lock_cannot_be_overridden(tmp_path, monkey
         path.write_text(json.dumps({"db_path": str(tmp_path / "tracking/tracking.db"), **changes}))
         with __import__("pytest").raises(ValueError, match="external collection disabled"):
             Config.load(str(path))
+
+@pytest.mark.parametrize('handles',[['UPPER'],['bad-handle'],['same','same'],'not-a-list',[123]])
+def test_invalid_adoptable_handles_rejected(tmp_path,handles):
+    p=tmp_path/'config.json';p.write_text(json.dumps({'adoptable_handles':handles}))
+    with pytest.raises(ValueError,match='adoptable_handles'):Config.load(str(p))
+
+def test_adoption_snapshot_rejects_shared_overlap(tmp_path):
+    p=tmp_path/'config.json';p.write_text(json.dumps({'adoptable_handles':['tampad_'],'shared_watch_ids':{'tampad_':'777'}}))
+    with pytest.raises(ValueError,match='shared watches cannot be adopted'):Config.load(str(p))

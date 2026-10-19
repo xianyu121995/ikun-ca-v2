@@ -33,6 +33,7 @@ class Config:
     max_watch_slots: int = 600
     shared_watch_ids: dict[str, str] | None = None
     adopted_watch_ids: dict[str, str] | None = None
+    adoptable_handles: list[str] | None = None
 
     def secret(self, kind: str) -> str:
         env = {
@@ -116,5 +117,11 @@ class Config:
             ):
                 raise ValueError("invalid shared_watch_ids")
             if set(cfg.shared_watch_ids) & set(cfg.adopted_watch_ids or {}):
+                raise ValueError("shared watches cannot be adopted")
+        if cfg.adoptable_handles is not None:
+            import re
+            if not isinstance(cfg.adoptable_handles, list) or any(not isinstance(h, str) or not re.fullmatch(r"[a-z0-9_]{1,15}", h) for h in cfg.adoptable_handles) or len(set(cfg.adoptable_handles)) != len(cfg.adoptable_handles):
+                raise ValueError("invalid adoptable_handles")
+            if set(cfg.adoptable_handles) & set(cfg.shared_watch_ids or {}):
                 raise ValueError("shared watches cannot be adopted")
         return cfg

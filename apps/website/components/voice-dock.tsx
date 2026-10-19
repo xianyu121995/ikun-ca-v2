@@ -52,21 +52,30 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
     update(); return controller.subscribe(update);
   }, [controller]);
   // Owner 2026-10-19: voice is ON by default and only off when the user turns it off. Browsers only allow audio
-  // after a real click, so the first click anywhere on the site arms it — unless this
-  // account explicitly turned voice off (stored preference with enabled=false).
+  // after a real click, so the first click anywhere on the site arms it — unless this account turned voice off
+  // (tracked with an explicit opt-out flag, set when 语音 goes on→off and cleared when it goes back on).
+  // Night quiet hours (22–08) are switched off once per account (owner: 常开); they can be re-enabled in the panel.
   useEffect(() => {
     if (!controller) return;
-    const key = 'ikun.voice.v1.' + encodeURIComponent(session.user_id);
+    const uid = encodeURIComponent(session.user_id), optKey = 'ikun.voice.optout.' + uid, quietKey = 'ikun.voice.quietoff.' + uid;
+    const get = (k: string) => { try { return window.localStorage.getItem(k); } catch { return null; } };
+    const set = (k: string, v: string | null) => { try { if (v === null) window.localStorage.removeItem(k); else window.localStorage.setItem(k, v); } catch { /* per-browser convenience only */ } };
+    const first = controller.getSnapshot();
+    if (!get(quietKey)) { if (first.quiet_hours.enabled) controller.setQuietHours({ ...first.quiet_hours, enabled: false }); set(quietKey, '1'); }
+    let wasEnabled = controller.getSnapshot().enabled;
+    const unsubscribe = controller.subscribe(() => {
+      const now = controller.getSnapshot().enabled;
+      if (wasEnabled && !now) set(optKey, '1'); else if (!wasEnabled && now) set(optKey, null);
+      wasEnabled = now;
+    });
     const arm = (event: Event) => {
       if ((event.target as Element | null)?.closest?.('.ikun-voice-dock')) return;
       const s = controller.getSnapshot();
-      if (s.armed) return;
-      let stored: string | null = null; try { stored = window.localStorage.getItem(key); } catch { /* storage blocked: treat as default-on */ }
-      if (!s.enabled && stored !== null) return; // user chose 语音关
+      if (s.armed || get(optKey)) return;
       controller.enableFromGesture(event);
     };
     document.addEventListener('click', arm, true);
-    return () => document.removeEventListener('click', arm, true);
+    return () => { document.removeEventListener('click', arm, true); unsubscribe(); };
   }, [controller, session.user_id]);
   return <VoiceContext.Provider value={controller}>{children}
     {controller && <div className="ikun-voice-dock" data-state={status}>

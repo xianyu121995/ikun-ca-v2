@@ -3,6 +3,7 @@
  *  speaking while the owner moves between pages with client-side navigation. */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { VoiceControls, type TrackingVoiceController, type VoiceSession } from '@ikun/ui';
+import {loadTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
 import { useTrackingVoice } from './tracking-voice';
 
 const VoiceContext = createContext<TrackingVoiceController | null>(null);
@@ -30,10 +31,9 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
   const [open, setOpen] = useState(false);
   const [subs, setSubs] = useState<{ subscription_id: string; label: string }[]>([]);
   // Per-account voice switches (moved here from the tracking page; owner decision 2026-10-19).
-  useEffect(() => { if (!open) return; let stop = false; (async () => { const out: { subscription_id: string; label: string }[] = []; let cursor: string | null = null;
-    do { const r: Response = await fetch('/api/v1/tracking/subscriptions?limit=100' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), { cache: 'no-store' }); if (!r.ok) break;
-      const v = (await r.json()).data; for (const row of v.items ?? []) if (row.desired_state !== 'removed') out.push({ subscription_id: row.subscription_id, label: (row.name || row.x_handle) + (row.x_handle ? ' @' + row.x_handle : '') }); cursor = v.next_cursor ?? null; } while (cursor);
-    if (!stop) setSubs(out); })().catch(() => {}); return () => { stop = true; }; }, [open]);
+  useEffect(() => { if (!open) return; let stopped=false;
+    loadTrackingSubscriptions(session.user_id).then(rows=>{if(!stopped)setSubs(rows.filter(row=>row.desired_state!=='removed').map(row=>({subscription_id:row.subscription_id,label:(row.name||row.x_handle)+(row.x_handle?' @'+row.x_handle:'')})));}).catch(()=>{});
+    return()=>{stopped=true;};},[open,session.user_id]);
   useEffect(() => {
     const events = new EventSource('/api/v1/tracking/events');
     const opened = () => voice.connected(true);

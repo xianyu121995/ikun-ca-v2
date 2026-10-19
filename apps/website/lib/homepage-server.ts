@@ -8,5 +8,6 @@ export interface ServerHomepage {
   summary:{tracked_total:number;by_rating:{S:number;A:number;B:number};completed_total:number;other_total:number};
   onSort:(value:{key:string;direction:'asc'|'desc'})=>void;
   canPage:(page:number)=>boolean;onPage:(page:number)=>void;onWindow:(window:string)=>void;onDetail:(id:string)=>void;
+  onCompletedOpen?:(open:boolean)=>void;onOtherOpen?:(open:boolean)=>void;completedLoading?:boolean;otherLoading?:boolean;completedError?:string|null;otherError?:string|null;
   completedPagination:ReactNode;otherPagination:ReactNode;
 }

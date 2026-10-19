@@ -175,3 +175,21 @@ def test_home_category_filter(domain,category):
 def test_home_category_filter_rejects_unknown(domain):
     with pytest.raises(DomainError):
         call(domain,'list',contract='projects-home-v1',query={'category':'invalid'})
+
+
+def test_milestone_three_day_window_and_cursor_binding(domain):
+    today = datetime.now(ZoneInfo('Asia/Shanghai')).date()
+    expected = []
+    for offset in range(5):
+        project = home_create(domain, milestone={'date': (today + timedelta(days=offset)).isoformat(), 'hour': '12', 'title': 'event', 'status': 'confirmed'}, rating='A')
+        if offset <= 3:
+            expected.append(project['project']['project_id'])
+    query = {'window_days': '3', 'limit': 2}
+    first = call(domain, 'milestones', query=query)[1]
+    cursor = first['next_cursor']
+    assert cursor
+    with pytest.raises(DomainError):
+        call(domain, 'milestones', query={**query, 'window_days': '7', 'cursor': cursor})
+    second = call(domain, 'milestones', query={**query, 'cursor': cursor})[1]
+    assert [p['project']['project_id'] for p in first['items'] + second['items']] == expected
+    assert second['next_cursor'] is None

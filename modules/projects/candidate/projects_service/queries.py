@@ -139,7 +139,7 @@ def summary(con,query):
 def milestones(con,query):
     if set(query)-{'rating','window_days','cursor','limit'}:raise DomainError(422,'VALIDATION_ERROR','事件查询字段不正确')
     window=query.get('window_days','all')
-    if str(window) not in ('all','7','30','90'):raise DomainError(422,'VALIDATION_ERROR','时间窗口不正确')
+    if str(window) not in ('all','3','7','30','90'):raise DomainError(422,'VALIDATION_ERROR','时间窗口不正确')
     day=datetime.now(ZoneInfo('Asia/Shanghai')).date()
     # Reuse the authenticated cursor query and DB ordering; independent of table filters/page.
     base={'collection':'tracked','sort':'event','direction':'asc','limit':query.get('limit',3)}

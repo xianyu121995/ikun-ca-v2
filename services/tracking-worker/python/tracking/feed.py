@@ -136,7 +136,8 @@ def visible_subscriptions(db):
     return [
         dict(r)
         for r in db.execute(
-            "SELECT p.* FROM projects p LEFT JOIN commands c ON c.command_id=p.active_command_id WHERE NOT(p.desired='removed' AND p.remote_state='absent' AND COALESCE(c.state,'unknown')='succeeded') ORDER BY p.subscription_id"
+            "SELECT p.*, (p.desired='removed' AND p.remote_state='absent' AND COALESCE(c.state,'unknown')='succeeded') AS removal_complete FROM projects p LEFT JOIN commands c ON c.command_id=p.active_command_id WHERE NOT(p.desired='removed' AND p.remote_state='absent' AND COALESCE(c.state,'unknown')='succeeded') OR EXISTS (SELECT 1 FROM tweets t WHERE t.subscription_id=p.subscription_id AND t.expires_at_ms>?) ORDER BY p.subscription_id",
+            (retention_now(db),)
         )
     ]
 
@@ -445,7 +446,7 @@ def snapshot(store, request: SnapshotRequest):
             if sid not in subs:
                 raise conflict()
             r = items[subs[sid]["project_id"]]
-            if r["state"] == "found" and r["rating"] in sub_counts:
+            if not subs[sid]["removal_complete"] and r["state"] == "found" and r["rating"] in sub_counts:
                 sub_counts[r["rating"]] += 1
         for aid in candidate_ids:
             tweet = all_rows[aid]

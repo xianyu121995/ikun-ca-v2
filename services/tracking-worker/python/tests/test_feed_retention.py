@@ -128,7 +128,7 @@ def test_author_and_unknown_are_not_fabricated(store):
     row = target(store)
     assert normalize({"id": "1", "text": "not authoritative"}, row["handle"]) is None
     assert normalize(tweet("someoneelse"), "project1") is None
-    unknown = normalize({"id": "2", "text": "unknown", "userScreenName": row["handle"]}, row["handle"])
+    unknown = normalize({"id": "2", "text": "unknown", "userScreenName": row["handle"]}, row["handle"], event_type="UNRECOGNIZED")
     assert unknown["tweet_kind"] == "unknown"
     assert store.insert_tweet(row, unknown, "wss")
     assert make_page(store)["items"] == []
@@ -783,3 +783,22 @@ def test_no_hint_cursor_shape_and_capacity_remain_compatible(store):
     with pytest.raises(DomainError) as exhausted:
         make_page(store)
     assert exhausted.value.status == 429
+
+
+def test_removed_subscription_keeps_history_but_not_active_counts(store):
+    from tracking import views
+    row = target(store)
+    observe(store, row, 880011, text='preserved after unsubscribe')
+    before = make_page(store)
+    assert before['matched_total'] == 1
+    cmd = 'cmd_' + str(uuid.uuid4())
+    with store.connect() as db:
+        db.execute("INSERT INTO commands(command_id,body_hash,envelope,project_id,subscription_id,revision,state,created_at,updated_at,request_id) VALUES(?,?,?,?,?,1,'succeeded',0,0,'test')", (cmd,'a'*64,'{}',row['project_id'],row['subscription_id']))
+        db.execute("UPDATE projects SET desired='removed',status='removed',remote_state='absent',active_command_id=? WHERE project_id=?", (cmd,row['project_id']))
+    after = make_page(store)
+    assert after['matched_total'] == 1
+    assert after['items'][0]['text'] == 'preserved after unsubscribe'
+    assert after['subscription_counts_by_rating'] == {'S':0,'A':0,'B':0}
+    assert views.page(store,'subscriptions',{})['items'] == []
+    assert len(views.page(store,'subscriptions',{'include_removed':'true'})['items']) == 1
+    assert views.page(store,'latest',{})['items'][0]['text'] == 'preserved after unsubscribe'

@@ -42,6 +42,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
     if (!refreshRef.current)
         refreshRef.current = coalescedRefresh(() => pull.current());
     const refresh = refreshRef.current;
+    const [historyAccounts, setHistoryAccounts] = useState<Account[]>([]);
     const [homeEdit, setHomeEdit] = useState<EditTarget | null>(null);
     // Owner 2026-10-19: 取消追踪 from a tweet = remove the subscription (also drops ikun's 6551 Watch); homepage untouched, old tweets stay.
     const [untrack, setUntrack] = useState<Subscription | null>(null);
@@ -85,14 +86,15 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             const visible = rows.filter(r => !(r.desired_state === 'removed' && r.observed_state === 'absent' && r.operation_state === 'succeeded'));
             const data = await api('tracking/latest?'+query.toString()+(cursors[page]?'&cursor='+encodeURIComponent(cursors[page]!):''));
             if (latestView.current !== key)return;
-            if(data.items.some((item:Activity)=>!visible.some(row=>row.subscription_id===item.subscription_id)))throw Error("VERSION_CONFLICT · 订阅投影已变化，请刷新");
+            if(data.items.some((item:Activity)=>!rows.some(row=>row.subscription_id===item.subscription_id)))throw Error("VERSION_CONFLICT · 订阅投影已变化，请刷新");
             const grades=new Map<string,Activity['rating']>(data.items.map((item:Activity)=>[item.subscription_id,item.rating]));
-            const accountRows:Account[]=visible.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.error_code ? row.notes+' · 失败原因：'+row.error_code : row.notes,grade:row.rating===undefined?grades.get(row.subscription_id)??null:row.rating,avatar:row.name.slice(0,1),status:row.error_code||row.operation_state==='failed'?'failed':row.desired_state==='running'&&row.observed_state==='running'&&row.connection==='connected'?'running':row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
+            const accountRows:Account[]=rows.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.error_code ? row.notes+' · 失败原因：'+row.error_code : row.notes,grade:row.rating===undefined?grades.get(row.subscription_id)??null:row.rating,avatar:row.name.slice(0,1),status:row.error_code||row.operation_state==='failed'?'failed':row.desired_state==='running'&&row.observed_state==='running'&&row.connection==='connected'?'running':row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
             setPosts(data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,translation_zh:item.translation_zh??null,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url})));
             setTotals({matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating});
             setCursor(data.next_cursor);
             setSubs(rows);
-            setAccounts(accountRows);
+            setAccounts(accountRows.filter(account=>visible.some(row=>row.subscription_id===account.ui_key)));
+            setHistoryAccounts(accountRows);
             setError('');
         }
         catch (e) {
@@ -214,13 +216,13 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             const row = subs.find(r => r.subscription_id === id);
             if (row && !(await operate(row, 'remove')))
                 throw Error('移除未确认');
-        }} live={{ connected,server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password' onClick={voice.revoke}>修改本人密码</a><span onClickCapture={voice.revoke}><LogoutButton /></span></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
+        }} live={{ connected,historyAccounts,server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password' onClick={voice.revoke}>修改本人密码</a><span onClickCapture={voice.revoke}><LogoutButton /></span></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
                 if (post.original_url && /^https:\/\/x\.com\/[A-Za-z0-9_]+\/status\/[0-9]+$/.test(post.original_url))
                     window.open(post.original_url, '_blank', 'noopener,noreferrer');
             },
             postActions: post => {
                 const row = subs.find(r => r.subscription_id === post.account_key);
-                return row ? <><Button size='sm' variant='ghost' disabled={busy} title='把这个项目放到主页“正在做”' onClick={() => void addToHome(row)}>加入主页</Button>{canManage && <Button size='sm' variant='ghost' disabled={busy} title='直接编辑主页上的重要时间、进度和备注' onClick={() => setHomeEdit({ project_id: row.project_id, name: row.name, tweet: post.translation_zh?.text ? post.translation_zh.text + '\n原文：' + post.body : post.body, quote: post.quoted_tweet?.text ?? null, received_at: post.received_at })}>编辑主页</Button>}{canManage && <Button size='sm' variant='ghost' disabled={busy} title='彻底移除这个账号的追踪（主页不变，旧推文保留）' onClick={() => setUntrack(row)}>取消追踪</Button>}</> : null;
+                return row ? <><Button size='sm' variant='ghost' disabled={busy} title='把这个项目放到主页“正在做”' onClick={() => void addToHome(row)}>加入主页</Button>{canManage && <Button size='sm' variant='ghost' disabled={busy} title='直接编辑主页上的重要时间、进度和备注' onClick={() => setHomeEdit({ project_id: row.project_id, name: row.name, tweet: post.translation_zh?.text ? post.translation_zh.text + '\n原文：' + post.body : post.body, quote: post.quoted_tweet?.text ?? null, received_at: post.received_at })}>编辑主页</Button>}{canManage && row.desired_state !== 'removed' && <Button size='sm' variant='ghost' disabled={busy} title='彻底移除这个账号的追踪（主页不变，旧推文保留）' onClick={() => setUntrack(row)}>取消追踪</Button>}</> : null;
             },
             manageActions: account => {
                 const row = subs.find(r => r.subscription_id === account.ui_key);

@@ -6,7 +6,8 @@ import type { ProjectMilestone } from '../../features/homepage/reference-types';
 
 type Row = { project: ProjectView; event: ProjectMilestone };
 const HOUR = 3600_000, DAY = 24 * HOUR, MAX_STACK = 4;
-const COLORS: Record<string, string> = { S: '#f5c451', A: '#f59e5b', B: '#60a5fa' };
+// Owner 2026-10-19 (scheme 1): S red / A gold / B blue, same as the table badges.
+const COLORS: Record<string, string> = { S: '#ef4444', A: '#eab308', B: '#3b82f6' };
 // Beijing wall-clock → epoch ms.
 const at = (date: string, hour: string | null) => Date.parse(`${date}T${hour ?? '12'}:00:00+08:00`);
 const pad = (n: number) => String(n).padStart(2, '0');

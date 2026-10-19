@@ -94,6 +94,8 @@ def rotate(root=V2,now=None):
         if total<=100*1024*1024:break
         total-=path.stat().st_size;path.unlink()
 
+HEALTH_GRACE_SECONDS=180
+
 def health(root=V2):
     errors=[]
     for name,url in [('网站','http://127.0.0.1:4000/health/ready'),('猎手','http://127.0.0.1:4011/health/ready'),('追踪','http://127.0.0.1:4012/health/ready'),('隧道','http://127.0.0.1:65520/ready')]:
@@ -113,7 +115,16 @@ def health(root=V2):
             if states.get('worker_error'):errors.append('猎手引擎任务异常')
             if db.execute("SELECT count(*) FROM hunters WHERE enabled=1 AND deleted_at IS NULL AND (poll_error IS NOT NULL OR profile_error IS NOT NULL)").fetchone()[0]:errors.append('猎手采集存在失败任务')
     except Exception:errors.append('监控任务健康状态无法读取')
-    atomic(root/'ops/health.json',{'checked_at':time.time(),'healthy':not errors,'errors':errors})
+    # Owner 2026-10-19: short blips that recover by themselves are not alerts. An error is only published after it
+    # has been seen continuously for 3 minutes (health runs every minute); it disappears on the first healthy check.
+    now=time.time();state_path=root/'ops/health_since.json'
+    try:since=json.loads(state_path.read_text())
+    except Exception:since={}
+    since={e:since.get(e,now) for e in errors}
+    atomic(state_path,since)
+    # Errors that already carry their own longer grace period (e.g. Watch, 15 min) are not delayed twice.
+    errors=[e for e in errors if '已持续' in e or now-since[e]>=HEALTH_GRACE_SECONDS]
+    atomic(root/'ops/health.json',{'checked_at':now,'healthy':not errors,'errors':errors})
     rotate(root)
     return errors
 

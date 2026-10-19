@@ -64,7 +64,10 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
     if (!get(quietKey)) { if (first.quiet_hours.enabled) controller.setQuietHours({ ...first.quiet_hours, enabled: false }); set(quietKey, '1'); }
     let wasEnabled = controller.getSnapshot().enabled;
     const unsubscribe = controller.subscribe(() => {
-      const now = controller.getSnapshot().enabled;
+      const snapshot = controller.getSnapshot();
+      // Page teardown clears the session; it is not a user's mute decision.
+      if (snapshot.status === 'signed-out') return;
+      const now = snapshot.enabled;
       if (wasEnabled && !now) set(optKey, '1'); else if (!wasEnabled && now) set(optKey, null);
       wasEnabled = now;
     });

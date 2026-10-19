@@ -62,7 +62,7 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
           const label = `${it.project.record.name} · ${e.title || '重要事件'} · ${d.getUTCMonth() + 1}/${d.getUTCDate()} ${e.hour ? e.hour + '时' : '（未定小时）'} · ${e.status === 'confirmed' ? '已确认' : '预计'}`;
           return <button key={it.project.key} type="button" role="listitem" className="hpv2-tl-dot" data-hourless={!e.hour || undefined}
             style={{ '--tl-color': COLORS[it.project.record.rating!] } as CSSProperties} title={label} aria-label={label} onClick={() => onOpen(it.project.key)}>
-            <i>{it.project.record.name.slice(0, 1)}</i><span>{it.project.record.name}</span>{e.hour ? <small>{e.hour}时</small> : null}</button>;
+            <i aria-hidden="true">{it.project.record.rating ?? '·'}</i><span>{it.project.record.name}</span>{e.hour ? <small>{e.hour}时</small> : null}</button>;
         })}
         {list.length > MAX_STACK && <span className="hpv2-tl-more" title={list.slice(MAX_STACK - 1).map(it => it.project.record.name).join('、')}>+{list.length - MAX_STACK + 1}</span>}
       </div>)}

@@ -13,6 +13,7 @@ export class TrackingVoiceController {
   private preferences: VoicePreferences = { enabled: false, disabled: new Set(), quiet: { ...DEFAULT_QUIET_HOURS } };
   private storageAvailable = true;
   private armed = false;
+  private activatedInSession = false;
   private connected = false;
   private failed = false;
   private disposed = false;
@@ -33,7 +34,7 @@ export class TrackingVoiceController {
     this.snapshot = this.makeSnapshot();
     try {
       this.stopObserving = options.speech.observe?.(() => {
-        if (this.availability() !== "available") { this.armed = false; this.dropAll(); }
+        if (this.availability() !== "available") { this.armed = false; this.activatedInSession = false; this.dropAll(); }
         this.tick();
       });
     } catch { /* An optional capability observer must not break the existing feed. */ }
@@ -83,7 +84,7 @@ export class TrackingVoiceController {
     if (this.disposed) return;
     const next = validSession(session) ? Object.freeze({ user_id: session.user_id, epoch: session.epoch, role: session.role }) : null;
     if (next && this.session && this.same(next) && next.role === this.session.role) return;
-    this.dropAll(); this.session = next; this.armed = false; this.connected = false; this.failed = false; this.notBefore = Infinity;
+    this.dropAll(); this.session = next; this.armed = false; this.activatedInSession = false; this.connected = false; this.failed = false; this.notBefore = Infinity;
     this.events.clear(); this.activities.clear();
     const loaded = next ? loadVoicePreferences(this.options.storage, next.user_id) : null;
     this.preferences = loaded?.preferences ?? { enabled: false, disabled: new Set(), quiet: { ...DEFAULT_QUIET_HOURS } };
@@ -96,16 +97,22 @@ export class TrackingVoiceController {
     if (!connected) this.armed = false;
     this.tick();
   }
+  /** Resume only this page's previous trusted activation after a transport reconnect. No persisted preference can unlock it. */
+  resumeAfterReconnect(identity: VoiceIdentity, hasBeenActive: boolean): boolean {
+    if (this.disposed || !this.same(identity) || hasBeenActive !== true || !this.activatedInSession ||
+        !this.connected || !this.preferences.enabled || this.failed || this.availability() !== "available") return false;
+    this.armed = true; this.tick(); return true;
+  }
   /** Call synchronously from a trusted click/keyboard gesture, never from an effect or persisted preference. */
   enableFromGesture(event: Event): boolean {
     if (this.disposed || !this.session || this.availability() !== "available") { this.publish(); return false; }
     let gesture = false; try { gesture = this.options.speech.isUserGesture(event); } catch { /* Fail closed. */ }
-    if (!gesture) { this.failed = true; this.armed = false; this.dropAll(); this.publish(); return false; }
-    this.dropAll(); this.preferences.enabled = true; this.armed = true; this.failed = false; this.notBefore = this.now(); this.persist(); this.tick(); return true;
+    if (!gesture) { this.failed = true; this.armed = false; this.activatedInSession = false; this.dropAll(); this.publish(); return false; }
+    this.dropAll(); this.preferences.enabled = true; this.armed = true; this.activatedInSession = true; this.failed = false; this.notBefore = this.now(); this.persist(); this.tick(); return true;
   }
   disable(): void {
     if (this.disposed) return;
-    this.preferences.enabled = false; this.armed = false; this.failed = false; this.dropAll(); this.persist(); this.publish();
+    this.preferences.enabled = false; this.armed = false; this.activatedInSession = false; this.failed = false; this.dropAll(); this.persist(); this.publish();
   }
   setSubscriptionEnabled(subscriptionId: string, enabled: boolean): boolean {
     if (this.disposed || !this.session || !isSubscriptionId(subscriptionId)) return false;
@@ -117,10 +124,10 @@ export class TrackingVoiceController {
   reloadPreferences(): void {
     if (!this.session || this.disposed) return;
     const loaded = loadVoicePreferences(this.options.storage, this.session.user_id);
-    this.dropAll(); this.armed = false; this.preferences = loaded.preferences; this.storageAvailable = loaded.available; this.publish();
+    this.dropAll(); this.armed = false; this.activatedInSession = false; this.preferences = loaded.preferences; this.storageAvailable = loaded.available; this.publish();
   }
   suspend(): void {
-    this.armed = false; this.connected = false; this.notBefore = this.now(); this.dropAll(); this.publish();
+    this.armed = false; this.activatedInSession = false; this.connected = false; this.notBefore = this.now(); this.dropAll(); this.publish();
   }
   private remember(candidate: VoiceCandidate, now: number): boolean {
     for (const map of [this.events, this.activities]) for (const [id, until] of map) if (until <= now) map.delete(id);
@@ -146,7 +153,7 @@ export class TrackingVoiceController {
   }
   private fail(job: Job): void {
     if (!this.current(job)) return;
-    this.failed = true; this.armed = false; this.dropAll(); this.publish();
+    this.failed = true; this.armed = false; this.activatedInSession = false; this.dropAll(); this.publish();
   }
   private pump(): void {
     if (this.active || !this.permitted(this.now()) || !this.session) return;
@@ -203,7 +210,7 @@ export class TrackingVoiceController {
   quietHours(): VoiceQuietHours { return { ...this.preferences.quiet }; }
   destroy(): void {
     if (this.disposed) return;
-    this.dropAll(); this.session = null; this.armed = false; this.connected = false; this.disposed = true;
+    this.dropAll(); this.session = null; this.armed = false; this.activatedInSession = false; this.connected = false; this.disposed = true;
     this.stopObserving?.(); this.stopObserving = undefined; this.publish(); this.listeners.clear(); this.events.clear(); this.activities.clear();
   }
 }

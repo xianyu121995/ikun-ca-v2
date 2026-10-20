@@ -96,6 +96,42 @@ test("disconnect requires a fresh gesture; reconnect does not replay earlier rec
   assert.equal(f.voice.getSnapshot().armed, false); f.enable(); assert.equal(f.voice.consume(frame(1, initialTime), session), false);
   assert.equal(f.send(2), true); await flush(); assert.equal(f.speech.calls.length, 1); f.voice.destroy();
 });
+test("same-page reconnect resumes prior activation, keeps account mutes and drops disconnected events", async () => {
+  const f = fixture(); f.enable();
+  f.voice.setSubscriptionEnabled('sub_' + uuid(2), false);
+  f.voice.setStreamConnected(false, session); assert.equal(f.send(), false);
+  f.clock.advance(1000); f.voice.setStreamConnected(true, session);
+  assert.equal(f.voice.resumeAfterReconnect(session, false), false);
+  assert.equal(f.voice.getSnapshot().armed, false);
+  assert.equal(f.voice.resumeAfterReconnect(session, true), true);
+  assert.equal(f.voice.getSnapshot().status, 'ready');
+  assert.deepEqual(f.voice.getSnapshot().disabled_subscription_ids, ['sub_' + uuid(2)]);
+  assert.equal(f.send(), false); // received during the outage: never replay
+  assert.equal(f.voice.consume(frame(2, initialTime), session), false);
+  assert.equal(f.send(3), true); await flush(); assert.equal(f.speech.calls.length, 1); f.voice.destroy();
+});
+test("manual off, logout, a new session/page and lifecycle suspension cannot auto-resume", () => {
+  for (const stop of [f => f.voice.disable(), f => f.voice.setSession(null),
+    f => f.voice.setSession({...session, epoch:'new-page'}), f => f.voice.suspend(), f => f.voice.reloadPreferences()]) {
+    const f = fixture(); f.enable(); f.voice.setStreamConnected(false, session); stop(f);
+    f.voice.setStreamConnected(true, session);
+    assert.equal(f.voice.resumeAfterReconnect(session, true), false); assert.equal(f.voice.getSnapshot().armed, false);
+    f.voice.destroy();
+  }
+  const storage = new MemoryStorage(), old = fixture({storage}); old.enable(); old.voice.destroy();
+  const fresh = fixture({storage}); assert.equal(fresh.voice.getSnapshot().enabled, true);
+  assert.equal(fresh.voice.resumeAfterReconnect(session, true), false); fresh.voice.destroy();
+});
+test("reconnect never unlocks unavailable speech, a browser rejection or an old identity", async () => {
+  const f = fixture(); f.enable(); f.send(); await flush(); f.speech.error();
+  f.voice.setStreamConnected(false, session); f.voice.setStreamConnected(true, session);
+  assert.equal(f.voice.resumeAfterReconnect(session, true), false); assert.equal(f.voice.getSnapshot().status, 'failed');
+  f.enable(); f.voice.setStreamConnected(false, session);
+  assert.equal(f.voice.resumeAfterReconnect(session, true), false);
+  f.voice.setStreamConnected(true, session); f.speech.state='no-local-voice';
+  assert.equal(f.voice.resumeAfterReconnect(session, true), false);
+  f.speech.state='available'; assert.equal(f.voice.resumeAfterReconnect({...session,epoch:'old'}, true), false); f.voice.destroy();
+});
 test("global and per-subscription disabled events are dropped and never buffered for later", async () => {
   const f = fixture(); assert.equal(f.send(), false); f.enable(); assert.equal(f.send(), false);
   f.voice.setSubscriptionEnabled("sub_" + uuid(1), false); assert.equal(f.send(2), false);

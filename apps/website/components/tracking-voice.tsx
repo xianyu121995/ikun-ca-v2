@@ -32,7 +32,9 @@ export function useTrackingVoice(session: VoiceSession) {
     };
   }, [session.user_id, session.epoch, session.role, revoke]);
   const connected = useCallback((state: boolean) => {
-    const value = current(); value?.controller.setStreamConnected(state, value.identity);
+    const value = current(); if (!value) return;
+    value.controller.setStreamConnected(state, value.identity);
+    if (state) value.controller.resumeAfterReconnect(value.identity, navigator.userActivation?.hasBeenActive === true);
   }, [current]);
   const verifyIdentity = useCallback(async () => {
     const before = current(); if (!before) return;

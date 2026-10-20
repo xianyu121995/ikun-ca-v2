@@ -172,7 +172,7 @@ export class TrackingVoiceController {
       job.timer = this.clock.setTimeout(() => this.fail(job), VOICE_LIMITS.speechMs);
       this.publish();
       try {
-        this.options.speech.speak(`${metadata.notes}，${metadata.rating}级。`, {
+        this.options.speech.speak(`${metadata.project_name}，${metadata.rating}级。`, {
           start: () => {
             if (!this.current(job)) return;
             if (!this.permitted(this.now()) || job.expires <= this.now()) { this.dropAll(); this.publish(); return; }

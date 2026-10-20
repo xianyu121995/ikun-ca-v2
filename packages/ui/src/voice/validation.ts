@@ -1,6 +1,6 @@
 import type { VoiceCandidate, VoiceMetadata, VoiceSession } from "./types.js";
 
-export const VOICE_LIMITS = Object.freeze({ queue: 20, ttlMs: 30_000, metadataMs: 4_000, speechMs: 30_000, dedupe: 1024, dedupeMs: 600_000, subscriptions: 1000, notes: 4000 });
+export const VOICE_LIMITS = Object.freeze({ queue: 20, ttlMs: 30_000, metadataMs: 4_000, speechMs: 30_000, dedupe: 1024, dedupeMs: 600_000, subscriptions: 1000, projectName: 4000 });
 const uuid4 = "[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const activity = /^act_[0-9a-f]{8}-[0-9a-f]{4}-[45][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 export const isSubscriptionId = (value: unknown): value is string => typeof value === "string" && new RegExp(`^sub_${uuid4}$`).test(value);
@@ -23,10 +23,10 @@ export function candidateFromFrame(value: unknown): VoiceCandidate | null {
   return Object.freeze({ event_id: value.event_id, activity_id: data.activity_id, subscription_id: data.subscription_id, project_id: data.project_id, tweet_kind: data.tweet_kind, received_at: timestamp });
 }
 export function verifiedMetadata(value: unknown, candidate: VoiceCandidate): VoiceMetadata | null {
-  if (!record(value) || value.subscription_id !== candidate.subscription_id || value.project_id !== candidate.project_id || !positiveRevision(value.subscription_revision) || !positiveRevision(value.project_revision) || !["S", "A", "B"].includes(value.rating as string) || typeof value.notes !== "string" || value.notes.length > VOICE_LIMITS.notes) return null;
-  const notes = value.notes.replace(/\s+/gu, " ").trim();
-  if (!notes || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(notes)) return null;
-  return { subscription_id: candidate.subscription_id, project_id: candidate.project_id, notes, subscription_revision: value.subscription_revision as number, project_revision: value.project_revision as number, rating: value.rating as VoiceMetadata["rating"] };
+  if (!record(value) || value.subscription_id !== candidate.subscription_id || value.project_id !== candidate.project_id || !positiveRevision(value.subscription_revision) || !positiveRevision(value.project_revision) || !["S", "A", "B"].includes(value.rating as string) || typeof value.project_name !== "string" || value.project_name.length > VOICE_LIMITS.projectName) return null;
+  const project_name = value.project_name.replace(/\s+/gu, " ").trim();
+  if (!project_name || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(project_name)) return null;
+  return { subscription_id: candidate.subscription_id, project_id: candidate.project_id, project_name, subscription_revision: value.subscription_revision as number, project_revision: value.project_revision as number, rating: value.rating as VoiceMetadata["rating"] };
 }
 const shanghai = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
 function dayMs(now: number): number {

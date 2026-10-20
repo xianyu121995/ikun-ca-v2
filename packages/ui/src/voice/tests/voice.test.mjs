@@ -28,16 +28,16 @@ test("defaults off, rejects invalid session and requires a real gesture on every
 for (const role of ["user", "superadmin"]) for (const kind of ["original", "quote"]) {
   test(`${role} may enable personal voice for ${kind}, independently of business write permission`, async () => {
     const f = fixture({ session: { ...session, role } }); assert.equal(f.enable(), true); assert.equal(f.send(1, { tweet_kind: kind, text: "NEVER SPEAK THIS", x_handle: "not_a_note", name: "not_a_note", raw: { secret: "none" } }), true);
-    await flush(); assert.deepEqual(f.speech.calls, ["真实监控备注，A级。"]);
+    await flush(); assert.deepEqual(f.speech.calls, ["真实项目名称，A级。"]);
     assert.deepEqual(Object.keys(f.resolved[0].candidate).sort(), ["event_id", "activity_id", "subscription_id", "project_id", "tweet_kind", "received_at"].sort());
     assert.equal(f.resolved[0].context.role, role); assert.equal(f.voice.getSnapshot().status, "speaking"); f.speech.end(); assert.equal(f.voice.getSnapshot().status, "ready"); f.voice.destroy();
   });
 }
-for (const rating of ["S", "A", "B"]) test(`only true notes plus current ${rating} rating are spoken`, async () => {
-  const f = fixture({ resolveMetadata: async c => metadata(c, { rating, notes: "  真实\n备注  " }) }); f.enable(); f.send(); await flush(); assert.deepEqual(f.speech.calls, [`真实 备注，${rating}级。`]); f.voice.destroy();
+for (const rating of ["S", "A", "B"]) test(`only verified project name plus current ${rating} rating are spoken`, async () => {
+  const f = fixture({ resolveMetadata: async c => metadata(c, { rating, project_name: "  真实\n项目  " }) }); f.enable(); f.send(); await flush(); assert.deepEqual(f.speech.calls, [`真实 项目，${rating}级。`]); f.voice.destroy();
 });
 test("C/D/null/missing and invalid metadata never fall back to event name, handle or rating", async () => {
-  const patches = [{ rating: "C" }, { rating: "D" }, { rating: null }, { rating: undefined }, { rating: 90 }, { notes: "" }, { notes: " \n\t" }, { notes: "\u200b" }, { notes: "\u202e备注" }, { notes: 2 }, { notes: "a".repeat(4001) }, { subscription_revision: 0 }, { subscription_revision: "1" }, { project_revision: -1 }, { project_revision: NaN }, { project_revision: Infinity }, { subscription_id: "sub_" + uuid(2) }, { project_id: "prj_" + uuid(2) }];
+  const patches = [{ rating: "C" }, { rating: "D" }, { rating: null }, { rating: undefined }, { rating: 90 }, { project_name: "" }, { project_name: " \n\t" }, { project_name: "\u200b" }, { project_name: "\u202e备注" }, { project_name: 2 }, { project_name: "a".repeat(4001) }, { project_name: undefined, notes: "旧备注不能代替名称" }, { subscription_revision: 0 }, { subscription_revision: "1" }, { project_revision: -1 }, { project_revision: NaN }, { project_revision: Infinity }, { subscription_id: "sub_" + uuid(2) }, { project_id: "prj_" + uuid(2) }];
   for (const patch of patches) { const f = fixture({ resolveMetadata: async c => metadata(c, patch) }); f.enable(); f.send(1, { notes: "不可回退", rating: "S", name: "不可回退" }); await flush(); assert.equal(f.speech.calls.length, 0, JSON.stringify(patch)); f.voice.destroy(); }
 });
 test("failed/null HTTP wrappers are not accepted as verified metadata; resolver throw is isolated", async () => {
@@ -173,7 +173,7 @@ test("metadata completed at 22 or a backwards wall clock cannot reopen a quiet q
   const f = fixture({ clock, resolveMetadata: c => new Promise(resolve => { answer = () => resolve(metadata(c)); }) }); f.enable(); f.send(); await flush(); clock.advance(1000); answer(); await flush(); assert.equal(f.speech.calls.length, 0);
   clock.time -= 2000; f.voice.tick(); assert.equal(f.voice.getSnapshot().status, "quiet-hours"); f.voice.destroy();
 });
-test("stored preference is user-isolated, contains no notes/session/events, and never unlocks another page", async () => {
+test("stored preference is user-isolated, contains no project names/session/events, and never unlocks another page", async () => {
   const storage = new MemoryStorage(); const f = fixture({ storage }); f.enable(); f.voice.setSubscriptionEnabled("sub_" + uuid(2), false); f.send(); await flush();
   const raw = storage.getItem(voicePreferenceKey(session.user_id)); assert.deepEqual(Object.keys(JSON.parse(raw)).sort(), ["version", "enabled", "disabled_subscription_ids", "quiet_hours"].sort()); assert.ok(!raw.includes("真实")); assert.ok(!raw.includes(session.epoch)); f.voice.destroy();
   const otherPage = fixture({ storage }); assert.equal(otherPage.voice.getSnapshot().enabled, true); assert.equal(otherPage.voice.getSnapshot().armed, false); assert.equal(otherPage.send(), false); otherPage.voice.destroy();
@@ -196,7 +196,7 @@ test("browser adapter selects only a local voice, reports start separately, and 
   const target = { SpeechSynthesisUtterance: class { constructor(text) { this.text = text; } }, navigator: { userActivation: { isActive: true } }, speechSynthesis: { getVoices: () => [remote, local], speak: value => { spoken = value; }, cancel: () => cancelled++, addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name) } };
   const port = createWebSpeechPort(target); assert.equal(port.availability(), "available"); assert.equal(port.isUserGesture(gesture), true); assert.equal(spoken, undefined);
   assert.equal(port.isUserGesture({ ...gesture, isTrusted: false }), false); target.navigator.userActivation.isActive = false; assert.equal(port.isUserGesture(gesture), false);
-  let started = false; port.speak("真实备注，S级。", { start: () => { started = true; }, end() {}, error() {} }); assert.equal(spoken.voice, local); assert.equal(started, false); spoken.onstart(); assert.equal(started, true);
+  let started = false; port.speak("真实项目名称，S级。", { start: () => { started = true; }, end() {}, error() {} }); assert.equal(spoken.voice, local); assert.equal(started, false); spoken.onstart(); assert.equal(started, true);
   port.cancel(); assert.equal(cancelled, 1); assert.equal(spoken.onstart, null);
   target.speechSynthesis.getVoices = () => [remote]; assert.equal(port.availability(), "no-local-voice");
   const stop = port.observe(() => {}); assert.equal(listeners.size, 1); stop(); assert.equal(listeners.size, 0);

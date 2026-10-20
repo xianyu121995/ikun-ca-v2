@@ -33,11 +33,12 @@ export function resolveTrackingVoiceMetadata(revoke: () => void, request: typeof
     }
     const sub = await read('/api/v1/tracking/subscriptions/' + encodeURIComponent(candidate.subscription_id));
     if (!sub || sub.subscription_id !== candidate.subscription_id || sub.project_id !== candidate.project_id ||
-      !revision(sub.revision) || typeof sub.notes !== 'string' || !sub.notes.trim() || sub.notes.length > 4000 || context.signal.aborted) return null;
+      !revision(sub.revision) || context.signal.aborted) return null;
     const project = await read('/api/v1/projects/' + encodeURIComponent(candidate.project_id));
     if (!project || project.project_id !== candidate.project_id || !revision(project.revision) ||
+      typeof project.name !== 'string' || !project.name.trim() || project.name.length > 4000 ||
       !['S', 'A', 'B'].includes(String(project.rating)) || context.signal.aborted) return null;
     return { subscription_id: candidate.subscription_id, project_id: candidate.project_id,
-      notes: sub.notes, subscription_revision: sub.revision, rating: project.rating, project_revision: project.revision };
+      project_name: project.name, subscription_revision: sub.revision, rating: project.rating, project_revision: project.revision };
   };
 }

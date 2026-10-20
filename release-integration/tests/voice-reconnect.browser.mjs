@@ -13,6 +13,7 @@ const root=fileURLToPath(new URL('../../',import.meta.url));
 const bundle=await build({stdin:{contents:`import React from 'react';import {createRoot} from 'react-dom/client';import {VoiceDock} from './components/voice-dock';createRoot(document.getElementById('root')).render(<VoiceDock><button id="gesture">测试页面</button></VoiceDock>);`,resolveDir:root+'apps/website',loader:'tsx'},bundle:true,write:false,format:'iife',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'}});
 const streams=new Set();let loggedIn=true,connections=0;
 const uid='usr_00000000-0000-4000-8000-000000000001';
+const emptyNotesSub='sub_d4bf0a2e-00dc-49f8-bbf3-a1231bcb7475',canonicalProject='prj_779afd82-bc46-4293-9735-1b47863fc7a5';
 const server=createServer((req,res)=>{
   if(req.url==='/app.js'){res.setHeader('content-type','text/javascript');res.end(bundle.outputFiles[0].contents);return;}
   if(req.url==='/api/v1/auth/me'){
@@ -26,7 +27,12 @@ const server=createServer((req,res)=>{
     res.writeHead(response.status,Object.fromEntries(response.headers));Readable.fromWeb(response.body).pipe(res);
     res.on('close',()=>{streams.delete(res);abort.abort();});return;
   }
-  if(req.url?.startsWith('/api/')){res.setHeader('content-type','application/json');res.end(JSON.stringify({data:{items:[],next_cursor:null}}));return;}
+  if(req.url?.startsWith('/api/')){
+    let data={items:[],next_cursor:null};
+    if(req.url==='/api/v1/tracking/subscriptions/'+emptyNotesSub)data={subscription_id:emptyNotesSub,project_id:canonicalProject,revision:1,notes:'',name:'订阅别名不能代替项目名称'};
+    if(req.url==='/api/v1/projects/'+canonicalProject)data={project_id:canonicalProject,revision:2,name:'挖矿挖AI，用GPU',rating:'B'};
+    res.setHeader('content-type','application/json');res.end(JSON.stringify({data,request_id:'voice_fixture'}));return;
+  }
   res.setHeader('content-type','text/html');res.end(`<html><head><style>${readFileSync(root+'apps/website/app/globals.css','utf8')}</style></head><body><div id="root"></div><script src="/app.js"></script></body></html>`);
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -62,6 +68,11 @@ try{
   await page.evaluate(()=>{window.__voiceAuditionMode='error';});
   await page.getByRole('button',{name:'试听语音',exact:true}).click();await page.getByText(/^浏览器播放试听失败/).waitFor();await waitState('on');
   console.log('PASS browser rejects audition: report failure without muting or corrupting live voice');
+  await page.evaluate(()=>{window.__voiceAuditionMode='success';});
+  const livePacket={...packet,activity_id:'act_'+crypto.randomUUID(),subscription_id:emptyNotesSub,project_id:canonicalProject,received_at:new Date().toISOString(),project_name:'不可信事件名称',notes:'不可信事件备注'};
+  for(const res of streams)res.write(`id: evt_${crypto.randomUUID()}\nevent: tracking.feed.activity.created.v1\ndata: ${JSON.stringify({data:livePacket,request_id:'voice_fixture'})}\n\n`);
+  await page.waitForFunction(()=>window.__voiceAuditions.at(-1)==='挖矿挖AI，用GPU，B级。');
+  console.log('PASS live SSE → empty-note subscription → canonical project name + B grade → browser speech');
   await page.getByRole('button',{name:'关闭语音',exact:true}).click();await waitState('off');
   await page.evaluate(()=>{window.__voiceAuditionMode='success';});
   await page.getByRole('button',{name:'试听语音',exact:true}).click();await page.getByText(/^浏览器已完成试听/).waitFor();await waitState('off');

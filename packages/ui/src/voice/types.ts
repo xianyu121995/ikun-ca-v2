@@ -9,7 +9,7 @@ export interface VoiceCandidate {
 export interface TrackingVoiceFrame { type: string; event_id: string; delivery: "live" | "history" | "replay" | "rest"; data: unknown }
 /** Return only after both authenticated, successful reads and ID/revision checks. No feed-page fallback. */
 export interface VoiceMetadata {
-  subscription_id: string; project_id: string; notes: string; subscription_revision: number;
+  subscription_id: string; project_id: string; project_name: string; subscription_revision: number;
   rating: "S" | "A" | "B"; project_revision: number;
 }
 export type ResolveVoiceMetadata = (candidate: Readonly<VoiceCandidate>, context: Readonly<VoiceSession> & { signal: AbortSignal }) => Promise<unknown>;

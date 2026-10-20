@@ -5,6 +5,6 @@ for (const exported of [TrackingVoiceController, VoiceControls, createWebSpeechP
 const speech = new MockSpeech();
 const voice = new TrackingVoiceController({ speech, clock: new FakeClock(), storage: new MemoryStorage(), resolveMetadata: async candidate => metadata(candidate, { rating: "S" }) });
 voice.setSession(session); voice.setStreamConnected(true, session); assert.equal(voice.enableFromGesture(gesture), true);
-assert.equal(voice.consume(frame(), session), true); await flush(); assert.deepEqual(speech.calls, ["真实监控备注，S级。"]);
+assert.equal(voice.consume(frame(), session), true); await flush(); assert.deepEqual(speech.calls, ["真实项目名称，S级。"]);
 voice.setSession(null); assert.equal(speech.hooks, null); assert.equal(voice.getSnapshot().queued, 0); voice.destroy();
 console.log("Compiled package export + mock playback/revocation smoke passed (not a new unit-test count)");

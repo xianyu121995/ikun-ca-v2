@@ -30,7 +30,7 @@ export async function trackingService(path: string, id: string, options: Request
         clearTimeout(timer);
     }
 }
-async function readBody(request: Request, empty = false) {
+export async function readBody(request: Request, empty = false) {
     const reader = request.body?.getReader();
     if (!reader) {
         if (empty)

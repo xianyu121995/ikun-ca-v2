@@ -8,6 +8,7 @@ import {canEdit} from '../features/homepage/view-model';
 import './projects-home-access.css';
 import {loadTrackingSubscriptions,invalidateTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
 import {readHomeRows,saveHomeRows,significantRowChange} from '../lib/home-page-size';
+import {JoinProjectTracking} from './join-project-tracking';
 type Home={project:ProjectRecordProjection;milestone:Omit<ProjectMilestone,'project_id'>;completion:null|{previous_stage:ArchiveNote['previous_stage'];completed_at:string}};
 type Page={items:Home[];total:number;next_cursor:string|null};
 type MainQuery={q:string;rating:string;progress_stage:string;discovered_on:string;category:string;sort:string;direction:'asc'|'desc'};
@@ -107,7 +108,7 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   return <div className="projects-home-access" data-project-access={canWrite?'write':'readonly'}><ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
     callbacks={{...mutations,onReconcile:reconcile,
       onQueryChange:(q:HomepageQuery)=>change({q:q.q,rating:q.rating,progress_stage:q.progress_stage,category:q.category??'all'}),onDiscoveryDateChange:day=>change({discovered_on:day??''}),onReload:reload}}
-    server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,pageSize:limit??9,xHandles,onQuickEdit:canWrite?quickEdit:undefined,hasNext:!!main.next_cursor,summary,
+    server={{mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,pageSize:limit??9,xHandles,renderJoinTracking:canWrite?(projectId,disabled)=><JoinProjectTracking key={projectId} projectId={projectId} csrf={csrf} canManage={canWrite} disabled={disabled} onJoined={reload}/>:undefined,onQuickEdit:canWrite?quickEdit:undefined,hasNext:!!main.next_cursor,summary,
       onSort:value=>change({sort:value.key,direction:value.direction}),canPage,onPage:next=>{if(canPage(next))setPage(next);},onWindow:setWindow,onDetail:id=>void openDetail(id),
       onCompletedOpen:setCompletedOpen,onOtherOpen:setOtherOpen,completedLoading:completedOpen&&(completedPending||completedIndex!==completedLoaded&&!completedError),otherLoading:otherOpen&&(otherPending||otherIndex!==otherLoaded&&!otherError),completedError,otherError,
       completedPagination:pagination(completedIndex,completedLoaded,completed.total,completed.next_cursor,completedCursors.current,setCompletedIndex),otherPagination:pagination(otherIndex,otherLoaded,other.total,other.next_cursor,otherCursors.current,setOtherIndex)}}/></div>;

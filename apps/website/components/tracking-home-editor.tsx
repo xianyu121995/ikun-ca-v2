@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Alert, Button, Dialog, Input } from '@ikun/ui';
 import { PROJECT_TYPES, referenceStageLabels } from '../features/homepage/reference-model';
+import {JoinProjectTracking} from './join-project-tracking';
 
 type Milestone = { date: string | null; hour: string | null; title: string; status: 'confirmed' | 'estimated' | 'unconfirmed' };
 type Loaded = { project: { project_id: string; name: string; revision: number; notes: string; progress_stage: keyof typeof referenceStageLabels; home_membership?: string; category?: string | null }; milestone: Milestone; completion: unknown };
@@ -10,7 +11,7 @@ export type EditTarget = { project_id: string; name: string; tweet: string; quot
 
 const hours = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
 
-export function TrackingHomeEditor({ target, csrf, onClose, onSaved }: { target: EditTarget | null; csrf: string; onClose: () => void; onSaved: (message: string) => void }) {
+export function TrackingHomeEditor({ target, csrf, canManage=false, onClose, onSaved }: { target: EditTarget | null; csrf: string; canManage?:boolean; onClose: () => void; onSaved: (message: string) => void }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false), [aiBusy, setAiBusy] = useState(false);
   const [date, setDate] = useState(''), [hour, setHour] = useState(''), [title, setTitle] = useState(''), [status, setStatus] = useState<'confirmed' | 'estimated'>('estimated');
   const [stage, setStage] = useState<keyof typeof referenceStageLabels>('todo'), [notes, setNotes] = useState(''), [category, setCategory] = useState(''), [openedFor, setOpenedFor] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export function TrackingHomeEditor({ target, csrf, onClose, onSaved }: { target:
       <label className='tracking-edit-field'>项目类型<select value={category} onChange={e => setCategory(e.target.value)}><option value=''>未分类</option>{PROJECT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}{category && !(PROJECT_TYPES as readonly string[]).includes(category) && <option value={category}>{category}</option>}</select></label>
       <label className='tracking-edit-field'>进度<select value={stage} onChange={e => setStage(e.target.value as keyof typeof referenceStageLabels)}>{Object.entries(referenceStageLabels).filter(([k]) => k !== 'completed').map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
       <label className='tracking-edit-field'>备注<textarea rows={3} maxLength={4000} value={notes} onChange={e => setNotes(e.target.value)} /></label>
+      {target&&loaded&&<JoinProjectTracking key={target.project_id} projectId={target.project_id} csrf={csrf} canManage={canManage} disabled={busy||aiBusy}/>}
       <Button variant='primary' pending={busy} disabled={!loaded} onClick={() => void save()}>保存并同步到主页</Button></>}
   </Dialog>;
 }

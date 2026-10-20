@@ -8,7 +8,7 @@ import {PROJECT_TYPES,currentMilestone,referenceStageLabels,validateDraft} from 
 import type {EditorDraft,ProjectMilestone} from '../../features/homepage/reference-types';
 
 const emptyFields:ProjectFieldsProjection={name:'',rating:'B',website_url:null,description:'',notes:'',category:null,progress_stage:'researching',progress_percent:null,token_date:null,token_date_status:'unconfirmed'};
-export function ReferenceEditor({project,milestones,mode,busy,blocked,unsettled,onClose,onSave,children}:{project?:ProjectView;milestones:readonly ProjectMilestone[];mode:'demo'|'live';busy:boolean;blocked:boolean;unsettled:boolean;onClose:()=>void;onSave:(draft:EditorDraft)=>void;children:ReactNode}){
+export function ReferenceEditor({project,milestones,mode,busy,blocked,unsettled,onClose,onSave,children,trackingAction}:{project?:ProjectView;milestones:readonly ProjectMilestone[];mode:'demo'|'live';busy:boolean;blocked:boolean;unsettled:boolean;onClose:()=>void;onSave:(draft:EditorDraft)=>void;children:ReactNode;trackingAction?:ReactNode}){
   const [initial]=useState<EditorDraft>(()=>({fields:project?pickFields(project.record):{...emptyFields},milestone:project?(()=>{const {project_id,...event}=currentMilestone(project,milestones);return event;})():{date:null,hour:'00',title:'',status:'unconfirmed'},archive_after_save:project?.record.progress_stage==='completed'}));
   const [draft,setDraft]=useState(initial),[error,setError]=useState(''),[discard,setDiscard]=useState(false);
   const dirty=JSON.stringify(draft)!==JSON.stringify(initial);
@@ -32,7 +32,7 @@ export function ReferenceEditor({project,milestones,mode,busy,blocked,unsettled,
         {draft.fields.progress_stage==='completed'&&<p className="hpv2-archive-choice">保存后移出主页，资料保留在「已完成记录」，可恢复原进度。</p>}
         <details className="hpv2-extra-fields"><summary>更多项目字段</summary><Input label="发币日期" type="date" value={draft.fields.token_date||''} disabled={blocked} onChange={event=>setDraft(previous=>({...previous,fields:{...previous.fields,token_date:event.target.value||null,token_date_status:event.target.value?'estimated':'unconfirmed'}}))}/><Select label="发币日期状态" value={draft.fields.token_date_status} disabled={blocked||!draft.fields.token_date} onChange={event=>field('token_date_status',event.target.value as ProjectFieldsProjection['token_date_status'])}>{draft.fields.token_date?<><option value="estimated">预计</option><option value="confirmed">已确认</option></>:<option value="unconfirmed">未确认</option>}</Select></details>
         {project&&<p className="hpv2-readonly-meta">发现时间、项目 ID 和服务端时间只读。<br/>{project.discoveredLabel} · revision {project.record.revision}<br/>{project.key}</p>}
-        {error&&<Alert tone="danger" title={error}/>}{children}
+        {error&&<Alert tone="danger" title={error}/>}{children}{trackingAction}
         <div className="hpv2-editor-actions"><Button disabled={busy} onClick={close}>{blocked&&!busy?'关闭':'取消'}</Button><Button type="submit" variant="primary" pending={busy} disabled={blocked}>{busy?'提交中…':'保存资料'}</Button></div>
       </form>}
   </HomepageDialog>;

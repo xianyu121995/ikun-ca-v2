@@ -236,6 +236,6 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             if (!open && !busy)
                 setEdit(null);
         }} pending={busy}><Input label='项目名称' value={editName} onChange={e => setEditName(e.target.value)}/><Input label='监控备注' value={editNotes} onChange={e => setEditNotes(e.target.value)}/><Button onClick={() => void save()} pending={busy}>保存资料</Button></Dialog>
- <TrackingHomeEditor target={homeEdit} csrf={csrf} onClose={() => setHomeEdit(null)} onSaved={message => setCommand(message)} />
+ <TrackingHomeEditor target={homeEdit} csrf={csrf} canManage={canManage} onClose={() => setHomeEdit(null)} onSaved={message => setCommand(message)} />
  <Dialog open={!!untrack} title='取消追踪' destructive onOpenChange={open => { if (!open && !busy) setUntrack(null); }} pending={busy}><p>确定取消追踪「{untrack?.name}」{untrack?.x_handle ? ' @' + untrack.x_handle : ''} 吗？</p><p>会从追踪列表彻底移除，不再接收新推文；主页上的项目不变，之前的推文继续显示。以后要追踪需要重新添加。</p><div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}><Button disabled={busy} onClick={() => setUntrack(null)}>取消</Button><Button variant='danger' pending={busy} onClick={() => { const row = untrack; if (row) void operate(row, 'remove').then(ok => { if (ok) { setUntrack(null); setCommand('已取消追踪「' + row.name + '」'); } }); }}>确定取消追踪</Button></div></Dialog></>;
 }

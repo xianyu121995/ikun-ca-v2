@@ -51,6 +51,8 @@ def accept(store, command, request_id):
             if command.operation == "tracking.create":
                 payload = command.payload
                 if row:
+                    if row["desired"] != "removed":
+                        raise DomainError(409, "CONFLICT", "already in tracking list; use an explicit resume command")
                     if row["handle"] != payload["x_handle"] or (
                         row["x_user_id"] and payload["x_user_id"] and row["x_user_id"] != payload["x_user_id"]
                     ):

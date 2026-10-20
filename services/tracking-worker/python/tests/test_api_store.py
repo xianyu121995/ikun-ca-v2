@@ -178,22 +178,34 @@ def test_duplicate_concurrent_inbox_is_one_intent(store):
         assert db.execute("SELECT COUNT(*) FROM commands").fetchone()[0] == 1
 
 
-def test_platform_id_enrichment_preserves_subscription_and_rejects_collision(client, store):
+@pytest.mark.parametrize("desired", ["running", "stopped"])
+def test_duplicate_create_never_updates_or_resumes_existing_subscription(client, store, desired):
     first = envelope()
     sid = submit(client, first).json()["data"]["subscription_id"]
+    if desired == "stopped":
+        assert submit(client, envelope(operation="tracking.stop", subscription_id=sid,
+                                      expected_revision=1, payload={})).status_code == 202
+    before = store.get(PID)
+    with store.connect() as db:
+        counts = {table: db.execute("SELECT COUNT(*) FROM " + table).fetchone()[0]
+                  for table in ("commands", "audit", "changes")}
     enriched = envelope(payload=first["payload"] | {"x_user_id": "12345", "notes": "not an edit"})
-    assert submit(client, enriched).json()["data"]["subscription_id"] == sid
-    assert store.get(PID)["x_user_id"] == "12345" and store.get(PID)["notes"] == ""
+    assert submit(client, enriched).status_code == 409
+    assert store.get(PID) == before
+    assert submit(client, first).json()["data"]["subscription_id"] == sid  # Original receipt is idempotent.
+    with store.connect() as db:
+        assert counts == {table: db.execute("SELECT COUNT(*) FROM " + table).fetchone()[0] for table in counts}
+
+
+def test_create_different_project_rejects_handle_and_platform_identity_collision(client, store):
+    first = envelope()
+    first["payload"]["x_user_id"] = "12345"
+    assert submit(client, first).status_code == 202
     other_id = "prj_" + str(uuid.uuid4())
-    other = envelope(project_id=other_id, payload=first["payload"] | {"x_handle": "otherproject"})
-    other_sid = submit(client, other).json()["data"]["subscription_id"]
-    assert (
-        submit(
-            client, envelope(project_id=other_id, payload=other["payload"] | {"x_user_id": "12345"})
-        ).status_code
-        == 409
-    )
-    assert store.get(other_id)["subscription_id"] == other_sid and store.get(other_id)["x_user_id"] is None
+    assert submit(client, envelope(project_id=other_id, payload=first["payload"] | {"x_user_id": None})).status_code == 409
+    assert submit(client, envelope(project_id=other_id, payload=first["payload"] | {"x_handle": "otherproject"})).status_code == 409
+    with store.connect() as db:
+        assert db.execute("SELECT 1 FROM projects WHERE project_id=?", (other_id,)).fetchone() is None
 
 
 async def test_unknown_write_then_read_failure_no_false_success(client, worker, store, vendor):

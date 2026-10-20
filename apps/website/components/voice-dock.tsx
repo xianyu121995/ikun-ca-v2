@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { VoiceControls, type TrackingVoiceController, type VoiceSession } from '@ikun/ui';
 import {loadTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
 import { useTrackingVoice } from './tracking-voice';
+import {VoiceTest} from './voice-test';
 
 const VoiceContext = createContext<TrackingVoiceController | null>(null);
 export const useSiteVoice = () => useContext(VoiceContext);
@@ -82,7 +83,7 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
   }, [controller, session.user_id]);
   return <VoiceContext.Provider value={controller}>{children}
     {controller && <div className="ikun-voice-dock" data-state={status}>
-      {open && <div className="ikun-voice-panel"><VoiceControls controller={controller} subscriptions={subs} /></div>}
+      {open && <div className="ikun-voice-panel"><VoiceTest controller={controller}/><VoiceControls controller={controller} subscriptions={subs} /></div>}
       <button type="button" className="ikun-voice-fab" aria-expanded={open} title="实时推文语音"
         onClick={event => { if (status === 'locked') controller.enableFromGesture(event.nativeEvent); else setOpen(o => !o); }}>
         {status === 'on' ? '🔊' : status === 'locked' ? '🔈' : '🔇'}<span className="ikun-voice-label">{status === 'on' ? ' 语音开' : status === 'locked' ? ' 点我恢复语音' : ' 语音关'}</span>

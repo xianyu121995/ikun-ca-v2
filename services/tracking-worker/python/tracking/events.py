@@ -82,12 +82,19 @@ def normalize(content: dict, username: str, require_author=False, *, event_type=
         event_type == "NEW_TWEET_QUOTE" or content.get("quotedStatus") or content.get("quoted_status")
     ):
         kind, type_evidence = "unknown", "conflicting-structured-v1"
-    elif event_type == "NEW_TWEET_QUOTE" or (quote is True and reply is False):
+    elif event_type == "NEW_TWEET_QUOTE" or quote is True:
         kind = "quote"
     elif event_type == "NEW_TWEET" or (reply is False and quote is False and event_type == "REST_USER_TWEETS_NO_RETWEETS"):
         kind = "original"
     else:
         kind = "unknown"
+    if kind != "unknown":
+        explicit = (
+            kind in ("reply", "repost", "quote")
+            or all(value is False for value in (reply, quote, repost))
+        )
+        transport = "rest" if event_type.startswith("REST_") else "wss"
+        type_evidence = f"6551-{transport}-{'structured' if explicit else 'event'}-v2"
     tweet_id = str(content.get("id", content.get("id_str", "")))
     created = timestamp(content.get("createdAt", content.get("created_at")))
     text = content.get("text", content.get("full_text", ""))
@@ -104,8 +111,24 @@ def normalize(content: dict, username: str, require_author=False, *, event_type=
         "author_verified": True,
         "author_handle": username,
         "author_id": author_id,
-        "quoted_tweet": quoted_context(content) if kind == "quote" else None,
+        "quoted_tweet": quoted_context(content),
     }
+
+
+def merge_type(previous, incoming, source):
+    """Unknown/REST enrichment never erases a known type; explicit live evidence may correct it."""
+    kind, evidence = incoming["tweet_kind"], incoming["type_evidence_version"]
+    if previous is None or previous["tweet_kind"] == "unknown":
+        return kind, evidence
+    old_kind, old_evidence = previous["tweet_kind"], previous["type_evidence_version"]
+    if kind == "unknown":
+        return old_kind, old_evidence
+    trusted_live = source == "wss" and evidence == "6551-wss-structured-v2"
+    if kind == old_kind:
+        return kind, evidence if trusted_live else old_evidence
+    if trusted_live:
+        return kind, evidence
+    return old_kind, old_evidence
 
 
 def parse_event(message) -> tuple[str, dict] | None:

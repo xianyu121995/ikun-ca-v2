@@ -18,7 +18,7 @@ from .protocol import UUID4, DomainError, Principal, Strict, canonical
 from .retention import retention_now
 
 PROFILE = "published-v1"
-POLICY = "product-decisions-v1.1"
+POLICY = "product-decisions-v1.2"
 NS = uuid.UUID("c018deb2-7ccf-5092-8112-b5c9f71d40be")
 
 
@@ -366,7 +366,7 @@ def _render(db, meta, row, offset, limit, now):
                 "rating_revision": rating["revision"],
                 "tweet_kind": tweet["tweet_kind"],
                 "text": tweet["text"][:20000],
-                "quoted_tweet": quote_for(db, tweet["tweet_id"]) if tweet["tweet_kind"] == "quote" else None,
+                "quoted_tweet": quote_for(db, tweet["tweet_id"]),
                 "translation_zh": translation_for(db, tweet["tweet_id"]),
                 "url": f"https://x.com/{sub['handle']}/status/{tweet['tweet_id']}",
                 "occurred_at": iso(int(tweet["created_at"] * 1000))
@@ -451,7 +451,7 @@ def snapshot(store, request: SnapshotRequest):
         for aid in candidate_ids:
             tweet = all_rows[aid]
             kind = tweet["tweet_kind"]
-            if kind not in ("original", "quote"):
+            if kind not in ("original", "quote", "unknown"):
                 excluded[kind if kind in ("reply", "repost") else "unknown_type"] += 1
                 continue
             rating = items[tweet["project_id"]]

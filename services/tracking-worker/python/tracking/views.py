@@ -144,7 +144,7 @@ def page(store, kind, query, *, fresh_seconds=45):
             items = [subscription(store,r,db=db,fresh_seconds=fresh_seconds,projection=(runtime,commands,last)) for r in selected]
         else:
             descending = kind == "latest"
-            clauses = ["t.expires_at_ms>?", "t.tweet_kind IN ('original','quote')", "t.author_verified=1"]
+            clauses = ["t.expires_at_ms>?", "t.tweet_kind IN ('original','quote','unknown')", "t.author_verified=1"]
             args = [now]
             for field in ("project_id", "subscription_id"):
                 if field in query:

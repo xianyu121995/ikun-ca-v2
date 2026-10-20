@@ -300,6 +300,7 @@ class Store:
         import uuid
 
         from .commands import activity, change
+        from .events import merge_type
         from .feed import activity_id
         from .protocol import SCOPE, canonical
         from .retention import TTL_MS, retention_now
@@ -415,32 +416,22 @@ class Store:
                 "SELECT 1 FROM tweets WHERE subscription_id=? AND tweet_id=? AND tweet_kind IN ('original','quote') AND author_verified=1",
                 (current["subscription_id"], tweet["tweet_id"]),
             ).fetchone()
+            type_basis = prior
+            if type_basis is None or type_basis["tweet_kind"] == "unknown":
+                type_basis = db.execute(
+                    "SELECT * FROM tweets WHERE subscription_id=? AND tweet_id=? "
+                    "AND tweet_kind!='unknown' ORDER BY seq DESC LIMIT 1",
+                    (current["subscription_id"], tweet["tweet_id"]),
+                ).fetchone() or prior
+            kind, evidence = merge_type(type_basis, tweet, source if not historical else "replay")
             if prior:
-                conflicted = "conflicting-structured-v1" in (
-                    prior["type_evidence_version"],
-                    tweet["type_evidence_version"],
-                )
-                kind = (
-                    "unknown"
-                    if conflicted
-                    else tweet["tweet_kind"]
-                    if prior["tweet_kind"] == "unknown"
-                    else prior["tweet_kind"]
-                )
-                # Conflicting reliable type evidence is hidden, never guessed back to original.
-                if (
-                    prior["tweet_kind"] != "unknown"
-                    and tweet["tweet_kind"] != "unknown"
-                    and prior["tweet_kind"] != tweet["tweet_kind"]
-                ):
-                    kind = "unknown"
-                    conflicted = True
                 text = prior["text"] or tweet["text"]
                 occurred = prior["created_at"] if prior["created_at"] is not None else created
                 if occurred is not None and created is not None:
                     occurred = min(occurred, created)
                 changed = (
-                    text != prior["text"] or occurred != prior["created_at"] or kind != prior["tweet_kind"]
+                    text != prior["text"] or occurred != prior["created_at"]
+                    or kind != prior["tweet_kind"] or evidence != prior["type_evidence_version"]
                 )
                 if changed:
                     db.execute(
@@ -449,12 +440,11 @@ class Store:
                             text,
                             occurred,
                             kind,
-                            "conflicting-structured-v1" if conflicted else tweet["type_evidence_version"],
+                            evidence,
                             aid,
                         ),
                     )
             else:
-                kind = tweet["tweet_kind"]
                 changed = True
                 db.execute(
                     "INSERT INTO tweets(activity_id,project_id,subscription_id,handle,tweet_id,text,created_at,received_at,source,generation,tweet_kind,author_verified,type_evidence_version,expires_at_ms) VALUES(?,?,?,?,?,?,?,?,?,?,?,1,?,?)",
@@ -470,12 +460,12 @@ class Store:
                         source,
                         current["generation"],
                         kind,
-                        tweet["type_evidence_version"],
+                        evidence,
                         expiry,
                     ),
                 )
             context = tweet.get("quoted_tweet")
-            if kind == "quote" and isinstance(context, dict):
+            if kind in ("quote", "unknown") and isinstance(context, dict):
                 # Normalized public context belongs to this DB; no raw frame or new schema.
                 from .events import quoted_context
                 normalized = quoted_context({"quotedStatus": {"id": context.get("tweet_id"),
@@ -518,7 +508,7 @@ class Store:
                     if versioned["is_live_new"]
                     else "tracking.feed.activity.updated.v1"
                 )
-                if kind in ("original", "quote") or known_before:
+                if kind in ("original", "quote", "unknown") or known_before:
                     eid = change(db, event_type, versioned)
                     envelope = {
                         "schema_version": 1,

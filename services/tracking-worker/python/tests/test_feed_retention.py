@@ -131,8 +131,8 @@ def test_author_and_unknown_are_not_fabricated(store):
     unknown = normalize({"id": "2", "text": "unknown", "userScreenName": row["handle"]}, row["handle"], event_type="UNRECOGNIZED")
     assert unknown["tweet_kind"] == "unknown"
     assert store.insert_tweet(row, unknown, "wss")
-    assert make_page(store)["items"] == []
-    assert make_page(store)["excluded"]["unknown_type"] == 1
+    assert make_page(store)["items"][0]["tweet_kind"] == "unknown"
+    assert make_page(store)["excluded"]["unknown_type"] == 0
     known = normalize(tweet(row["handle"], "2", text="known"), "project1")
     assert store.insert_tweet(row, known, "wss")
     assert len(make_page(store)["items"]) == 1
@@ -183,13 +183,13 @@ def test_server_global_sort_full_counts_filters_and_limit_change(store):
     observe(store, rows[0], "203", at=time.time() - 200, kind="unknown")
     observe(store, rows[0], "204", at=time.time() - 200, kind="quote")
     result = make_page(store, limit=1, mapping=mapping)
-    assert result["matched_total"] == 4
-    assert result["activity_counts_by_rating"] == {"S": 2, "A": 1, "B": 1}
+    assert result["matched_total"] == 5
+    assert result["activity_counts_by_rating"] == {"S": 3, "A": 1, "B": 1}
     assert result["subscription_counts_by_rating"] == {"S": 1, "A": 1, "B": 1}
     assert result["excluded"] == {
         "reply": 1,
         "repost": 1,
-        "unknown_type": 1,
+        "unknown_type": 0,
         "C": 1,
         "D": 1,
         "unrated": 1,
@@ -199,10 +199,10 @@ def test_server_global_sort_full_counts_filters_and_limit_change(store):
     while result["next_cursor"]:
         result = next_page(store, result["next_cursor"], limit=2)
         seen += result["items"]
-    assert [r["tweet_id"] for r in seen] == ["102", "101", "100", "204"]
-    assert len({r["activity_id"] for r in seen}) == 4
+    assert [r["tweet_id"] for r in seen] == ["102", "101", "100", "204", "203"]
+    assert len({r["activity_id"] for r in seen}) == 5
     filtered = make_page(store, mapping=mapping, q="真实备注 1", ratings=["S"])
-    assert filtered["matched_total"] == 2
+    assert filtered["matched_total"] == 3
     assert filtered["subscription_counts_by_rating"] == {"S": 1, "A": 1, "B": 1}
     assert filtered["items"][0]["notes"] == "真实备注 1"
 

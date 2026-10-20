@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { TrackingVoiceController, VoiceControls, createWebSpeechPort, browserVoiceStorage, bindVoiceBrowserLifecycle,
   type VoiceSession, type VoiceIdentity } from '@ikun/ui';
 import { resolveTrackingVoiceMetadata } from '../lib/tracking-voice-metadata';
+import {clearClientSession} from '../lib/client-session-cache';
 
 type Scope = { controller: TrackingVoiceController; identity: VoiceIdentity; revoked: boolean };
 /** Only the existing TrackingLive EventSource calls this bridge. It never creates a stream. */
@@ -15,7 +16,7 @@ export function useTrackingVoice(session: VoiceSession) {
   }, [session.user_id, session.epoch]);
   const revoke = useCallback(() => {
     const value = current(); if (!value) return;
-    value.revoked = true; value.controller.setSession(null);
+    clearClientSession();value.revoked = true; value.controller.setSession(null);
   }, [current]);
   useEffect(() => {
     const instance = new TrackingVoiceController({ speech: createWebSpeechPort(), storage: browserVoiceStorage(),

@@ -1,5 +1,6 @@
 import type {ReactNode} from 'react';
 export interface ServerHomepage {
+  query?:{q:string;rating:string;progress_stage:string;category:string;discovered_on:string;sort:string;direction:'asc'|'desc'};
   mainIds:readonly string[];completedIds:readonly string[];otherIds:readonly string[];eventIds:readonly string[];
   total:number;page:number;hasNext:boolean;pageSize?:number;
   xHandles?:Readonly<Record<string,string>>;

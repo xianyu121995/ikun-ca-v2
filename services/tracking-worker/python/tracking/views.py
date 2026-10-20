@@ -9,11 +9,11 @@ from .commands import activity
 from .protocol import SCOPE, UUID4, DomainError, canonical, utc
 
 
-def subscription(store, row, *, db=None, fresh_seconds=45):
+def subscription(store, row, *, db=None, fresh_seconds=45, projection=None):
     if db is None:
         with store.connect() as con:
             return subscription(store, row, db=con, fresh_seconds=fresh_seconds)
-    runtime = dict(db.execute("SELECT * FROM runtime WHERE id=1").fetchone())
+    runtime = projection[0] if projection else dict(db.execute("SELECT * FROM runtime WHERE id=1").fetchone())
     connected = bool(
         runtime["heartbeat"]
         and time.time() - runtime["heartbeat"] < 10
@@ -25,8 +25,8 @@ def subscription(store, row, *, db=None, fresh_seconds=45):
     observed = (
         {"active": "running", "absent": "absent"}.get(row["remote_state"], "unknown") if fresh else "unknown"
     )
-    cmd = db.execute("SELECT state FROM commands WHERE command_id=?", (row["active_command_id"],)).fetchone()
-    last = db.execute(
+    cmd = projection[1].get(row['active_command_id']) if projection else db.execute("SELECT state FROM commands WHERE command_id=?", (row["active_command_id"],)).fetchone()
+    last = projection[2].get(row['subscription_id']) if projection else db.execute(
         "SELECT MAX(created_at) FROM tweets WHERE subscription_id=?", (row["subscription_id"],)
     ).fetchone()[0]
     return {
@@ -66,10 +66,11 @@ def page(store, kind, query, *, fresh_seconds=45):
         raise DomainError(422, "VALIDATION_ERROR", "unsupported query fields")
     try:
         limit = int(query.get("limit", "50"))
-        if not 1 <= limit <= 100:
+        maximum = 1000 if kind == 'subscriptions' else 100
+        if not 1 <= limit <= maximum:
             raise ValueError()
     except (ValueError, TypeError):
-        raise DomainError(422, "VALIDATION_ERROR", "limit must be 1..100") from None
+        raise DomainError(422, "VALIDATION_ERROR", "limit out of range") from None
     bound = hashlib.sha256(
         canonical([SCOPE, kind, {k: v for k, v in query.items() if k not in ("cursor", "limit")}]).encode()
     ).hexdigest()
@@ -108,7 +109,11 @@ def page(store, kind, query, *, fresh_seconds=45):
     with store.connect() as db:
         from .retention import retention_now
 
-        now = retention_now(db)
+        if kind == 'subscriptions':
+            db.execute('BEGIN')  # Read-only list: no retention clock write/fsync on every request.
+            now = 0
+        else:
+            now = retention_now(db)
         if kind == "subscriptions":
             if query.get("include_removed", "false") not in ("true", "false"):
                 raise DomainError(422, "VALIDATION_ERROR", "invalid include_removed")
@@ -129,7 +134,14 @@ def page(store, kind, query, *, fresh_seconds=45):
 
             if after:
                 rows = [r for r in rows if key(r) > after]
-            items = [subscription(store, r, db=db, fresh_seconds=fresh_seconds) for r in rows[:limit]]
+            selected=rows[:limit]
+            runtime=dict(db.execute("SELECT * FROM runtime WHERE id=1").fetchone())
+            # Three bulk reads replace three per-row queries, within the same read snapshot.
+            command_ids=[r['active_command_id'] for r in selected if r['active_command_id']]
+            commands={r[0]:(r[1],) for r in db.execute('SELECT command_id,state FROM commands WHERE command_id IN ('+','.join('?' for _ in command_ids)+')',command_ids)} if command_ids else {}
+            ids=[r['subscription_id'] for r in selected]
+            last={r[0]:r[1] for r in db.execute('SELECT subscription_id,MAX(created_at) FROM tweets WHERE subscription_id IN ('+','.join('?' for _ in ids)+') GROUP BY subscription_id',ids)} if ids else {}
+            items = [subscription(store,r,db=db,fresh_seconds=fresh_seconds,projection=(runtime,commands,last)) for r in selected]
         else:
             descending = kind == "latest"
             clauses = ["t.expires_at_ms>?", "t.tweet_kind IN ('original','quote')", "t.author_verified=1"]

@@ -13,14 +13,14 @@ type Modal={kind:'manager'}|{kind:'states'}|{kind:'join'}|{kind:'discard';next:s
 const grades:Grade[]=['S','A','B',null];
 const initialHunters:Record<string,boolean>={alphascout:true,signalflow:true,gemfinder:true,firstmover:true,oceanwatcher:false};
 export default function App({live}:{live?:LiveBinding}={}){
- const [now]=useState(Date.now),[projects,setProjects]=useState(()=>live?.projects??createProjects(now)),[filters,setFilters]=useState<Filters>(initialFilters),[sort,setSort]=useState<TableSort>({key:'time',direction:'desc'}),[page,setPage]=useState(1),[mode,setMode]=useState<Mode>('normal');
+ const [now]=useState(Date.now),[projects,setProjects]=useState(()=>live?.projects??createProjects(now)),[filters,setFilters]=useState<Filters>(live?.initialFilters??initialFilters),[sort,setSort]=useState<TableSort>({key:'time',direction:'desc'}),[page,setPage]=useState(1),[mode,setMode]=useState<Mode>('normal');
  const [selected,setSelected]=useState<string|null>(null),[draft,setDraft]=useState<Project|null>(null),[errors,setErrors]=useState<Record<string,string>>({}),[pending,setPending]=useState(false),[saveFailure,setSaveFailure]=useState(false),[modal,setModal]=useState<Modal>(null),[messages,setMessages]=useState<ToastMessage[]>([]);
  const [hunters,setHunters]=useState(live?{}:initialHunters),[hunterAction,setHunterAction]=useState<Action>('add'),[handle,setHandle]=useState(''),[hunterError,setHunterError]=useState('');
  const opener=useRef<HTMLElement|null>(null),nameRef=useRef<HTMLInputElement>(null),usernameRef=useRef<HTMLInputElement>(null),timer=useRef<ReturnType<typeof setTimeout>|null>(null),busy=useRef(false),lastModalTrigger=useRef<HTMLElement|null>(null),toastCounter=useRef(0),scrollRef=useRef<HTMLDivElement>(null);
  const [per,setPer]=useState(10);
  useEffect(()=>{const el=scrollRef.current;if(!el||typeof ResizeObserver==='undefined')return;const fit=()=>{const head=el.querySelector('thead')?.getBoundingClientRect().height||34,row=el.querySelector('tbody tr')?.getBoundingClientRect().height||50;const n=Math.max(5,Math.floor((el.getBoundingClientRect().height-head)/row));setPer(v=>v===n?v:n);};const ro=new ResizeObserver(fit);ro.observe(el);const t=setTimeout(fit,300);return()=>{ro.disconnect();clearTimeout(t);};},[]);
  const writable=!live||live.role==='superadmin';
- useEffect(()=>{if(live){setProjects(live.projects);setMode(live.loading?'loading':live.error?'error':'normal');}},[live?.projects,live?.loading,live?.error]);
+ useEffect(()=>{if(live){setProjects(live.projects);setMode(live.loading&&!live.projects.length?'loading':live.error&&!live.projects.length?'error':'normal');}},[live?.projects,live?.loading,live?.error]);
  const saved=projects.find(p=>p.id===selected),dirty=!!draft&&!!saved&&JSON.stringify(draft)!==JSON.stringify(saved);
  const all=filterProjects(projects,live?initialFilters:filters,sort,now),pages=Math.max(1,Math.ceil(all.length/per)),currentPage=Math.min(page,pages),rows=all.slice((currentPage-1)*per,currentPage*per),isNormal=mode==='normal';
  const say=(title:string,tone:ToastMessage['tone']='success')=>setMessages(m=>[...m.slice(-2),{id:`toast-${++toastCounter.current}`,title,tone}]);

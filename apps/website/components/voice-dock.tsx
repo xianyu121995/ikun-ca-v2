@@ -4,6 +4,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { VoiceControls, type TrackingVoiceController, type VoiceSession } from '@ikun/ui';
 import {loadTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
+import {publishTrackingEvent} from '../lib/tracking-events-client';
 import { useTrackingVoice } from './tracking-voice';
 import {VoiceTest} from './voice-test';
 
@@ -13,6 +14,7 @@ export const useSiteVoice = () => useContext(VoiceContext);
 type Me = { user_id: string; role: 'superadmin' | 'user'; must_change_password: boolean };
 
 export function VoiceDock({ children }: { children: ReactNode }) {
+  const [controller,setController]=useState<ReturnType<typeof useTrackingVoice>['controller']>(null);
   const [session, setSession] = useState<VoiceSession | null>(null);
   useEffect(() => {
     let stopped = false;
@@ -24,11 +26,13 @@ export function VoiceDock({ children }: { children: ReactNode }) {
       }).catch(() => { /* signed out or offline: no voice */ });
     return () => { stopped = true; };
   }, []);
-  return session ? <Live session={session}>{children}</Live> : <>{children}</>;
+  // Keep the page under the same provider before/after auth resolves; moving it into Live remounted it.
+  return <VoiceContext.Provider value={controller}>{children}{session&&<Live session={session} onController={setController}/>}</VoiceContext.Provider>;
 }
 
-function Live({ session, children }: { session: VoiceSession; children: ReactNode }) {
+function Live({ session, onController }: { session: VoiceSession; onController:(controller:ReturnType<typeof useTrackingVoice>['controller'])=>void }) {
   const voice = useTrackingVoice(session);
+  useEffect(()=>{onController(voice.controller);return()=>onController(null);},[voice.controller,onController]);
   const [open, setOpen] = useState(false);
   const [subs, setSubs] = useState<{ subscription_id: string; label: string }[]>([]);
   // Per-account voice switches (moved here from the tracking page; owner decision 2026-10-19).
@@ -37,12 +41,12 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
     return()=>{stopped=true;};},[open,session.user_id]);
   useEffect(() => {
     const events = new EventSource('/api/v1/tracking/events');
-    const opened = () => voice.connected(true);
-    const disconnected = () => { voice.connected(false); void voice.verifyIdentity(); };
-    const created = (event: Event) => voice.consume(event as MessageEvent);
+    const opened = (event:Event) => {voice.connected(true);publishTrackingEvent(event);};
+    const disconnected = (event:Event) => { voice.connected(false); void voice.verifyIdentity();publishTrackingEvent(event); };
+    const created = (event: Event) => {if(event.type==='tracking.feed.activity.created.v1')voice.consume(event as MessageEvent);publishTrackingEvent(event);};
     events.addEventListener('open', opened);
     events.addEventListener('error', disconnected);
-    events.addEventListener('tracking.feed.activity.created.v1', created);
+    for(const type of ['tracking.feed.activity.created.v1','tracking.feed.activity.updated.v1','tracking.subscription.updated','command.updated'])events.addEventListener(type,created);
     return () => { voice.connected(false); events.close(); };
   }, [voice.connected, voice.consume, voice.verifyIdentity]);
   const controller = voice.controller;
@@ -81,7 +85,7 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
     document.addEventListener('click', arm, true);
     return () => { document.removeEventListener('click', arm, true); unsubscribe(); };
   }, [controller, session.user_id]);
-  return <VoiceContext.Provider value={controller}>{children}
+  return <>
     {controller && <div className="ikun-voice-dock" data-state={status}>
       {open && <div className="ikun-voice-panel"><VoiceTest controller={controller}/><VoiceControls controller={controller} subscriptions={subs} /></div>}
       <button type="button" className="ikun-voice-fab" aria-expanded={open} title="实时推文语音"
@@ -89,5 +93,5 @@ function Live({ session, children }: { session: VoiceSession; children: ReactNod
         {status === 'on' ? '🔊' : status === 'locked' ? '🔈' : '🔇'}<span className="ikun-voice-label">{status === 'on' ? ' 语音开' : status === 'locked' ? ' 点我恢复语音' : ' 语音关'}</span>
       </button>
     </div>}
-  </VoiceContext.Provider>;
+  </>;
 }

@@ -13,7 +13,7 @@ export async function requireAuthPage(path: string) {
     throw new Error('AUTH_PAGE_DENIED');
   }
   const actor=http.authorize(request,false);
-  return {username:actor.username,role:actor.role,must_change_password:actor.must_change_password,csrf_token:actor.csrf_token};
+  return {user_id:actor.id,username:actor.username,role:actor.role,must_change_password:actor.must_change_password,csrf_token:actor.csrf_token};
 }
 
 /** Call inside the action function immediately before executing a business write. */

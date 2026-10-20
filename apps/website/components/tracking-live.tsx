@@ -4,7 +4,9 @@ import { Alert, Button, Dialog, Input, Panel } from '@ikun/ui';
 import { LogoutButton } from './auth/forms';
 import { TrackingPage } from '../features/tracking/final/tracking-page';
 import { emptyFilters, type Account, type Post, type Filters } from '../features/tracking/final/model';
-import { coalescedRefresh } from '../lib/coalesced-refresh';
+import {clearClientSession,invalidateClientData,keyedRefresh,peekClientData,readClientData,saveClientData} from '../lib/client-session-cache';
+import {loadTrackingSubscriptions,invalidateTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
+import {subscribeTrackingEvents} from '../lib/tracking-events-client';
 import { TrackingHomeEditor, type EditTarget } from './tracking-home-editor';
 import { useSiteVoice } from './voice-dock';
 import type { VoiceSession } from '@ikun/ui';
@@ -23,6 +25,8 @@ type Subscription = {
     connection: string;
 };
 type Activity = {translation_zh?:Post['translation_zh'];quoted_tweet?:Post['quoted_tweet'];tweet_kind?:string;activity_id:string;subscription_id:string;project_id:string;name:string;x_handle:string;notes:string;rating:'S'|'A'|'B';rating_revision:number;text:string;occurred_at:string|null;received_at:string;sort_at:string;sort_basis:string;url:string};
+type Totals={matchedTotal:number;subscriptionCounts:{S:number;A:number;B:number}};
+type Snapshot={subs:Subscription[];accounts:Account[];historyAccounts:Account[];posts:Post[];cursor:string|null;totals:Totals;filters:Filters;windowFrom:string|null;page:number;cursors:(string|null)[];queryView:string};
 export function TrackingLive({ csrf, canManage, username, voiceSession, fixture = false }: {
     csrf: string;
     canManage: boolean;
@@ -31,74 +35,71 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
     fixture?:boolean;
 }) {
     // Voice now lives in the site-wide dock (root layout); this page only shows its settings.
-    void voiceSession;
+    const scope=voiceSession.user_id,snapshot=useRef(peekClientData<Snapshot>(scope,'tracking:view')).current;
     const site = useSiteVoice();
     const voice = useMemo(() => ({ controller: site, connected: (_state: boolean) => {}, consume: (_event: MessageEvent) => {},
         verifyIdentity: async () => {}, revoke: () => { site?.setSession(null); } }), [site]);
-    const queryView=useRef<string|null>(null);
-    useEffect(()=>{queryView.current??='qv1_'+crypto.randomUUID();},[]);
+    const queryView=useRef(snapshot?.queryView??'qv1_'+crypto.randomUUID());
     const pull = useRef<() => Promise<void>>(async () => { });
-    const refreshRef = useRef<ReturnType<typeof coalescedRefresh> | null>(null);
+    const refreshRef = useRef<ReturnType<typeof keyedRefresh> | null>(null);
     if (!refreshRef.current)
-        refreshRef.current = coalescedRefresh(() => pull.current());
+        refreshRef.current = keyedRefresh(() => pull.current(),()=>latestView.current);
     const refresh = refreshRef.current;
-    const [historyAccounts, setHistoryAccounts] = useState<Account[]>([]);
+    const [historyAccounts, setHistoryAccounts] = useState<Account[]>(snapshot?.historyAccounts??[]);
     const [homeEdit, setHomeEdit] = useState<EditTarget | null>(null);
     // Owner 2026-10-19: 取消追踪 from a tweet = remove the subscription (also drops ikun's 6551 Watch); homepage untouched, old tweets stay.
     const [untrack, setUntrack] = useState<Subscription | null>(null);
-    const [subs, setSubs] = useState<Subscription[]>([]), [accounts, setAccounts] = useState<Account[]>([]), [posts, setPosts] = useState<Post[]>([]);
-    const [loading, setLoading] = useState(true), [error, setError] = useState(''), [cursor, setCursor] = useState<string | null>(null), [cursors, setCursors] = useState<(string | null)[]>([null]), [page, setPage] = useState(0), [busy, setBusy] = useState(false);
+    const [subs, setSubs] = useState<Subscription[]>(snapshot?.subs??[]), [accounts, setAccounts] = useState<Account[]>(snapshot?.accounts??[]), [posts, setPosts] = useState<Post[]>(snapshot?.posts??[]);
+    const [loading, setLoading] = useState(!snapshot), [error, setError] = useState(''), [cursor, setCursor] = useState<string | null>(snapshot?.cursor??null), [cursors, setCursors] = useState<(string | null)[]>(snapshot?.cursors??[null]), [page, setPage] = useState(snapshot?.page??0), [busy, setBusy] = useState(false);
     const [edit, setEdit] = useState<Subscription | null>(null), [editName, setEditName] = useState(''), [editNotes, setEditNotes] = useState(''), [command, setCommand] = useState('');
     const [add, setAdd] = useState({ name: '', x_handle: '', notes: '', rating: 'B', confirmed: false });
-    const [filters,setFilters]=useState<Filters>(emptyFilters);
-    const [windowFrom,setWindowFrom]=useState<string|null>(null);
-    const [totals,setTotals]=useState<{matchedTotal:number;subscriptionCounts:{S:number;A:number;B:number}}|null>(null);
+    const [filters,setFilters]=useState<Filters>(snapshot?.filters??emptyFilters);
+    const [windowFrom,setWindowFrom]=useState<string|null>(snapshot?.windowFrom??null);
+    const [totals,setTotals]=useState<Totals|null>(snapshot?.totals??null);
     const query=new URLSearchParams({profile:'published-v1',limit:'20',q:filters.query,ratings:filters.grade==='all'?'S,A,B':filters.grade});
     if(windowFrom)query.set('from_at',windowFrom);
     const viewKey = JSON.stringify([page, cursors[page], csrf,query.toString()]);
     function changeFilters(next:Filters){setFilters(next);setWindowFrom(next.hours==='all'?null:new Date(Date.now()-Number(next.hours)*3600000).toISOString());setPage(0);setCursors([null]);setLoading(true);}
     const latestView = useRef(viewKey);
+    const mounted=useRef(true),readAt=useRef(Date.now());
+    useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
     latestView.current = viewKey;
     async function api(path: string, method = 'GET', body?: unknown, row?: Subscription) {
         const response = await fetch('/api/v1/' + path, { method, credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(12000), headers: { 'content-type': 'application/json', 'x-csrf-token': csrf,...(path.startsWith('tracking/latest?')&&queryView.current?{'x-tracking-query-view':queryView.current}:{}), ...(method === 'GET' ? {} : { 'idempotency-key': crypto.randomUUID() }), ...(row ? { 'if-match': `"rev-${row.revision}"` } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
         const value = await response.json();
         if (!response.ok) {
+            if(response.status===403)clearClientSession();
             if (response.status === 401) {
+                clearClientSession();
                 voice.revoke();
                 location.assign('/login?next=/tracking');
             }
             throw Error((value.error?.code || 'ERROR') + ' · ' + (value.error?.message || '请求失败') + ' · ' + value.request_id);
         }
+        if(method!=='GET')invalidateClientData(scope);
         return value.data;
     }
     pull.current = async () => {
         const key = viewKey;
         try {
-            const rows: Subscription[] = [];
-            let next: string | null = null;
-            do {
-                const data = await api('tracking/subscriptions?limit=100&include_removed=true' + (next ? '&cursor=' + encodeURIComponent(next) : ''));
-                rows.push(...data.items);
-                next = data.next_cursor;
-                if (rows.length > 1000)
-                    throw Error('列表超过本地预览上限');
-            } while (next);
+            const started=Date.now(),path='tracking/latest?'+query.toString()+(cursors[page]?'&cursor='+encodeURIComponent(cursors[page]!):'');
+            const [rows,data]=await Promise.all([loadTrackingSubscriptions(scope,true),readClientData(scope,path+'|'+queryView.current,()=>api(path),750)]);
             const visible = rows.filter(r => !(r.desired_state === 'removed' && r.observed_state === 'absent' && r.operation_state === 'succeeded'));
-            const data = await api('tracking/latest?'+query.toString()+(cursors[page]?'&cursor='+encodeURIComponent(cursors[page]!):''));
-            if (latestView.current !== key)return;
+            if (!mounted.current||latestView.current !== key)return;
             if(data.items.some((item:Activity)=>!rows.some(row=>row.subscription_id===item.subscription_id)))throw Error("VERSION_CONFLICT · 订阅投影已变化，请刷新");
             const grades=new Map<string,Activity['rating']>(data.items.map((item:Activity)=>[item.subscription_id,item.rating]));
             const accountRows:Account[]=rows.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.error_code ? row.notes+' · 失败原因：'+row.error_code : row.notes,grade:row.rating===undefined?grades.get(row.subscription_id)??null:row.rating,avatar:row.name.slice(0,1),status:row.error_code||row.operation_state==='failed'?'failed':row.desired_state==='running'&&row.observed_state==='running'&&row.connection==='connected'?'running':row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
-            setPosts(data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,translation_zh:item.translation_zh??null,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url})));
+            const postRows:Post[]=data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,translation_zh:item.translation_zh??null,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url}));setPosts(postRows);
             setTotals({matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating});
             setCursor(data.next_cursor);
             setSubs(rows);
             setAccounts(accountRows.filter(account=>visible.some(row=>row.subscription_id===account.ui_key)));
             setHistoryAccounts(accountRows);
+            readAt.current=started;saveClientData(scope,'tracking:view',{subs:rows,posts:postRows,accounts:accountRows.filter(account=>visible.some(row=>row.subscription_id===account.ui_key)),historyAccounts:accountRows,cursor:data.next_cursor,totals:{matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating},filters,windowFrom,page,cursors,queryView:queryView.current});
             setError('');
         }
         catch (e) {
-            if (latestView.current !== key)
+            if (!mounted.current||latestView.current !== key)
                 return;
             const message=(e as Error).message;
             if(message.startsWith('VERSION_CONFLICT')&&page>0){setPage(0);setCursors([null]);}
@@ -106,22 +107,18 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             setAccounts(previous => previous.map(row => ({ ...row, status: 'unknown' })));
         }
         finally {
-            if (latestView.current === key)
+            if (mounted.current&&latestView.current === key)
                 setLoading(false);
         }
     };
-    useEffect(() => { const timer=setTimeout(()=>void refresh(),250);return()=>clearTimeout(timer); }, [viewKey, refresh]);
+    useEffect(() => { const timer=setTimeout(()=>void refresh(),filters.query?200:0);return()=>clearTimeout(timer); }, [viewKey, refresh]);
     useEffect(() => {
         const timer = setInterval(() => void refresh(), 15000);
-        const events = new EventSource('/api/v1/tracking/events');
-        const opened = () => voice.connected(true);
-        const disconnected = () => { voice.connected(false); void voice.verifyIdentity(); };
-        events.addEventListener('open', opened);
-        events.addEventListener('error', disconnected);
         let eventTimer:ReturnType<typeof setTimeout>|undefined;
         const reload = (event: Event) => {
-            if (event.type === 'tracking.feed.activity.created.v1') voice.consume(event as MessageEvent);
+            if(event.type==='open'||event.type==='error')return;
             if(event.type.startsWith('tracking.feed.activity.')){try{if(JSON.parse((event as MessageEvent).data).data?.replay===true)return;}catch{return;}}
+            try{const value=JSON.parse((event as MessageEvent).data).data;const at=Date.parse(value.updated_at||value.received_at||'');if(Number.isFinite(at)&&at<=readAt.current)return;}catch{return;}
             if (event.type === 'command.updated') {
                 try {
                     const value = JSON.parse((event as MessageEvent).data).data;
@@ -130,21 +127,21 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
                 catch { }
             }
             clearTimeout(eventTimer);eventTimer=setTimeout(()=>void refresh(),250);
-            // Translation arrives a few seconds after the push; pick it up without waiting for the 15s poll.
-            if (event.type === 'tracking.feed.activity.created.v1') { setTimeout(()=>void refresh(),5000); setTimeout(()=>void refresh(),12000); }
+            // The 15s poll picks up translations; no extra 5s/12s reload for every individual tweet.
         };
-        for (const type of ['tracking.feed.activity.created.v1','tracking.feed.activity.updated.v1', 'tracking.subscription.updated', 'command.updated'])
-            events.addEventListener(type, reload);
-        return () => { voice.connected(false); events.removeEventListener('open', opened); events.removeEventListener('error', disconnected); clearInterval(timer);clearTimeout(eventTimer); events.close(); };
-    }, [refresh, voice.connected, voice.consume, voice.verifyIdentity]);
+        const unsubscribe=subscribeTrackingEvents(reload);
+        return () => { clearInterval(timer);clearTimeout(eventTimer);unsubscribe(); };
+    }, [refresh]);
+    async function refreshAfterWrite(){await refresh.settled();invalidateClientData(scope);await refresh();}
     async function operate(row: Subscription, operation: string) {
         if (busy)
             return;
         setBusy(true);
         try {
-            const value = await api('tracking/subscriptions/' + row.subscription_id + (operation === 'remove' ? '' : '/' + operation), operation === 'remove' ? 'DELETE' : 'POST', undefined, row);
+            const fresh=await api('tracking/subscriptions/'+row.subscription_id);
+            const value = await api('tracking/subscriptions/' + row.subscription_id + (operation === 'remove' ? '' : '/' + operation), operation === 'remove' ? 'DELETE' : 'POST', undefined, fresh);
             setCommand(value.command_id + ' · ' + value.state + '（受理不等于远端成功）');
-            await refresh();
+            await refreshAfterWrite();
             return true;
         }
         catch (e) {
@@ -186,7 +183,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             setCommand(value.command_id + ' · ' + value.state);
             close();
             setAdd({ name: '', x_handle: '', notes: '', rating: 'B', confirmed: false });
-            await refresh();
+            await refreshAfterWrite();
         }
         catch (e) {
             setError((e as Error).message);
@@ -200,9 +197,10 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             return;
         setBusy(true);
         try {
-            await api('tracking/subscriptions/' + edit.subscription_id, 'PATCH', { name: editName, notes: editNotes }, edit);
+            const fresh=await api('tracking/subscriptions/'+edit.subscription_id);
+            await api('tracking/subscriptions/' + edit.subscription_id, 'PATCH', { name: editName, notes: editNotes }, fresh);
             setEdit(null);
-            await refresh();
+            await refreshAfterWrite();
         }
         catch (e) {
             setError((e as Error).message);

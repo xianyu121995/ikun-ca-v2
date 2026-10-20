@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-import {requireIdentity,requireSuperadmin,withAuth} from '../../../modules/auth/dist/src/server.js';
+import {auth,requireIdentity,requireSuperadmin,withAuth} from '../../../modules/auth/dist/src/server.js';
 
 type Principal={user_id:string;tenant_id:'ikun-main';role:'superadmin'|'user'};
 const id=(request:Request)=>{const value=request.headers.get('x-request-id');return value&&/^[A-Za-z0-9_-]{1,64}$/.test(value)?value:randomUUID();};
@@ -57,26 +57,27 @@ export async function hunterEventsRoute(original:Request){
   const requestId=id(original),request=authenticatedRequest(original,requestId);
   return withAuth(request,async()=>{
     requireIdentity(request);
+    const liveIdentity=()=>{const actor=auth().authorize(request,false);return {user_id:actor.id,tenant_id:actor.tenant_id,role:actor.role};};
     const resume=request.headers.get('last-event-id');if(resume&&!/^hunter:[0-9]{1,15}$/.test(resume))return fail(requestId,422,'VALIDATION_ERROR','Hunter 事件游标无效');
     let after=resume?Number(resume.slice(7)):0,done=false,timer:ReturnType<typeof setTimeout>|undefined,wake:(()=>void)|undefined;
     const controller=new AbortController(),encoder=new TextEncoder();let heartbeat=Date.now();
     const body=new ReadableStream<Uint8Array>({async pull(stream){
       try{
         while(!done){
-          const principal=requireIdentity(request);
+          const principal=liveIdentity();
           const result=await hunterCall('/internal/v1/events?after='+after,requestId,principal,'GET',undefined,{},controller.signal);
           if(!result.ok){done=true;stream.close();return;}
           const envelope=await result.json();const frames=envelope.data.items;
           if(!Array.isArray(frames))throw Error('INVALID_EVENTS');
           if(frames.length){
             let text='';for(const frame of frames){
-              requireIdentity(request);
+              liveIdentity();
               if(!Number.isSafeInteger(frame.sequence)||frame.sequence<=after||!['hunter.discovery.updated','command.updated'].includes(frame.type))throw Error('INVALID_EVENT');
               after=frame.sequence;text+='id: hunter:'+after+'\nevent: '+frame.type+'\ndata: '+JSON.stringify({data:frame.data,request_id:requestId})+'\n\n';
             }
             stream.enqueue(encoder.encode(text));return;
           }
-          if(Date.now()-heartbeat>=15000){requireIdentity(request);heartbeat=Date.now();stream.enqueue(encoder.encode(': heartbeat\n\n'));return;}
+          if(Date.now()-heartbeat>=15000){liveIdentity();heartbeat=Date.now();stream.enqueue(encoder.encode(': heartbeat\n\n'));return;}
           await new Promise<void>(resolve=>{wake=resolve;timer=setTimeout(resolve,500);});
         }
       }catch{if(!done){done=true;controller.abort();stream.close();}}

@@ -2,11 +2,12 @@
 import { Children, cloneElement, isValidElement, useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { Alert, Button, Input, LoginPanel, Panel, type NavigationLinkProps } from '@ikun/ui';
 import Link from 'next/link';
+import {clearClientSession} from '../../lib/client-session-cache';
 
 /** Receiving-only wording approved by the owner; preserve the frozen shared UI. */
 // Owner decision 2026-10-18: workspace pages switch without a full reload so the site-wide voice keeps playing.
 const WORKSPACE=new Set(['/','/hunter','/tracking']);
-function A(p:NavigationLinkProps){return WORKSPACE.has(p.href)?<Link {...p} href={p.href}/>:<a {...p}/>;}
+function A(p:NavigationLinkProps){return WORKSPACE.has(p.href)?<Link {...p} href={p.href} prefetch={true}/>:<a {...p}/>;}
 export function WorkspaceLink({children,href,...props}:NavigationLinkProps) {
   if(href!=='/tracking')return <A {...props} href={href}>{children}</A>;
   return <A {...props} href={href} aria-label="猎手项目追踪" title="猎手项目追踪">{Children.map(children,child=>
@@ -35,7 +36,7 @@ export function LoginForm() {
   async function submit(event:FormEvent<HTMLFormElement>) {
     const form=event.currentTarget,values=new FormData(form);setPending(true);setError('');
     try {const session=await call('/api/v1/auth/login',{username:values.get('username'),password:values.get('password')});
-      form.reset();location.replace(session.must_change_password?'/auth/password':safeNext());
+      clearClientSession();form.reset();location.replace(session.must_change_password?'/auth/password':safeNext());
     }catch(error){setError(error instanceof Error?error.message:'登录未完成');}finally{setPending(false);}
   }
   const [notice,setNotice]=useState('');
@@ -49,7 +50,7 @@ export function PasswordForm({forced}:{forced:boolean}) {
     if(values.get('new_password')!==values.get('confirm_password')) {setError('两次新密码不一致');return;}
     setPending(true);
     try {await call('/api/v1/auth/password',{current_password:values.get('current_password'),new_password:values.get('new_password')},await csrfToken());
-      form.reset();location.replace('/?notice=password_changed');
+      clearClientSession();form.reset();location.replace('/?notice=password_changed');
     }catch(error){setError(error instanceof Error?error.message:'改密未完成');}finally{setPending(false);}
   }
   return <Panel title={forced?'首次登录：修改初始密码':'修改本人密码'}>
@@ -66,7 +67,7 @@ export function PasswordForm({forced}:{forced:boolean}) {
 export function LogoutButton() {
   const [pending,setPending]=useState(false),[error,setError]=useState('');
   return <><Button pending={pending} onClick={async()=>{setPending(true);setError('');try{
-    await call('/api/v1/auth/logout',{},await csrfToken());location.replace('/login');
+    await call('/api/v1/auth/logout',{},await csrfToken());clearClientSession();location.replace('/login');
   }catch(error){setError(error instanceof Error?error.message:'退出未完成');}finally{setPending(false);}}}>退出登录</Button>
   {error&&<span role="alert">{error}</span>}</>;
 }

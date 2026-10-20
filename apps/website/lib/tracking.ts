@@ -64,6 +64,7 @@ export async function readBody(request: Request, empty = false) {
     }
 }
 export async function trackingRoute(original: Request) {
+    const started=performance.now();
     const id = requestId(original);
     const headers = new Headers(original.headers);
     headers.set('x-request-id', id);
@@ -78,14 +79,18 @@ export async function trackingRoute(original: Request) {
                 return failure(id, 404, 'NOT_FOUND', '路径不存在');
             const out = await trackingService(suffix.slice(1) + url.search, id, { signal: request.signal, headers: request.headers.has('last-event-id') ? { 'last-event-id': request.headers.get('last-event-id')! } : {} });
             if (out.ok && suffix === '/subscriptions') {
+                const trackingDone=performance.now();
                 const value=await out.json();
                 const rows=value.data.items as {project_id:string;rating?:string|null}[];
-                const catalog=await ipc({operation:'ratings',contract:'tracking-ratings-v1',principal,request_id:id,body:{project_ids:[...new Set(rows.map(r=>r.project_id))],expected_catalog_version:null}},request.signal);
-                if(!catalog.ok)return catalog;
-                const ratings=(await catalog.json()).data.items as {project_id:string;rating:string|null}[];
+                const ids=[...new Set(rows.map(r=>r.project_id))],batches=Array.from({length:Math.max(1,Math.ceil(ids.length/200))},(_,index)=>ids.slice(index*200,(index+1)*200));
+                const catalogs=await Promise.all(batches.map(project_ids=>ipc({operation:'ratings',contract:'tracking-ratings-v1',principal,request_id:id,body:{project_ids,expected_catalog_version:null}},request.signal)));
+                const failed=catalogs.find(r=>!r.ok);if(failed)return failed;
+                const catalogsData=await Promise.all(catalogs.map(async catalog=>(await catalog.json()).data));
+                if(new Set(catalogsData.map(data=>data.catalog_version)).size!==1)return failure(id,409,'VERSION_CONFLICT','项目评分已更新，请刷新核对');
+                const ratings=catalogsData.flatMap(data=>data.items) as {project_id:string;rating:string|null}[];
                 const map=new Map(ratings.map(r=>[r.project_id,r.rating]));
                 for(const row of rows){const rating=map.get(row.project_id);row.rating=rating&&['S','A','B'].includes(rating)?rating:null;}
-                return Response.json(value,{headers:{'cache-control':'no-store','x-request-id':id}});
+                return Response.json(value,{headers:{'cache-control':'no-store','x-request-id':id,'server-timing':`tracking;dur=${(trackingDone-started).toFixed(1)}, ratings;dur=${(performance.now()-trackingDone).toFixed(1)}, total;dur=${(performance.now()-started).toFixed(1)}`}});
             }
             return new Response(out.body, { status: out.status, headers: { 'content-type': out.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store', 'x-request-id': id, ...(out.headers.get('etag') ? { etag: out.headers.get('etag')! } : {}), ...(out.headers.get('retry-after') ? {'retry-after':out.headers.get('retry-after')!} : {}) } });
         }

@@ -19,7 +19,7 @@ function ResultMessage({result,busy,onReconcile}:{result:OperationResult|null;bu
   return <Alert tone={result.state==='succeeded'?'success':result.state==='failed'?'danger':'warning'} title={operationLabels[result.state]} action={awaiting(result)&&onReconcile?<Button size="sm" pending={busy} onClick={onReconcile}>核对结果</Button>:undefined}>{result.error?.message}{awaiting(result)&&<p>保留原操作记录，先核对结果，不重复写入。</p>}</Alert>;
 }
 export default function ReferenceHomepage({context,data,callbacks={},milestones=[],archiveNotes=[],asOfDate,server}:ReferenceHomepageProps){
-  const [query,setQuery]=useState({q:'',rating:'all',stage:'all',foundDate:'',category:'all'}),[sort,setSort]=useState<TableSort>({key:'discovered',direction:'desc'});
+  const [query,setQuery]=useState(()=>({q:server?.query?.q??'',rating:server?.query?.rating??'all',stage:server?.query?.progress_stage??'all',foundDate:server?.query?.discovered_on??'',category:server?.query?.category??'all'})),[sort,setSort]=useState<TableSort>({key:server?.query?.sort??'discovered',direction:server?.query?.direction??'desc'});
   const [page,setPage]=useState(1),[windowDays,setWindowDays]=useState('7'),[selected,setSelected]=useState<Set<string>>(new Set());
   const [editor,setEditor]=useState<{project?:ProjectView}|null>(null),[detail,setDetail]=useState<string|null>(null),[archiveOpen,setArchiveOpen]=useState(false),[otherOpen,setOtherOpen]=useState(false);
   const [toast,setToast]=useState<string|null>(null);

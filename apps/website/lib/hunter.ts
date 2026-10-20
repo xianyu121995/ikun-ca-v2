@@ -57,7 +57,7 @@ export async function hunterEventsRoute(original:Request){
   const requestId=id(original),request=authenticatedRequest(original,requestId);
   return withAuth(request,async()=>{
     requireIdentity(request);
-    const liveIdentity=()=>{const actor=auth().authorize(request,false);return {user_id:actor.id,tenant_id:actor.tenant_id,role:actor.role};};
+    const liveIdentity=():Principal=>{const actor=auth().authorize(request,false);if(actor.tenant_id!=='ikun-main')throw Error('INVALID_SCOPE');return {user_id:actor.id,tenant_id:actor.tenant_id,role:actor.role};};
     const resume=request.headers.get('last-event-id');if(resume&&!/^hunter:[0-9]{1,15}$/.test(resume))return fail(requestId,422,'VALIDATION_ERROR','Hunter 事件游标无效');
     let after=resume?Number(resume.slice(7)):0,done=false,timer:ReturnType<typeof setTimeout>|undefined,wake:(()=>void)|undefined;
     const controller=new AbortController(),encoder=new TextEncoder();let heartbeat=Date.now();

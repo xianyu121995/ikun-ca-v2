@@ -1,4 +1,6 @@
 """Own only the exact marked Watch created by this hunter; never rewrite shared rows."""
+import hashlib
+import re
 import time
 from .providers import ProviderError
 
@@ -21,6 +23,58 @@ def rows(payload):
         if not name or name in result:raise ProviderError('invalid_watch_snapshot')
         result[name] = item
     return result
+
+
+async def recover_read_once(store, providers, approval):
+    """Stopped-worker operator recovery: exactly one budgeted READ, never a Watch write."""
+    from watch_lock import watch_lock
+    if not store.worker_token or not re.fullmatch(r'[a-z0-9_-]{1,80}', approval):
+        raise ValueError('watch_recovery_requires_worker_lease_and_approval')
+    intent = 'provider_intent:watch:' + hashlib.sha256(b'').hexdigest()
+    failure = 'provider_failure:watch:' + hashlib.sha256(b'').hexdigest()
+    async with watch_lock(store.path):
+        with store.transaction():
+            states = store.states()
+            previous = states.get('watch_read_once', {})
+            if previous.get('approval') == approval:
+                return previous  # A repeated command cannot consume a second paid request.
+            if states.get(intent) != 'billing_unknown':
+                raise ValueError('watch_recovery_requires_billing_unknown')
+            result = {'approval': approval, 'status': 'started', 'started_at': time.time(),
+                      'previous_intent': states[intent], 'previous_failure': states.get(failure)}
+            store.set_state('watch_read_once', result)
+            store.set_state(intent, None)
+        try:
+            snapshot = rows(await providers.request('watch'))
+            covered = {name for name, watch in snapshot.items() if watch.get('newFlwBol') is True}
+            hunters = store.hunters(include_deleted=True)
+            wanted = [h['username'] for h in hunters if not h['deleted_at'] and h['enabled']
+                      and h['mode'] == 'WSS' and h['profile_status'] == 'ready']
+            if not set(wanted) <= covered:
+                raise ProviderError('watch_coverage_incomplete')
+            with store.transaction() as db:
+                store.coverage(covered, time.time())
+                store.set_state('watch_slots', {'used': len(snapshot), 'capacity': 600})
+                store.set_state('watch_read_once_signature',
+                                [[h['id'], h['enabled'], h['mode'], h['deleted_at']] for h in hunters])
+                store.set_state('watch_error', None)
+                result.update(status='succeeded', finished_at=time.time(), slots=len(snapshot),
+                              wss_hunters=len(wanted), covered=len(wanted))
+                store.set_state('watch_read_once', result)
+                store.audit(db, 'operator', 'watch.read_once', approval, time.time(), 'succeeded;watch_writes=0')
+            return result
+        except BaseException as error:
+            # Also fence malformed snapshots, cancelled requests and non-timeout failures.
+            with store.transaction() as db:
+                store.set_state(intent, 'billing_unknown')
+                store.set_state('watch_error', 'provider_billing_unknown')
+                result.update(status='failed', finished_at=time.time(),
+                              error=error.code if isinstance(error, ProviderError) else type(error).__name__)
+                store.set_state('watch_read_once', result)
+                store.audit(db, 'operator', 'watch.read_once', approval, time.time(), 'failed;watch_writes=0')
+            if not isinstance(error, Exception):
+                raise
+            return result
 
 async def synchronize(engine):
     from watch_lock import watch_lock

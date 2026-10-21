@@ -73,6 +73,9 @@ class Providers:
             url = 'https://ai.6551.io/open/' + ('twitter_user_info' if operation == 'profile' else 'twitter_watch')
             kwargs = {'json': {'username': username} if operation == 'profile' else {},
                       'headers': {'Authorization': 'Bearer '+self.settings.token_6551}}
+            if operation == 'watch':
+                # Listing all shared Watches can take longer; writes/profile calls keep their existing timeout.
+                kwargs['timeout'] = httpx.Timeout(self.settings.timeout, read=max(20, self.settings.timeout))
         else:
             raise ValueError('unapproved_provider_operation')
         states = self.store.states()

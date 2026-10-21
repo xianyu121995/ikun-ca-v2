@@ -213,11 +213,15 @@ class Engine:
 
     async def watch_loop(self):
         from .watch import synchronize
-        previous = None
+        saved = self.store.states().get('watch_read_once_signature')
+        previous = [tuple(item) for item in saved] if saved is not None else None
         while not self.stop.is_set():
             try:
                 signature = [(h['id'],h['enabled'],h['mode'],h['deleted_at']) for h in self.store.hunters(include_deleted=True)]
                 states = self.store.states()
+                # An interrupted/failed operator retry must never become an automatic paid retry.
+                if states.get('watch_read_once', {}).get('status') in ('started', 'failed'):
+                    raise ProviderError('provider_billing_unknown')
                 if self.settings.external_io_enabled and (signature != previous or time.time()-states.get('watch_checked_at',0)>=300):
                     await synchronize(self)
                     previous = signature

@@ -4,6 +4,8 @@
 
 2026-10-20 用户更新：播报内容改为 Projects 的当前项目名称＋S/A/B 等级，不再依赖追踪备注。
 
+2026-10-22 用户更新：网站改用 `consumePublished`，以 `/tracking/latest?profile=published-v1` 的 S/A/B 列表为准，REST 和 unknown 均可播。首个成功列表只建立基线；之后新增 ID 且服务器判断发布时间在十分钟内才播。SSE 仅触发立即读列表，另有十五秒轮询。浏览器独占锁与共享 ID 记录保证同一浏览器不重复发声，队列期限从每页实际到达的 `performance.now()` 起算三十秒。原 `consume` 保留兼容旧接线与测试，网站不再用它接收 SSE 候选。下面旧接线说明仅适用于兼容入口。
+
 ## 接线契约（集成窗口持有真实请求）
 
 1. 浏览器页面创建一个 `TrackingVoiceController({speech: createWebSpeechPort(), storage: browserVoiceStorage(), resolveMetadata})`，渲染 `VoiceControls`。`storage` 不可用时省略该选项，控件诚实提示设置仅本页有效。模块导入/构造/恢复偏好均不会发声。

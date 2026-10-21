@@ -14,11 +14,11 @@ test('401 revokes and stops polling without consuming a list',async()=>{let coun
 test('a failed first read does not turn the existing initial list into new items',async()=>{let count=0;const calls=[];const feed=new PublishedVoiceFeed({request:async()=>++count===1?new Response('',{status:503}):response([row(1)]),onItem:r=>calls.push(r),connected(){},revoke(){}});await feed.refresh();await feed.refresh();assert.equal(calls.length,0);feed.stop();});
 test('two eligible tabs share an exclusive speaker and persistent activity claims across handoff',async()=>{
  const locks=new Map(),storage=new Map();
- const target={localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},navigator:{locks:{async request(name,options,callback){while(locks.has(name)){await locks.get(name);if(options.signal.aborted)return;}if(options.signal.aborted)return;let done;locks.set(name,new Promise(r=>done=r));try{await callback();}finally{locks.delete(name);done();}}}}};
+ const target={localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},navigator:{locks:{async request(name,options,callback){assert.ok(!(options.signal&&options.ifAvailable),'native Web Locks forbids signal + ifAvailable');if(locks.has(name)&&options.ifAvailable)return callback(null);while(locks.has(name)){await locks.get(name);if(options.signal?.aborted)return;}if(options.signal?.aborted)return;let done;locks.set(name,new Promise(r=>done=r));try{await callback({name});}finally{locks.delete(name);done();}}}}};
  const controller=()=>({getSnapshot:()=>({enabled:true,armed:true,connected:true,available:'available',status:'ready'}),subscribe:()=>()=>{}});
  const a=bindVoiceOwner(controller(),target),b=bindVoiceOwner(controller(),target);await new Promise(r=>setImmediate(r));assert.equal(a.isLeader(),true);assert.equal(b.isLeader(),false);
- let spoken=0;assert.equal(a.claim('user','activity',at,()=>{spoken++;return true;}),true);assert.equal(b.claim('user','activity',at,()=>{spoken++;return true;}),false);
- a.dispose();await new Promise(r=>setImmediate(r));assert.equal(b.isLeader(),true);assert.equal(b.claim('user','activity',at+1000,()=>{spoken++;return true;}),false);assert.equal(spoken,1);b.dispose();
+ let spoken=0;assert.equal(await a.claim('user','activity',at,()=>{spoken++;return true;}),true);assert.equal(await b.claim('user','activity',at,()=>{spoken++;return true;}),false);
+ a.dispose();await new Promise(r=>setImmediate(r));assert.equal(await b.claim('user','activity',at+1000,()=>{spoken++;return true;}),false);assert.equal(b.isLeader(),true);assert.equal(spoken,1);b.dispose();
 });
 test('published-v1 responses carry a fresh server clock without changing the feed DTO',async()=>{
  const {publishedFeed,feedQuery}=await import('../../apps/website/lib/published-feed.ts');

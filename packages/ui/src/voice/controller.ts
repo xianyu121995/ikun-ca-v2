@@ -152,10 +152,10 @@ export class TrackingVoiceController {
     this.queue.push({ candidate, expires: arrived + VOICE_LIMITS.ttlMs }); this.pump(); this.publish(); return true;
   }
   /** Feed intake, after initial-list suppression and cross-tab coordination by the authenticated host. */
-  consumePublished(value: unknown, identity: VoiceIdentity): boolean {
+  consumePublished(value: unknown, identity: VoiceIdentity, arrivedAt?: number): boolean {
     if (this.disposed || !this.same(identity)) return false;
-    const arrived = this.elapsed(), item = publishedVoice(value); this.tick();
-    if (!Number.isFinite(arrived) || !item || !this.remember(item.candidate, arrived)) return false;
+    const now = this.elapsed(), arrived = arrivedAt ?? now, item = publishedVoice(value); this.tick();
+    if (!Number.isFinite(arrived) || arrived > now || arrived + VOICE_LIMITS.ttlMs <= now || !item || !this.remember(item.candidate, arrived)) return false;
     if (!this.permitted(this.now()) || this.preferences.disabled.has(item.candidate.subscription_id) ||
         arrived < this.notBefore || this.queue.length + (this.active ? 1 : 0) >= VOICE_LIMITS.queue) return false;
     this.queue.push({...item, expires: arrived + VOICE_LIMITS.ttlMs}); this.pump(); this.publish(); return true;

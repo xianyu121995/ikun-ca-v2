@@ -1,25 +1,29 @@
 import type {TrackingVoiceController} from '@ikun/ui';
 type Target=Pick<Window,'navigator'|'localStorage'>;
-/** Web Locks elect exactly one eligible page. The lock is released on mute, disconnect or page teardown. */
+/** One eligible page owns the speaker. Non-blocking election avoids accumulating work in follower tabs. */
 export function bindVoiceOwner(controller:TrackingVoiceController,target:Target=window){
-  let leader=false,lease:AbortController|null=null,disposed=false;
+  let leader=false,lease:AbortController|null=null,disposed=false,ready=Promise.resolve();
   const update=()=>{
     const s=controller.getSnapshot();const eligible=s.enabled&&s.armed&&s.connected&&s.available==='available'&&
       !['failed','quiet-hours','signed-out'].includes(s.status);
     if(!eligible){lease?.abort();lease=null;leader=false;return;}
     if(lease||disposed||!target.navigator.locks)return;
     const active=new AbortController();lease=active;
-    void target.navigator.locks.request('ikun.voice.speaker.v1',{signal:active.signal},async()=>{
-      if(active.signal.aborted)return;
-      leader=true;
+    let settled!:()=>void;ready=new Promise<void>(resolve=>{settled=resolve;});
+    // Web Locks forbids signal + ifAvailable; cancellation is handled by the callback below.
+    void target.navigator.locks.request('ikun.voice.speaker.v1',{ifAvailable:true},async lock=>{
+      if(!lock||active.signal.aborted)return;
+      leader=true;settled();
       await new Promise<void>(resolve=>{if(active.signal.aborted)resolve();else active.signal.addEventListener('abort',()=>resolve(),{once:true});});
       leader=false;
-    }).catch(()=>{});
+    }).catch(()=>{}).finally(()=>{settled();if(lease===active)lease=null;});
   };
   const unsubscribe=controller.subscribe(update);update();
   return {isLeader:()=>leader&&!disposed,
-    claim(user:string,id:string,serverAt:number,accept:()=>boolean){
-      if(!leader||disposed)return false;
+    async claim(user:string,id:string,serverAt:number,accept:()=>boolean){
+      if(disposed)return false;
+      update();const attempt=lease;await ready;
+      if(!leader||disposed||lease!==attempt)return false;
       try{
         const key='ikun.voice.spoken.v1.'+encodeURIComponent(user);
         const value=JSON.parse(target.localStorage.getItem(key)??'[]');

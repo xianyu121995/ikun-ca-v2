@@ -6,7 +6,7 @@ import { resolveTrackingVoiceMetadata } from '../lib/tracking-voice-metadata';
 import {clearClientSession} from '../lib/client-session-cache';
 
 type Scope = { controller: TrackingVoiceController; identity: VoiceIdentity; revoked: boolean };
-/** Only the existing TrackingLive EventSource calls this bridge. It never creates a stream. */
+/** Site-wide controller bridge. The authenticated published-v1 reader owns intake. */
 export function useTrackingVoice(session: VoiceSession) {
   const scope = useRef<Scope | null>(null);
   const [controller, setController] = useState<TrackingVoiceController | null>(null);
@@ -51,8 +51,8 @@ export function useTrackingVoice(session: VoiceSession) {
         value.data?.role !== session.role || value.data?.must_change_password !== false) revoke();
     } catch { /* Remain disconnected; a transport failure never restores the old session. */ }
   }, [current, revoke, session.user_id, session.role]);
-  const consumePublished = useCallback((item: unknown) => {
-    const value = current(); return value ? value.controller.consumePublished(item, value.identity) : false;
+  const consumePublished = useCallback((item: unknown, arrivedAt?: number) => {
+    const value = current(); return value ? value.controller.consumePublished(item, value.identity, arrivedAt) : false;
   }, [current]);
   return { controller, connected, consumePublished, revoke, verifyIdentity };
 }

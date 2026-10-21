@@ -45,7 +45,7 @@ function Live({ session, onController }: { session: VoiceSession; onController:(
     if(!voice.controller)return;
     const owner=bindVoiceOwner(voice.controller);
     const feed=new PublishedVoiceFeed({connected:voice.connected,revoke:voice.revoke,
-      onItem:(item,serverAt)=>{owner.claim(session.user_id,item.activity_id,serverAt,()=>voice.consumePublished(item));}});
+      onItem:(item,serverAt,arrivedAt)=>{owner.claim(session.user_id,item.activity_id,serverAt,()=>voice.consumePublished(item,arrivedAt));}});
     const events = new EventSource('/api/v1/tracking/events');
     const opened = (event:Event) => {void feed.refresh();publishTrackingEvent(event);};
     const disconnected = (event:Event) => {void voice.verifyIdentity();void feed.refresh();publishTrackingEvent(event);};

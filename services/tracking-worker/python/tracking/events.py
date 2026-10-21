@@ -9,6 +9,13 @@ from email.utils import parsedate_to_datetime
 from .store import handle
 
 
+def note(callback, reason):
+    # Offline/standalone parsing remains independent of the optional WSS logger.
+    if callback is not None:
+        try:callback(reason)
+        except Exception:pass
+
+
 def timestamp(value) -> float | None:
     try:
         if isinstance(value, (int, float)) and not isinstance(value, bool):
@@ -49,20 +56,24 @@ def quoted_context(content):
             "url": f"https://x.com/{author}/status/{identifier}"}
 
 
-def normalize(content: dict, username: str, require_author=False, *, event_type="NEW_TWEET") -> dict | None:
+def normalize(content: dict, username: str, require_author=False, *, event_type="NEW_TWEET", on_drop=None) -> dict | None:
     """Map documented 6551 author/boolean fields; never infer type from prose."""
     if not isinstance(content, dict):
+        note(on_drop,'invalid_content_shape')
         return None
     author = content.get("userScreenName", content.get("screenName"))
     author_id = content.get("userIdStr")
     try:
         if not isinstance(author, str) or handle(author) != username:
+            note(on_drop,'author_handle_missing_or_mismatch')
             return None
     except (ValueError, AttributeError):
+        note(on_drop,'author_handle_invalid')
         return None
     if author_id is not None and (
         not isinstance(author_id, str) or not re.fullmatch(r"[0-9]{1,40}", author_id)
     ):
+        note(on_drop,'author_id_invalid')
         return None
     reply, quote, repost = content.get("isReply"), content.get("isQuote"), content.get("isRetweet")
     type_evidence = "6551-structured-v1"
@@ -99,8 +110,10 @@ def normalize(content: dict, username: str, require_author=False, *, event_type=
     created = timestamp(content.get("createdAt", content.get("created_at")))
     text = content.get("text", content.get("full_text", ""))
     if not re.fullmatch(r"[0-9]{1,40}", tweet_id) or not isinstance(text, str):
+        note(on_drop,'tweet_id_or_text_invalid')
         return None
     if require_author and created is None:
+        note(on_drop,'tweet_time_invalid')
         return None
     return {
         "tweet_id": tweet_id,
@@ -131,18 +144,21 @@ def merge_type(previous, incoming, source):
     return old_kind, old_evidence
 
 
-def parse_event(message) -> tuple[str, dict] | None:
+def parse_event(message, on_drop=None) -> tuple[str, dict] | None:
     if not isinstance(message, dict) or message.get("method") != "twitter.event":
+        note(on_drop,'unsupported_method')
         return None
     params = message.get("params")
     if not isinstance(params, dict) or params.get("eventType") not in ("NEW_TWEET", "NEW_TWEET_QUOTE"):
+        note(on_drop,'not_tracking_tweet_event')
         return None
     try:
         username = handle(params.get("twAccount", ""))
         content = params.get("content")
         if isinstance(content, str):
             content = json.loads(content)
-        tweet = normalize(content, username, event_type=params["eventType"])
+        tweet = normalize(content, username, event_type=params["eventType"], on_drop=on_drop)
         return (username, tweet) if tweet else None
     except (ValueError, TypeError, AttributeError):
+        note(on_drop,'invalid_event_fields_or_content_json')
         return None

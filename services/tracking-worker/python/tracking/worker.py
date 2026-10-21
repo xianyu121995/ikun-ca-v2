@@ -221,29 +221,40 @@ class Worker:
                         self.fail(pending, list_exc)
                     break
 
-    def ingest(self, message):
+    def ingest(self, message, trace=None):
         self.ensure_owner()
-        event = parse_event(message)
+        on_drop = trace.drop if trace else None
+        event = parse_event(message,on_drop=on_drop)
         if event is None:
             return False
         username, tweet = event
         row = next((r for r in self.store.projects() if r["handle"] == username), None)
         shared = row and row["handle"] in (self.cfg.shared_watch_ids or {}) and row["status"] == "running"
         if not row or row["desired"] != "running" or not (row["claim"] == "owned" or shared):
+            if trace:trace.drop('not_subscribed' if not row else 'not_running_or_owned')
             return False
         if (
             row["remote_state"] != "active"
             or time.time() - (row["observed_at"] or 0) > self.cfg.remote_fresh_seconds
         ):
+            if trace:trace.drop('watch_not_active' if row['remote_state']!='active' else 'watch_observation_stale')
             return False
-        return self.store.insert_tweet(row, tweet, "wss")
+        try:result = self.store.insert_tweet(row,tweet,'wss',on_drop=on_drop)
+        except Exception:
+            if trace:trace.drop('store_error')
+            raise
+        if result and trace:trace.accepted()
+        return result
 
-    async def session(self, ws):
+    async def session(self, ws, audit=None):
+        from wss_audit import WssAudit
+        audit = audit or WssAudit('tracking')
         ack, pong = asyncio.Event(), asyncio.Event()
 
         async def receiver():
             async for raw in ws:
                 if raw in ("pong", b"pong"):
+                    audit.pong()
                     pong.set()
                     continue
                 if raw in ("ping", b"ping"):
@@ -252,29 +263,39 @@ class Worker:
                 try:
                     message = json.loads(raw)
                 except (ValueError, TypeError):
+                    audit.emit('dropped',reason='invalid_json')
                     continue
                 if not isinstance(message, dict):
+                    audit.emit('dropped',reason='invalid_envelope')
                     continue
-                params = message.get('params')
-                if isinstance(params,dict) and str(params.get('twAccount','')).lower() == '0x2a_ikun':
-                    logging.getLogger('tracking.target.raw').info(json.dumps({'received_at':time.time(),'frame':raw.decode() if isinstance(raw,bytes) else raw},ensure_ascii=False))
+                trace = audit.frame(message)
                 if message.get("id") == 1:
                     if message.get("result", {}).get("success") is True:
+                        audit.emit('subscribed')
                         ack.set()
                     else:
+                        trace.drop('subscription_rejected')
                         raise RemoteError("subscription_rejected")
                 elif message.get("error"):
+                    trace.drop('provider_stream_error')
                     raise RemoteError("stream_error")
                 elif ack.is_set():
-                    self.ingest(message)
+                    self.ingest(message,trace)
+                else:trace.drop('before_subscription_ack')
             raise RemoteError("stream_closed")
 
         async def heartbeat():
-            await asyncio.wait_for(ack.wait(), timeout=self.cfg.heartbeat_timeout)
+            try:await asyncio.wait_for(ack.wait(), timeout=self.cfg.heartbeat_timeout)
+            except asyncio.TimeoutError:
+                audit.emit('dropped',reason='subscription_ack_timeout')
+                raise
             while True:
                 pong.clear()
                 await ws.send("ping")
-                await asyncio.wait_for(pong.wait(), timeout=self.cfg.heartbeat_timeout)
+                try:await asyncio.wait_for(pong.wait(), timeout=self.cfg.heartbeat_timeout)
+                except asyncio.TimeoutError:
+                    audit.emit('dropped',reason='application_heartbeat_timeout')
+                    raise
                 self.ensure_owner()
                 self.store.runtime(connection="connected", pong_at=time.time(), error=None)
                 await asyncio.sleep(self.cfg.heartbeat_seconds)
@@ -296,17 +317,18 @@ class Worker:
             start = time.monotonic()
             try:
                 self.remote.ready()
+                from wss_audit import connection
                 self.store.runtime(connection="connecting", pong_at=None, error=None)
                 url = "wss://ai.6551.io/open/twitter_wss?" + urlencode({"token": self.cfg.secret("token")})
-                async with self.ws_connect(
+                async with connection(self.ws_connect(
                     url,
                     open_timeout=15,
                     close_timeout=5,
                     ping_interval=None,
                     max_size=1024 * 1024,
                     max_queue=64,
-                ) as ws:
-                    await self.session(ws)
+                ),'tracking') as (ws,audit):
+                    await self.session(ws,audit)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:

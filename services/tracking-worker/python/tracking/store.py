@@ -295,12 +295,12 @@ class Store:
             db.execute("COMMIT")
             return {"retention_now_ms": now, "clock_anomaly": bool(flagged)}
 
-    def insert_tweet(self, row: dict, tweet: dict, source: str) -> bool:
+    def insert_tweet(self, row: dict, tweet: dict, source: str, *, on_drop=None) -> bool:
         import math
         import uuid
 
         from .commands import activity, change
-        from .events import merge_type
+        from .events import merge_type, note
         from .feed import activity_id
         from .protocol import SCOPE, canonical
         from .retention import TTL_MS, retention_now
@@ -320,6 +320,7 @@ class Store:
             "repost",
             "unknown",
         ):
+            note(on_drop,'unverified_author_or_unsupported_kind')
             return False
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -330,6 +331,10 @@ class Store:
                 or (current["x_user_id"] and tweet.get("author_id") != current["x_user_id"])
                 or tweet.get("author_handle") != current["handle"]
             ):
+                reason = ('subscription_revision_changed' if current['revision']!=row['revision'] else
+                          'subscription_not_running' if current['desired']!='running' else
+                          'author_id_missing_or_mismatch' if current['x_user_id'] and tweet.get('author_id')!=current['x_user_id'] else 'author_handle_mismatch')
+                note(on_drop,reason)
                 db.execute("ROLLBACK")
                 return False
             now = retention_now(db)
@@ -362,6 +367,7 @@ class Store:
                     or (created is None and source != "wss")
                 )
             ):
+                note(on_drop,'before_current_generation_or_unverifiable_history')
                 db.execute("COMMIT")
                 return False
             first = ledger is None
@@ -386,6 +392,7 @@ class Store:
             elif (
                 ledger["state"] == "expired" or ledger["origin_subscription_id"] != current["subscription_id"]
             ):
+                note(on_drop,'ledger_expired_or_other_subscription')
                 db.execute("COMMIT")
                 return False
             db.execute(
@@ -397,6 +404,7 @@ class Store:
                 (expiry, tweet["tweet_id"]),
             )
             if expiry <= now:
+                note(on_drop,'tweet_expired')
                 # Preserve the pending purge marker if older payload still exists.
                 if first:
                     db.execute(
@@ -527,6 +535,7 @@ class Store:
                         (eid, canonical(envelope), "pending", time.time()),
                     )
             db.execute("COMMIT")
+            if not changed:note(on_drop,'duplicate_or_no_change')
             return changed
 
     def activities(self, project_id: str | None = None, after: int = 0, limit: int = 50) -> list[dict]:

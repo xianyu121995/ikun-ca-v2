@@ -258,13 +258,16 @@ class Engine:
                 await self.pause(min(60, retry_time(failures, time.time(), error)-time.time()))
 
     async def consume(self):
+        from wss_audit import connection
         generation_snapshot=[h for h in self.store.hunters() if h['enabled'] and h['mode']=='WSS' and h['profile_status']=='ready']
         uri = 'wss://ai.6551.io/open/twitter_wss?token='+quote(self.settings.token_6551, safe='')
-        async with self.connector(uri, open_timeout=15, close_timeout=5, ping_interval=20, ping_timeout=20, max_size=1_000_000) as socket:
+        async with connection(self.connector(uri, open_timeout=15, close_timeout=5, ping_interval=20, ping_timeout=20, max_size=1_000_000),'hunter') as (socket,audit):
             await socket.send(json.dumps({'jsonrpc':'2.0','id':1,'method':'twitter.subscribe'}))
             ack = json.loads(await asyncio.wait_for(socket.recv(), 15))
             if ack.get('id') != 1 or not isinstance(ack.get('result'), dict) or ack['result'].get('success') is not True:
+                audit.emit('dropped',reason='subscription_not_acknowledged')
                 raise ProviderError('wss_subscription_not_acknowledged')
+            audit.emit('subscribed')
             self.store.set_state('wss_state', 'subscribed')
             self.store.set_state('last_pong_at',None)
             # Subscription ACK is not a source heartbeat. Establish only new generations.
@@ -274,6 +277,7 @@ class Engine:
             next_ping = time.monotonic()+20
             while not self.stop.is_set():
                 if time.monotonic()-last_pong > 65:
+                    audit.emit('dropped',reason='application_heartbeat_timeout')
                     raise ProviderError('wss_application_heartbeat_timeout')
                 if time.monotonic() >= next_ping:
                     await socket.send('ping')
@@ -283,17 +287,29 @@ class Engine:
                 except asyncio.TimeoutError:
                     continue
                 if raw == 'pong' or raw == b'pong':
+                    audit.pong()
                     last_pong = time.monotonic()
                     self.store.set_state('last_pong_at', time.time())
                     continue
+                trace = None
                 try:
                     payload = json.loads(raw)
+                    trace = audit.frame(payload)
                     if not isinstance(payload, dict):
                         raise ValueError('invalid_envelope')
-                    for event in wss_events(payload, time.time()):
+                    events = wss_events(payload, time.time())
+                    if not events:
+                        params = payload.get('params')
+                        reason = 'not_hunter_follower_event' if not isinstance(params,dict) or params.get('eventType')!='NEW_FOLLOWER' else 'empty_follow_targets'
+                        trace.drop(reason)
+                    for event in events:
                         origin=next((h for h in generation_snapshot if h['username']==event.hunter),None)
-                        if origin:self.store.ingest_wss(event,generation=origin['generation'])
+                        if not origin:trace.drop('hunter_not_in_connection_generation')
+                        elif self.store.ingest_wss(event,generation=origin['generation']):trace.accepted()
+                        else:trace.drop('follow_event_duplicate_or_inactive_generation')
                 except (ValueError, TypeError, KeyError,Conflict):
+                    if trace:trace.drop('invalid_follow_event_or_store_conflict')
+                    else:audit.emit('dropped',reason='invalid_json')
                     self.store.set_state('last_rejected_event_at', time.time())
                 if not any(h['enabled'] and h['mode']=='WSS' for h in self.store.hunters()):
                     return

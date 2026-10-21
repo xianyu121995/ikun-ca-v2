@@ -52,12 +52,51 @@ test("strict event parser accepts UUIDv5 activities and rejects other types, ori
   for (const type of ["tracking.feed.activity.updated.v1", "tracking.activity.created", "hunter.discovery.created", "message"]) assert.equal(candidateFromFrame(frame(1, initialTime, {}, { type })), null);
   assert.equal(candidateFromFrame(frame(1, initialTime, {}, { event_id: "missing" })), null);
 });
-test("old/future timestamps and invalid delivery never reach metadata", async () => {
+test("invalid delivery and server replay flags never reach metadata", async () => {
   const f = fixture(); f.enable();
-  assert.equal(f.voice.consume(frame(1, f.clock.now() - 30000), f.identity), false);
-  assert.equal(f.voice.consume(frame(2, f.clock.now() + 1), f.identity), false);
   for (const delivery of ["history", "replay", "rest"]) assert.equal(f.send(3, {}, { delivery }), false);
   assert.equal(f.send(4, { replay: true }), false); await flush(); assert.equal(f.resolved.length, 0); f.voice.destroy();
+});
+for (const [label, offset] of [["one second slow", -1000], ["one minute fast", 60000], ["ten minutes slow", -600000]]) {
+  test(`fresh live events speak with browser clock ${label}; replay and duplicates stay silent`, async () => {
+    const clock = new FakeClock(); clock.time += offset;
+    const f = fixture({clock}); f.enable();
+    const live = frame(1, initialTime);
+    assert.equal(f.voice.consume(live, f.identity), true);
+    await flush(); assert.deepEqual(f.speech.calls, ["真实项目名称，A级。"]); f.speech.end();
+    assert.equal(f.voice.consume(live, f.identity), false);
+    assert.equal(f.voice.consume(frame(2, initialTime, {activity_id:live.data.activity_id}), f.identity), false);
+    assert.equal(f.voice.consume(frame(3, initialTime, {replay:true,is_live_new:false}), f.identity), false);
+    await flush(); assert.equal(f.speech.calls.length, 1); f.voice.destroy();
+  });
+}
+test("server timestamps do not bound arrival freshness, including after reconnect", async () => {
+  const f = fixture(); f.enable();
+  assert.equal(f.voice.consume(frame(1, initialTime - 86400000), f.identity), true);
+  await flush(); f.speech.end();
+  f.voice.setStreamConnected(false,session); f.clock.advance(1000); f.voice.setStreamConnected(true,session);
+  assert.equal(f.voice.resumeAfterReconnect(session,true), true);
+  assert.equal(f.voice.consume(frame(2, initialTime + 86400000), f.identity), true);
+  await flush(); assert.equal(f.speech.calls.length, 2); f.voice.destroy();
+});
+test("wall clock changes cannot expire or rejuvenate locally arrived work", async () => {
+  const f = fixture(); f.voice.setQuietHours({enabled:false,start:22,end:8}); f.enable();
+  f.send(1); f.send(2); await flush();
+  f.clock.time += 3600000; f.voice.tick();
+  assert.equal(f.voice.getSnapshot().queued,2);
+  f.clock.time -= 7200000; f.clock.elapseWithoutTimers(30001);
+  f.speech.end(); await flush();
+  assert.equal(f.voice.getSnapshot().queued,0); assert.equal(f.speech.calls.length,1); f.voice.destroy();
+});
+test("an event waiting thirty seconds after browser arrival cannot start speaking", async () => {
+  const f = fixture(); f.enable(); f.send(1); await flush();
+  f.clock.elapseWithoutTimers(29000); f.send(2);
+  // The second event gets its own arrival-based budget, not the first event's deadline.
+  f.clock.elapseWithoutTimers(29999); f.speech.end(); await flush();
+  assert.equal(f.speech.calls.length,2); f.voice.destroy();
+  const expired = fixture(); expired.enable(); expired.send(1); expired.send(2); await flush();
+  expired.clock.elapseWithoutTimers(30000); expired.speech.end(); await flush();
+  assert.equal(expired.speech.calls.length,1); assert.equal(expired.voice.getSnapshot().queued,0); expired.voice.destroy();
 });
 test("both stable event and activity IDs deduplicate before and after completion", async () => {
   const f = fixture(); f.enable(); assert.equal(f.send(), true); await flush(); f.speech.end();
@@ -91,9 +130,9 @@ test("old session callbacks cannot reconnect or inject work into a new session",
   const f = fixture(); f.enable(); f.voice.setSession({ ...session, epoch: "new" });
   f.voice.setStreamConnected(true, session); assert.equal(f.voice.getSnapshot().connected, false); assert.equal(f.send(), false); assert.equal(f.speech.calls.length, 0); f.voice.destroy();
 });
-test("disconnect requires a fresh gesture; reconnect does not replay earlier received events", async () => {
+test("disconnect requires a fresh gesture; server-marked replay is not spoken on reconnect", async () => {
   const f = fixture(); f.enable(); f.voice.setStreamConnected(false, session); f.clock.advance(1000); f.voice.setStreamConnected(true, session);
-  assert.equal(f.voice.getSnapshot().armed, false); f.enable(); assert.equal(f.voice.consume(frame(1, initialTime), session), false);
+  assert.equal(f.voice.getSnapshot().armed, false); f.enable(); assert.equal(f.voice.consume(frame(1, initialTime, {replay:true,is_live_new:false}), session), false);
   assert.equal(f.send(2), true); await flush(); assert.equal(f.speech.calls.length, 1); f.voice.destroy();
 });
 test("same-page reconnect resumes prior activation, keeps account mutes and drops disconnected events", async () => {
@@ -107,7 +146,7 @@ test("same-page reconnect resumes prior activation, keeps account mutes and drop
   assert.equal(f.voice.getSnapshot().status, 'ready');
   assert.deepEqual(f.voice.getSnapshot().disabled_subscription_ids, ['sub_' + uuid(2)]);
   assert.equal(f.send(), false); // received during the outage: never replay
-  assert.equal(f.voice.consume(frame(2, initialTime), session), false);
+  assert.equal(f.voice.consume(frame(2, initialTime, {replay:true,is_live_new:false}), session), false);
   assert.equal(f.send(3), true); await flush(); assert.equal(f.speech.calls.length, 1); f.voice.destroy();
 });
 test("manual off, logout, a new session/page and lifecycle suspension cannot auto-resume", () => {
@@ -140,7 +179,7 @@ test("global and per-subscription disabled events are dropped and never buffered
 test("bounded queue admits at most 20, drops overflow and expires waiting items after 30 seconds", async () => {
   const f = fixture(); f.enable(); for (let n = 1; n <= 20; n++) assert.equal(f.send(n), true); assert.equal(f.send(21), false);
   await flush(); assert.equal(f.voice.getSnapshot().queued, 20); assert.equal(f.speech.calls.length, 1);
-  f.clock.time += 30_000; f.speech.end(); await flush(); assert.equal(f.voice.getSnapshot().queued, 0); assert.equal(f.speech.calls.length, 1); f.voice.destroy();
+  f.clock.elapseWithoutTimers(30_000); f.speech.end(); await flush(); assert.equal(f.voice.getSnapshot().queued, 0); assert.equal(f.speech.calls.length, 1); f.voice.destroy();
 });
 test("dedupe capacity is bounded without evicting live IDs; overflow cannot replay an earlier event", async () => {
   const f = fixture(); for (let n = 1; n <= 2000; n++) f.send(n); // all off: remember and discard, no metadata
@@ -158,7 +197,7 @@ test("speech error and missing browser callbacks fail closed without retrying or
 test("native queued speech that never started is cancelled when its event TTL expires", async () => {
   const f = fixture(); f.speech.startImmediately = false; f.enable(); f.send(); await flush();
   assert.equal(f.voice.getSnapshot().status, "starting"); const before = f.speech.cancellations;
-  f.clock.time += 30000; f.voice.tick(); assert.ok(f.speech.cancellations > before); assert.equal(f.speech.hooks, null); f.voice.destroy();
+  f.clock.elapseWithoutTimers(30000); f.voice.tick(); assert.ok(f.speech.cancellations > before); assert.equal(f.speech.hooks, null); f.voice.destroy();
 });
 test("quiet time is Shanghai 22 inclusive to 08 exclusive regardless of host timezone", () => {
   for (const [at, quiet] of [["2026-10-16T13:59:59.999Z", false], ["2026-10-16T14:00:00.000Z", true], ["2026-10-16T23:59:59.999Z", true], ["2026-10-17T00:00:00.000Z", false]]) assert.equal(isVoiceQuietHours(Date.parse(at)), quiet, at);
@@ -166,7 +205,7 @@ test("quiet time is Shanghai 22 inclusive to 08 exclusive regardless of host tim
 test("crossing exactly 22 stops speaking and drops queued work; quiet events do not accumulate until 08", async () => {
   const clock = new FakeClock(); clock.time = Date.parse("2026-10-16T13:59:59.000Z"); const f = fixture({ clock }); f.enable(); f.send(1); f.send(2); await flush();
   clock.advance(1000); assert.equal(f.voice.getSnapshot().status, "quiet-hours"); assert.equal(f.voice.getSnapshot().queued, 0); assert.equal(f.speech.hooks, null);
-  const quietFrame = frame(3, clock.now()); f.voice.consume(quietFrame, session); clock.advance(10 * 3600_000); await flush(); assert.equal(f.speech.calls.length, 1); assert.equal(f.voice.consume(quietFrame, session), false); assert.equal(f.send(4), true); await flush(); assert.equal(f.speech.calls.length, 2); f.voice.destroy();
+  const quietFrame = frame(3, clock.now()); f.voice.consume(quietFrame, session); clock.advance(10 * 3600_000); await flush(); assert.equal(f.speech.calls.length, 1); assert.equal(f.voice.consume({...quietFrame,data:{...quietFrame.data,replay:true,is_live_new:false}}, session), false); assert.equal(f.send(4), true); await flush(); assert.equal(f.speech.calls.length, 2); f.voice.destroy();
 });
 test("metadata completed at 22 or a backwards wall clock cannot reopen a quiet queue", async () => {
   const clock = new FakeClock(); clock.time = Date.parse("2026-10-16T13:59:59.000Z"); let answer;

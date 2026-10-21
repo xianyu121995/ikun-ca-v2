@@ -8,11 +8,13 @@ export const frame = (n = 1, now = initialTime, patch = {}, outer = {}) => ({
 export const metadata = (candidate, patch = {}) => ({ subscription_id: candidate.subscription_id, project_id: candidate.project_id, project_name: "真实项目名称", subscription_revision: 3, rating: "A", project_revision: 7, ...patch });
 export const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
 export class FakeClock {
-  time = initialTime; id = 0; timers = new Map();
+  time = initialTime; elapsed = 0; id = 0; timers = new Map();
   now = () => this.time;
-  setTimeout = (fn, ms) => { const id = ++this.id; this.timers.set(id, { fn, at: this.time + ms }); return id; };
+  monotonic = () => this.elapsed;
+  setTimeout = (fn, ms) => { const id = ++this.id; this.timers.set(id, { fn, at: this.elapsed + ms }); return id; };
   clearTimeout = id => this.timers.delete(id);
-  advance(ms) { const until = this.time + ms; let guard = 0; for (;;) { const next = [...this.timers.entries()].filter(([, t]) => t.at <= until).sort((a, b) => a[1].at - b[1].at)[0]; if (!next) break; if (++guard > 20000) throw Error("timer loop"); this.time = next[1].at; this.timers.delete(next[0]); next[1].fn(); } this.time = until; }
+  elapseWithoutTimers(ms) { this.time += ms; this.elapsed += ms; }
+  advance(ms) { const until = this.elapsed + ms; let guard = 0; for (;;) { const next = [...this.timers.entries()].filter(([, t]) => t.at <= until).sort((a, b) => a[1].at - b[1].at)[0]; if (!next) break; if (++guard > 20000) throw Error("timer loop"); this.time += next[1].at - this.elapsed; this.elapsed = next[1].at; this.timers.delete(next[0]); next[1].fn(); } this.time += until - this.elapsed; this.elapsed = until; }
 }
 export class MemoryStorage {
   values = new Map(); getItem = key => this.values.get(key) ?? null; setItem = (key, value) => { this.values.set(key, value); };

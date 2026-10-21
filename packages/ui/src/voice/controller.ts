@@ -2,7 +2,7 @@ import type { VoiceCandidate, VoiceClock, VoiceIdentity, VoiceOptions, VoiceSess
 import { candidateFromFrame, DEFAULT_QUIET_HOURS, isSubscriptionId, isVoiceQuietHours, nextVoiceBoundaryMs, validHour, validSession, verifiedMetadata, VOICE_LIMITS, type VoiceQuietHours } from "./validation.js";
 import { loadVoicePreferences, saveVoicePreferences, voicePreferenceKey, type VoicePreferences } from "./preferences.js";
 
-const systemClock: VoiceClock = { now: Date.now, setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: handle => clearTimeout(handle as ReturnType<typeof setTimeout>) };
+const systemClock: VoiceClock = { now: Date.now, monotonic: () => performance.now(), setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: handle => clearTimeout(handle as ReturnType<typeof setTimeout>) };
 interface Pending { candidate: VoiceCandidate; expires: number }
 interface Job extends Pending { generation: number; abort: AbortController; timer: unknown; phase: "resolving" | "starting" | "speaking" }
 
@@ -20,6 +20,7 @@ export class TrackingVoiceController {
   private generation = 0;
   private notBefore = Infinity;
   private highWater = -Infinity;
+  private elapsedHighWater = -Infinity;
   private queue: Pending[] = [];
   private active: Job | undefined;
   private timer: unknown;
@@ -45,8 +46,13 @@ export class TrackingVoiceController {
   private now(): number {
     const value = this.clock.now();
     if (!Number.isFinite(value)) return Infinity;
-    // A wall-clock rollback must not rejuvenate old work or reopen the quiet-hour boundary.
+    // Calendar time is used only for quiet hours; rollback must not reopen their boundary.
     this.highWater = Math.max(this.highWater, value); return this.highWater;
+  }
+  private elapsed(): number {
+    const value = this.clock.monotonic?.() ?? this.clock.now();
+    if (!Number.isFinite(value)) return Infinity;
+    this.elapsedHighWater = Math.max(this.elapsedHighWater, value); return this.elapsedHighWater;
   }
   private availability() { try { return this.options.speech.availability(); } catch { return "unsupported" as const; } }
   private same(identity: VoiceIdentity): boolean { return !!this.session && identity.user_id === this.session.user_id && identity.epoch === this.session.epoch; }
@@ -93,7 +99,7 @@ export class TrackingVoiceController {
   }
   setStreamConnected(connected: boolean, identity: VoiceIdentity): void {
     if (this.disposed || !this.same(identity) || this.connected === connected) return;
-    this.dropAll(); this.connected = connected; this.notBefore = this.now();
+    this.dropAll(); this.connected = connected; this.notBefore = this.elapsed();
     if (!connected) this.armed = false;
     this.tick();
   }
@@ -108,7 +114,7 @@ export class TrackingVoiceController {
     if (this.disposed || !this.session || this.availability() !== "available") { this.publish(); return false; }
     let gesture = false; try { gesture = this.options.speech.isUserGesture(event); } catch { /* Fail closed. */ }
     if (!gesture) { this.failed = true; this.armed = false; this.activatedInSession = false; this.dropAll(); this.publish(); return false; }
-    this.dropAll(); this.preferences.enabled = true; this.armed = true; this.activatedInSession = true; this.failed = false; this.notBefore = this.now(); this.persist(); this.tick(); return true;
+    this.dropAll(); this.preferences.enabled = true; this.armed = true; this.activatedInSession = true; this.failed = false; this.notBefore = this.elapsed(); this.persist(); this.tick(); return true;
   }
   disable(): void {
     if (this.disposed) return;
@@ -119,7 +125,7 @@ export class TrackingVoiceController {
     if (!enabled && !this.preferences.disabled.has(subscriptionId) && this.preferences.disabled.size >= VOICE_LIMITS.subscriptions) return false;
     if (enabled) this.preferences.disabled.delete(subscriptionId); else this.preferences.disabled.add(subscriptionId);
     // Cancels an in-flight metadata read as well as a speaking item; late answers cannot restart it.
-    this.dropAll(); this.notBefore = this.now(); this.persist(); this.tick(); return true;
+    this.dropAll(); this.notBefore = this.elapsed(); this.persist(); this.tick(); return true;
   }
   reloadPreferences(): void {
     if (!this.session || this.disposed) return;
@@ -127,7 +133,7 @@ export class TrackingVoiceController {
     this.dropAll(); this.armed = false; this.activatedInSession = false; this.preferences = loaded.preferences; this.storageAvailable = loaded.available; this.publish();
   }
   suspend(): void {
-    this.armed = false; this.activatedInSession = false; this.connected = false; this.notBefore = this.now(); this.dropAll(); this.publish();
+    this.armed = false; this.activatedInSession = false; this.connected = false; this.notBefore = this.elapsed(); this.dropAll(); this.publish();
   }
   private remember(candidate: VoiceCandidate, now: number): boolean {
     for (const map of [this.events, this.activities]) for (const [id, until] of map) if (until <= now) map.delete(id);
@@ -138,11 +144,12 @@ export class TrackingVoiceController {
   }
   consume(frame: unknown, identity: VoiceIdentity): boolean {
     if (this.disposed || !this.same(identity)) return false;
-    this.tick(); const candidate = candidateFromFrame(frame); const now = this.now();
-    if (!candidate || !this.remember(candidate, now)) return false;
-    const received = Date.parse(candidate.received_at);
-    if (!this.permitted(now) || this.preferences.disabled.has(candidate.subscription_id) || received < this.notBefore || received > now || received + VOICE_LIMITS.ttlMs <= now || this.queue.length + (this.active ? 1 : 0) >= VOICE_LIMITS.queue) return false;
-    this.queue.push({ candidate, expires: received + VOICE_LIMITS.ttlMs }); this.pump(); this.publish(); return true;
+    const arrived = this.elapsed();
+    this.tick(); const candidate = candidateFromFrame(frame);
+    if (!Number.isFinite(arrived) || !candidate || !this.remember(candidate, arrived)) return false;
+    // Server timestamps are metadata only: clock skew must never discard a live event.
+    if (!this.permitted(this.now()) || this.preferences.disabled.has(candidate.subscription_id) || arrived < this.notBefore || this.queue.length + (this.active ? 1 : 0) >= VOICE_LIMITS.queue) return false;
+    this.queue.push({ candidate, expires: arrived + VOICE_LIMITS.ttlMs }); this.pump(); this.publish(); return true;
   }
   private current(job: Job): boolean { return !this.disposed && this.active === job && job.generation === this.generation && !job.abort.signal.aborted; }
   private finish(job: Job): void {
@@ -158,16 +165,16 @@ export class TrackingVoiceController {
   private pump(): void {
     if (this.active || !this.permitted(this.now()) || !this.session) return;
     let next: Pending | undefined;
-    while ((next = this.queue.shift())) if (next.expires > this.now() && !this.preferences.disabled.has(next.candidate.subscription_id)) break;
-    if (!next || next.expires <= this.now()) return;
+    while ((next = this.queue.shift())) if (next.expires > this.elapsed() && !this.preferences.disabled.has(next.candidate.subscription_id)) break;
+    if (!next || next.expires <= this.elapsed()) return;
     const job: Job = { ...next, abort: new AbortController(), generation: this.generation, phase: "resolving", timer: undefined };
     this.active = job;
-    job.timer = this.clock.setTimeout(() => this.finish(job), Math.min(VOICE_LIMITS.metadataMs, job.expires - this.now()));
+    job.timer = this.clock.setTimeout(() => this.finish(job), Math.min(VOICE_LIMITS.metadataMs, job.expires - this.elapsed()));
     const context = Object.freeze({ ...this.session, signal: job.abort.signal });
     Promise.resolve().then(() => this.current(job) ? this.options.resolveMetadata(job.candidate, context) : null).then(value => {
       if (!this.current(job)) return;
       const metadata = verifiedMetadata(value, job.candidate);
-      if (!metadata || !this.permitted(this.now()) || job.expires <= this.now() || this.preferences.disabled.has(job.candidate.subscription_id)) { this.finish(job); return; }
+      if (!metadata || !this.permitted(this.now()) || job.expires <= this.elapsed() || this.preferences.disabled.has(job.candidate.subscription_id)) { this.finish(job); return; }
       this.clock.clearTimeout(job.timer); job.phase = "starting";
       job.timer = this.clock.setTimeout(() => this.fail(job), VOICE_LIMITS.speechMs);
       this.publish();
@@ -175,7 +182,7 @@ export class TrackingVoiceController {
         this.options.speech.speak(`${metadata.project_name}，${metadata.rating}级。`, {
           start: () => {
             if (!this.current(job)) return;
-            if (!this.permitted(this.now()) || job.expires <= this.now()) { this.dropAll(); this.publish(); return; }
+            if (!this.permitted(this.now()) || job.expires <= this.elapsed()) { this.dropAll(); this.publish(); return; }
             job.phase = "speaking"; this.publish();
           },
           end: () => this.finish(job), error: () => this.fail(job),
@@ -191,8 +198,9 @@ export class TrackingVoiceController {
     if (!this.permitted(now)) {
       if (this.active || this.queue.length) this.dropAll();
     } else {
-      this.queue = this.queue.filter(item => item.expires > now);
-      if (this.active && this.active.phase !== "speaking" && this.active.expires <= now) { const job = this.active; this.finish(job); }
+      const elapsed = this.elapsed();
+      this.queue = this.queue.filter(item => item.expires > elapsed);
+      if (this.active && this.active.phase !== "speaking" && this.active.expires <= elapsed) { const job = this.active; this.finish(job); }
       this.pump();
     }
     this.clock.clearTimeout(this.timer); this.timer = undefined;

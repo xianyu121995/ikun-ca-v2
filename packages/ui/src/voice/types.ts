@@ -22,7 +22,7 @@ export interface VoiceSpeechPort {
   observe?(listener: () => void): () => void;
 }
 export interface VoiceStorage { getItem(key: string): string | null; setItem(key: string, value: string): void }
-export interface VoiceClock { now(): number; setTimeout(callback: () => void, ms: number): unknown; clearTimeout(handle: unknown): void }
+export interface VoiceClock { now(): number; monotonic?(): number; setTimeout(callback: () => void, ms: number): unknown; clearTimeout(handle: unknown): void }
 export type VoiceStatus = "signed-out" | "unsupported" | "no-local-voice" | "off" | "locked" | "disconnected" | "quiet-hours" | "ready" | "resolving" | "starting" | "speaking" | "failed";
 export interface VoiceSnapshot {
   status: VoiceStatus; enabled: boolean; armed: boolean; connected: boolean; available: VoiceAvailability;

@@ -28,6 +28,19 @@ export function verifiedMetadata(value: unknown, candidate: VoiceCandidate): Voi
   if (!project_name || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(project_name)) return null;
   return { subscription_id: candidate.subscription_id, project_id: candidate.project_id, project_name, subscription_revision: value.subscription_revision as number, project_revision: value.project_revision as number, rating: value.rating as VoiceMetadata["rating"] };
 }
+/** published-v1 owns visibility and rating; source and tweet kind are irrelevant here. */
+export function publishedVoice(value: unknown) {
+  if (!record(value) || typeof value.activity_id !== 'string' || !activity.test(value.activity_id) ||
+      !isSubscriptionId(value.subscription_id) || !projectId(value.project_id) ||
+      typeof value.age_ms !== 'number' || !Number.isFinite(value.age_ms) || value.age_ms < 0 || value.age_ms > 600_000 ||
+      typeof value.name !== 'string' || !value.name.trim() || value.name.length > VOICE_LIMITS.projectName ||
+      !['S','A','B'].includes(String(value.rating))) return null;
+  const name = value.name.replace(/\s+/gu, ' ').trim();
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u.test(name)) return null;
+  return {candidate: {event_id: value.activity_id, activity_id: value.activity_id,
+    subscription_id: value.subscription_id, project_id: value.project_id},
+    metadata: {project_name: name, rating: value.rating as VoiceMetadata['rating']}};
+}
 const shanghai = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Shanghai", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
 function dayMs(now: number): number {
   const parts = shanghai.formatToParts(now);

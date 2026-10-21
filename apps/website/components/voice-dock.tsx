@@ -6,6 +6,8 @@ import { VoiceControls, type TrackingVoiceController, type VoiceSession } from '
 import {loadTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
 import {publishTrackingEvent} from '../lib/tracking-events-client';
 import { useTrackingVoice } from './tracking-voice';
+import {PublishedVoiceFeed} from '../lib/published-voice-feed';
+import {bindVoiceOwner} from '../lib/voice-browser-owner';
 import {VoiceTest} from './voice-test';
 
 const VoiceContext = createContext<TrackingVoiceController | null>(null);
@@ -40,15 +42,19 @@ function Live({ session, onController }: { session: VoiceSession; onController:(
     loadTrackingSubscriptions(session.user_id).then(rows=>{if(!stopped)setSubs(rows.filter(row=>row.desired_state!=='removed').map(row=>({subscription_id:row.subscription_id,label:(row.name||row.x_handle)+(row.x_handle?' @'+row.x_handle:'')})));}).catch(()=>{});
     return()=>{stopped=true;};},[open,session.user_id]);
   useEffect(() => {
+    if(!voice.controller)return;
+    const owner=bindVoiceOwner(voice.controller);
+    const feed=new PublishedVoiceFeed({connected:voice.connected,revoke:voice.revoke,
+      onItem:(item,serverAt)=>{owner.claim(session.user_id,item.activity_id,serverAt,()=>voice.consumePublished(item));}});
     const events = new EventSource('/api/v1/tracking/events');
-    const opened = (event:Event) => {voice.connected(true);publishTrackingEvent(event);};
-    const disconnected = (event:Event) => { voice.connected(false); void voice.verifyIdentity();publishTrackingEvent(event); };
-    const created = (event: Event) => {if(event.type==='tracking.feed.activity.created.v1')voice.consume(event as MessageEvent);publishTrackingEvent(event);};
-    events.addEventListener('open', opened);
-    events.addEventListener('error', disconnected);
-    for(const type of ['tracking.feed.activity.created.v1','tracking.feed.activity.updated.v1','tracking.subscription.updated','command.updated'])events.addEventListener(type,created);
-    return () => { voice.connected(false); events.close(); };
-  }, [voice.connected, voice.consume, voice.verifyIdentity]);
+    const opened = (event:Event) => {void feed.refresh();publishTrackingEvent(event);};
+    const disconnected = (event:Event) => {void voice.verifyIdentity();void feed.refresh();publishTrackingEvent(event);};
+    const changed = (event:Event) => {void feed.refresh();publishTrackingEvent(event);};
+    events.addEventListener('open',opened);events.addEventListener('error',disconnected);
+    for(const type of ['tracking.feed.activity.created.v1','tracking.feed.activity.updated.v1','tracking.subscription.updated','command.updated'])events.addEventListener(type,changed);
+    void feed.refresh();const timer=setInterval(()=>void feed.refresh(),15000);
+    return()=>{clearInterval(timer);feed.stop();owner.dispose();voice.connected(false);events.close();};
+  }, [session.user_id,voice.controller,voice.connected,voice.consumePublished,voice.revoke,voice.verifyIdentity]);
   const controller = voice.controller;
   const [status, setStatus] = useState('');
   useEffect(() => {

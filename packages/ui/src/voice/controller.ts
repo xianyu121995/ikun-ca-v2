@@ -1,9 +1,9 @@
 import type { VoiceCandidate, VoiceClock, VoiceIdentity, VoiceOptions, VoiceSession, VoiceSnapshot, VoiceStatus } from "./types.js";
-import { candidateFromFrame, DEFAULT_QUIET_HOURS, isSubscriptionId, isVoiceQuietHours, nextVoiceBoundaryMs, validHour, validSession, verifiedMetadata, VOICE_LIMITS, type VoiceQuietHours } from "./validation.js";
+import { publishedVoice, candidateFromFrame, DEFAULT_QUIET_HOURS, isSubscriptionId, isVoiceQuietHours, nextVoiceBoundaryMs, validHour, validSession, verifiedMetadata, VOICE_LIMITS, type VoiceQuietHours } from "./validation.js";
 import { loadVoicePreferences, saveVoicePreferences, voicePreferenceKey, type VoicePreferences } from "./preferences.js";
 
 const systemClock: VoiceClock = { now: Date.now, monotonic: () => performance.now(), setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: handle => clearTimeout(handle as ReturnType<typeof setTimeout>) };
-interface Pending { candidate: VoiceCandidate; expires: number }
+interface Pending { candidate: VoiceCandidate; expires: number; metadata?: {project_name: string; rating: "S" | "A" | "B"} }
 interface Job extends Pending { generation: number; abort: AbortController; timer: unknown; phase: "resolving" | "starting" | "speaking" }
 
 /** One instance per logged-in browser page. It never creates a feed, fetches metadata or stores event data. */
@@ -151,6 +151,15 @@ export class TrackingVoiceController {
     if (!this.permitted(this.now()) || this.preferences.disabled.has(candidate.subscription_id) || arrived < this.notBefore || this.queue.length + (this.active ? 1 : 0) >= VOICE_LIMITS.queue) return false;
     this.queue.push({ candidate, expires: arrived + VOICE_LIMITS.ttlMs }); this.pump(); this.publish(); return true;
   }
+  /** Feed intake, after initial-list suppression and cross-tab coordination by the authenticated host. */
+  consumePublished(value: unknown, identity: VoiceIdentity): boolean {
+    if (this.disposed || !this.same(identity)) return false;
+    const arrived = this.elapsed(), item = publishedVoice(value); this.tick();
+    if (!Number.isFinite(arrived) || !item || !this.remember(item.candidate, arrived)) return false;
+    if (!this.permitted(this.now()) || this.preferences.disabled.has(item.candidate.subscription_id) ||
+        arrived < this.notBefore || this.queue.length + (this.active ? 1 : 0) >= VOICE_LIMITS.queue) return false;
+    this.queue.push({...item, expires: arrived + VOICE_LIMITS.ttlMs}); this.pump(); this.publish(); return true;
+  }
   private current(job: Job): boolean { return !this.disposed && this.active === job && job.generation === this.generation && !job.abort.signal.aborted; }
   private finish(job: Job): void {
     if (!this.current(job)) return;
@@ -171,9 +180,9 @@ export class TrackingVoiceController {
     this.active = job;
     job.timer = this.clock.setTimeout(() => this.finish(job), Math.min(VOICE_LIMITS.metadataMs, job.expires - this.elapsed()));
     const context = Object.freeze({ ...this.session, signal: job.abort.signal });
-    Promise.resolve().then(() => this.current(job) ? this.options.resolveMetadata(job.candidate, context) : null).then(value => {
+    Promise.resolve().then(() => this.current(job) ? job.metadata ?? this.options.resolveMetadata(job.candidate, context) : null).then(value => {
       if (!this.current(job)) return;
-      const metadata = verifiedMetadata(value, job.candidate);
+      const metadata = job.metadata ?? verifiedMetadata(value, job.candidate);
       if (!metadata || !this.permitted(this.now()) || job.expires <= this.elapsed() || this.preferences.disabled.has(job.candidate.subscription_id)) { this.finish(job); return; }
       this.clock.clearTimeout(job.timer); job.phase = "starting";
       job.timer = this.clock.setTimeout(() => this.fail(job), VOICE_LIMITS.speechMs);

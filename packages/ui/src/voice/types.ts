@@ -3,7 +3,12 @@ export interface VoiceSession { user_id: string; epoch: string; role: "user" | "
 export type VoiceIdentity = Pick<VoiceSession, "user_id" | "epoch">;
 export interface VoiceCandidate {
   event_id: string; activity_id: string; subscription_id: string; project_id: string;
-  tweet_kind: "original" | "quote"; received_at: string;
+  tweet_kind?: "original" | "quote"; received_at?: string;
+}
+/** Authenticated published-v1 row; age uses the response's server time. */
+export interface PublishedVoiceActivity {
+  activity_id: string; subscription_id: string; project_id: string;
+  name: string; rating: "S" | "A" | "B"; age_ms: number;
 }
 /** The existing controller supplies envelope.data and SSE lastEventId, without copying text/raw. */
 export interface TrackingVoiceFrame { type: string; event_id: string; delivery: "live" | "history" | "replay" | "rest"; data: unknown }

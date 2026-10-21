@@ -51,23 +51,10 @@ export function useTrackingVoice(session: VoiceSession) {
         value.data?.role !== session.role || value.data?.must_change_password !== false) revoke();
     } catch { /* Remain disconnected; a transport failure never restores the old session. */ }
   }, [current, revoke, session.user_id, session.role]);
-  const consume = useCallback((event: MessageEvent) => {
-    const value = current(); if (!value || event.type !== 'tracking.feed.activity.created.v1') return;
-    try {
-      const envelope: unknown = JSON.parse(event.data);
-      if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) return;
-      const object = envelope as Record<string, unknown>;
-      if (Object.keys(object).sort().join(',') !== 'data,request_id' || typeof object.request_id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(object.request_id)) return;
-      const data = object.data;
-      if (!data || typeof data !== 'object' || Array.isArray(data)) return;
-      const d = data as Record<string, unknown>;
-      value.controller.consume({ type: event.type, event_id: event.lastEventId, delivery: 'live', data: {
-        activity_id: d.activity_id, subscription_id: d.subscription_id, project_id: d.project_id, tweet_kind: d.tweet_kind,
-        received_at: d.received_at, source: d.source, is_live_new: d.is_live_new, replay: d.replay,
-      } }, value.identity);
-    } catch { /* Bad metadata or voice must never interrupt the existing feed. */ }
+  const consumePublished = useCallback((item: unknown) => {
+    const value = current(); return value ? value.controller.consumePublished(item, value.identity) : false;
   }, [current]);
-  return { controller, connected, consume, revoke, verifyIdentity };
+  return { controller, connected, consumePublished, revoke, verifyIdentity };
 }
 
 export function TrackingVoiceSettings({ controller, subscriptions }: {

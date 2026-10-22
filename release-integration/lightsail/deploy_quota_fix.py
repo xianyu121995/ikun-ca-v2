@@ -127,7 +127,9 @@ def main():
     finally:
         fcntl.flock(lock,fcntl.LOCK_UN);os.close(lock)
         for unit in stopped:subprocess.run(['systemctl','start',unit],check=True,timeout=45)
-    if args.final:subprocess.run(['systemctl','restart','ikun-web'],check=True,timeout=60)
+    # systemd permits a 90-second graceful stop for existing web streams.
+    if args.final:subprocess.run(['systemctl','restart','ikun-web'],check=True,timeout=150)
+    subprocess.run(['systemctl','is-active','--quiet','ikun-tracking-live','ikun-hunter','ikun-web'],check=True,timeout=15)
     assert all(pid(u)==v for u,v in before.items()), 'unrelated_service_restarted'
     print('RELEASE_ACTIVE',args.release,'REST_PAUSED' if not args.final else 'CIRCUIT_OPEN_NO_IMMEDIATE_PROBE',flush=True)
 

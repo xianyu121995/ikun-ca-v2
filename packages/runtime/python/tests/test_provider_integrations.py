@@ -15,6 +15,8 @@ from provider_6551 import Ledger
 
 @pytest.fixture
 def setup(tmp_path,monkeypatch):
+    monkeypatch.setenv('IKUN_TRACKING_BACKFILL_ENABLED','1')
+    monkeypatch.setenv('IKUN_6551_BACKFILL_DAILY_LIMIT','300')
     monkeypatch.setenv('IKUN_6551_LEDGER',str(tmp_path/'ops/ledger.db'))
     monkeypatch.setenv('IKUN_TRACKING_6551_TOKEN','PRIVATE_TOKEN')
     cfg=Config(db_path=tmp_path/'tracking/tracking.db',remote_enabled=True,dedicated_account=True,request_interval=0)

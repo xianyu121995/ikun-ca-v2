@@ -30,6 +30,12 @@ def configured():
     return Ledger(Path(path)) if path else None
 
 
+def tracking_backfill_enabled():
+    """Tweet recovery is opt-in; a zero daily budget also closes every entry point."""
+    return (os.environ.get('IKUN_TRACKING_BACKFILL_ENABLED','0')=='1' and
+            int(os.environ.get('IKUN_6551_BACKFILL_DAILY_LIMIT','0'))>0)
+
+
 def quota_response(response):
     if response.status_code==402:return True
     if response.status_code!=200:return False
@@ -94,7 +100,7 @@ class Ledger:
     def day(self):return datetime.fromtimestamp(self.clock(),TZ).strftime('%Y-%m-%d')
 
     def limits(self):
-        return max(1,int(os.environ.get('IKUN_6551_DAILY_LIMIT','300'))),max(1,int(os.environ.get('IKUN_6551_BACKFILL_DAILY_LIMIT','300')))
+        return max(1,int(os.environ.get('IKUN_6551_DAILY_LIMIT','300'))),max(0,int(os.environ.get('IKUN_6551_BACKFILL_DAILY_LIMIT','0')))
 
     def next_day(self):
         now=datetime.fromtimestamp(self.clock(),TZ)
@@ -150,6 +156,8 @@ class Ledger:
 
     def begin(self,program,endpoint,*,purpose='read',job_key=None):
         if endpoint not in ENDPOINTS or not re.fullmatch(r'[a-z_]{1,40}',program):raise ValueError('unapproved_provider_route')
+        if program=='tracking' and endpoint not in ('twitter_watch','twitter_watch_add','twitter_watch_delete') and not tracking_backfill_enabled():
+            raise Blocked('backfill_disabled',86400)
         now=self.clock();day=self.day();limit,backfill_limit=self.limits();probe=False
         with self.db() as db:
             db.execute('BEGIN IMMEDIATE');circuit=self.get(db,'circuit',{})
@@ -212,7 +220,7 @@ class Ledger:
                 'by_program':rows,'backfill_used':backfills,'backfill_limit':cap,'quota_exhausted':bool(circuit.get('open')),
                 'recording_since':recording_since,
                 'realtime_paused':realtime_paused,
-                'next_probe_at':circuit.get('next_probe',0),'daily_limit_reached':used>=limit or backfills>=cap}
+                'next_probe_at':circuit.get('next_probe',0),'daily_limit_reached':used>=limit or (cap>0 and backfills>=cap)}
 
     def publish(self):
         path=self.path.parent/'6551-status.json';temp=path.with_name(path.name+'.'+uuid.uuid4().hex)

@@ -5,6 +5,12 @@ from provider_6551 import Ledger, Blocked, response_error, quota_response
 import httpx
 
 
+@pytest.fixture(autouse=True)
+def explicit_recovery_opt_in(monkeypatch):
+    monkeypatch.setenv('IKUN_TRACKING_BACKFILL_ENABLED','1')
+    monkeypatch.setenv('IKUN_6551_BACKFILL_DAILY_LIMIT','300')
+
+
 def test_shared_402_circuit_has_one_low_frequency_probe_and_survives_restart(tmp_path):
     now=[1792670000.0];path=tmp_path/'ops/ledger.sqlite3'
     first=Ledger(path,clock=lambda:now[0]);second=Ledger(path,clock=lambda:now[0])
@@ -104,3 +110,16 @@ def test_watch_cache_retains_only_reconciliation_metadata(tmp_path):
     ledger.cache_watch({'success':True,'token':'SECRET','data':[{'twAccount':'example','id':1,'newTweetBol':True,'token':'SECRET'}]})
     assert ledger.cached_watch()=={'success':True,'data':[{'twAccount':'example','id':1,'newTweetBol':True}]}
     with ledger.db() as db:assert 'SECRET' not in db.execute("SELECT value FROM meta WHERE key='watch_snapshot'").fetchone()[0]
+
+
+def test_default_zero_backfill_budget_is_not_a_global_budget_alarm(tmp_path,monkeypatch):
+    monkeypatch.delenv('IKUN_TRACKING_BACKFILL_ENABLED',raising=False)
+    monkeypatch.delenv('IKUN_6551_BACKFILL_DAILY_LIMIT',raising=False)
+    ledger=Ledger(tmp_path/'ledger.db')
+    assert ledger.limits()==(300,0)
+    for endpoint in ('twitter_user_tweets','twitter_search','twitter_user_info'):
+        with pytest.raises(Blocked,match='backfill_disabled'):ledger.begin('tracking',endpoint)
+    assert ledger.summary()['used']==0 and not ledger.summary()['daily_limit_reached']
+    permit=ledger.begin('tracking','twitter_watch');ledger.finish(permit,200)
+    permit=ledger.begin('hunter_ai','twitter_user_tweets');ledger.finish(permit,200)
+    assert ledger.summary()['used']==2  # Watch control plane and Hunter are independent.

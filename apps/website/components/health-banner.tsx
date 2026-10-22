@@ -18,6 +18,6 @@ export default function HealthBanner(){
  return <>{show&&<div role='alert' style={{background:'#7f1d1d',color:'#fff',padding:'10px 48px 10px 20px',position:'sticky',top:0,zIndex:1000}}>服务异常：{signature}<button type='button' aria-label='关闭提示' title='关闭（同样的问题不再提示，出现新问题会再显示）' onClick={close} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'transparent',border:0,color:'#fff',fontSize:18,cursor:'pointer',lineHeight:1}}>✕</button></div>}
  {usage&&<details style={{padding:'6px 20px',fontSize:12,background:'#172132',color:'#dbeafe'}}><summary>6551 今日调用 {usage.used} / {usage.limit} 次（北京时间）</summary>
  <div>{usage.by_program.length?usage.by_program.map(r=><span key={r.program} style={{marginRight:18}}>{({tracking:'追踪',hunter:'猎手',hunter_ai:'猎手资料补全'} as Record<string,string>)[r.program]??r.program}：{r.calls}次</span>):'今日尚无调用'}</div>
- <div>补抓 {usage.backfill_used} / {usage.backfill_limit} 次；开始记录：{new Date(usage.recording_since*1000).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})}。此前历史用量不计入本表。</div>
+ <div>{usage.backfill_limit===0?'推文补抓已关闭（预算 0）':`补抓 ${usage.backfill_used} / ${usage.backfill_limit} 次`}；开始记录：{new Date(usage.recording_since*1000).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false})}。此前历史用量不计入本表。</div>
  {csrf&&<button type='button' onClick={()=>void check()} disabled={checking}>{checking?'提交中…':'检查'}</button>} {checkMessage}</details>}</>;
 }

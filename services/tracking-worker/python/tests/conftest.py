@@ -53,6 +53,9 @@ class Vendor:
 
 @pytest.fixture
 def cfg(tmp_path, monkeypatch):
+    # Recovery-path regressions opt in explicitly; production defaults to WSS only.
+    monkeypatch.setenv('IKUN_TRACKING_BACKFILL_ENABLED','1')
+    monkeypatch.setenv('IKUN_6551_BACKFILL_DAILY_LIMIT','300')
     monkeypatch.setenv("TRACKING_API_TOKEN", "b3-tracking-direction-credential-xxxxxxxx")
     monkeypatch.setenv("IKUN_TRACKING_6551_TOKEN", "test-vendor-credential-xxxxxxxxxxxxxxxx")
     monkeypatch.setenv("IKUN_TRACKING_ADMIN_TOKEN", "test-admin-credential-xxxxxxxxxxxxxxxxx")

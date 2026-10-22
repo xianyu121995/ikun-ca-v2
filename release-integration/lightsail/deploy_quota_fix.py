@@ -18,6 +18,7 @@ def main():
     p.add_argument('--release', required=True)
     p.add_argument('--archive', type=Path, required=True)
     p.add_argument('--final', action='store_true')
+    p.add_argument('--tracking-wss-only',action='store_true')
     stage=p.add_mutually_exclusive_group()
     stage.add_argument('--prepare-only', action='store_true')
     stage.add_argument('--prepared', action='store_true')
@@ -96,7 +97,8 @@ def main():
                 d.pop('IKUN_6551_REST_PAUSED',None)
                 d['IKUN_6551_LEDGER']=str(base/'ops/6551-ledger.sqlite3')
                 d['IKUN_6551_DAILY_LIMIT']='300'
-                d['IKUN_6551_BACKFILL_DAILY_LIMIT']='300'
+                d['IKUN_6551_BACKFILL_DAILY_LIMIT']='0' if args.tracking_wss_only else d.get('IKUN_6551_BACKFILL_DAILY_LIMIT','0')
+                d['IKUN_TRACKING_BACKFILL_ENABLED']='0' if args.tracking_wss_only else d.get('IKUN_TRACKING_BACKFILL_ENABLED','0')
             elif path.name!='web.environment.json':
                 d['IKUN_6551_REST_PAUSED']='1'
             temp=path.with_suffix('.quota-stage')
@@ -109,7 +111,7 @@ def main():
             ledger=Ledger(base/'ops/6551-ledger.sqlite3')
             ledger.trip_quota(initial=True)
             ledger.wss_rejected('tracking')
-            if args.gap_backup:
+            if args.gap_backup and not args.tracking_wss_only:
                 backup=args.gap_backup.resolve()
                 assert backup.is_relative_to(base/'backups/daily') and backup.name=='tracking.db'
                 with sqlite3.connect(backup.as_uri()+'?mode=ro',uri=True) as db:

@@ -16,3 +16,7 @@ test('connected WSS and paused REST remain distinct; malformed metadata is rejec
  assert.equal(providerHealth({...raw,used:NaN}),null);
  assert.deepEqual(providerHealth({...raw,by_program:[{program:'SECRET',calls:1}]})!.usage.by_program,[]);
 });
+test('zero recovery budget is displayed as disabled, without a false global limit error',()=>{
+ const result=providerHealth({...raw,backfill_used:0,backfill_limit:0,quota_exhausted:false,realtime_paused:false,daily_limit_reached:false})!;
+ assert.equal(result.usage.backfill_limit,0);assert.deepEqual(result.errors,[]);
+});

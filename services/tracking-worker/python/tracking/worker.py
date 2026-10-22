@@ -15,7 +15,7 @@ from .config import Config
 from .events import normalize, parse_event
 from .remote import OTHER_FLAGS, Remote, RemoteError
 from .store import Store
-from provider_6551 import wss_auth_delay
+from provider_6551 import wss_auth_delay, tracking_backfill_enabled
 
 log = logging.getLogger("tracking.worker")
 
@@ -29,7 +29,7 @@ class Worker:
         self._last_reconcile = 0
         self.ledger = remote.ledger
         previous=store.runtime()
-        if previous.get('heartbeat'):
+        if tracking_backfill_enabled() and previous.get('heartbeat'):
             self.ledger.mark_gap(previous.get('pong_at') or previous['heartbeat'])
         self._reconnected_at = None
         self._watch_requested=True;self._watch_retry_at=0
@@ -171,6 +171,7 @@ class Worker:
         return snapshot
 
     async def backfill(self, row):
+        if not tracking_backfill_enabled():return
         if row['desired']!='running':return
         if not row['baseline_ready'] and not row['last_backfill']:self.ledger.initial(row)
         for job in self.ledger.jobs(row['subscription_id']):
@@ -194,6 +195,9 @@ class Worker:
                 if error.code in ('quota_exhausted','daily_budget_exhausted','backfill_daily_limit','provider_busy'):return
 
     async def process_backfills(self):
+        if not tracking_backfill_enabled():
+            self._reconnected_at=None
+            return
         rows=[r for r in self.store.projects() if r['desired']=='running' and
               (r['claim']=='owned' or r['handle'] in (self.cfg.shared_watch_ids or {})) and
               r.get('error') not in ('ownership_conflict','shared_watch_identity_changed')]
@@ -363,7 +367,7 @@ class Worker:
                     auth_failures+=1;code='wss_auth_rejected'
                     self.ledger.wss_rejected('tracking')
                 else:auth_failures=0
-                self.ledger.mark_gap(self.store.runtime().get('pong_at') or time.time())
+                if tracking_backfill_enabled():self.ledger.mark_gap(self.store.runtime().get('pong_at') or time.time())
                 self.store.runtime(connection="disconnected", pong_at=None, error=code)
                 # Logging only the classification avoids leaking a token-bearing handshake URL.
                 log.warning("stream disconnected: %s", code)
@@ -380,7 +384,7 @@ class Worker:
             # Queue before shared/adopted Watch reconciliation marks its baseline ready.
             # Execution still requires local ownership/read permission in process_backfills.
             for row in rows:
-                if row['desired']=='running' and not row['baseline_ready'] and not row['last_backfill']:
+                if tracking_backfill_enabled() and row['desired']=='running' and not row['baseline_ready'] and not row['last_backfill']:
                     self.ledger.initial(row)
             signature=tuple(sorted((r['subscription_id'],r['handle'],r['generation'],r['desired']) for r in rows))
             if self._subscription_signature is not None and signature!=self._subscription_signature:
@@ -461,6 +465,6 @@ class Worker:
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
-            self.ledger.mark_gap(self.store.runtime().get('pong_at') or time.time())
+            if tracking_backfill_enabled():self.ledger.mark_gap(self.store.runtime().get('pong_at') or time.time())
             await self.remote.close()
             self.release()

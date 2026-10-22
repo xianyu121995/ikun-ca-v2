@@ -4,7 +4,7 @@ import asyncio
 import time
 import os
 from datetime import datetime, timedelta, timezone
-from provider_6551 import Ledger, configured, Blocked, quota_response, response_error
+from provider_6551 import Ledger, configured, Blocked, quota_response, response_error, tracking_backfill_enabled
 
 import httpx
 
@@ -56,6 +56,8 @@ class Remote:
         await self.client.aclose()
 
     async def request(self, endpoint: str, body: dict, *, purpose='read', job_key=None):
+        if endpoint not in ('twitter_watch','twitter_watch_add','twitter_watch_delete') and not tracking_backfill_enabled():
+            raise RemoteError('backfill_disabled')
         self.ready()
         if os.environ.get('IKUN_6551_REST_PAUSED') == '1':
             raise RemoteError('quota_exhausted', 3600)

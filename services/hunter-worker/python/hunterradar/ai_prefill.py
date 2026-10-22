@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import time
 from urllib.parse import urlsplit
@@ -47,7 +48,7 @@ THIRD_PARTY = ('x.com', 'twitter.com', 't.co', 'linktr.ee', 'discord.gg', 'disco
 
 def recent_tweets(settings, handle, limit=8):
     """Read-only 6551 lookup of a discovery's latest tweets (text + expanded links). Failures return []."""
-    if settings is None or not getattr(settings, 'external_io_enabled', False) or not getattr(settings, 'token_6551', ''):
+    if os.environ.get('IKUN_6551_REST_PAUSED') == '1' or settings is None or not getattr(settings, 'external_io_enabled', False) or not getattr(settings, 'token_6551', ''):
         return []
     try:
         with httpx.Client(timeout=15) as client:

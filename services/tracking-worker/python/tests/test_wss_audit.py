@@ -28,8 +28,7 @@ def test_accepted_and_duplicate_keep_original_store_behavior(worker,store,caplog
 
 
 @pytest.mark.parametrize('case,reason',[
-    ('not_subscribed','not_subscribed'),('stale','watch_observation_stale'),
-    ('not_active','watch_not_active'),('missing_author','author_handle_missing_or_mismatch'),
+    ('not_subscribed','not_subscribed'),('missing_author','author_handle_missing_or_mismatch'),
     ('author_id','author_id_missing_or_mismatch'),('unsupported','not_tracking_tweet_event'),
 ])
 def test_existing_rejections_have_reasons(worker,store,caplog,case,reason):
@@ -45,6 +44,23 @@ def test_existing_rejections_have_reasons(worker,store,caplog,case,reason):
     assert reason in reasons(caplog)
     assert not store.activities()
     assert 'PRIVATE_BODY' not in caplog.text
+
+
+@pytest.mark.parametrize('error', ['api_failure','quota_exhausted','rate_limited',None])
+def test_rest_failure_or_stale_observation_never_blocks_authorized_wss(worker,store,caplog,error):
+    row=prepare(store)
+    store.observe(row,remote_state='unknown',status='retrying',error=error,observed_at=time.time()-86400)
+    assert ingest(worker,event(tweet(tweet_id='89104')))
+    assert 'watch_not_active' not in reasons(caplog)
+    assert 'watch_observation_stale' not in reasons(caplog)
+
+
+async def test_emergency_rest_pause_makes_no_provider_requests(worker,vendor,monkeypatch):
+    from tracking.remote import RemoteError
+    monkeypatch.setenv('IKUN_6551_REST_PAUSED','1')
+    with pytest.raises(RemoteError,match='quota_exhausted'):
+        await worker.remote.watches()
+    assert vendor.calls==[]
 
 
 def test_broken_diagnostic_callback_does_not_change_normalization_or_storage(store):

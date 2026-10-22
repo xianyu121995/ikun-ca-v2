@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 import json
 import hashlib
+import os
 from email.utils import parsedate_to_datetime
 
 import httpx
@@ -29,6 +30,8 @@ class Providers:
             await self.client.aclose()
 
     async def watch_write(self, endpoint, body):
+        if os.environ.get('IKUN_6551_REST_PAUSED') == '1':
+            raise ProviderError('quota_exhausted', 3600)
         if not self.settings.external_io_enabled or endpoint not in ('twitter_watch_add','twitter_watch_delete'):
             raise ProviderError('external_io_disabled')
         self.store.reserve('6551',1,self.settings.daily_6551,self.settings.requests_per_minute,time.time())
@@ -57,6 +60,8 @@ class Providers:
                 raise ProviderError('external_io_disabled', 300)
             sample_permit.claim(operation, username)
         now = time.time()
+        if operation != 'followings' and os.environ.get('IKUN_6551_REST_PAUSED') == '1':
+            raise ProviderError('quota_exhausted', 3600)
         if operation == 'followings':
             if not self.settings.token_twitterapi:
                 raise ProviderError('twitterapi_key_missing', 300)

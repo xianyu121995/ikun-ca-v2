@@ -33,5 +33,5 @@ async def test_shared_never_repairs_owner_watch(worker, store, vendor, mode, cod
         vendor.rows['project1'] = watch
     await worker.reconcile()
     assert store.get(row['project_id'])['error'] == code
-    assert not worker.ingest(event(tweet()))
+    assert worker.ingest(event(tweet())) is (mode != 'wrong')
     assert all(name == 'twitter_watch' for name, _ in vendor.calls)

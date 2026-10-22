@@ -229,16 +229,13 @@ class Worker:
             return False
         username, tweet = event
         row = next((r for r in self.store.projects() if r["handle"] == username), None)
-        shared = row and row["handle"] in (self.cfg.shared_watch_ids or {}) and row["status"] == "running"
-        if not row or row["desired"] != "running" or not (row["claim"] == "owned" or shared):
+        shared = row and row["handle"] in (self.cfg.shared_watch_ids or {})
+        if (not row or row["desired"] != "running" or not (row["claim"] == "owned" or shared)
+                or row.get('error') in ('ownership_conflict', 'shared_watch_identity_changed')):
             if trace:trace.drop('not_subscribed' if not row else 'not_running_or_owned')
             return False
-        if (
-            row["remote_state"] != "active"
-            or time.time() - (row["observed_at"] or 0) > self.cfg.remote_fresh_seconds
-        ):
-            if trace:trace.drop('watch_not_active' if row['remote_state']!='active' else 'watch_observation_stale')
-            return False
+        # REST control-plane failures never revoke an authorized WSS subscription.
+        # insert_tweet still checks revision, local desired state and author identity.
         try:result = self.store.insert_tweet(row,tweet,'wss',on_drop=on_drop)
         except Exception:
             if trace:trace.drop('store_error')

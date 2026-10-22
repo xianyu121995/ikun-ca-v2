@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+import os
 
 import httpx
 
@@ -52,6 +53,8 @@ class Remote:
 
     async def request(self, endpoint: str, body: dict):
         self.ready()
+        if os.environ.get('IKUN_6551_REST_PAUSED') == '1':
+            raise RemoteError('quota_exhausted', 3600)
         async with self.lock:
             await asyncio.sleep(max(0, self.cfg.request_interval - (time.monotonic() - self.last_request)))
             self.last_request = time.monotonic()

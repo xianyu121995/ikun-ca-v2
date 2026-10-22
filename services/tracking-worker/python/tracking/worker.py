@@ -195,7 +195,8 @@ class Worker:
 
     async def process_backfills(self):
         rows=[r for r in self.store.projects() if r['desired']=='running' and
-              (r['claim']=='owned' or r['handle'] in (self.cfg.shared_watch_ids or {}))]
+              (r['claim']=='owned' or r['handle'] in (self.cfg.shared_watch_ids or {})) and
+              r.get('error') not in ('ownership_conflict','shared_watch_identity_changed')]
         if self._reconnected_at:
             self.ledger.close_gap(self._reconnected_at,rows);self._reconnected_at=None
         for row in rows:
@@ -376,6 +377,11 @@ class Worker:
     async def ticks(self):
         while not self.stop.is_set():
             rows = self.store.projects(include_removed=True)
+            # Queue before shared/adopted Watch reconciliation marks its baseline ready.
+            # Execution still requires local ownership/read permission in process_backfills.
+            for row in rows:
+                if row['desired']=='running' and not row['baseline_ready'] and not row['last_backfill']:
+                    self.ledger.initial(row)
             signature=tuple(sorted((r['subscription_id'],r['handle'],r['generation'],r['desired']) for r in rows))
             if self._subscription_signature is not None and signature!=self._subscription_signature:
                 self._watch_requested=True;self._watch_retry_at=0;self.ledger.request_watch_check(force=True)

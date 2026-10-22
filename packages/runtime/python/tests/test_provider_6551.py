@@ -97,3 +97,10 @@ def test_watch_cache_only_expires_on_event_and_manual_check_obeys_circuit(tmp_pa
     ledger.trip_quota(initial=True)
     with pytest.raises(Blocked):ledger.begin('tracking','twitter_watch')
     assert ledger.summary()['used']==0
+
+
+def test_watch_cache_retains_only_reconciliation_metadata(tmp_path):
+    ledger=Ledger(tmp_path/'ledger.db')
+    ledger.cache_watch({'success':True,'token':'SECRET','data':[{'twAccount':'example','id':1,'newTweetBol':True,'token':'SECRET'}]})
+    assert ledger.cached_watch()=={'success':True,'data':[{'twAccount':'example','id':1,'newTweetBol':True}]}
+    with ledger.db() as db:assert 'SECRET' not in db.execute("SELECT value FROM meta WHERE key='watch_snapshot'").fetchone()[0]

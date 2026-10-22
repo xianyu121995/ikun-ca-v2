@@ -142,7 +142,11 @@ class Ledger:
         if not isinstance(rows,list) or (isinstance(data,dict) and data.get('total',len(rows))!=len(rows)):return
         names=[str(x.get('twAccount',x.get('username',''))).lower().lstrip('@') for x in rows if isinstance(x,dict)]
         if len(names)!=len(rows) or len(set(names))!=len(names) or any(not re.fullmatch(r'[a-z0-9_]{1,15}',n) for n in names):return
-        with self.db() as db:self.put(db,'watch_snapshot',{'at':self.clock(),'payload':payload})
+        allowed={'twAccount','username','id','twGroupId','groupName','remark','isPaused','isSuspended','isBlacked',
+                 'newTweetBol','newFlwBol','newUnFlwBol','newTweetReplyBol','newTweetQuoteBol','newRetweetBol',
+                 'updateNameBol','updateDescBol','updateAvatarBol','updateBannerBol','newCaBol','tweetToppingBol'}
+        safe={'success':True,'data':[{k:v for k,v in row.items() if k in allowed and type(v) in (str,int,bool,type(None))} for row in rows]}
+        with self.db() as db:self.put(db,'watch_snapshot',{'at':self.clock(),'payload':safe})
 
     def begin(self,program,endpoint,*,purpose='read',job_key=None):
         if endpoint not in ENDPOINTS or not re.fullmatch(r'[a-z_]{1,40}',program):raise ValueError('unapproved_provider_route')

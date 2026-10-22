@@ -418,3 +418,17 @@ async def test_healthy_ticks_do_not_poll_watch_even_after_two_hours(worker,store
     monkeypatch.setattr(worker,'process_backfills',backfills)
     await worker.ticks()
     assert vendor.calls==[]
+
+
+async def test_new_shared_subscription_gets_one_initial_read_without_watch_write(worker,store,vendor,monkeypatch):
+    add(store);worker.remote.cache_watch=True
+    worker.cfg=replace(worker.cfg,shared_watch_ids={'project1':'777'})
+    vendor.rows['project1']={**vendor.watch('project1',group='ALPHA'),'id':777}
+    async def pause(seconds):worker.stop.set()
+    monkeypatch.setattr(worker,'pause',pause)
+    await worker.ticks()
+    assert [name for name,_ in vendor.calls].count('twitter_user_tweets')==1
+    assert not any(name in ('twitter_watch_add','twitter_watch_delete') for name,_ in vendor.calls)
+    row=store.get('prj_550e8400-e29b-41d4-a716-446655440001')
+    await worker.backfill(row)
+    assert [name for name,_ in vendor.calls].count('twitter_user_tweets')==1

@@ -88,6 +88,8 @@ async def connection(manager,engine):
         if isinstance(error,asyncio.CancelledError):reason = 'cancelled'
         elif isinstance(error,TimeoutError):reason = 'timeout'
         else:reason = 'connection_or_processing_error'
+        status=getattr(getattr(error,'response',None),'status_code',None)
+        if type(status) is int and 100<=status<=599:reason='handshake_http_'+str(status)
         audit.emit('disconnected',reason=reason)
         raise
     else:audit.emit('closed',reason='normal_return')

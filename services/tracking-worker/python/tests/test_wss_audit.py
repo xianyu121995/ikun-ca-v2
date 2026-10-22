@@ -63,6 +63,19 @@ async def test_emergency_rest_pause_makes_no_provider_requests(worker,vendor,mon
     assert vendor.calls==[]
 
 
+async def test_handshake_logs_only_status_never_token_or_body(caplog):
+    from types import SimpleNamespace
+    from wss_audit import connection
+    class Failure(Exception):response=SimpleNamespace(status_code=402)
+    class Manager:
+        async def __aenter__(self):raise Failure('PRIVATE_TOKEN PRIVATE_BODY')
+        async def __aexit__(self,*args):pass
+    with pytest.raises(Failure):
+        async with connection(Manager(),'tracking'):pass
+    assert 'handshake_http_402' in reasons(caplog)
+    assert 'PRIVATE_TOKEN' not in caplog.text and 'PRIVATE_BODY' not in caplog.text
+
+
 def test_broken_diagnostic_callback_does_not_change_normalization_or_storage(store):
     from tracking.events import normalize
     row=prepare(store)

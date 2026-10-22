@@ -25,11 +25,12 @@ def main():
     assert old.name == args.expected, 'unexpected_live_release'
     target = old.parent / args.release
     assert not target.exists(), 'release_already_exists'
-    shutil.copytree(old, target, symlinks=True)
     with tarfile.open(args.archive) as archive:
         members = archive.getmembers()
         assert all(not x.name.startswith('/') and '..' not in Path(x.name).parts
                    and not x.issym() and not x.islnk() for x in members), 'unsafe_overlay'
+        assert members, 'empty_overlay'
+        shutil.copytree(old, target, symlinks=True)
         archive.extractall(target, members=members)
     subprocess.run(['chown', '-R', 'ikun:ikun', str(target)], check=True)
     subprocess.run(['systemctl', 'start', 'ikun-backup.service'], check=True, timeout=180)

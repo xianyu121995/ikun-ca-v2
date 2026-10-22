@@ -223,8 +223,8 @@ class Store:
             self.audit(db,actor,'hunter.adopt_legacy_profile',identifier,time.time())
         return self.hunter(identifier)
 
-    def apply_profile(self, row, user_id, name, followers, now):
-        mode = 'WSS' if followers >= 5000 else 'REST'
+    def apply_profile(self, row, user_id, name, followers, now, *, rest_only=False):
+        mode = 'WSS' if followers >= 5000 and not rest_only else 'REST'
         with self.connect(True) as db:
             current = db.execute('SELECT * FROM hunters WHERE id=?', (row['id'],)).fetchone()
             if not self.current(current, row):
@@ -242,6 +242,7 @@ class Store:
                 active_since=CASE WHEN ? THEN ? ELSE active_since END,
                 next_poll_at=CASE WHEN ? THEN 0 ELSE next_poll_at END WHERE id=?""",
                        (user_id, name, followers, mode, 9999999999, int(changed), changed,changed,now,changed,now,changed, row['id']))
+            db.execute('DELETE FROM state WHERE key=?', ('provider_result:profile:'+hashlib.sha256(row['username'].encode()).hexdigest(),))
         return True
 
     @staticmethod
@@ -314,8 +315,27 @@ class Store:
                 return False
             return self._insert_event(db, row, event)
 
-    def apply_poll(self, row, targets: list[Target], now):
-        next_hour = now+3600
+    def apply_rest_cutover(self, row, targets: list[Target], now, *, next_poll_at=None):
+        """Seed a NEW REST generation atomically; never turn WSS history into alerts.
+
+        Called by the sole worker, only after a valid paid REST response exists.
+        External Watch cleanup is a separate, explicitly verified operator step.
+        """
+        with self.transaction() as db:
+            current = db.execute('SELECT * FROM hunters WHERE id=?', (row['id'],)).fetchone()
+            if not self.current(current, row) or current['version'] != row['version'] or current['mode'] != 'WSS' or current['profile_status'] != 'ready':
+                return {'discarded': True, 'new': 0}
+            db.execute("""UPDATE hunters SET mode='REST',generation=generation+1,version=version+1,
+                baseline_ready=0,baseline_at=?,active_since=? WHERE id=?""", (now, now, row['id']))
+            migrated = dict(db.execute('SELECT * FROM hunters WHERE id=?', (row['id'],)).fetchone())
+            result = self.apply_poll(migrated, targets, now, next_poll_at=next_poll_at)
+            self.set_state('rest_cutover:'+row['id'], {'from_generation':row['generation'],
+                'generation':migrated['generation'], 'baseline_at':now, 'watch_cleanup':'pending'})
+            self.audit(db, 'worker', 'hunter.rest_cutover', row['id'], now, 'baseline_only;watch_writes=0')
+            return dict(result, migrated=True)
+
+    def apply_poll(self, row, targets: list[Target], now, *, next_poll_at=None):
+        next_hour = now+3600 if next_poll_at is None else next_poll_at
         with self.connect(True) as db:
             current = db.execute('SELECT * FROM hunters WHERE id=?', (row['id'],)).fetchone()
             if not self.current(current, row) or current['mode'] != 'REST' or not current['user_id']:
@@ -480,17 +500,18 @@ class Store:
             db.execute("DELETE FROM quota WHERE window LIKE 'minute:%' AND window<>?", ('minute:'+minute,))
 
     @staticmethod
-    def provider_block_keys(operation, username=None):
-        if operation not in ('profile', 'watch', 'followings'):
+    def provider_block_keys(operation, username=None, *, provider=None):
+        if operation not in ('profile', 'watch', 'followings', 'tweets', 'ai_profile'):
             raise ValueError('unapproved_provider_operation')
-        provider = 'twitterapi' if operation == 'followings' else '6551'
+        provider = provider or ('twitterapi' if operation in ('followings','tweets','ai_profile') else '6551')
+        if provider not in ('twitterapi', '6551'):raise ValueError('unapproved_provider')
         # Reuse provider_intent so the existing restore carries the latest fence.
         prefix = 'provider_intent:blocked:'+provider
         account = hashlib.sha256((username or '').casefold().encode()).hexdigest()
         return prefix, prefix+':'+operation+':'+account
 
-    def provider_block(self, operation, username=None, *, states=None):
-        keys = self.provider_block_keys(operation, username)
+    def provider_block(self, operation, username=None, *, states=None, provider=None):
+        keys = self.provider_block_keys(operation, username, provider=provider)
         if states is None:
             with self.connect() as db:
                 states = {r['key']: json.loads(r['value']) for r in db.execute('SELECT key,value FROM state WHERE key IN (?,?)', keys)}
@@ -503,9 +524,9 @@ class Store:
                     return value
         return None
 
-    def block_provider(self, operation, username, code, intent, *, provider_wide=False, now=None):
-        keys = self.provider_block_keys(operation, username)
-        if (provider_wide and (operation != 'followings' or code != 'provider_http_402')
+    def block_provider(self, operation, username, code, intent, *, provider_wide=False, now=None, provider=None):
+        keys = self.provider_block_keys(operation, username, provider=provider)
+        if (provider_wide and (not keys[0].endswith(':twitterapi') or code != 'provider_http_402')
                 or not provider_wide and code not in ('provider_http_400', 'provider_http_404')):
             raise ValueError('invalid_provider_block_scope')
         now = time.time() if now is None else now
@@ -527,13 +548,13 @@ class Store:
         db.execute('UPDATE state SET value=? WHERE key=?', (json.dumps(released), key))
         Store.audit(db, actor, 'provider.resume', key, now, json.dumps({'block_id': block['block_id'], 'code': block['code'], 'reason': reason}))
 
-    def resume_provider(self, operation, username=None, *, expected_block_id, actor, reason, now=None):
+    def resume_provider(self, operation, username=None, *, expected_block_id, actor, reason, now=None, provider=None):
         """Explicit operator action with a block-ID check; never called by a loop."""
         if not isinstance(actor, str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,128}', actor) or not isinstance(reason, str) or not re.fullmatch(r'[a-z0-9_]{1,80}', reason):
             raise ValueError('provider_resume_requires_actor_and_reason')
         now = time.time() if now is None else now
         with self.connect(True) as db:
-            for key in self.provider_block_keys(operation, username):
+            for key in self.provider_block_keys(operation, username, provider=provider):
                 saved = db.execute('SELECT value FROM state WHERE key=?', (key,)).fetchone()
                 block = json.loads(saved[0]) if saved else None
                 if block and block.get('block_id') == expected_block_id:
@@ -541,7 +562,7 @@ class Store:
                         return False
                     self._release_provider_block(db, key, block, actor, reason, now)
                     job = 'poll' if block['operation'] == 'followings' else 'profile'
-                    if block['operation'] != 'watch':
+                    if block['operation'] not in ('watch','tweets','ai_profile'):
                         where = '' if block['provider_wide'] else ' AND username=?'
                         values = (block['code'],) if block['provider_wide'] else (block['code'], username)
                         db.execute(f'UPDATE hunters SET {job}_error=NULL,next_{job}_at=0 WHERE {job}_error=?'+where, values)

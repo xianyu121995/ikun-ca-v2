@@ -58,6 +58,8 @@ class Engine:
         self.store = original_store.worker_view(owner)
         self.providers.store = self.store
         self.store.recover()
+        if self.settings.rest_only:
+            self.store.set_state('wss_state', 'disabled_rest_only')
         self.store.set_state('worker_error', None)
         loops = [asyncio.create_task(self.supervise(name, fn)) for name, fn in
                  [('profiles', self.profile_loop), ('rest', self.rest_loop), ('wss', self.wss_loop),
@@ -146,12 +148,12 @@ class Engine:
             await self.pause(60)
 
     async def scan_profile(self, row):
-        if self.store.provider_block('profile', row['username']):
+        if self.store.provider_block('profile', row['username'], provider='twitterapi' if self.settings.rest_only else '6551'):
             return
         try:
             payload = await self.providers.request('profile', row['username'])
             user_id, name, count = profile(payload, row['username'])
-            self.store.apply_profile(row, user_id, name, count, time.time())
+            self.store.apply_profile(row, user_id, name, count, time.time(), rest_only=self.settings.rest_only)
         except asyncio.CancelledError:
             raise
         except Exception as error:
@@ -163,7 +165,7 @@ class Engine:
         while not self.stop.is_set():
             states = self.store.states()
             for row in self.store.hunters():
-                if row['enabled'] and row['profile_status'] != 'ready' and row['next_profile_at'] <= time.time() and not self.store.provider_block('profile', row['username'], states=states):
+                if row['enabled'] and row['profile_status'] != 'ready' and row['next_profile_at'] <= time.time() and not self.store.provider_block('profile', row['username'], states=states, provider='twitterapi' if self.settings.rest_only else '6551'):
                     await self.scan_profile(row)
                 if self.stop.is_set():
                     break
@@ -193,7 +195,7 @@ class Engine:
                 return
             try:
                 payload = await self.providers.request('followings', row['username'])
-                result = self.store.apply_poll(row, followings(payload), time.time())
+                result = self.apply_rest_result(row, payload, time.time())
                 LOG.info('rest_poll baseline=%s new=%s warning=%s',result.get('baseline'),result['new'],result.get('warning'))
             except asyncio.CancelledError:
                 raise
@@ -201,17 +203,48 @@ class Engine:
                 code = 'stable_identity_conflict' if isinstance(error,Conflict) else str(error) if isinstance(error,(ProviderError,BudgetExceeded)) else type(error).__name__
                 self.store.job_failure(row,'poll',code,9999999999 if isinstance(error,Conflict) else retry_time(row['poll_failures'],time.time(),error))
 
+    def apply_rest_result(self, row, payload, now):
+        apply = self.store.apply_rest_cutover if self.settings.rest_only and row['mode']=='WSS' else self.store.apply_poll
+        return apply(row, followings(payload), now, next_poll_at=row.get('batch_next_poll_at'))
+
+    def replay_rest_results(self):
+        """Apply durable paid results locally after a crash, before any new IO."""
+        states = self.store.states()
+        now = time.time()
+        for row in self.store.hunters():
+            key = 'provider_result:followings:'+hashlib.sha256(row['username'].encode()).hexdigest()
+            cached = states.get(key)
+            if (not row['enabled'] or row['profile_status']!='ready' or not cached
+                    or cached.get('generation') != [row['id'],row['generation']]
+                    or not 0 <= now-cached.get('received_at',0) <= 3600):
+                continue
+            try:
+                from .rest_batches import next_slot
+                self.apply_rest_result(dict(row,batch_next_poll_at=next_slot(states, row['id'], now)), cached['payload'], cached['received_at'])
+            except (ValueError, Conflict):
+                self.store.job_failure(row, 'poll', 'provider_result_requires_reconciliation', 9999999999)
+
     async def rest_loop(self):
+        if self.settings.rest_only:
+            self.replay_rest_results()
         while not self.stop.is_set():
-            states = self.store.states()
-            rows = [row for row in self.store.hunters() if row['enabled'] and row['mode'] == 'REST'
-                    and row['profile_status'] == 'ready' and row['next_poll_at'] <= time.time()
-                    and not self.store.provider_block('followings', row['username'], states=states)]
+            if self.settings.rest_only:
+                from .rest_batches import claim
+                rows = claim(self.store, time.time())
+            else:
+                states = self.store.states()
+                rows = [row for row in self.store.hunters() if row['enabled'] and row['mode'] == 'REST'
+                        and row['profile_status'] == 'ready' and row['next_poll_at'] <= time.time()
+                        and not self.store.provider_block('followings', row['username'], states=states)]
             # Return exceptions isolates accounts deleted while waiting for a concurrency slot.
             await asyncio.gather(*(self.poll(row) for row in rows), return_exceptions=True)
             await self.pause(1)
 
     async def watch_loop(self):
+        if self.settings.rest_only:
+            self.store.set_state('watch_state', 'disabled_rest_only')
+            await self.stop.wait()
+            return
         from .watch import synchronize
         saved = self.store.states().get('watch_read_once_signature')
         previous = [tuple(item) for item in saved] if saved is not None else None
@@ -248,6 +281,10 @@ class Engine:
             await self.pause(5)
 
     async def wss_loop(self):
+        if self.settings.rest_only:
+            self.store.set_state('wss_state', 'disabled_rest_only')
+            await self.stop.wait()
+            return
         failures = 0
         auth_failures=0
         while not self.stop.is_set():
@@ -284,6 +321,8 @@ class Engine:
                     await self.pause(min(60, retry_time(failures, time.time(), error)-time.time()))
 
     async def consume(self):
+        if self.settings.rest_only:
+            raise ProviderError('hunter_rest_only', retryable=False)
         from wss_audit import connection
         generation_snapshot=[h for h in self.store.hunters() if h['enabled'] and h['mode']=='WSS' and h['profile_status']=='ready']
         uri = 'wss://ai.6551.io/open/twitter_wss?token='+quote(self.settings.token_6551, safe='')

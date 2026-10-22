@@ -30,6 +30,7 @@ class Settings:
     daily_twitterapi: int = 10000
     requests_per_minute: int = 30
     concurrency: int = 2
+    rest_only: bool = False
     project_url: str = ''
     project_hosts: tuple[str, ...] = ('127.0.0.1', 'localhost')
     project_secret: str = field(default='', repr=False)
@@ -88,6 +89,7 @@ class Settings:
                    daily_twitterapi=int(env.get('HUNTER_TWITTERAPI_DAILY_CREDITS', '10000')),
                    requests_per_minute=int(env.get('HUNTER_REQUESTS_PER_MINUTE', '30')),
                    concurrency=int(env.get('HUNTER_REST_CONCURRENCY', '2')),
+                   rest_only=env.get('HUNTER_REST_ONLY')=='1',
                    project_url=env.get('HUNTER_PROJECT_TASK_URL', ''),
                    project_hosts=tuple(env.get('HUNTER_PROJECT_TASK_HOSTS', '127.0.0.1,localhost').split(',')),
                    project_secret=env.get('HUNTER_PROJECT_TASK_SECRET', ''),

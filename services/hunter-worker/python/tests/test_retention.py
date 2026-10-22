@@ -184,13 +184,16 @@ def test_backup_failure_never_deletes_but_clock_remains_expired(store,monkeypatc
     assert count(store,'retention_runs')==0
 
 def test_d4_retains_disabled_valid_history_and_exact_72h(store):
-    a=ready(store,'hunter1',user_id='101');ready(store,'hunter2',user_id='102')
-    store.ingest_wss(event())
-    store.patch(a['id'],a['version'],enabled=False,now=NOW+10)
-    assert not store.ingest_wss(event(at=NOW+11,received=NOW+11))
-    store.ingest_wss(event('hunter2',at=NOW+3600,received=NOW+3600))
-    assert store.aggregate(NOW+259200)[0]['hunter_count']==2
-    assert store.aggregate(NOW+259200.000001)==[]
+    # A whole-second reference keeps +1us representable at the store's precision.
+    # Wall-clock .975 + 259200.000001 can instead become .9750009 and truncate.
+    stamp=int(NOW)
+    a=ready(store,'hunter1',user_id='101',now=stamp);ready(store,'hunter2',user_id='102',now=stamp)
+    store.ingest_wss(event(at=stamp,received=stamp))
+    store.patch(a['id'],a['version'],enabled=False,now=stamp+10)
+    assert not store.ingest_wss(event(at=stamp+11,received=stamp+11))
+    store.ingest_wss(event('hunter2',at=stamp+3600,received=stamp+3600))
+    assert store.aggregate(stamp+259200)[0]['hunter_count']==2
+    assert store.aggregate(stamp+259200.000001)==[]
 
 def test_d4_resume_old_generation_and_rest_baseline(store):
     old=ready(store,'hunter1',user_id='101')

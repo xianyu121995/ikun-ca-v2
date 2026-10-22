@@ -47,8 +47,34 @@ THIRD_PARTY = ('x.com', 'twitter.com', 't.co', 'linktr.ee', 'discord.gg', 'disco
                'medium.com', 'mirror.xyz', 'youtube.com', 'youtu.be', 'gitbook.io', 'notion.site', 'galxe.com', 'zealy.io')
 
 
-def recent_tweets(settings, handle, limit=8):
+def rest_input(settings, store, operation, handle):
+    """AI runs in a worker thread; reuse the same TWI budget and billing fences."""
+    if store is None or not settings.external_io_enabled:return None
+    import asyncio
+    from .providers import Providers, ProviderError
+    from .store import BudgetExceeded
+    async def read():
+        provider = Providers(settings, store)
+        try:return await provider.request(operation, handle)
+        finally:await provider.close()
+    try:return asyncio.run(read())
+    except (ProviderError, BudgetExceeded, ValueError):return None
+
+
+def recent_tweets(settings, handle, limit=8, *, store=None):
     """Read-only 6551 lookup of a discovery's latest tweets (text + expanded links). Failures return []."""
+    if getattr(settings, 'rest_only', False):
+        payload = rest_input(settings, store, 'tweets', handle) or {}
+        data = payload.get('data') or {}
+        tweets = data.get('tweets') if isinstance(data,dict) else None
+        out = []
+        for tweet in tweets if isinstance(tweets,list) else []:
+            if not isinstance(tweet,dict) or not isinstance(tweet.get('text'),str):continue
+            entities = tweet.get('entities') or {}
+            links = [u.get('expanded_url') or u.get('url') for u in entities.get('urls',[])
+                     if isinstance(u,dict) and isinstance(u.get('expanded_url') or u.get('url'),str)]
+            out.append({'text':tweet['text'][:600], 'links':links[:5]})
+        return out[:limit]
     if os.environ.get('IKUN_6551_REST_PAUSED') == '1' or settings is None or not getattr(settings, 'external_io_enabled', False) or not getattr(settings, 'token_6551', ''):
         return []
     ledger=configured();permit=None
@@ -75,16 +101,19 @@ def recent_tweets(settings, handle, limit=8):
     return out[:limit]
 
 
-def profile_website(settings, handle):
+def profile_website(settings, handle, *, store=None):
     """The website field of the X profile (twitterapi.io user/info entities.url). Read-only; failures return None."""
     token = getattr(settings, 'token_twitterapi', '') if settings is not None else ''
     if not token or not getattr(settings, 'external_io_enabled', False):
         return None
     try:
-        with httpx.Client(timeout=15) as client:
-            response = client.get('https://api.twitterapi.io/twitter/user/info', params={'userName': handle},
-                                  headers={'X-API-Key': token})
-        data = response.json().get('data') if response.status_code == 200 else None
+        if getattr(settings, 'rest_only', False):
+            data = (rest_input(settings,store,'ai_profile',handle) or {}).get('data')
+        else:
+            with httpx.Client(timeout=15) as client:
+                response = client.get('https://api.twitterapi.io/twitter/user/info', params={'userName': handle},
+                                      headers={'X-API-Key': token})
+            data = response.json().get('data') if response.status_code == 200 else None
         urls = (((data or {}).get('entities') or {}).get('url') or {}).get('urls') or []
         for item in urls:
             host = (urlsplit(item.get('expanded_url') or '').hostname or '').lower().removeprefix('www.')
@@ -120,7 +149,7 @@ def clean(value: dict, handle: str, bio: str, domains=()) -> dict:
 
 
 def run_pass(store, failures: dict, limit=3, settings=None) -> int:
-    ledger=configured()
+    ledger=None if getattr(settings,'rest_only',False) else configured()
     if ledger:
         status=ledger.summary()
         if status['quota_exhausted'] or status['daily_limit_reached']:return 0
@@ -144,8 +173,9 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
         else:
             # Fence the attempt before paid IO; a crash cannot trigger immediate replay.
             store.set_state(cache_key, {'at': now, 'tweets': []})
-            tweets = recent_tweets(settings, item['x_handle'])
-            profile_site = profile_website(settings, item['x_handle'])
+            kwargs = {'store':store} if getattr(settings,'rest_only',False) else {}
+            tweets = recent_tweets(settings, item['x_handle'], **kwargs)
+            profile_site = profile_website(settings, item['x_handle'], **kwargs)
             store.set_state(cache_key, {'at': now, 'tweets': tweets, 'profile': profile_site})
         domains = link_domains(tweets)
         from .site_reader import bio_domains, read_project

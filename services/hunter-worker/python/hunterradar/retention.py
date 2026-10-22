@@ -210,6 +210,19 @@ def restore_bundle(folder,destination,*,current,progress=None):
         if manifest['schema'].get('4')!='hunter_research_retention':raise ValueError('restore_schema4_bundle_required')
         source_version=max(metadata(source)[0]);bundle_version=max(int(v) for v in manifest['schema'])
         if source_version!=bundle_version:raise ValueError('restore_schema_version_mismatch')
+        # An old baseline plus a newer dispatch checkpoint is not a recoverable
+        # combination. Require a coherent stopped-worker snapshot for REST batches.
+        with sqlite3.connect((Path(folder)/'hunter.db').absolute().as_uri()+'?mode=ro',uri=True,timeout=5) as check:
+            check.row_factory=sqlite3.Row
+            def rest_checkpoint(db):
+                return {r['key']:r['value'] for r in db.execute('SELECT key,value FROM state')
+                        if r['key'].startswith(('rest_batches:', 'rest_cutover:', 'provider_result:'))}
+            saved_rest, latest_rest = rest_checkpoint(check), rest_checkpoint(source)
+            if any(k.startswith(('rest_batches:', 'rest_cutover:')) for k in set(saved_rest)|set(latest_rest)):
+                if saved_rest!=latest_rest:raise ValueError('restore_rest_checkpoint_mismatch')
+                for table in ('hunters','seen_targets'):
+                    if sorted(json.dumps(r,sort_keys=True) for r in _rows(check,table)) != sorted(json.dumps(r,sort_keys=True) for r in _rows(source,table)):
+                        raise ValueError('restore_rest_baseline_mismatch')
         if source_version>=5:
             # Never forget a committed offline import's durable IDs/checkpoints.
             # The mutable seen-time projection is cleaned by the normal TTL path.

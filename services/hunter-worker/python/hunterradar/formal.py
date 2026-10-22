@@ -33,6 +33,7 @@ def account_dto(db,row,now):
     states={r['key']:json.loads(r['value']) for r in db.execute("SELECT key,value FROM state WHERE key IN ('worker_heartbeat','last_pong_at','wss_state')")}
     alive=now-states.get('worker_heartbeat',0)<15
     fresh=alive and bool(row['enabled']) and bool(row['baseline_ready']) and (now-(states.get('last_pong_at') or 0)<65 and row['watch_covered'] if row['mode']=='WSS' else row['last_poll_at'] is not None and now-row['last_poll_at']<7200 and not row['poll_error'])
+    if row['mode']=='WSS' and states.get('wss_state')=='disabled_rest_only':fresh=False
     return dict(account_id=row['id'],x_handle=row['username'],label=row['label'],notes=row['note'],enabled=bool(row['enabled']),baseline_ready=bool(row['baseline_ready']),
         connection='connected' if fresh else 'unconfigured' if row['profile_status']!='ready' else 'connecting' if alive and states.get('wss_state')=='connecting' and row['mode']=='WSS' else 'disconnected',
         last_signal_at=iso(db.execute('SELECT max(received_at) FROM follow_events WHERE hunter_id=?',(row['id'],)).fetchone()[0]),revision=row['version'])

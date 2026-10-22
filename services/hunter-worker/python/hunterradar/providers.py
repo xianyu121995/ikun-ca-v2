@@ -31,6 +31,8 @@ class Providers:
             await self.client.aclose()
 
     async def watch_write(self, endpoint, body):
+        if self.settings.rest_only:
+            raise ProviderError('hunter_rest_only', retryable=False)
         if os.environ.get('IKUN_6551_REST_PAUSED') == '1':
             raise ProviderError('quota_exhausted', 3600)
         if not self.settings.external_io_enabled or endpoint not in ('twitter_watch_add','twitter_watch_delete'):
@@ -71,7 +73,10 @@ class Providers:
                 raise ProviderError('external_io_disabled', 300)
             sample_permit.claim(operation, username)
         now = time.time()
-        if operation != 'followings' and os.environ.get('IKUN_6551_REST_PAUSED') == '1':
+        twi = operation in ('followings','tweets','ai_profile') or (operation == 'profile' and self.settings.rest_only)
+        if self.settings.rest_only and operation == 'watch':
+            raise ProviderError('hunter_rest_only', retryable=False)
+        if not twi and os.environ.get('IKUN_6551_REST_PAUSED') == '1':
             raise ProviderError('quota_exhausted', 3600)
         if operation == 'followings':
             if not self.settings.token_twitterapi:
@@ -81,6 +86,14 @@ class Providers:
             kwargs = {'params': {'userName': username, 'cursor': '', 'pageSize': 20},
                       'headers': {'X-API-Key': self.settings.token_twitterapi},
                       'timeout': httpx.Timeout(max(60, self.settings.timeout), connect=self.settings.timeout, pool=self.settings.timeout)}
+        elif twi:
+            if not self.settings.token_twitterapi:
+                raise ProviderError('twitterapi_key_missing', 300)
+            provider, cost, limit = 'twitterapi', 300 if operation == 'tweets' else 18, self.settings.daily_twitterapi
+            method = 'GET'
+            url = 'https://api.twitterapi.io/twitter/user/' + ('last_tweets' if operation == 'tweets' else 'info')
+            kwargs = {'params': {'userName':username}, 'headers': {'X-API-Key':self.settings.token_twitterapi}}
+            if operation == 'tweets':kwargs['params'].update(cursor='', includeReplies='false')
         elif operation in ('profile', 'watch'):
             if not self.settings.token_6551:
                 raise ProviderError('6551_token_missing', 300)
@@ -100,17 +113,20 @@ class Providers:
             if cached is not None:return cached
         states = self.store.states()
         result_key = 'provider_result:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest()
-        pending = states.get(result_key) if operation == 'followings' else None
+        pending = states.get(result_key) if provider == 'twitterapi' else None
         generation = None
-        if operation == 'followings':
+        if operation in ('followings','profile') and provider == 'twitterapi':
             with self.store.connect() as db:
                 account = db.execute('SELECT id,generation FROM hunters WHERE username=?',(username,)).fetchone()
                 generation = [account['id'],account['generation']] if account else None
         if pending:
-            if pending.get('generation') != generation or now-pending['received_at'] > 3600:
+            if operation in ('tweets','ai_profile'):
+                # Known successful enrichment results are reusable for one hour.
+                if 0 <= now-pending['received_at'] <= 3600:return pending['payload']
+            elif pending.get('generation') != generation or not 0 <= now-pending['received_at'] <= 3600:
                 raise ProviderError('provider_result_requires_reconciliation',9999999999-now)
-            return pending['payload']
-        blocked = self.store.provider_block(operation, username, states=states)
+            else:return pending['payload']
+        blocked = self.store.provider_block(operation, username, states=states, provider=provider)
         if blocked:
             raise ProviderError(blocked['code'], retryable=False)
         cooldown = states.get('cooldown:'+provider, 0)
@@ -140,9 +156,9 @@ class Providers:
                 # Keep in_flight until the durable terminal block is committed.
                 # A crash before that commit therefore still forbids blind replay.
                 self.store.block_provider(operation, username, code, intent,
-                                          provider_wide=response.status_code == 402, now=now)
+                                          provider_wide=response.status_code == 402, now=now, provider=provider)
                 raise ProviderError(code, retryable=False)
-            if response.status_code == 200 and operation == 'followings':
+            if response.status_code == 200 and provider == 'twitterapi':
                 pass  # Keep the billing fence until the successful payload is durable.
             else:
                 self.store.set_state(intent,None)
@@ -164,7 +180,7 @@ class Providers:
             payload = response.json()
             if not isinstance(payload, dict) or payload.get('success') is False or payload.get('status') == 'error':
                 raise ProviderError('provider_application_error', 300)
-            if operation == 'followings':
+            if provider == 'twitterapi':
                 with self.store.connect(True) as db:
                     for key, value in ((result_key, {'payload':payload,'received_at':time.time(),'generation':generation}),(intent,None)):
                         db.execute('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,json.dumps(value)))
@@ -178,7 +194,7 @@ class Providers:
             raise ProviderError('provider_billing_unknown',9999999999-time.time()) from None
         except (httpx.HTTPError, ValueError) as error:
             if ledger and permit:ledger.finish(permit,error=type(error).__name__)
-            if operation == 'followings' and isinstance(error, ValueError):
+            if provider == 'twitterapi' and isinstance(error, ValueError):
                 self.store.set_state(intent,'billing_unknown')
                 raise ProviderError('provider_billing_unknown',9999999999-time.time()) from None
             self.store.set_state(intent,None)

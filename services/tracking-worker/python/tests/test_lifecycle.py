@@ -256,7 +256,13 @@ async def test_backfill_dedup_filters_and_gap_reporting(worker, store, vendor):
     assert not worker.ingest(event(now))
     vendor.tweets = [tweet(tweet_id=str(1000 + i)) for i in range(100)]
     store.observe(store.get("prj_550e8400-e29b-41d4-a716-446655440001"), last_backfill=0)
+    calls=len([name for name,_ in vendor.calls if name in ('twitter_user_tweets','twitter_search')])
     await worker.reconcile()
+    assert len([name for name,_ in vendor.calls if name in ('twitter_user_tweets','twitter_search')])==calls
+    row=store.get("prj_550e8400-e29b-41d4-a716-446655440001")
+    worker.ledger.mark_gap(row['generation_at'])
+    worker.ledger.close_gap(time.time(),[row])
+    await worker.backfill(row)
     assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["coverage"] == "possible_gap"
 
 
@@ -394,3 +400,21 @@ async def test_explicit_owned_legacy_watch_adopts_without_remote_write(worker,st
     row=store.get('prj_550e8400-e29b-41d4-a716-446655440001')
     assert row['claim']=='owned' and row['remote_state']=='active'
     assert not any(endpoint in ('twitter_watch_add','twitter_watch_delete') for endpoint,body in vendor.calls)
+
+
+async def test_healthy_ticks_do_not_poll_watch_even_after_two_hours(worker,store,vendor,monkeypatch):
+    worker.remote.cache_watch=True
+    add(store)
+    vendor.rows['project1']=vendor.watch('project1')
+    await worker.reconcile()
+    vendor.calls.clear()
+    now=[time.time()];iterations=[0]
+    async def pause(seconds):
+        now[0]+=7200;iterations[0]+=1
+        if iterations[0]>=2:worker.stop.set()
+    async def backfills():pass
+    monkeypatch.setattr('tracking.worker.time.time',lambda:now[0])
+    monkeypatch.setattr(worker,'pause',pause)
+    monkeypatch.setattr(worker,'process_backfills',backfills)
+    await worker.ticks()
+    assert vendor.calls==[]

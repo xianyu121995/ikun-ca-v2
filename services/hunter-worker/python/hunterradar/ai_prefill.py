@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from provider_6551 import configured, Blocked, quota_response, response_error
 import re
 import time
 from urllib.parse import urlsplit
@@ -50,14 +51,20 @@ def recent_tweets(settings, handle, limit=8):
     """Read-only 6551 lookup of a discovery's latest tweets (text + expanded links). Failures return []."""
     if os.environ.get('IKUN_6551_REST_PAUSED') == '1' or settings is None or not getattr(settings, 'external_io_enabled', False) or not getattr(settings, 'token_6551', ''):
         return []
+    ledger=configured();permit=None
     try:
+        if ledger:permit=ledger.begin('hunter_ai','twitter_user_tweets',purpose='ai_input')
         with httpx.Client(timeout=15) as client:
             response = client.post('https://ai.6551.io/open/twitter_user_tweets',
                                    json={'username': handle, 'maxResults': limit, 'product': 'Latest',
                                          'includeReplies': False, 'includeRetweets': False},
                                    headers={'Authorization': 'Bearer ' + settings.token_6551})
+        quota=quota_response(response)
+        if ledger:ledger.finish(permit,response.status_code,quota=quota,error=response_error(response));permit=None
         data = response.json().get('data') if response.status_code == 200 else None
-    except (httpx.HTTPError, ValueError):
+    except Blocked:return []
+    except (httpx.HTTPError, ValueError) as e:
+        if ledger and permit:ledger.finish(permit,error=type(e).__name__)
         return []
     out = []
     for t in data if isinstance(data, list) else []:
@@ -113,6 +120,10 @@ def clean(value: dict, handle: str, bio: str, domains=()) -> dict:
 
 
 def run_pass(store, failures: dict, limit=3, settings=None) -> int:
+    ledger=configured()
+    if ledger:
+        status=ledger.summary()
+        if status['quota_exhausted'] or status['daily_limit_reached']:return 0
     if not gemini.enabled():
         return 0
     from .formal import FormalService

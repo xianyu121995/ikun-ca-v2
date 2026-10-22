@@ -15,6 +15,7 @@ from .config import Config
 from .events import normalize, parse_event
 from .remote import OTHER_FLAGS, Remote, RemoteError
 from .store import Store
+from provider_6551 import wss_auth_delay
 
 log = logging.getLogger("tracking.worker")
 
@@ -26,6 +27,14 @@ class Worker:
         self.worker_id = str(uuid.uuid4())
         self._leased = False
         self._last_reconcile = 0
+        self.ledger = remote.ledger
+        previous=store.runtime()
+        if previous.get('heartbeat'):
+            self.ledger.mark_gap(previous.get('pong_at') or previous['heartbeat'])
+        self._reconnected_at = None
+        self._watch_requested=True;self._watch_retry_at=0
+        self._subscription_signature=None
+        self.ledger.request_watch_check()
 
     def acquire(self):
         if not self.store.lease(self.worker_id, acquire=True):
@@ -68,7 +77,7 @@ class Worker:
 
     def fail(self, row, exc: RemoteError):
         attempts = row["attempts"] + 1
-        delay = max(exc.retry_after, min(300, 2 ** min(attempts, 8)) + random.random())
+        delay = max(exc.retry_after, min(3600, 60 * 2 ** min(attempts-1, 6)) + random.random())
         self.store.observe(
             row,
             status="blocked" if exc.code in ("ownership_conflict", "remote_not_configured") else "retrying",
@@ -162,31 +171,36 @@ class Worker:
         return snapshot
 
     async def backfill(self, row):
-        if row["last_backfill"] and time.time() - row["last_backfill"] < self.cfg.backfill_seconds:
-            return
-        boundary = max(row["generation_at"], self.store.latest_time(row["project_id"]) or 0)
-        try:
-            items = await self.remote.tweets(row["handle"])
-            self.ensure_owner()
-            tweets = [
-                normalize(item, row["handle"], require_author=True, event_type="REST_USER_TWEETS_NO_RETWEETS")
-                for item in items
-            ]
-            valid = [tweet for tweet in tweets if tweet]
-            coverage = "bounded_latest_100"
-            if len(items) >= 100 and (not valid or min(x["created_at"] for x in valid) > boundary):
-                coverage = "possible_gap"
-            if row["coverage"] == "possible_gap":
-                coverage = "possible_gap"  # Later success cannot prove a previously lost window.
-            for tweet in sorted(valid, key=lambda x: x["created_at"]):
-                self.store.insert_tweet(row, tweet, "rest_recovery")
-            self.store.observe(row, last_backfill=time.time(), coverage=coverage, baseline_ready=1)
-        except RemoteError:
-            self.store.observe(
-                row,
-                last_backfill=time.time(),
-                coverage="possible_gap" if row["coverage"] == "possible_gap" else "recovery_failed",
-            )
+        if row['desired']!='running':return
+        if not row['baseline_ready'] and not row['last_backfill']:self.ledger.initial(row)
+        for job in self.ledger.jobs(row['subscription_id']):
+            if job['generation']!=row['generation']:
+                self.ledger.discard(job['key']);continue
+            try:
+                items=await self.remote.tweets(row['handle'],job=job)
+                self.ensure_owner()
+                tweets=[normalize(item,row['handle'],require_author=True,
+                          event_type='REST_USER_TWEETS_NO_RETWEETS') for item in items]
+                valid=[t for t in tweets if t and job['from_at']<=t['created_at']<=job['to_at']]
+                coverage='possible_gap' if len(items)>=100 or row['coverage']=='possible_gap' else 'bounded_latest_100'
+                for tweet in sorted(valid,key=lambda x:x['created_at']):
+                    self.store.insert_tweet(row,tweet,'rest_recovery')
+                self.store.observe(row,last_backfill=time.time(),coverage=coverage,baseline_ready=1)
+            except RemoteError as error:
+                # Blocked before transport stays queued; an attempted request is never replayed.
+                if not any(x['key']==job['key'] for x in self.ledger.jobs(row['subscription_id'])):
+                    self.store.observe(row,last_backfill=time.time(),
+                        coverage='possible_gap' if row['coverage']=='possible_gap' else 'recovery_failed')
+                if error.code in ('quota_exhausted','daily_budget_exhausted','backfill_daily_limit','provider_busy'):return
+
+    async def process_backfills(self):
+        rows=[r for r in self.store.projects() if r['desired']=='running' and
+              (r['claim']=='owned' or r['handle'] in (self.cfg.shared_watch_ids or {}))]
+        if self._reconnected_at:
+            self.ledger.close_gap(self._reconnected_at,rows);self._reconnected_at=None
+        for row in rows:
+            if self.stop.is_set():break
+            await self.backfill(row)
 
     async def reconcile(self):
         from watch_lock import watch_lock
@@ -200,12 +214,17 @@ class Worker:
         if not rows:
             return
         try:
+            self._last_reconcile = now
             snapshot = await self.remote.watches()
             self._last_reconcile = now
         except RemoteError as exc:
             for row in rows:
                 self.fail(row, exc)
+            self._watch_requested=True
+            self._watch_retry_at=min(r['next_retry'] for r in self.store.projects(include_removed=True)
+                                     if r['next_retry']>now)
             return
+        self._watch_requested=False;self._watch_retry_at=0
         for row in rows:
             if self.stop.is_set():
                 break
@@ -213,6 +232,8 @@ class Worker:
                 snapshot = await self.reconcile_one(row, snapshot)
             except RemoteError as exc:
                 self.fail(row, exc)
+                self._watch_requested=True
+                self._watch_retry_at=max(self._watch_retry_at,time.time()+max(60,exc.retry_after))
                 # A possibly applied mutation invalidates the prior snapshot.
                 try:
                     snapshot = await self.remote.watches()
@@ -269,6 +290,9 @@ class Worker:
                 if message.get("id") == 1:
                     if message.get("result", {}).get("success") is True:
                         audit.emit('subscribed')
+                        self._reconnected_at=time.time()
+                        self._watch_requested=True;self._watch_retry_at=0
+                        self.ledger.wss_recovered('tracking')
                         ack.set()
                     else:
                         trace.drop('subscription_rejected')
@@ -310,6 +334,7 @@ class Worker:
 
     async def streams(self):
         failures = 0
+        auth_failures=0
         while not self.stop.is_set():
             start = time.monotonic()
             try:
@@ -332,11 +357,17 @@ class Worker:
                 if self.stop.is_set():
                     break
                 code = exc.code if isinstance(exc, RemoteError) else "stream_disconnected"
+                status=getattr(getattr(exc,'response',None),'status_code',None)
+                if status==401:
+                    auth_failures+=1;code='wss_auth_rejected'
+                    self.ledger.wss_rejected('tracking')
+                else:auth_failures=0
+                self.ledger.mark_gap(self.store.runtime().get('pong_at') or time.time())
                 self.store.runtime(connection="disconnected", pong_at=None, error=code)
                 # Logging only the classification avoids leaking a token-bearing handshake URL.
                 log.warning("stream disconnected: %s", code)
             failures = 0 if time.monotonic() - start > 60 else failures + 1
-            await self.pause(min(60, 2 ** min(failures, 6)) + random.random())
+            await self.pause((wss_auth_delay(auth_failures) if auth_failures else min(60,2**min(failures,6)))+random.random())
 
     async def pause(self, seconds):
         with contextlib.suppress(asyncio.TimeoutError):
@@ -345,8 +376,15 @@ class Worker:
     async def ticks(self):
         while not self.stop.is_set():
             rows = self.store.projects(include_removed=True)
-            if time.time()-self._last_reconcile >= min(300,self.cfg.remote_fresh_seconds/2) or any(r['next_retry'] <= time.time() and (r['status'] not in ('running','stopped','removed') or r['error']) for r in rows):
+            signature=tuple(sorted((r['subscription_id'],r['handle'],r['generation'],r['desired']) for r in rows))
+            if self._subscription_signature is not None and signature!=self._subscription_signature:
+                self._watch_requested=True;self._watch_retry_at=0;self.ledger.request_watch_check(force=True)
+            self._subscription_signature=signature
+            if self.ledger.watch_pending():self._watch_requested=True
+            if self._watch_requested and time.time()>=self._watch_retry_at:
                 await self.reconcile()
+            await self.process_backfills()
+            self.ledger.publish()
             await self.pause(self.cfg.reconcile_seconds)
 
     async def pulse(self):
@@ -417,5 +455,6 @@ class Worker:
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
+            self.ledger.mark_gap(self.store.runtime().get('pong_at') or time.time())
             await self.remote.close()
             self.release()

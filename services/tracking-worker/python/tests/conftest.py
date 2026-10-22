@@ -46,7 +46,7 @@ class Vendor:
             if not self.delete_noop:
                 self.rows.pop(body["username"], None)
             return httpx.Response(200, json={"success": True})
-        if endpoint == "twitter_user_tweets":
+        if endpoint in ("twitter_user_tweets", "twitter_search"):
             return httpx.Response(200, json={"success": True, "data": self.tweets})
         raise AssertionError(endpoint)
 
@@ -81,7 +81,7 @@ def vendor():
 
 @pytest.fixture
 async def worker(cfg, store, vendor):
-    remote = Remote(cfg, transport=httpx.MockTransport(vendor))
+    remote = Remote(cfg, transport=httpx.MockTransport(vendor),cache_watch=False)
     worker = Worker(cfg, store, remote)
     yield worker
     await remote.close()

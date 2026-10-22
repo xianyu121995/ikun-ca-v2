@@ -62,6 +62,17 @@ def test_no_human_login_or_browser_identity(client, store):
         ).fetchall()
 
 
+def test_manual_provider_check_needs_direction_auth_and_only_queues(client,cfg):
+    from provider_6551 import Ledger
+    ledger=Ledger(cfg.db_path.parent.parent/'ops/6551-ledger.sqlite3')
+    ledger.trip_quota(initial=True)
+    assert client.post('/internal/v1/provider-check',json={}).status_code==401
+    response=client.post('/internal/v1/provider-check',json={},headers=HEAD)
+    assert response.status_code==202
+    assert response.json()['data']=={'state':'queued','blocked_by_quota':True}
+    assert ledger.watch_pending() and ledger.summary()['used']==0
+
+
 def test_b2_exact_wire_ack_result_idempotency_and_lost_ack(client, store):
     body = envelope()
     response = submit(client, body)

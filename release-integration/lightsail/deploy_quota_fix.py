@@ -1,6 +1,7 @@
 """Approved staged quota repair; immutable release, verified backups, no provider calls."""
 import argparse
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,10 @@ def main():
     p.add_argument('--release', required=True)
     p.add_argument('--archive', type=Path, required=True)
     p.add_argument('--final', action='store_true')
+    stage=p.add_mutually_exclusive_group()
+    stage.add_argument('--prepare-only', action='store_true')
+    stage.add_argument('--prepared', action='store_true')
+    p.add_argument('--gap-backup',type=Path)
     args = p.parse_args()
     assert os.getuid() == 0
     os.umask(0o077)
@@ -24,15 +29,33 @@ def main():
     old = Path('/opt/ikun/current').resolve()
     assert old.name == args.expected, 'unexpected_live_release'
     target = old.parent / args.release
-    assert not target.exists(), 'release_already_exists'
+    assert len(args.release)==40 and all(c in '0123456789abcdef' for c in args.release)
+    marker=target/'.quota-prepared.json'
+    prepared={'base':args.expected,'release':args.release,'archive_sha256':hashlib.sha256(args.archive.read_bytes()).hexdigest()}
+    assert target.exists()==args.prepared, 'release_preparation_mismatch'
     with tarfile.open(args.archive) as archive:
         members = archive.getmembers()
         assert all(not x.name.startswith('/') and '..' not in Path(x.name).parts
                    and not x.issym() and not x.islnk() for x in members), 'unsafe_overlay'
         assert members, 'empty_overlay'
-        shutil.copytree(old, target, symlinks=True)
-        archive.extractall(target, members=members)
-    subprocess.run(['chown', '-R', 'ikun:ikun', str(target)], check=True)
+        if args.prepared:
+            assert json.loads(marker.read_text())==prepared, 'prepared_build_mismatch'
+            for member in members:
+                if member.isfile():
+                    assert hashlib.sha256((target/member.name).read_bytes()).digest()==hashlib.sha256(archive.extractfile(member).read()).digest(), 'prepared_source_changed'
+        else:
+            shutil.copytree(old, target, symlinks=True)
+            archive.extractall(target, members=members)
+    if not args.prepared:subprocess.run(['chown', '-R', 'ikun:ikun', str(target)], check=True)
+    if args.prepare_only:
+        subprocess.run(['runuser','-u','ikun','--','env','NODE_ENV=production','NEXT_TELEMETRY_DISABLED=1',
+                        'NODE_OPTIONS=--max-old-space-size=1536','PATH=/opt/ikun/toolchains/node24/bin:/usr/bin:/bin',
+                        '/opt/ikun/toolchains/node24/bin/node',str(target/'apps/website/node_modules/next/dist/bin/next'),
+                        'build','--webpack'],cwd=target/'apps/website',check=True,timeout=600)
+        marker.write_text(json.dumps(prepared)+'\n')
+        print('PREPARED_BUILD',args.release,flush=True)
+        return
+    if args.final:assert args.prepared, 'final_requires_prebuilt_website'
     subprocess.run(['systemctl', 'start', 'ikun-backup.service'], check=True, timeout=180)
     manifest = max((base/'backups/daily').glob('*/verification.json'), key=lambda p:p.stat().st_mtime)
     report = json.loads(manifest.read_text())
@@ -85,7 +108,15 @@ def main():
             from provider_6551 import Ledger
             ledger=Ledger(base/'ops/6551-ledger.sqlite3')
             ledger.trip_quota(initial=True)
-            shutil.chown(ledger.path,user='ikun',group='ikun')
+            ledger.wss_rejected('tracking')
+            if args.gap_backup:
+                backup=args.gap_backup.resolve()
+                assert backup.is_relative_to(base/'backups/daily') and backup.name=='tracking.db'
+                with sqlite3.connect(backup.as_uri()+'?mode=ro',uri=True) as db:
+                    heartbeat,pong=db.execute('SELECT heartbeat,pong_at FROM runtime WHERE id=1').fetchone()
+                ledger.mark_gap(pong or heartbeat)
+            for path in ledger.path.parent.glob('6551-*'):
+                if path.is_file() and not path.is_symlink():shutil.chown(path,user='ikun',group='ikun')
         link=Path('/opt/ikun/.current-quota-stage')
         link.symlink_to(target);os.replace(link,'/opt/ikun/current');switched=True
     except BaseException:

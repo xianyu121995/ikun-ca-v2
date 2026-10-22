@@ -4,6 +4,7 @@ import time
 import json
 import hashlib
 import os
+from provider_6551 import configured, Blocked, quota_response, response_error
 from email.utils import parsedate_to_datetime
 
 import httpx
@@ -34,12 +35,22 @@ class Providers:
             raise ProviderError('quota_exhausted', 3600)
         if not self.settings.external_io_enabled or endpoint not in ('twitter_watch_add','twitter_watch_delete'):
             raise ProviderError('external_io_disabled')
-        self.store.reserve('6551',1,self.settings.daily_6551,self.settings.requests_per_minute,time.time())
+        ledger=configured();permit=None
+        try:
+            if ledger:permit=ledger.begin('hunter',endpoint,purpose='watch_write')
+            else:self.store.reserve('6551',1,self.settings.daily_6551,self.settings.requests_per_minute,time.time())
+        except Blocked as e:raise ProviderError(e.code,e.retry_after) from None
         try:
             response=await self.client.post('https://ai.6551.io/open/'+endpoint,json=body,headers={'Authorization':'Bearer '+self.settings.token_6551})
+            quota=quota_response(response)
+            if ledger:
+                ledger.finish(permit,response.status_code,quota=quota,error=response_error(response));permit=None
+                with ledger.db() as db:db.execute("DELETE FROM meta WHERE key='watch_snapshot'")
+            if quota:raise ProviderError('quota_exhausted',3600)
             if response.status_code!=200 or response.json().get('success') is not True:
                 raise ProviderError('watch_mutation_failed',60)
-        except (httpx.HTTPError,ValueError):
+        except (httpx.HTTPError,ValueError) as e:
+            if ledger and permit:ledger.finish(permit,error=type(e).__name__)
             raise ProviderError('watch_mutation_uncertain',30) from None
 
     async def request(self, operation, username=None):
@@ -83,6 +94,10 @@ class Providers:
                 kwargs['timeout'] = httpx.Timeout(self.settings.timeout, read=max(20, self.settings.timeout))
         else:
             raise ValueError('unapproved_provider_operation')
+        ledger=configured() if provider=='6551' else None
+        if ledger and operation=='watch':
+            cached=ledger.cached_watch()
+            if cached is not None:return cached
         states = self.store.states()
         result_key = 'provider_result:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest()
         pending = states.get(result_key) if operation == 'followings' else None
@@ -105,11 +120,21 @@ class Providers:
         if states.get(intent) in ('in_flight','billing_unknown'):
             raise ProviderError('provider_billing_unknown',9999999999-now)
         # Every attempt, including failed/ambiguous requests, reserves budget before IO.
-        self.store.reserve(provider, cost, limit, self.settings.requests_per_minute, now)
+        permit=None
+        try:
+            if ledger:permit=ledger.begin('hunter',url.rsplit('/',1)[-1],purpose=operation)
+            else:self.store.reserve(provider, cost, limit, self.settings.requests_per_minute, now)
+        except Blocked as e:raise ProviderError(e.code,e.retry_after) from None
         self.store.set_state(intent,'in_flight')
         started = time.monotonic()
         try:
             response = await self.client.request(method, url, **kwargs)
+            quota=quota_response(response) if provider=='6551' else False
+            if ledger:
+                ledger.finish(permit,response.status_code,quota=quota,error=response_error(response));permit=None
+            if quota:
+                self.store.set_state(intent,None)
+                raise ProviderError('quota_exhausted',3600)
             if (provider == 'twitterapi' and response.status_code == 402) or response.status_code in (400, 404):
                 code = 'provider_http_'+str(response.status_code)
                 # Keep in_flight until the durable terminal block is committed.
@@ -143,12 +168,16 @@ class Providers:
                 with self.store.connect(True) as db:
                     for key, value in ((result_key, {'payload':payload,'received_at':time.time(),'generation':generation}),(intent,None)):
                         db.execute('INSERT INTO state(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,json.dumps(value)))
+            if ledger and operation=='watch':ledger.cache_watch(payload)
             return payload
         except (httpx.ReadTimeout,httpx.WriteTimeout,httpx.ReadError,httpx.WriteError,httpx.RemoteProtocolError) as error:
+            if ledger and permit:ledger.finish(permit,error=type(error).__name__)
             self.store.set_state('provider_failure:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest(), {'kind':type(error).__name__,'elapsed_seconds':round(time.monotonic()-started,3),'at':time.time()})
-            self.store.set_state(intent,'billing_unknown')
+            self.store.set_state(intent,None if ledger and operation=='watch' else 'billing_unknown')
+            if ledger and operation=='watch':raise ProviderError('provider_transport_or_json_error',60) from None
             raise ProviderError('provider_billing_unknown',9999999999-time.time()) from None
         except (httpx.HTTPError, ValueError) as error:
+            if ledger and permit:ledger.finish(permit,error=type(error).__name__)
             if operation == 'followings' and isinstance(error, ValueError):
                 self.store.set_state(intent,'billing_unknown')
                 raise ProviderError('provider_billing_unknown',9999999999-time.time()) from None

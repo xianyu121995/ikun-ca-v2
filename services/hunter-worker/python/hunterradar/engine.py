@@ -215,23 +215,41 @@ class Engine:
         from .watch import synchronize
         saved = self.store.states().get('watch_read_once_signature')
         previous = [tuple(item) for item in saved] if saved is not None else None
+        failures=0;retry_at=0
+        recovered=self.store.states().get('watch_read_once',{})
+        # The explicitly approved one-read recovery just supplied the startup snapshot.
+        self._watch_requested=not (recovered.get('status')=='succeeded' and
+                                  time.time()-recovered.get('finished_at',0)<30)
+        from provider_6551 import configured
+        ledger=configured()
+        if ledger:ledger.request_watch_check()
         while not self.stop.is_set():
             try:
+                if getattr(self,'_watch_reconnected',False):
+                    self._watch_reconnected=False;retry_at=0;failures=0
+                if time.time()<retry_at:
+                    await self.pause(min(5,retry_at-time.time()));continue
                 signature = [(h['id'],h['enabled'],h['mode'],h['deleted_at']) for h in self.store.hunters(include_deleted=True)]
                 states = self.store.states()
                 # An interrupted/failed operator retry must never become an automatic paid retry.
                 if states.get('watch_read_once', {}).get('status') in ('started', 'failed'):
                     raise ProviderError('provider_billing_unknown')
-                if self.settings.external_io_enabled and (signature != previous or time.time()-states.get('watch_checked_at',0)>=300):
+                if signature!=previous and ledger:ledger.request_watch_check(force=previous is not None)
+                if self.settings.external_io_enabled and (signature != previous or self._watch_requested or (ledger and ledger.watch_pending())):
                     await synchronize(self)
                     previous = signature
+                    self._watch_requested=False
+                    failures=0;retry_at=0
             except (ProviderError, BudgetExceeded, ValueError, TimeoutError) as error:
                 if isinstance(error, ValueError):self.record_loop_error('watch', error)
                 self.store.set_state('watch_error',str(error) if isinstance(error,ProviderError) else type(error).__name__)
+                failures+=1
+                retry_at=time.time()+max(getattr(error,'retry_after',0),min(3600,60*2**min(failures-1,6)))
             await self.pause(5)
 
     async def wss_loop(self):
         failures = 0
+        auth_failures=0
         while not self.stop.is_set():
             active = [h for h in self.store.hunters() if h['enabled'] and h['mode']=='WSS' and h['profile_status']=='ready']
             if not self.settings.external_io_enabled:
@@ -255,7 +273,15 @@ class Engine:
                 self.store.set_state('wss_state', 'reconnecting')
                 self.store.set_state('wss_gap_since', time.time())
                 self.store.set_state('wss_error', type(error).__name__)
-                await self.pause(min(60, retry_time(failures, time.time(), error)-time.time()))
+                if getattr(getattr(error,'response',None),'status_code',None)==401:
+                    auth_failures+=1
+                    from provider_6551 import configured, wss_auth_delay
+                    ledger=configured()
+                    if ledger:ledger.wss_rejected('hunter')
+                    await self.pause(wss_auth_delay(auth_failures))
+                else:
+                    auth_failures=0
+                    await self.pause(min(60, retry_time(failures, time.time(), error)-time.time()))
 
     async def consume(self):
         from wss_audit import connection
@@ -268,6 +294,11 @@ class Engine:
                 audit.emit('dropped',reason='subscription_not_acknowledged')
                 raise ProviderError('wss_subscription_not_acknowledged')
             audit.emit('subscribed')
+            self._watch_requested=True
+            self._watch_reconnected=True
+            from provider_6551 import configured
+            ledger=configured()
+            if ledger:ledger.wss_recovered('hunter')
             self.store.set_state('wss_state', 'subscribed')
             self.store.set_state('last_pong_at',None)
             # Subscription ACK is not a source heartbeat. Establish only new generations.

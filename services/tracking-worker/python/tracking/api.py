@@ -157,6 +157,14 @@ def create_app(cfg: Config, store: Store | None = None):
             },
         )
 
+    @app.post('/internal/v1/provider-check',dependencies=[Depends(service)])
+    def provider_check(request: Request):
+        from provider_6551 import configured, Ledger
+        ledger=configured() or Ledger(cfg.db_path.parent.parent/'ops/6551-ledger.sqlite3')
+        ledger.request_watch_check(force=True)
+        status=ledger.summary()
+        return reply(request,{'state':'queued','blocked_by_quota':status['quota_exhausted']},status=202)
+
     @app.post("/internal/v1/feed/{operation}", dependencies=[Depends(service)])
     async def published_feed(operation: str, request: Request):
         handlers = {

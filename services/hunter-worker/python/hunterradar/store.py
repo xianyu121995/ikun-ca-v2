@@ -292,7 +292,7 @@ class Store:
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)''',
             (event.key, row['id'], row['user_id'], row['generation'], target, event.target.user_id,
              event.target.name, event.target.description, event.occurred_at, event.received_at,
-             event.occurred_at, event.source, event.time_basis)).rowcount
+             micros(event.occurred_at)/1e6, event.source, event.time_basis)).rowcount
         if count:
             qualified = db.execute('SELECT count(DISTINCT hunter_x_id) FROM follow_events WHERE target=? AND target_id IS NOT NULL AND window_at>=? AND window_at<=?',
                                    (target, effective-WINDOW, effective)).fetchone()[0]

@@ -24,7 +24,8 @@ def claim(store, now):
     epoch = int(now // SECONDS)
     with store.transaction():
         rows = {h['id']: h for h in store.hunters() if h['enabled'] and h['profile_status'] == 'ready'}
-        before = store.states().get(KEY)
+        # Read only this key: a full states() parse inside BEGIN IMMEDIATE blocked the writer lock.
+        before = store.get_state(KEY)
         saved = copy.deepcopy(before)
         if saved is None:
             # Put the remainder at the END: 85 => 7+7+...+7+8.
@@ -56,13 +57,12 @@ def claim(store, now):
             return []
         saved['last_slot'] = epoch
         selected = []
-        states = store.states()
         for identifier in groups[epoch % SLOTS]:
             row = rows[identifier]
             previous = saved['attempts'].get(identifier)
             if previous and (previous['generation'] == row['generation'] and epoch-previous['slot'] < SLOTS):
                 continue
-            if row['next_poll_at'] > now or store.provider_block('followings', row['username'], states=states):
+            if row['next_poll_at'] > now or store.provider_block('followings', row['username']):
                 continue
             saved['attempts'][identifier] = {'generation':row['generation'], 'slot':epoch}
             selected.append(dict(row, batch_next_poll_at=(epoch+SLOTS)*SECONDS))

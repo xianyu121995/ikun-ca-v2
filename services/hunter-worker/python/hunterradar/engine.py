@@ -107,19 +107,26 @@ class Engine:
                 LOG.warning('worker_loop_failed %s', code)
                 await self.pause(5)
 
+    def _clear_loop_error(self, prefix):
+        # Only a recovered loop may clear its own sticky error; single-key read inside the write lock.
+        with self.store.transaction():
+            error = self.store.get_state('worker_error')
+            if isinstance(error, str) and error.startswith(prefix):
+                self.store.set_state('worker_error_last_recovery', {'error': error, 'at': time.time()})
+                self.store.set_state('worker_error', None)
+
+    def _heartbeat_tick(self, successes):
+        self.store.renew_worker()
+        self.store.set_state('worker_heartbeat', time.time())
+        if successes >= 3:
+            self._clear_loop_error('heartbeat:')
+
     async def heartbeat_loop(self):
         successes = 0
         while not self.stop.is_set():
-            self.store.renew_worker()
-            self.store.set_state('worker_heartbeat', time.time())
             successes += 1
-            if successes >= 3:
-                # Only a recovered heartbeat may clear its own sticky error.
-                with self.store.transaction():
-                    error = self.store.states().get('worker_error')
-                    if isinstance(error, str) and error.startswith('heartbeat:'):
-                        self.store.set_state('worker_error_last_recovery', {'error': error, 'at': time.time()})
-                        self.store.set_state('worker_error', None)
+            # SQLite writes (fsync) run off the event loop so HTTP requests are not starved.
+            await asyncio.to_thread(self._heartbeat_tick, successes)
             await self.pause(3)
 
     async def ai_loop(self):
@@ -138,6 +145,13 @@ class Engine:
 
     async def retention_loop(self):
         while not self.stop.is_set():
+            try:
+                # Drop one-hour enrichment caches (tweets / ai_profile / ai_input) the code can no longer reuse.
+                pruned = await asyncio.to_thread(self.store.prune_expired_caches)
+                if pruned:
+                    LOG.info('hunter_cache_pruned rows=%d', pruned)
+            except (ValueError, OSError, sqlite3.Error) as error:
+                LOG.warning('hunter_cache_prune_failed %s', type(error).__name__)
             try:
                 result=await asyncio.to_thread(self.store.cleanup)
                 self.store.set_state('retention_error',None)
@@ -163,20 +177,16 @@ class Engine:
     async def profile_loop(self):
         successes = 0
         while not self.stop.is_set():
-            states = self.store.states()
-            for row in self.store.hunters():
-                if row['enabled'] and row['profile_status'] != 'ready' and row['next_profile_at'] <= time.time() and not self.store.provider_block('profile', row['username'], states=states, provider='twitterapi' if self.settings.rest_only else '6551'):
+            rows = await asyncio.to_thread(self.store.hunters)
+            for row in rows:
+                if row['enabled'] and row['profile_status'] != 'ready' and row['next_profile_at'] <= time.time() and not self.store.provider_block('profile', row['username'], provider='twitterapi' if self.settings.rest_only else '6551'):
                     await self.scan_profile(row)
                 if self.stop.is_set():
                     break
             successes += 1
             self.store.set_state('profiles_checked_at', time.time())
             if successes >= 3:
-                with self.store.transaction():
-                    error = self.store.states().get('worker_error')
-                    if isinstance(error, str) and error.startswith('profiles:'):
-                        self.store.set_state('worker_error_last_recovery', {'error': error, 'at': time.time()})
-                        self.store.set_state('worker_error', None)
+                await asyncio.to_thread(self._clear_loop_error, 'profiles:')
             await self.pause(2)
 
     async def poll(self, row):
@@ -209,11 +219,12 @@ class Engine:
 
     def replay_rest_results(self):
         """Apply durable paid results locally after a crash, before any new IO."""
-        states = self.store.states()
+        from .rest_batches import KEY
+        states = {KEY: self.store.get_state(KEY)}
         now = time.time()
         for row in self.store.hunters():
             key = 'provider_result:followings:'+hashlib.sha256(row['username'].encode()).hexdigest()
-            cached = states.get(key)
+            cached = self.store.get_state(key)
             if (not row['enabled'] or row['profile_status']!='ready' or not cached
                     or cached.get('generation') != [row['id'],row['generation']]
                     or not 0 <= now-cached.get('received_at',0) <= 3600):
@@ -230,12 +241,12 @@ class Engine:
         while not self.stop.is_set():
             if self.settings.rest_only:
                 from .rest_batches import claim
-                rows = claim(self.store, time.time())
+                # claim() holds BEGIN IMMEDIATE; run it off the event loop every second.
+                rows = await asyncio.to_thread(claim, self.store, time.time())
             else:
-                states = self.store.states()
                 rows = [row for row in self.store.hunters() if row['enabled'] and row['mode'] == 'REST'
                         and row['profile_status'] == 'ready' and row['next_poll_at'] <= time.time()
-                        and not self.store.provider_block('followings', row['username'], states=states)]
+                        and not self.store.provider_block('followings', row['username'])]
             # Return exceptions isolates accounts deleted while waiting for a concurrency slot.
             await asyncio.gather(*(self.poll(row) for row in rows), return_exceptions=True)
             await self.pause(1)

@@ -23,6 +23,12 @@ export interface LiveBinding{
  filter:(key:string,value:string)=>void;
 }
 class ApiError extends Error{constructor(readonly code:string,message:string){super(message)}}
+const BUSY_MESSAGE='服务繁忙，请稍后重试';
+// Proxies (e.g. Cloudflare 502/524) can answer with an HTML page; never feed that to JSON.parse.
+async function readApiBody(response:Response):Promise<{data?:unknown;error?:{code?:string;message?:string}}|null>{
+ if(!/json/i.test(response.headers.get('content-type')||''))return null;
+ try{const value=await response.json();return value&&typeof value==='object'?value:null;}catch{return null;}
+}
 export default function HunterController({session,fixture=false}:{session:Session;fixture?:boolean}){
  const scope=session.user_id,snapshot=useRef(peekClientData<Snapshot>(scope,'hunter:view')).current;
  const [records,setRecords]=useState<DiscoveryDTO[]>(snapshot?.records??[]),[loading,setLoading]=useState(!snapshot),[refreshing,setRefreshing]=useState(false),[error,setError]=useState<string|null>(null);
@@ -35,7 +41,11 @@ export default function HunterController({session,fixture=false}:{session:Sessio
  const generation=useRef(0),active=useRef<AbortController|null>(null),readAt=useRef(Date.now()),currentRecords=useRef(records);currentRecords.current=records;
  async function api(path:string,method='GET',body?:unknown,extra:Record<string,string>={},signal?:AbortSignal){
   const response=await fetch(path,{method,headers:{'content-type':'application/json','x-csrf-token':session.csrf_token,...extra},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store',signal});
-  const value=await response.json();if(!response.ok){if(response.status===401||response.status===403){clearClientSession();setRevoked(true);setRecords([]);}throw new ApiError(value.error?.code||'UPSTREAM_UNAVAILABLE',value.error?.message||'操作未确认');}if(method!=='GET')invalidateClientData(scope);return value.data;
+  const value=await readApiBody(response);
+  if(!response.ok){if(response.status===401||response.status===403){clearClientSession();setRevoked(true);setRecords([]);}throw new ApiError(value?.error?.code||'UPSTREAM_UNAVAILABLE',value?.error?.message||(value?'操作未确认':BUSY_MESSAGE));}
+  if(!value)throw new ApiError('UPSTREAM_UNAVAILABLE',BUSY_MESSAGE);
+  if(method!=='GET')invalidateClientData(scope);
+  return value.data as any;
  }
  async function load(target=cursor,initial=false){
   const version=++generation.current;active.current?.abort();const controller=new AbortController();active.current=controller;

@@ -166,7 +166,7 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
     for item in todo:
         bio = item.get('profile_bio') or ''
         cache_key = 'ai_input:' + item['x_handle']
-        cached = store.states().get(cache_key)
+        cached = store.get_state(cache_key)
         if cached and now - cached.get('at', 0) < 3600:
             tweets = cached.get('tweets', [])
             profile_site = cached.get('profile')

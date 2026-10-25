@@ -20,6 +20,16 @@ from .retention import advance,active,retired,micros,TTL_US
 APP_ID = 0x494b0201
 WINDOW = 72 * 3600
 LEGACY_DIRECTORY_PREFIX = 'legacy_takeover_v2:'
+# Enrichment caches that are only ever reused for one hour (providers.py / ai_prefill.py).
+# Each entry maps a key prefix to the JSON field holding its write time.
+# Billing fences (provider_intent:*), provider blocks, followings/profile results,
+# cooldowns, REST batches and Watch state are deliberately NOT listed here.
+EXPIRING_CACHE_PREFIXES = (('provider_result:tweets:', 'received_at'),
+                           ('provider_result:ai_profile:', 'received_at'),
+                           ('ai_input:', 'at'))
+CACHE_MAX_AGE_SECONDS = 3600
+PROTECTED_STATE_PREFIXES = ('provider_intent:', 'provider_result:followings:', 'provider_result:profile:',
+                            'cooldown:', 'rest_batches:', 'rest_cutover:', 'watch', LEGACY_DIRECTORY_PREFIX)
 ACTIVE_TRANSACTION=ContextVar('hunter_transaction',default=None)
 
 
@@ -589,8 +599,74 @@ class Store:
                     db.execute("DELETE FROM state WHERE key='watch_error_since'")
 
     def states(self):
+        """Full table read + parse. Expensive; hot paths must use get_state/get_states/list_states."""
         with self.connect() as db:
             return {r['key']: json.loads(r['value']) for r in db.execute('SELECT * FROM state WHERE key NOT GLOB ?', (LEGACY_DIRECTORY_PREFIX+'*',))}
+
+    def get_state(self, key, default=None):
+        """Read and parse a single state row (primary-key lookup)."""
+        if key.startswith(LEGACY_DIRECTORY_PREFIX):
+            return default
+        with self.connect() as db:
+            row = db.execute('SELECT value FROM state WHERE key=?', (key,)).fetchone()
+        return json.loads(row[0]) if row else default
+
+    def get_states(self, keys):
+        """Read only the requested keys; missing keys are absent from the result (like states())."""
+        wanted = [k for k in dict.fromkeys(keys) if not k.startswith(LEGACY_DIRECTORY_PREFIX)]
+        if not wanted:
+            return {}
+        result = {}
+        with self.connect() as db:
+            for start in range(0, len(wanted), 500):
+                chunk = wanted[start:start+500]
+                marks = ','.join('?' for _ in chunk)
+                for r in db.execute(f'SELECT key,value FROM state WHERE key IN ({marks})', chunk):
+                    result[r['key']] = json.loads(r['value'])
+        return result
+
+    def list_states(self, prefix):
+        """Read all rows whose key starts with prefix (index range scan, no full-table parse)."""
+        if not prefix or prefix.startswith(LEGACY_DIRECTORY_PREFIX):
+            raise ValueError('invalid_state_prefix')
+        with self.connect() as db:
+            return {r['key']: json.loads(r['value']) for r in
+                    db.execute('SELECT key,value FROM state WHERE substr(key,1,?)=?', (len(prefix), prefix))}
+
+    def prune_expired_caches(self, now=None, *, max_age=CACHE_MAX_AGE_SECONDS, limit=1000):
+        """Delete enrichment caches older than max_age that the code can no longer reuse.
+
+        Only EXPIRING_CACHE_PREFIXES are touched. A row is removed only when its
+        timestamp field is a number and strictly older than max_age; unparsable
+        or unexpected rows are kept (fail closed).
+        """
+        now = time.time() if now is None else now
+        if max_age < CACHE_MAX_AGE_SECONDS:
+            raise ValueError('cache_max_age_below_reuse_window')
+        deleted = 0
+        with self.connect(True) as db:
+            for prefix, field in EXPIRING_CACHE_PREFIXES:
+                if prefix.startswith(PROTECTED_STATE_PREFIXES):
+                    raise ValueError('protected_state_prefix')
+                stale = []
+                for r in db.execute('SELECT key,value FROM state WHERE substr(key,1,?)=?', (len(prefix), prefix)):
+                    try:
+                        value = json.loads(r['value'])
+                    except ValueError:
+                        continue
+                    stamp = value.get(field) if isinstance(value, dict) else None
+                    if isinstance(stamp, (int, float)) and not isinstance(stamp, bool) and now - stamp > max_age:
+                        stale.append(r['key'])
+                    if len(stale) + deleted >= limit:
+                        break
+                for key in stale:
+                    if key.startswith(PROTECTED_STATE_PREFIXES) or not key.startswith(prefix):
+                        raise ValueError('protected_state_prefix')
+                    db.execute('DELETE FROM state WHERE key=?', (key,))
+                deleted += len(stale)
+                if deleted >= limit:
+                    break
+        return deleted
 
     @staticmethod
     def legacy_identity_pending(db, identifier):
@@ -612,8 +688,9 @@ class Store:
             counts = {r['status']: r['n'] for r in db.execute('SELECT status,count(*) n FROM task_outbox GROUP BY status')}
             quotas = {r['provider']: r['reserved'] for r in db.execute('SELECT * FROM quota WHERE window=?', (today,))}
             events = db.execute('SELECT count(*) FROM follow_events').fetchone()[0]
-        states = self.states()
-        alive = now - states.get('worker_heartbeat', 0) < 15
+        states = self.get_states(('worker_heartbeat', 'wss_state', 'last_pong_at', 'worker_error',
+                                  'watch_checked_at', 'watch_error'))
+        alive = now - (states.get('worker_heartbeat') or 0) < 15
         return {'worker_alive': alive, 'wss_state': states.get('wss_state', 'stopped') if alive else 'stopped',
                 'last_pong_at': states.get('last_pong_at'), 'worker_error': states.get('worker_error'),
                 'watch_checked_at': states.get('watch_checked_at'), 'watch_error': states.get('watch_error'),

@@ -111,8 +111,11 @@ class Providers:
         if ledger and operation=='watch':
             cached=ledger.cached_watch()
             if cached is not None:return cached
-        states = self.store.states()
         result_key = 'provider_result:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest()
+        intent='provider_intent:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest()
+        # Read only the rows this request needs instead of parsing the whole state table.
+        states = self.store.get_states((result_key, intent, 'cooldown:'+provider,
+                                        *self.store.provider_block_keys(operation, username, provider=provider)))
         pending = states.get(result_key) if provider == 'twitterapi' else None
         generation = None
         if operation in ('followings','profile') and provider == 'twitterapi':
@@ -132,7 +135,6 @@ class Providers:
         cooldown = states.get('cooldown:'+provider, 0)
         if cooldown > now:
             raise ProviderError('provider_cooldown', cooldown-now)
-        intent='provider_intent:'+operation+':'+hashlib.sha256((username or '').encode()).hexdigest()
         if states.get(intent) in ('in_flight','billing_unknown'):
             raise ProviderError('provider_billing_unknown',9999999999-now)
         # Every attempt, including failed/ambiguous requests, reserves budget before IO.

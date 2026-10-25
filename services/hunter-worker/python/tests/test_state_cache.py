@@ -70,24 +70,27 @@ async def test_provider_request_reads_only_needed_rows(store, monkeypatch):
 
 def test_prune_only_expired_enrichment_caches(store):
     h = hashlib.sha256(b'h').hexdigest()
-    old, fresh = NOW-3601, NOW-60
+    # Default retention is 72h; reuse window stays 1h. Mid-age caches must be kept.
+    expired_age, mid_age, fresh = NOW - (72 * 3600) - 1, NOW - 7200, NOW - 60
     protected = {
         'provider_intent:tweets:'+h: 'billing_unknown',
         'provider_intent:ai_profile:'+h: 'in_flight',
         'provider_intent:blocked:twitterapi:tweets:'+h: {'state': 'blocked', 'code': 'provider_http_404'},
-        'provider_result:followings:'+h: {'payload': {}, 'received_at': old, 'generation': None},
-        'provider_result:profile:'+h: {'payload': {}, 'received_at': old, 'generation': None},
-        'cooldown:twitterapi': old,
-        'ai:discovery-1': {'name': 'x', 'generated_at': old},
+        'provider_result:followings:'+h: {'payload': {}, 'received_at': expired_age, 'generation': None},
+        'provider_result:profile:'+h: {'payload': {}, 'received_at': expired_age, 'generation': None},
+        'cooldown:twitterapi': expired_age,
+        'ai:discovery-1': {'name': 'x', 'generated_at': expired_age},
         'provider_result:tweets:fresh': {'payload': {}, 'received_at': fresh},
+        'provider_result:tweets:mid': {'payload': {}, 'received_at': mid_age},
         'provider_result:tweets:weird': {'payload': {}, 'received_at': 'not-a-number'},
         'provider_result:tweets:list': ['unexpected'],
         'ai_input:fresh': {'at': fresh, 'tweets': []},
+        'ai_input:mid': {'at': mid_age, 'tweets': []},
     }
     expired = {
-        'provider_result:tweets:'+h: {'payload': {'big': 'x'*1000}, 'received_at': old},
-        'provider_result:ai_profile:'+h: {'payload': {}, 'received_at': old},
-        'ai_input:h': {'at': old, 'tweets': [{'text': 't'}]},
+        'provider_result:tweets:'+h: {'payload': {'big': 'x'*1000}, 'received_at': expired_age},
+        'provider_result:ai_profile:'+h: {'payload': {}, 'received_at': expired_age},
+        'ai_input:h': {'at': expired_age, 'tweets': [{'text': 't'}]},
     }
     for key, value in {**protected, **expired}.items():
         put(store, key, value)
@@ -105,6 +108,6 @@ def test_prune_refuses_window_shorter_than_reuse(store):
 
 def test_prune_respects_limit(store):
     for i in range(5):
-        put(store, f'ai_input:h{i}', {'at': NOW-7200, 'tweets': []})
+        put(store, f'ai_input:h{i}', {'at': NOW - (72 * 3600) - 1, 'tweets': []})
     assert store.prune_expired_caches(NOW, limit=2) == 2
     assert store.prune_expired_caches(NOW) == 3

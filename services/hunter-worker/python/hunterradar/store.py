@@ -27,7 +27,10 @@ LEGACY_DIRECTORY_PREFIX = 'legacy_takeover_v2:'
 EXPIRING_CACHE_PREFIXES = (('provider_result:tweets:', 'received_at'),
                            ('provider_result:ai_profile:', 'received_at'),
                            ('ai_input:', 'at'))
-CACHE_MAX_AGE_SECONDS = 3600
+# Code only reuses enrichment caches younger than this; prune must never go below it.
+CACHE_REUSE_WINDOW_SECONDS = 3600
+# Default prune retention (72h). Larger than the reuse window so recent caches stay for triage.
+CACHE_RETENTION_SECONDS = 72 * 3600
 PROTECTED_STATE_PREFIXES = ('provider_intent:', 'provider_result:followings:', 'provider_result:profile:',
                             'cooldown:', 'rest_batches:', 'rest_cutover:', 'watch', LEGACY_DIRECTORY_PREFIX)
 ACTIVE_TRANSACTION=ContextVar('hunter_transaction',default=None)
@@ -633,7 +636,7 @@ class Store:
             return {r['key']: json.loads(r['value']) for r in
                     db.execute('SELECT key,value FROM state WHERE substr(key,1,?)=?', (len(prefix), prefix))}
 
-    def prune_expired_caches(self, now=None, *, max_age=CACHE_MAX_AGE_SECONDS, limit=1000):
+    def prune_expired_caches(self, now=None, *, max_age=CACHE_RETENTION_SECONDS, limit=1000):
         """Delete enrichment caches older than max_age that the code can no longer reuse.
 
         Only EXPIRING_CACHE_PREFIXES are touched. A row is removed only when its
@@ -641,7 +644,7 @@ class Store:
         or unexpected rows are kept (fail closed).
         """
         now = time.time() if now is None else now
-        if max_age < CACHE_MAX_AGE_SECONDS:
+        if max_age < CACHE_REUSE_WINDOW_SECONDS:
             raise ValueError('cache_max_age_below_reuse_window')
         deleted = 0
         with self.connect(True) as db:

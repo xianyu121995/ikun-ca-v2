@@ -146,7 +146,7 @@ class Engine:
     async def retention_loop(self):
         while not self.stop.is_set():
             try:
-                # Drop one-hour enrichment caches (tweets / ai_profile / ai_input) the code can no longer reuse.
+                # Drop enrichment caches older than the retention window (default 72h; reuse window stays 1h).
                 pruned = await asyncio.to_thread(self.store.prune_expired_caches)
                 if pruned:
                     LOG.info('hunter_cache_pruned rows=%d', pruned)

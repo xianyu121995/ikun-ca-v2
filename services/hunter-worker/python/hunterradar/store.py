@@ -31,6 +31,8 @@ EXPIRING_CACHE_PREFIXES = (('provider_result:tweets:', 'received_at'),
 CACHE_REUSE_WINDOW_SECONDS = 3600
 # Default prune retention (72h). Larger than the reuse window so recent caches stay for triage.
 CACHE_RETENTION_SECONDS = 72 * 3600
+# How often retention_loop may call prune_expired_caches (store.cleanup stays ~60s).
+CACHE_PRUNE_INTERVAL_SECONDS = 24 * 3600
 PROTECTED_STATE_PREFIXES = ('provider_intent:', 'provider_result:followings:', 'provider_result:profile:',
                             'cooldown:', 'rest_batches:', 'rest_cutover:', 'watch', LEGACY_DIRECTORY_PREFIX)
 ACTIVE_TRANSACTION=ContextVar('hunter_transaction',default=None)

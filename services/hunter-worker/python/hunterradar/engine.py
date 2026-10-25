@@ -21,7 +21,7 @@ from websockets.asyncio.client import connect
 from .config import Settings
 from .parsers import followings, profile, watch_coverage, wss_events
 from .providers import ProviderError, Providers
-from .store import BudgetExceeded, Conflict, LeaseLost, Store
+from .store import BudgetExceeded, Conflict, LeaseLost, Store, CACHE_PRUNE_INTERVAL_SECONDS
 
 LOG = logging.getLogger('hunterradar')
 
@@ -144,12 +144,17 @@ class Engine:
             await self.pause(2 if stored else 15)
 
     async def retention_loop(self):
+        # Prune enrichment caches at most once per day; store.cleanup still runs ~every 60s.
+        last_cache_prune = 0.0
         while not self.stop.is_set():
             try:
-                # Drop enrichment caches older than the retention window (default 72h; reuse window stays 1h).
-                pruned = await asyncio.to_thread(self.store.prune_expired_caches)
-                if pruned:
-                    LOG.info('hunter_cache_pruned rows=%d', pruned)
+                now = time.time()
+                if now - last_cache_prune >= CACHE_PRUNE_INTERVAL_SECONDS:
+                    # Drop enrichment caches older than the retention window (default 72h; reuse window stays 1h).
+                    pruned = await asyncio.to_thread(self.store.prune_expired_caches)
+                    last_cache_prune = now
+                    if pruned:
+                        LOG.info('hunter_cache_pruned rows=%d', pruned)
             except (ValueError, OSError, sqlite3.Error) as error:
                 LOG.warning('hunter_cache_prune_failed %s', type(error).__name__)
             try:

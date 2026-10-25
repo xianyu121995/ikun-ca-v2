@@ -7,9 +7,10 @@ import pytest
 
 from conftest import NOW, ready
 from hunterradar.config import Settings
+from hunterradar.engine import Engine
 from hunterradar.providers import Providers
 from hunterradar.rest_batches import claim, KEY
-from hunterradar.store import Store, LEGACY_DIRECTORY_PREFIX
+from hunterradar.store import Store, LEGACY_DIRECTORY_PREFIX, CACHE_PRUNE_INTERVAL_SECONDS
 
 START = int(NOW//3600)*3600
 
@@ -111,3 +112,66 @@ def test_prune_respects_limit(store):
         put(store, f'ai_input:h{i}', {'at': NOW - (72 * 3600) - 1, 'tweets': []})
     assert store.prune_expired_caches(NOW, limit=2) == 2
     assert store.prune_expired_caches(NOW) == 3
+
+
+async def test_retention_loop_prunes_caches_at_most_daily(store, monkeypatch):
+    """store.cleanup stays ~60s; prune_expired_caches runs at most once per day."""
+    engine = Engine(Settings(db=store.path), store)
+    prune_at, cleanup_n = [], [0]
+    clock = {'now': 1_000_000.0}
+    monkeypatch.setattr('hunterradar.engine.time.time', lambda: clock['now'])
+
+    def fake_prune():
+        prune_at.append(clock['now'])
+        return 0
+
+    def fake_cleanup():
+        cleanup_n[0] += 1
+        if cleanup_n[0] >= 3:
+            engine.stop.set()
+        return {'deleted': 0}
+
+    async def fake_pause(seconds):
+        if cleanup_n[0] == 1:
+            clock['now'] += 30  # still inside the daily window
+        elif cleanup_n[0] == 2:
+            clock['now'] += CACHE_PRUNE_INTERVAL_SECONDS  # cross the daily window
+
+    monkeypatch.setattr(store, 'prune_expired_caches', fake_prune)
+    monkeypatch.setattr(store, 'cleanup', fake_cleanup)
+    monkeypatch.setattr(engine, 'pause', fake_pause)
+    await engine.retention_loop()
+    await engine.providers.close()
+    assert cleanup_n[0] == 3
+    assert prune_at == [1_000_000.0, 1_000_000.0 + 30 + CACHE_PRUNE_INTERVAL_SECONDS]
+
+
+async def test_retention_loop_retries_prune_after_failure(store, monkeypatch):
+    """Failed prune does not advance the daily stamp, so the next minute retries."""
+    engine = Engine(Settings(db=store.path), store)
+    prune_calls, cleanup_n = [], [0]
+    clock = {'now': 2_000_000.0}
+    monkeypatch.setattr('hunterradar.engine.time.time', lambda: clock['now'])
+
+    def fake_prune():
+        prune_calls.append(clock['now'])
+        if len(prune_calls) == 1:
+            raise OSError('synthetic_prune_failure')
+        return 0
+
+    def fake_cleanup():
+        cleanup_n[0] += 1
+        if cleanup_n[0] >= 2:
+            engine.stop.set()
+        return {'deleted': 0}
+
+    async def fake_pause(seconds):
+        clock['now'] += 60
+
+    monkeypatch.setattr(store, 'prune_expired_caches', fake_prune)
+    monkeypatch.setattr(store, 'cleanup', fake_cleanup)
+    monkeypatch.setattr(engine, 'pause', fake_pause)
+    await engine.retention_loop()
+    await engine.providers.close()
+    assert cleanup_n[0] == 2
+    assert prune_calls == [2_000_000.0, 2_000_000.0 + 60]

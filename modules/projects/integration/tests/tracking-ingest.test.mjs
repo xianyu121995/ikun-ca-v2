@@ -5,7 +5,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import http from 'node:http';
 import {Readable} from 'node:stream';
 import {fileURLToPath} from 'node:url';
-const preview=new URL('../../.preview/',import.meta.url);
+const preview=new URL('../../../../',import.meta.url);
 const {ManagedProjectsIpc}=await import(new URL('packages/runtime/dist/index.js',preview));
 const post=await import(new URL('apps/website/app/internal/v1/ingest/[source]/route.ts',preview));
 const get=await import(new URL('apps/website/app/internal/v1/receipts/[source]/[id]/route.ts',preview));

@@ -169,6 +169,9 @@ async def test_standalone_absolute_entry_from_private_cwd_ignores_development_im
         module / "tracking", released_module / "tracking", ignore=shutil.ignore_patterns("__pycache__")
     )
     shutil.copyfile(module / "entry.py", released_module / "entry.py")
+    # Package the shared runtime dependency too; -I deliberately ignores PYTHONPATH.
+    for shared in (module.parents[2] / "packages/runtime/python").glob("*.py"):
+        shutil.copyfile(shared, released_module / shared.name)
     shutil.copytree(module.parents[2] / "schemas/tracking", release / "schemas/tracking")
     job = tmp_path / "private-job"
     job.mkdir(mode=0o700)
@@ -231,5 +234,5 @@ async def test_standalone_absolute_entry_from_private_cwd_ignores_development_im
         assert not list(job.glob(".env*"))
     finally:
         process.terminate()
-        await asyncio.wait_for(process.communicate(), 10)
-    assert process.returncode == 0
+        stdout, stderr = await asyncio.wait_for(process.communicate(), 10)
+    assert process.returncode == 0, stderr.decode()

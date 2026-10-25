@@ -1,0 +1,404 @@
+{
+  "checked_at_utc": "2026-10-25T09:01:44.159516+00:00",
+  "repository_branch": "ikun/live",
+  "application_baseline": "ab3b3d768895741f9a4b36d13568ff5de2245ff4",
+  "services": {
+    "ikun-web.service": {
+      "MainPID": "152307",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecStart": "{ path=/opt/ikun/venvs/projects/bin/python ; argv[]=/opt/ikun/venvs/projects/bin/python /opt/ikun/bin/run_production.py web ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "WorkingDirectory": "",
+      "User": "ikun",
+      "Id": "ikun-web.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/etc/systemd/system/ikun-web.service",
+      "DropInPaths": "",
+      "proc_cwd": "/opt/ikun/releases/7fa16d69fdbc8c7151c46b0dbbcc29b92cc106fb/apps/website",
+      "proc_exe": "/opt/ikun/toolchains/node-v24.22.0-linux-x64/bin/node",
+      "safe_environment": {
+        "DATA_ROOT": "/var/lib/ikun/production/data",
+        "IKUN_TRACKING_BACKFILL_ENABLED": "0",
+        "IKUN_6551_BACKFILL_DAILY_LIMIT": "0",
+        "HOME": "/var/lib/ikun",
+        "PATH": "/opt/ikun/toolchains/node24/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    "ikun-tracking-live.service": {
+      "MainPID": "152300",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecStart": "{ path=/opt/ikun/venvs/tracking/bin/python ; argv[]=/opt/ikun/venvs/tracking/bin/python /opt/ikun/bin/run_production.py tracking ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "WorkingDirectory": "",
+      "User": "ikun",
+      "Id": "ikun-tracking-live.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/etc/systemd/system/ikun-tracking-live.service",
+      "DropInPaths": "",
+      "proc_cwd": "/var/lib/ikun/production",
+      "proc_exe": "/opt/ikun/toolchains/python/cpython-3.11.15-linux-x86_64-gnu/bin/python3.11",
+      "safe_environment": {
+        "HOME": "/var/lib/ikun",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/snap/bin"
+      }
+    },
+    "ikun-hunter.service": {
+      "MainPID": "191272",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecStart": "{ path=/opt/ikun/venvs/hunter/bin/python ; argv[]=/opt/ikun/venvs/hunter/bin/python /opt/ikun/bin/run_hunter_timefix_ab3b3d768895.py hunter ; ignore_errors=no ; start_time=[Sat 2026-10-24 11:12:20 UTC] ; stop_time=[n/a] ; pid=191272 ; code=(null) ; status=0/0 }",
+      "WorkingDirectory": "",
+      "User": "ikun",
+      "Id": "ikun-hunter.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/etc/systemd/system/ikun-hunter.service",
+      "DropInPaths": "/etc/systemd/system/ikun-hunter.service.d/90-rest-release.conf",
+      "proc_cwd": "/var/lib/ikun/production",
+      "proc_exe": "/opt/ikun/toolchains/python/cpython-3.11.15-linux-x86_64-gnu/bin/python3.11",
+      "safe_environment": {
+        "HOME": "/var/lib/ikun",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/snap/bin"
+      }
+    },
+    "ikun-projects.service": {
+      "MainPID": "9363",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecStart": "{ path=/opt/ikun/venvs/projects/bin/python ; argv[]=/opt/ikun/venvs/projects/bin/python /opt/ikun/bin/run_production.py projects ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "WorkingDirectory": "",
+      "User": "ikun",
+      "Id": "ikun-projects.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/etc/systemd/system/ikun-projects.service",
+      "DropInPaths": "",
+      "proc_cwd": "/opt/ikun/releases/75dd1907e7ddcad481b4de8523963b5fe15198ae/modules/projects/candidate",
+      "proc_exe": "/opt/ikun/toolchains/python/cpython-3.11.15-linux-x86_64-gnu/bin/python3.11",
+      "safe_environment": {
+        "DATA_ROOT": "/var/lib/ikun/production/data",
+        "HOME": "/var/lib/ikun",
+        "PATH": "/opt/ikun/toolchains/node24/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    "ikun-health.service": {
+      "MainPID": "0",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecStart": "{ path=/opt/ikun/venvs/projects/bin/python ; argv[]=/opt/ikun/venvs/projects/bin/python /opt/ikun/bin/production_ops.py health ; ignore_errors=no ; start_time=[Sun 2026-10-25 09:01:26 UTC] ; stop_time=[Sun 2026-10-25 09:01:27 UTC] ; pid=222113 ; code=exited ; status=0 }",
+      "WorkingDirectory": "",
+      "User": "ikun",
+      "Id": "ikun-health.service",
+      "ActiveState": "inactive",
+      "SubState": "dead",
+      "FragmentPath": "/etc/systemd/system/ikun-health.service",
+      "DropInPaths": ""
+    },
+    "ikun-health.timer": {
+      "NextElapseUSecRealtime": "",
+      "LastTriggerUSec": "Sun 2026-10-25 09:01:26 UTC",
+      "Result": "success",
+      "Id": "ikun-health.timer",
+      "ActiveState": "active",
+      "SubState": "waiting",
+      "FragmentPath": "/etc/systemd/system/ikun-health.timer",
+      "DropInPaths": ""
+    },
+    "ikun-backup.service": {
+      "MainPID": "0",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecStart": "{ path=/opt/ikun/venvs/projects/bin/python ; argv[]=/opt/ikun/venvs/projects/bin/python /opt/ikun/bin/production_ops.py backup ; ignore_errors=no ; start_time=[Sat 2026-10-24 20:00:03 UTC] ; stop_time=[Sat 2026-10-24 20:00:04 UTC] ; pid=211045 ; code=exited ; status=0 }",
+      "WorkingDirectory": "",
+      "User": "ikun",
+      "Id": "ikun-backup.service",
+      "ActiveState": "inactive",
+      "SubState": "dead",
+      "FragmentPath": "/etc/systemd/system/ikun-backup.service",
+      "DropInPaths": ""
+    },
+    "ikun-backup.timer": {
+      "NextElapseUSecRealtime": "Sun 2026-10-25 20:00:00 UTC",
+      "LastTriggerUSec": "Sat 2026-10-24 20:00:03 UTC",
+      "Result": "success",
+      "Id": "ikun-backup.timer",
+      "ActiveState": "active",
+      "SubState": "waiting",
+      "FragmentPath": "/etc/systemd/system/ikun-backup.timer",
+      "DropInPaths": ""
+    },
+    "ikun-tunnel.service": {
+      "MainPID": "9982",
+      "Result": "success",
+      "NRestarts": "0",
+      "ExecStart": "{ path=/usr/bin/cloudflared ; argv[]=/usr/bin/cloudflared tunnel --config /var/lib/ikun/production/config/cloudflared.yml --no-autoupdate --metrics 127.0.0.1:65520 --loglevel warn run ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "WorkingDirectory": "",
+      "User": "ikun",
+      "Id": "ikun-tunnel.service",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/etc/systemd/system/ikun-tunnel.service",
+      "DropInPaths": "",
+      "proc_cwd": "/",
+      "proc_exe": "/usr/bin/cloudflared",
+      "safe_environment": {
+        "HOME": "/var/lib/ikun",
+        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/snap/bin"
+      }
+    }
+  },
+  "config_files": [
+    "/var/lib/ikun/production/config/web.environment.json",
+    "/var/lib/ikun/production/config/cloudflared.yml",
+    "/var/lib/ikun/production/config/tunnel.credentials.json",
+    "/var/lib/ikun/production/config/ai.json",
+    "/var/lib/ikun/production/config/tracking.live.environment.json",
+    "/var/lib/ikun/production/config/tracking.live.json",
+    "/var/lib/ikun/production/config/hunter.live.environment.json"
+  ],
+  "safe_configuration": {
+    "/var/lib/ikun/production/config/web.environment.json": {
+      "mode": "0o600",
+      "safe_values": {
+        "DATA_ROOT": "/var/lib/ikun/production/data",
+        "PORT": "4000",
+        "IKUN_6551_DAILY_LIMIT": "300",
+        "IKUN_6551_BACKFILL_DAILY_LIMIT": "0",
+        "IKUN_TRACKING_BACKFILL_ENABLED": "0"
+      },
+      "secret_field_names": [
+        "HUNTER_API_TOKEN",
+        "PROJECTS_INGEST_HUNTER_TOKEN",
+        "TRACKING_API_TOKEN",
+        "PROJECTS_INGEST_TRACKING_TOKEN",
+        "IKUN_IPC_TOKEN",
+        "IKUN_PROJECTS_IPC_TOKEN"
+      ]
+    },
+    "/var/lib/ikun/production/config/cloudflared.yml": {
+      "mode": "0o600",
+      "safe_values": {},
+      "secret_field_names": []
+    },
+    "/var/lib/ikun/production/config/tunnel.credentials.json": {
+      "mode": "0o600",
+      "safe_values": {},
+      "secret_field_names": [
+        "TunnelSecret"
+      ]
+    },
+    "/var/lib/ikun/production/config/ai.json": {
+      "mode": "0o600",
+      "safe_values": {},
+      "secret_field_names": []
+    },
+    "/var/lib/ikun/production/config/tracking.live.environment.json": {
+      "mode": "0o600",
+      "safe_values": {
+        "DATA_ROOT": "/var/lib/ikun/production/data",
+        "IKUN_TRACKING_CONFIG": "/var/lib/ikun/production/config/tracking.live.json",
+        "IKUN_6551_DAILY_LIMIT": "300",
+        "IKUN_6551_BACKFILL_DAILY_LIMIT": "0",
+        "IKUN_TRACKING_BACKFILL_ENABLED": "0"
+      },
+      "secret_field_names": [
+        "TRACKING_API_TOKEN",
+        "IKUN_TRACKING_6551_TOKEN"
+      ]
+    },
+    "/var/lib/ikun/production/config/tracking.live.json": {
+      "mode": "0o600",
+      "safe_values": {
+        "remote_enabled": true,
+        "shared_account_safe": true,
+        "dedicated_account": false,
+        "watch_group": "ikun-ca-v2-project-tracking"
+      },
+      "secret_field_names": []
+    },
+    "/var/lib/ikun/production/config/hunter.live.environment.json": {
+      "mode": "0o600",
+      "safe_values": {
+        "DATA_ROOT": "/var/lib/ikun/production/data",
+        "HUNTER_HOST": "127.0.0.1",
+        "HUNTER_PORT": "4011",
+        "HUNTER_DB": "/var/lib/ikun/production/data/hunter/hunter.db",
+        "HUNTER_TWITTERAPI_DAILY_CREDITS": "150000",
+        "IKUN_6551_DAILY_LIMIT": "300",
+        "IKUN_6551_BACKFILL_DAILY_LIMIT": "0",
+        "IKUN_TRACKING_BACKFILL_ENABLED": "0",
+        "HUNTER_REST_ONLY": "1",
+        "HUNTER_REST_CONCURRENCY": "2"
+      },
+      "secret_field_names": [
+        "HUNTER_API_TOKEN",
+        "PROJECTS_INGEST_HUNTER_TOKEN",
+        "OPENNEWS_TOKEN",
+        "TWITTERAPI_IO_API_KEY"
+      ]
+    }
+  },
+  "databases": {
+    "auth": {
+      "path": "/var/lib/ikun/production/data/auth/auth.db",
+      "inode": 1050095,
+      "application_id": 1229652484,
+      "schema_version": 2
+    },
+    "projects": {
+      "path": "/var/lib/ikun/production/data/projects/projects.db",
+      "inode": 1050097,
+      "application_id": 1229652483,
+      "schema_version": 2
+    },
+    "hunter": {
+      "path": "/var/lib/ikun/production/data/hunter/hunter.db",
+      "inode": 1050099,
+      "application_id": 1229652481,
+      "schema_version": 5,
+      "modes": [
+        [
+          "REST",
+          1,
+          86
+        ],
+        [
+          "WSS",
+          0,
+          2
+        ]
+      ]
+    },
+    "tracking": {
+      "path": "/var/lib/ikun/production/data/tracking/tracking.db",
+      "inode": 1050729,
+      "application_id": 1229652482,
+      "schema_version": 4,
+      "runtime": {
+        "connection": "connected",
+        "error": null,
+        "heartbeat": 1792919032.591038,
+        "pong_at": 1792919030.7350152
+      }
+    }
+  },
+  "ports": [
+    "Netid State  Recv-Q Send-Q                   Local Address:Port  Peer Address:PortProcess                                                   ",
+    "udp   UNCONN 0      0                           127.0.0.54:53         0.0.0.0:*    users:((\"systemd-resolve\",pid=134350,fd=16))             ",
+    "udp   UNCONN 0      0                        127.0.0.53%lo:53         0.0.0.0:*    users:((\"systemd-resolve\",pid=134350,fd=14))             ",
+    "udp   UNCONN 0      0                     172.26.2.81%ens5:68         0.0.0.0:*    users:((\"systemd-network\",pid=134336,fd=22))             ",
+    "udp   UNCONN 0      0                            127.0.0.1:323        0.0.0.0:*    users:((\"chronyd\",pid=3997,fd=5))                        ",
+    "udp   UNCONN 0      0                                [::1]:323           [::]:*    users:((\"chronyd\",pid=3997,fd=6))                        ",
+    "udp   UNCONN 0      0      [fe80::4ff:d7ff:fe53:8a7d]%ens5:546           [::]:*    users:((\"systemd-network\",pid=134336,fd=23))             ",
+    "tcp   LISTEN 0      4096                     127.0.0.53%lo:53         0.0.0.0:*    users:((\"systemd-resolve\",pid=134350,fd=15))             ",
+    "tcp   LISTEN 0      4096                           0.0.0.0:22         0.0.0.0:*    users:((\"sshd\",pid=170018,fd=3),(\"systemd\",pid=1,fd=181))",
+    "tcp   LISTEN 0      2048                         127.0.0.1:4011       0.0.0.0:*    users:((\"python\",pid=191272,fd=10))                      ",
+    "tcp   LISTEN 0      2048                         127.0.0.1:4012       0.0.0.0:*    users:((\"python\",pid=152300,fd=10))                      ",
+    "tcp   LISTEN 0      511                          127.0.0.1:4000       0.0.0.0:*    users:((\"next-server (v1\",pid=152307,fd=21))             ",
+    "tcp   LISTEN 0      4096                         127.0.0.1:65520      0.0.0.0:*    users:((\"cloudflared\",pid=9982,fd=7))                    ",
+    "tcp   LISTEN 0      4096                        127.0.0.54:53         0.0.0.0:*    users:((\"systemd-resolve\",pid=134350,fd=17))             ",
+    "tcp   LISTEN 0      4096                              [::]:22            [::]:*    users:((\"sshd\",pid=170018,fd=4),(\"systemd\",pid=1,fd=182))"
+  ],
+  "cloudflared_version": "cloudflared version 2026.10.1 (built 2026-10-15-17:08 UTC)",
+  "latest_backup": {
+    "path": "/var/lib/ikun/production/backups/daily/20261025-040004-173674",
+    "verification": {
+      "auth": {
+        "integrity": "ok",
+        "all_table_counts_match": true,
+        "bytes": 90112
+      },
+      "projects": {
+        "integrity": "ok",
+        "all_table_counts_match": true,
+        "bytes": 3575808
+      },
+      "hunter": {
+        "integrity": "ok",
+        "all_table_counts_match": true,
+        "bytes": 35758080
+      },
+      "tracking": {
+        "integrity": "ok",
+        "all_table_counts_match": true,
+        "bytes": 4407296
+      }
+    }
+  },
+  "hunter_quota_reservations": [
+    {
+      "provider": "twitterapi",
+      "window": "2026-10-25",
+      "reserved": 50556
+    },
+    {
+      "provider": "twitterapi",
+      "window": "2026-10-24",
+      "reserved": 148128
+    },
+    {
+      "provider": "twitterapi",
+      "window": "2026-10-23",
+      "reserved": 132444
+    },
+    {
+      "provider": "6551",
+      "window": "2026-10-22",
+      "reserved": 1000
+    },
+    {
+      "provider": "twitterapi",
+      "window": "2026-10-22",
+      "reserved": 102750
+    },
+    {
+      "provider": "wss_connect",
+      "window": "2026-10-22",
+      "reserved": 75
+    },
+    {
+      "provider": "twitterapi",
+      "window": "2026-10-21",
+      "reserved": 98640
+    },
+    {
+      "provider": "wss_connect",
+      "window": "2026-10-21",
+      "reserved": 18
+    },
+    {
+      "provider": "6551",
+      "window": "2026-10-21",
+      "reserved": 116
+    },
+    {
+      "provider": "6551",
+      "window": "2026-10-20",
+      "reserved": 233
+    },
+    {
+      "provider": "twitterapi",
+      "window": "2026-10-20",
+      "reserved": 99360
+    },
+    {
+      "provider": "wss_connect",
+      "window": "2026-10-20",
+      "reserved": 21
+    }
+  ],
+  "secret_values_included": false,
+  "provider_calls_performed": 0,
+  "production_mutations": 0,
+  "server_file_sha256": {
+    "/opt/ikun/bin/production_ops.py": "fe14e5a24d0311af1f76f088a44808d029179ae5f2041351effd964c99f870b8",
+    "/opt/ikun/bin/run_hunter_rest_7111ce3.py": "866dac59183bc5ba03075245444925699e61f7fec3bb2c3189bf83ee252b8405",
+    "/opt/ikun/bin/export_backup.py": "796b2cba54387c0144f4469f8c8b9c56a4c6fde649596352503c4c63c836cec7",
+    "/opt/ikun/bin/run_production.py": "c3de4c170281616e844213ea9ce1f376e4e9a52cae5ca8e4a0361a5086fc5ae7",
+    "/opt/ikun/bin/run_test.py": "92bfc553b18bccd62deddd7a5250964fc1144d4732bc877c1028c25929f925f1",
+    "/opt/ikun/bin/verified_backup.py": "713cb355784c5677c00b7a421475f23b12c5bf91840767bc2006a03cb2ebe144",
+    "/opt/ikun/bin/run_hunter_timefix_ab3b3d768895.py": "89b170d9f2bd94d89400657a9bc05609fa7dc23739659d899d6b22df6c794a24"
+  }
+}

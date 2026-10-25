@@ -5,12 +5,13 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {join} from 'node:path';
 const moduleRoot=fileURLToPath(new URL('../../',import.meta.url));
-const {feedQuery}=await import(pathToFileURL(join(moduleRoot,'.b3/preview/apps/website/lib/published-feed.ts')));
+const preview=process.env.IKUN_TEST_REPO_ROOT||join(moduleRoot,'../../..');
+const {feedQuery}=await import(pathToFileURL(join(preview,'apps/website/lib/published-feed.ts')));
 const root='http://127.0.0.1/api/v1/tracking/latest?profile=published-v1';
 test('Full Unicode query normalization matches the actual Python contract hash',()=>{
  for(const q of [' Straße Σς ',' ＡＢＣ ','İ','\ufb03','100%_literal','\u001c trimmed \u0085']){
   const input=feedQuery(new URL(root+'&q='+encodeURIComponent(q)));
-  const expected=execFileSync(join(moduleRoot,'.venv/bin/python'),['-c','import json,sys;from tracking.feed import Query,query_hash;print(query_hash(Query.model_validate(json.loads(sys.stdin.read()))))'],{cwd:moduleRoot,input:JSON.stringify(input.query),encoding:'utf8'}).trim();
+  const expected=execFileSync(process.env.IKUN_TEST_PYTHON||join(moduleRoot,'.venv/bin/python'),['-c','import json,sys;from tracking.feed import Query,query_hash;print(query_hash(Query.model_validate(json.loads(sys.stdin.read()))))'],{cwd:moduleRoot,input:JSON.stringify(input.query),encoding:'utf8'}).trim();
   assert.equal(input.hash,expected,q);
  }
 });
@@ -29,7 +30,7 @@ const {createServer}=await import('node:http');
 const {mkdtempSync,chmodSync,realpathSync,writeFileSync}=await import('node:fs');
 const budgetEvidence=[],budgetPath=join(moduleRoot,'artifacts/b3/feed-budgets-'+Date.now()+'.json');function persistBudgets(){writeFileSync(budgetPath,JSON.stringify(budgetEvidence,null,2));writeFileSync(join(moduleRoot,'artifacts/b3/feed-budget-receipt-path.txt'),budgetPath);}persistBudgets();
 const {randomUUID}=await import('node:crypto');
-const {publishedFeed}=await import(pathToFileURL(join(moduleRoot,'.b3/preview/apps/website/lib/published-feed.ts')));
+const {publishedFeed}=await import(pathToFileURL(join(preview,'apps/website/lib/published-feed.ts')));
 async function budgetFixture(mode){
  const folder=realpathSync(mkdtempSync('/private/tmp/ik-b3-budget-'));chmodSync(folder,0o700);const socket=join(folder,'rpc.sock');
  const previous={};for(const key of ['IKUN_PROJECTS_IPC_SOCKET','IKUN_PROJECTS_IPC_TOKEN','IKUN_PROJECTS_BUILD_SHA'])previous[key]=process.env[key];

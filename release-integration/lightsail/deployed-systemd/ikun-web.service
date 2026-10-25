@@ -1,0 +1,25 @@
+[Unit]
+Description=ikun production web
+Wants=network-online.target
+After=network-online.target
+Requires=ikun-projects.service
+After=ikun-projects.service
+
+[Service]
+User=ikun
+Group=ikun
+UMask=0077
+Environment=HOME=/var/lib/ikun TZ=Asia/Shanghai
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ikun /var/log/ikun /opt/ikun/current/apps/website/.next/cache
+ExecStart=/opt/ikun/venvs/projects/bin/python /opt/ikun/bin/run_production.py web
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=90
+MemoryMax=1400M
+
+[Install]
+WantedBy=multi-user.target

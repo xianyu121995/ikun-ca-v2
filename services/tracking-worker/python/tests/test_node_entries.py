@@ -1,14 +1,17 @@
 """One pytest wrapper contains nine Node cases; never add those nine twice."""
 
 import subprocess
+import os
+import shutil
+import sys
 import time
 from pathlib import Path
 
 
 def test_actual_b1_b2_tracking_entries():
     module = Path(__file__).resolve().parents[1]
-    node = Path("/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node")
-    preview = module / ".b3/preview"
+    node = shutil.which("node")
+    preview = module.parents[2]
     if not (preview / "modules/auth/dist/src/server.js").exists():
         raise RuntimeError("Prepare pinned B3 dependency assembly before integration regression")
     result = subprocess.run(
@@ -23,6 +26,12 @@ def test_actual_b1_b2_tracking_entries():
         capture_output=True,
         text=True,
         timeout=90,
+        env=dict(
+            os.environ,
+            IKUN_TEST_REPO_ROOT=str(preview),
+            IKUN_TEST_PYTHON=sys.executable,
+            PYTHONPATH=os.pathsep.join([str(preview / "packages/runtime/python"), str(module)]),
+        ),
     )
     logs = module / "artifacts/b3"
     logs.mkdir(parents=True, exist_ok=True)

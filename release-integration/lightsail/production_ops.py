@@ -12,6 +12,23 @@ maintenance = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(maintenance)
 if sys.argv[1] == 'health':
     errors = maintenance.health(root=base)
+    # Approved Hunter REST-only release: no Watch synchronization is expected.
+    # Keep all Tracking, provider, worker-heartbeat and delivery checks intact.
+    import json, sqlite3
+    config = json.loads((base/'config/hunter.live.environment.json').read_text())
+    with sqlite3.connect((base/'data/hunter/hunter.db').as_uri()+'?mode=ro', uri=True) as db:
+        policy = {k:json.loads(v) for k,v in db.execute("SELECT key,value FROM state WHERE key IN ('wss_state','watch_state')")}
+    if (config.get('HUNTER_REST_ONLY') == '1' and not config.get('OPENNEWS_TOKEN')
+            and policy.get('wss_state') == policy.get('watch_state') == 'disabled_rest_only'):
+        retired = '猎手 Watch 同步异常（已持续 15 分钟以上）'
+        errors = [e for e in errors if e != retired]
+        since_path = base/'ops/health_since.json'
+        since = json.loads(since_path.read_text()); since.pop(retired, None)
+        maintenance.atomic(since_path, since)
+        health_path = base/'ops/health.json'
+        health = json.loads(health_path.read_text())
+        health.update(healthy=not errors, errors=errors, hunter_transport='twitterapi_rest', tracking_transport='6551_wss')
+        maintenance.atomic(health_path, health)
     print('PRODUCTION_HEALTH', '; '.join(errors) or 'OK')
 elif sys.argv[1] == 'backup':
     sys.path.insert(0, '/opt/ikun/bin')

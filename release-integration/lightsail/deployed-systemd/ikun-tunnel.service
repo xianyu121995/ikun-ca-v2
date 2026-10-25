@@ -1,0 +1,22 @@
+[Unit]
+Description=ikun production existing named tunnel
+Wants=network-online.target
+After=network-online.target ikun-web.service
+
+[Service]
+User=ikun
+Group=ikun
+UMask=0077
+Environment=HOME=/var/lib/ikun TZ=Asia/Shanghai
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ikun /var/log/ikun /opt/ikun/current/apps/website/.next/cache
+ExecStart=/usr/bin/cloudflared tunnel --config /var/lib/ikun/production/config/cloudflared.yml --no-autoupdate --metrics 127.0.0.1:65520 --loglevel warn run
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+
+[Install]
+WantedBy=multi-user.target

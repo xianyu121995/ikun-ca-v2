@@ -9,9 +9,9 @@ import {join} from 'node:path';
 import {createServer} from 'node:http';
 
 globalThis.AsyncLocalStorage=AsyncLocalStorage;
-const moduleRoot=fileURLToPath(new URL('../../',import.meta.url)),preview=join(moduleRoot,'.b3/preview');
+const moduleRoot=fileURLToPath(new URL('../../',import.meta.url)),preview=process.env.IKUN_TEST_REPO_ROOT||join(moduleRoot,'../../..');
 const dataRoot=realpathSync(mkdtempSync('/private/tmp/ik-b3-entry-'));
-const python=join(moduleRoot,'.venv/bin/python'),token='b3-tracking-direction-credential-xxxxxxxx',fixtureToken=randomUUID();
+const python=process.env.IKUN_TEST_PYTHON||join(moduleRoot,'.venv/bin/python'),token='b3-tracking-direction-credential-xxxxxxxx',fixtureToken=randomUUID();
 const password='Synthetic-B3-Password-Final-274!',initial='Synthetic-B3-Initial-984!';
 const {config}=await import(pathToFileURL(join(preview,'modules/auth/dist/src/config.js')));
 const {LocalAccounts}=await import(pathToFileURL(join(preview,'modules/auth/dist/src/local.js')));
@@ -28,14 +28,17 @@ async function internal(path,options={}){return fetch(endpoint+'/internal/v1/'+p
 async function state(sid){return (await(await internal('subscriptions/'+sid)).json()).data;}
 async function fixture(path,body){return fetch(endpoint+'/fixture/'+path,{method:body?'POST':'GET',headers:{'x-fixture-token':fixtureToken,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});}
 async function context(request,fn){return work.run({route:'/',isStaticGeneration:false},()=>unit.run({type:'request',phase:'action',headers:request.headers},fn));}
+async function eventBlock(reader){let text='';for(let i=0;i<30;i++){const part=await reader.read();if(part.done)throw Error('SSE_ENDED_BEFORE_EVENT');text+=new TextDecoder().decode(part.value);if(/data: (.+)/.test(text))return text;}throw Error('SSE_EVENT_NOT_FOUND');}
 before(async()=>{
  process.env.DATA_ROOT=dataRoot;process.env.IKUN_AUTH_ORIGIN=origin;process.env.IKUN_AUTH_DEV='1';
+ // This rotation case needs two concurrent fixture sessions; the production default is one.
+ process.env.IKUN_AUTH_MAX_SESSIONS='5';
  local=new LocalAccounts(config({dataRoot,origin,secure:false}),true);
  await local.bootstrap('admin',initial);await local.create('user',initial);await local.create('forced',initial);
  for(const name of ['admin','user']){const login=await local.login(name,initial);await local.changePassword(login.actor,initial,password);}
  const projectsEntry=join(preview,'modules/projects/integration/ipc-entry.py');
  execFileSync(python,[projectsEntry,'--migrate','--database',join(dataRoot,'projects/projects.db')]);
- manager=new ManagedProjectsIpc({executable:python,args:[projectsEntry],cwd:join(preview,'modules/projects/candidate'),entry_path:projectsEntry,entry_sha256:createHash('sha256').update(readFileSync(projectsEntry)).digest('hex'),build_sha:JSON.parse(readFileSync(join(moduleRoot,'.b3/frozen-inputs-verified.json'))).pins.projects},dataRoot);
+ manager=new ManagedProjectsIpc({executable:python,args:[projectsEntry],cwd:join(preview,'modules/projects/candidate'),entry_path:projectsEntry,entry_sha256:createHash('sha256').update(readFileSync(projectsEntry)).digest('hex'),build_sha:process.env.IKUN_TEST_BUILD_SHA||execFileSync('git',['rev-parse','HEAD'],{cwd:preview,encoding:'utf8'}).trim()},dataRoot);
  await manager.start(15000);Object.assign(process.env,{IKUN_PROJECTS_IPC_SOCKET:manager.identity.socketPath,IKUN_PROJECTS_IPC_TOKEN:manager.identity.token,IKUN_PROJECTS_BUILD_SHA:manager.identity.buildSha});
  const reserve=createServer();await new Promise(r=>reserve.listen(0,'127.0.0.1',r));const port=reserve.address().port;await new Promise(r=>reserve.close(r));endpoint='http://127.0.0.1:'+port;
  const cfg=join(dataRoot,'tracking.json');writeFileSync(cfg,JSON.stringify({db_path:join(dataRoot,'tracking/tracking.db'),remote_enabled:true,dedicated_account:true,port,reconcile_seconds:.1,backfill_seconds:.2,request_interval:0,heartbeat_seconds:.1,heartbeat_timeout:.5}));
@@ -46,7 +49,7 @@ before(async()=>{
  projects=await import(pathToFileURL(join(preview,'apps/website/lib/projects.ts')));projects.projectsAuth();
  api=await import(pathToFileURL(join(preview,'apps/website/lib/tracking.ts')));
  route=await import(pathToFileURL(join(preview,'apps/website/app/api/v1/tracking/[[...path]]/route.ts')));
- eventsRoute=await import(pathToFileURL(join(preview,'apps/website/app/api/v1/events/stream/route.ts')));
+ eventsRoute=await import(pathToFileURL(join(preview,'apps/website/app/api/v1/tracking/events/route.ts')));
  const authModule=await import(pathToFileURL(join(preview,'modules/auth/dist/src/server.js')));auth=authModule.auth();
  ({requireAuthPage:pageGuard}=await import(pathToFileURL(join(preview,'apps/website/lib/auth.ts'))));
  ({authorizeTrackingAction:action}=await import(pathToFileURL(join(preview,'apps/website/app/tracking/actions.ts'))));
@@ -103,14 +106,14 @@ test('Actual B2 serialized outbox relay, lost ACK reconciles original ID with on
 });
 test('SSE standard envelope/replay and quiet revocation cancel the real Tracking upstream',async()=>{
  const admin=await session('admin'),user=await session('user');
- const request=req('/api/v1/events/stream','GET',user);const response=await eventsRoute.GET(request);assert.equal(response.status,200);const reader=response.body.getReader();
- const first=await reader.read();const block=new TextDecoder().decode(first.value);const data=block.match(/data: (.+)/);assert.ok(data);assert.deepEqual(Object.keys(JSON.parse(data[1])).sort(),['data','request_id']);
+ const request=req('/api/v1/tracking/events','GET',user);const response=await eventsRoute.GET(request);assert.equal(response.status,200);const reader=response.body.getReader();
+ const block=await eventBlock(reader);const data=block.match(/data: (.+)/);assert.ok(data);assert.deepEqual(Object.keys(JSON.parse(data[1])).sort(),['data','request_id']);
  await new Promise(r=>setTimeout(r,5500));assert.equal((await(await fixture('state')).json()).active_streams,1);
  assert.equal((await auth.handle(req('/api/v1/auth/logout','POST',user,{}))).status,200);
  let done=false;for(let i=0;i<10;i++){const part=await Promise.race([reader.read(),new Promise((_,reject)=>setTimeout(()=>reject(Error('SSE_REVOCATION')),3000))]);if(part.done){done=true;break;}}assert.equal(done,true);await until(async()=>(await(await fixture('state')).json()).active_streams===0);
  assert.equal((await route.GET(req('/api/v1/tracking/subscriptions','GET',user))).status,401);
- const active=await session('user');const replay=await eventsRoute.GET(req('/api/v1/events/stream','GET',active));const r=replay.body.getReader();const text=new TextDecoder().decode((await r.read()).value);const eventId=text.match(/id: (evt_[^\n]+)/)?.[1];await r.cancel();assert.ok(eventId);
- const resumed=await eventsRoute.GET(req('/api/v1/events/stream','GET',active,undefined,{'last-event-id':eventId}));const rr=resumed.body.getReader();const next=new TextDecoder().decode((await rr.read()).value);assert.ok(!next.includes('id: '+eventId+'\n'));await rr.cancel();await until(async()=>(await(await fixture('state')).json()).active_streams===0);
+ const active=await session('user');const replay=await eventsRoute.GET(req('/api/v1/tracking/events','GET',active));const r=replay.body.getReader();const text=await eventBlock(r);const eventId=text.match(/id: (evt_[^\n]+)/)?.[1];await r.cancel();assert.ok(eventId);
+ const resumed=await eventsRoute.GET(req('/api/v1/tracking/events','GET',active,undefined,{'last-event-id':eventId}));const rr=resumed.body.getReader();const next=new TextDecoder().decode((await rr.read()).value);assert.ok(!next.includes('id: '+eventId+'\n'));await rr.cancel();await until(async()=>(await(await fixture('state')).json()).active_streams===0);
 });
 test('Disabled, reset, seven-day expiry and rotated B1 cookies are rejected in actual Tracking handler',async()=>{
  let user=await session('user');local.setEnabled('user',false);assert.equal((await route.GET(req('/api/v1/tracking/subscriptions','GET',user))).status,401);local.setEnabled('user',true);

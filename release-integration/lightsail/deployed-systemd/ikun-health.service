@@ -1,0 +1,15 @@
+[Unit]
+Description=ikun production health
+
+[Service]
+Type=oneshot
+User=ikun
+Group=ikun
+UMask=0077
+Environment=HOME=/var/lib/ikun TZ=Asia/Shanghai
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ikun /var/log/ikun /opt/ikun/current/apps/website/.next/cache
+ExecStart=/opt/ikun/venvs/projects/bin/python /opt/ikun/bin/production_ops.py health

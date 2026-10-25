@@ -222,12 +222,11 @@ def test_real_tracking_route_and_http_reconcile(tmp_path):
         con.execute("CREATE TRIGGER injected_inbox_failure BEFORE INSERT ON event_inbox WHEN NEW.event_id='"+failed['event_id']+"' BEGIN SELECT RAISE(ABORT,'synthetic inbox failure'); END")
     fixture=tmp_path/'events.json';fixture.write_text(json.dumps({'project':p,'other_project':other,'event':event(p['project_id']),
         'hunter_event':hunter_event(name='hunter regression control'),'cases':samples},ensure_ascii=False))
-    shutil.copyfile(ROOT/'modules/projects/integration/website/lib/projects.ts',ROOT/'modules/projects/.preview/apps/website/lib/projects.ts')
     import os
     env={**os.environ,'DATA_ROOT':str(data),'PROJECTS_PYTHON':sys.executable,
          'B2_BUILD_SHA':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'TI_FIXTURE':str(fixture)}
-    node='/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node'
-    result=subprocess.run([node,'--import',str(ROOT/'modules/projects/.preview/node_modules/tsx/dist/loader.mjs'),
+    node=shutil.which('node')
+    result=subprocess.run([node,'--import',str(ROOT/'node_modules/tsx/dist/loader.mjs'),
         '--test',str(ROOT/'modules/projects/integration/tests/tracking-ingest.test.mjs')],cwd=ROOT,env=env,capture_output=True,text=True,timeout=40)
     (tmp_path/'tracking-node.tap').write_text(result.stdout+result.stderr)
     assert result.returncode==0,result.stdout+result.stderr

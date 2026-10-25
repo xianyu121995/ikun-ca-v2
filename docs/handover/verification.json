@@ -1,0 +1,258 @@
+{
+  "checked_at_utc": "2026-10-25T09:37:02.829224+00:00",
+  "node": "v24.22.0",
+  "base_commit": "ab3b3d768895741f9a4b36d13568ff5de2245ff4",
+  "production_touched": false,
+  "provider_calls": 0,
+  "archived_preview_suites_not_run": [
+    "test_browser.py",
+    "test_b2_browser.py",
+    "test_b2_lifecycle.py"
+  ],
+  "results": [
+    {
+      "name": "prepare-shared",
+      "command": [
+        "pnpm",
+        "build:shared"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/prepare-shared.log"
+    },
+    {
+      "name": "prepare-auth",
+      "command": [
+        "pnpm",
+        "build:auth"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/prepare-auth.log"
+    },
+    {
+      "name": "runtime-python",
+      "command": [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/test-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "-p",
+        "handover_offline_guard",
+        "packages/runtime/python/tests"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/runtime-python.log"
+    },
+    {
+      "name": "hunter",
+      "command": [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/test-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "-p",
+        "handover_offline_guard",
+        "services/hunter-worker/python/tests"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/hunter.log"
+    },
+    {
+      "name": "tracking",
+      "command": [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/test-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "-p",
+        "handover_offline_guard",
+        "services/tracking-worker/python/tests"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/tracking.log"
+    },
+    {
+      "name": "projects",
+      "command": [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/test-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "-p",
+        "handover_offline_guard",
+        "modules/projects/candidate/tests",
+        "--ignore=modules/projects/candidate/tests/test_browser.py",
+        "--ignore=modules/projects/candidate/tests/test_b2_browser.py",
+        "--ignore=modules/projects/candidate/tests/test_b2_lifecycle.py"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/projects.log"
+    },
+    {
+      "name": "release-python",
+      "command": [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/test-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "-p",
+        "handover_offline_guard",
+        "release-integration/tests"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/release-python.log"
+    },
+    {
+      "name": "desktop-auth",
+      "command": [
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/test-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "-p",
+        "handover_offline_guard",
+        "release-integration/lightsail/test_auth_remote.py"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/desktop-auth.log"
+    },
+    {
+      "name": "auth",
+      "command": [
+        "env",
+        "TSX_TSCONFIG_PATH=packages/ui/tsconfig.check.json",
+        "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/toolchains/node24/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/modules/auth/tests/auth.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/modules/auth/tests/b1.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/modules/auth/tests/owner-decisions.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/modules/auth/tests/password10.test.mjs"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/auth.log"
+    },
+    {
+      "name": "root",
+      "command": [
+        "env",
+        "TSX_TSCONFIG_PATH=packages/ui/tsconfig.check.json",
+        "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/toolchains/node24/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/tests/b0-launch.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/tests/b0-managed.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/tests/b0-stores.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/tests/foundation.test.mjs"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/root.log"
+    },
+    {
+      "name": "voice",
+      "command": [
+        "env",
+        "TSX_TSCONFIG_PATH=packages/ui/tsconfig.check.json",
+        "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/toolchains/node24/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/packages/ui/src/voice/tests/published.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/packages/ui/src/voice/tests/voice.test.mjs"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/voice.log"
+    },
+    {
+      "name": "release-node",
+      "command": [
+        "env",
+        "TSX_TSCONFIG_PATH=packages/ui/tsconfig.check.json",
+        "/Users/lvlei/Library/Application Support/ikun-ca-v2-c0-lite/toolchains/node24/bin/node",
+        "--import",
+        "tsx",
+        "--test",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/command-gateway.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/hunter-stream-speed.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/page-speed.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/project-tracking.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/published-voice.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/sse-heartbeat.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/subscriptions-bff.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/tracking-unknown.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/tracking-untrack-history.test.mjs",
+        "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/release-integration/tests/tracking-voice-metadata.test.mjs"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/release-node.log"
+    },
+    {
+      "name": "ui",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@ikun/ui",
+        "test"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/ui.log"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "pnpm",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/typecheck.log"
+    },
+    {
+      "name": "build",
+      "command": [
+        "pnpm",
+        "build"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/build.log"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": "/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2-worktrees/live/.runtime/handover-test-logs/diff-check.log"
+    }
+  ],
+  "passed": true,
+  "top_level_test_pass_counts": {
+    "runtime-python": 18,
+    "hunter": 292,
+    "tracking": 228,
+    "projects": 251,
+    "release-python": 70,
+    "desktop-auth": 6,
+    "auth": 71,
+    "root": 26,
+    "voice": 47,
+    "release-node": 59,
+    "ui": 13
+  },
+  "top_level_pass_total": 1081,
+  "scope_note": "Current source regressions; archived Projects preview/browser suites listed separately and not rerun. Nested Node cases inside Python wrappers are not counted twice. base_commit is the deployed application baseline; handover working-tree adjustments were included in this run."
+}

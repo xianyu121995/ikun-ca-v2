@@ -4,7 +4,7 @@ import http from 'node:http';
 import {chmodSync,mkdtempSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
-const {ipc}=await import(new URL('../../.preview/apps/website/lib/projects.ts',import.meta.url));
+const {ipc}=await import(new URL('../../../../apps/website/lib/projects.ts',import.meta.url));
 const directory=mkdtempSync('/private/tmp/ikp-rating-');chmodSync(directory,0o700);const socketPath=join(directory,'p.sock');
 const names=['IKUN_PROJECTS_IPC_SOCKET','IKUN_PROJECTS_IPC_TOKEN','IKUN_PROJECTS_BUILD_SHA'];const old=names.map(name=>process.env[name]);
 const token='r'.repeat(64),build='f'.repeat(40);let mode='valid',closed,entered;let received=0;

@@ -1,0 +1,24 @@
+[Unit]
+Description=ikun production tracking-live
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/var/lib/ikun/production/ops/EXTERNAL_MONITORING_APPROVED
+
+[Service]
+User=ikun
+Group=ikun
+UMask=0077
+Environment=HOME=/var/lib/ikun TZ=Asia/Shanghai
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ikun /var/log/ikun /opt/ikun/current/apps/website/.next/cache
+ExecStart=/opt/ikun/venvs/tracking/bin/python /opt/ikun/bin/run_production.py tracking
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=90
+MemoryMax=1024M
+
+[Install]
+WantedBy=multi-user.target

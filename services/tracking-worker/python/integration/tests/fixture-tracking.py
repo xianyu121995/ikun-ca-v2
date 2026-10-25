@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 MODULE = Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(MODULE), str(MODULE / "tests")]
+sys.path[:0] = [str(MODULE), str(MODULE / "tests"), str(MODULE.parents[2] / "packages/runtime/python")]
 import httpx
 from conftest import Vendor
 from fastapi import Request

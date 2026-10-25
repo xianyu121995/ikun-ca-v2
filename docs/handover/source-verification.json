@@ -1,0 +1,103 @@
+{
+  "roles": {
+    "web": {
+      "root": "/opt/ikun/releases/7fa16d69fdbc8c7151c46b0dbbcc29b92cc106fb",
+      "files_checked": 310,
+      "mismatches": [],
+      "missing": []
+    },
+    "tracking": {
+      "root": "/opt/ikun/releases/7fa16d69fdbc8c7151c46b0dbbcc29b92cc106fb",
+      "files_checked": 25,
+      "mismatches": [],
+      "missing": []
+    },
+    "hunter": {
+      "root": "/opt/ikun/releases/ab3b3d768895741f9a4b36d13568ff5de2245ff4",
+      "files_checked": 34,
+      "mismatches": [],
+      "missing": []
+    },
+    "projects": {
+      "root": "/opt/ikun/releases/75dd1907e7ddcad481b4de8523963b5fe15198ae",
+      "files_checked": 56,
+      "mismatches": [],
+      "missing": []
+    }
+  },
+  "6551_daily_calls": [
+    {
+      "day": "2026-10-25",
+      "program": "tracking",
+      "endpoint": "twitter_watch",
+      "status_code": 200,
+      "calls": 14
+    },
+    {
+      "day": "2026-10-25",
+      "program": "tracking",
+      "endpoint": "twitter_watch_add",
+      "status_code": 200,
+      "calls": 4
+    },
+    {
+      "day": "2026-10-25",
+      "program": "tracking",
+      "endpoint": "twitter_watch_delete",
+      "status_code": 200,
+      "calls": 6
+    },
+    {
+      "day": "2026-10-24",
+      "program": "tracking",
+      "endpoint": "twitter_watch",
+      "status_code": 402,
+      "calls": 4
+    },
+    {
+      "day": "2026-10-23",
+      "program": "hunter",
+      "endpoint": "twitter_watch",
+      "status_code": 200,
+      "calls": 1
+    },
+    {
+      "day": "2026-10-23",
+      "program": "hunter",
+      "endpoint": "twitter_watch",
+      "status_code": 402,
+      "calls": 1
+    },
+    {
+      "day": "2026-10-23",
+      "program": "tracking",
+      "endpoint": "twitter_watch",
+      "status_code": 402,
+      "calls": 5
+    },
+    {
+      "day": "2026-10-23",
+      "program": "tracking",
+      "endpoint": "twitter_watch_add",
+      "status_code": 200,
+      "calls": 1
+    },
+    {
+      "day": "2026-10-22",
+      "program": "hunter",
+      "endpoint": "twitter_watch",
+      "status_code": 402,
+      "calls": 1
+    }
+  ],
+  "6551_circuit": {
+    "circuit": {
+      "open": false,
+      "failures": 0,
+      "next_probe": 0
+    }
+  },
+  "ai_cli_path": "/usr/local/bin/codex",
+  "ai_model": "CLI default",
+  "ai_proxy_configured": false
+}

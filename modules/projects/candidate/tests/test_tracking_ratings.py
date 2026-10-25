@@ -181,9 +181,8 @@ def test_path_checks_do_not_follow_or_restat_transient_sidecars(tmp_path,monkeyp
 def test_real_node_ratings_transport(tmp_path):
     root=Path(__file__).resolve().parents[4]
     # Lightweight source entry validation, not a claim that the old Next build was rebuilt.
-    shutil.copyfile(root/'modules/projects/integration/website/lib/projects.ts',root/'modules/projects/.preview/apps/website/lib/projects.ts')
-    node='/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node/bin/node'
-    result=subprocess.run([node,'--import',str(root/'modules/projects/.preview/node_modules/tsx/dist/loader.mjs'),
+    node=shutil.which('node')
+    result=subprocess.run([node,'--import',str(root/'node_modules/tsx/dist/loader.mjs'),
         '--test',str(root/'modules/projects/integration/tests/ratings-ipc.test.mjs')],cwd=root,capture_output=True,text=True,timeout=15)
     (tmp_path/'ratings-node.tap').write_text(result.stdout+result.stderr)
     assert result.returncode==0,result.stdout+result.stderr

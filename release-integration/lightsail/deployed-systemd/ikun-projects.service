@@ -1,0 +1,26 @@
+[Unit]
+Description=ikun production projects
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=ikun
+Group=ikun
+UMask=0077
+Environment=HOME=/var/lib/ikun TZ=Asia/Shanghai
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/ikun /var/log/ikun /opt/ikun/current/apps/website/.next/cache
+RuntimeDirectory=ikun-production-projects
+RuntimeDirectoryMode=0700
+ExecStartPre=/usr/bin/rm -f /run/ikun-production-projects/projects.sock
+ExecStart=/opt/ikun/venvs/projects/bin/python /opt/ikun/bin/run_production.py projects
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=90
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

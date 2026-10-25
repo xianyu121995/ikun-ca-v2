@@ -1,0 +1,38 @@
+{
+  "checked_at_utc": "2026-10-25T09:37:09.970716+00:00",
+  "production_mutations": [],
+  "current": "/opt/ikun/releases/7fa16d69fdbc8c7151c46b0dbbcc29b92cc106fb",
+  "unchanged_service_pids": {
+    "web": 152307,
+    "tracking": 152300,
+    "hunter": 191272,
+    "projects": 9363,
+    "tunnel": 9982
+  },
+  "active_services": [
+    "web",
+    "tracking",
+    "hunter",
+    "projects",
+    "tunnel"
+  ],
+  "oneshot_last_results": {
+    "health": "success",
+    "backup": "success"
+  },
+  "tracking": {
+    "connection": "connected",
+    "heartbeat_age_seconds": 1.7
+  },
+  "automation": {
+    "ikun_wss": "absent from automation registry; not recreated",
+    "vout_50": "ACTIVE",
+    "vout_config_sha256": "a8fcdcd0fc3c9b294e08d471e61b12dc03418f72153eaad43bf5e7458830a754",
+    "vout_config_unchanged": true
+  },
+  "main_sha": "63e8a2857241c6a76226f21435e40db9736a1e7e",
+  "pending_voice_sha": "966cbd6f8a13a4ebe04359eca732fcfda4483048",
+  "ecosystem_sha": "9f243bc3076d2ddc2efccc6c34a7a45c03a065f5",
+  "new_ssh_key_generated": false,
+  "provider_requests": 0
+}

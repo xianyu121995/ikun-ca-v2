@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {randomUUID} from 'node:crypto';
-import {mkdtempSync,mkdirSync,rmSync,readFileSync,copyFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,rmSync,copyFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {AuthStore} from '../dist/src/store.js';
@@ -61,8 +61,7 @@ test('B1 fixed scope and future SQLite versions fail closed',()=>fixture(async e
  e.store.db.exec('PRAGMA user_version=3');assert.throws(()=>inspectAuthDatabase(e.cfg),/UNSUPPORTED_VERSION/);e.store.db.exec('PRAGMA user_version=2');
 }));
 test('B1 actual pinned B0 defaults reject Auth2; explicit readonly domain admission checks checksum/scope',async()=>{
- const manifest=JSON.parse(readFileSync(new URL('../test-results/b1-preview.json',import.meta.url)));
- const runtime=await import(new URL('file://'+join(manifest.preview,'packages/runtime/dist/index.js')));
+ const runtime=await import(new URL('../../../packages/runtime/dist/index.js',import.meta.url));
  const dir=mkdtempSync('/private/tmp/ikun-auth-b0-policy-'),cfg=config({dataRoot:dir,origin,secure:false});
  try{
   const created=runtime.openStores('website',dir,{names:['auth']});runtime.closeStores(created);

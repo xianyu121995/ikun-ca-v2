@@ -131,3 +131,14 @@
 .hunter-v3 .score-buttons .ik-button[data-grade="ignore"] {color:#e38b8b;border-color:#5a2f35;}
 .hunter-v3 .score-buttons .ik-button[data-grade="ignore"]:hover {background:#3a1d22;color:#ffb3b3;}
 .hunter-v3 .drawer-note.ai-note {border-color:#2b5f55;background:#0f2a26;color:#8fe3cf;margin-bottom:8px;}
+
+/* New-discovery sound alert controls (frontend-only) */
+.hunter-v3 .alert-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 6px;border:1px solid #2a4251;border-radius:7px;background:#0d1d27}
+.hunter-v3 .alert-toggle,.hunter-v3 .alert-preview{border:1px solid #2a4251;background:#132431;color:#cbdfe8;border-radius:5px;padding:6px 9px;font-size:10.5px;font-weight:650;cursor:pointer;white-space:nowrap}
+.hunter-v3 .alert-toggle:hover,.hunter-v3 .alert-preview:hover{background:#1a3340}
+.hunter-v3 .alert-toggle.on{border-color:#1d5655;background:#0d3435;color:#56e9d3}
+.hunter-v3 .alert-select{background:#101f2b;border:1px solid #263e4e;color:#d4e5ec;border-radius:5px;min-height:28px;padding:0 6px;font-size:10.5px;outline:none}
+.hunter-v3 .alert-select:focus{border-color:#2ec9b5}
+.hunter-v3 .alert-volume{display:flex;align-items:center;gap:5px;color:#7e9aaa;font-size:10px}
+.hunter-v3 .alert-volume input[type=range]{width:72px;accent-color:#31dabb}
+@media(max-width:760px){.hunter-v3 .alert-controls{width:100%;order:3}.hunter-v3 .alert-volume{flex:1}.hunter-v3 .alert-volume input[type=range]{flex:1;width:auto}}

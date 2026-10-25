@@ -6,6 +6,7 @@ import type {DiscoveryDTO,CommandResult,HunterAccountDTO,ProjectFields} from '..
 import './hunter-host.css';
 import {clearClientSession,invalidateClientData,peekClientData,readClientData,saveClientData} from '../lib/client-session-cache';
 import {loadTrackingSubscriptions,invalidateTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
+import {fireHunterAlert,bindTitleFlashLifecycle,type DiscoveryCue} from '../lib/hunter-alert';
 
 type Session={user_id:string;role:'superadmin'|'user';csrf_token:string;must_change_password:boolean;capabilities:{can_manage_hunter:boolean}};
 type Snapshot={records:DiscoveryDTO[];nextCursor:string|null;cursor:string|null;history:(string|null)[];query:Record<string,string>;filterValues:Filters;counts:{total:number;enabled:number}|null};
@@ -18,6 +19,7 @@ export interface LiveBinding{
  projects:Project[];role:'superadmin'|'user';loading:boolean;refreshing:boolean;error:string|null;
  fixture:boolean;nextCursor:string|null;previous:boolean;blockedIds:ReadonlySet<string>;
  counts:{total:number;enabled:number}|null;
+ alertNotice:string|null;clearAlertNotice:()=>void;
  confirm:(project:Project)=>Promise<Outcome>;ignore:(project:Project)=>Promise<Outcome>;addHome:(project:Project)=>Promise<Outcome>;save:(project:Project)=>Promise<Outcome>;manage:(action:'add'|'enable'|'disable'|'remove',handle:string)=>Promise<Outcome>;
  refresh:()=>void;next:()=>void;back:()=>void;
  filter:(key:string,value:string)=>void;
@@ -38,6 +40,10 @@ export default function HunterController({session,fixture=false}:{session:Sessio
  const [filterValues,setFilterValues]=useState<Filters>(snapshot?.filterValues??{query:'',time:'all',grade:'all',status:'all'});
  const researchOps=useRef(new Map<string,{key:string;body:string;revision:number}>());
  const [researchUnknown,setResearchUnknown]=useState<ReadonlySet<string>>(new Set());
+ const [alertNotice,setAlertNotice]=useState<string|null>(null);
+ const notifyAlert=(message:string)=>setAlertNotice(message);
+ const toCue=(row:Pick<DiscoveryDTO,'discovery_id'|'discovered_at'|'x_handle'>):DiscoveryCue=>({discovery_id:row.discovery_id,discovered_at:row.discovered_at,x_handle:row.x_handle});
+ const runAlert=(cues:DiscoveryCue[])=>{if(!cues.length||fixture)return;void fireHunterAlert(cues,{onToast:notifyAlert});};
  const generation=useRef(0),active=useRef<AbortController|null>(null),readAt=useRef(Date.now()),currentRecords=useRef(records);currentRecords.current=records;
  async function api(path:string,method='GET',body?:unknown,extra:Record<string,string>={},signal?:AbortSignal){
   const response=await fetch(path,{method,headers:{'content-type':'application/json','x-csrf-token':session.csrf_token,...extra},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store',signal});
@@ -58,7 +64,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
     item.monitoring_state=sub?.error_code?'failed':sub?.desired_state==='running'&&sub.observed_state==='running'&&sub.connection==='connected'?'succeeded':'pending';
     item.monitoring_message=sub?.error_code?'失败：'+sub.error_code:item.monitoring_state==='succeeded'?'追踪中':sub?.desired_state==='removed'?'追踪已移除':sub?.desired_state==='stopped'?'追踪已停止':sub?'监听连接中':'订阅投递中或追踪服务暂不可用';
    }
-   if(version!==generation.current||controller.signal.aborted)return;readAt.current=started;setRecords(page.items);setNextCursor(page.next_cursor);
+   if(version!==generation.current||controller.signal.aborted)return;readAt.current=started;setRecords(page.items);setNextCursor(page.next_cursor);runAlert(page.items.map(toCue));
    saveClientData(scope,'hunter:view',{records:page.items,nextCursor:page.next_cursor,cursor:target,history,query,counts,filterValues});
    for(const item of page.items)if(item.project_id&&homeWanted.current.has(item.discovery_id))void homeAdd(item.project_id).then(()=>forgetHome(item.discovery_id)).catch(()=>{});
   }catch(e){if(controller.signal.aborted)return;setError(e instanceof Error?e.message:'列表不可用');}
@@ -66,13 +72,14 @@ export default function HunterController({session,fixture=false}:{session:Sessio
  }
  const loadRef=useRef(load);loadRef.current=load;
  useEffect(()=>{void loadRef.current(cursor,!snapshot);const poll=setInterval(()=>void loadRef.current(),10000);return()=>{clearInterval(poll);active.current?.abort();generation.current++;};},[cursor,query]);
+ useEffect(()=>bindTitleFlashLifecycle(),[]);
  useEffect(()=>{
   if(revoked)return;
   const source=new EventSource('/api/v1/hunter/events'),abort=new AbortController();
   let closed=false,busy=false,again=false,checking=false,timer:ReturnType<typeof setTimeout>|undefined;
   const refresh=(event?:Event)=>{
    if(closed)return;
-   if(event){try{const data=JSON.parse((event as MessageEvent).data).data;const known=currentRecords.current.find(row=>row.discovery_id===data.discovery_id);if(known&&data.revision<=known.revision)return;const at=Date.parse(data.updated_at||data.last_seen_at||data.discovered_at||'');if(Number.isFinite(at)&&at<=readAt.current)return;}catch{return;}}
+   if(event){try{const data=JSON.parse((event as MessageEvent).data).data;if(data&&typeof data.discovery_id==='string')runAlert([toCue(data)]);const known=currentRecords.current.find(row=>row.discovery_id===data.discovery_id);if(known&&data.revision<=known.revision)return;const at=Date.parse(data.updated_at||data.last_seen_at||data.discovered_at||'');if(Number.isFinite(at)&&at<=readAt.current)return;}catch{return;}}
    if(busy){again=true;return;}
    if(timer)return;
    timer=setTimeout(()=>{timer=undefined;if(closed)return;busy=true;void loadRef.current().finally(()=>{busy=false;if(again){again=false;refresh();}});},250);
@@ -188,7 +195,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
  }
  const projects:Project[]=records.map(toProject);
  const updateFilter=(key:string,value:string)=>{setCursor(null);setHistory([]);setQuery(old=>{const next={...old};if(key==='query'){if(value)next.q=value;else delete next.q;}if(key==='grade'){if(value!=='all')next.rating=value==='none'?'unrated':value;else delete next.rating;}if(key==='status'){if(value!=='all')next.review_state=value==='joined'?'tracking':value;else delete next.review_state;}if(key==='time'){delete next.since;delete next.until;if(value!=='all'){next.since=new Date(Date.now()-Number(value)*3600000).toISOString();next.until=new Date().toISOString();}}return JSON.stringify(old)===JSON.stringify(next)?old:next;});};
- const binding:LiveBinding={initialFilters:filterValues,projects,role:revoked?'user':session.role,loading,refreshing,error,fixture,nextCursor,previous:history.length>0,counts,filter:(key,value)=>{setFilterValues(old=>({...old,[key]:value}));updateFilter(key,value);},
+ const binding:LiveBinding={initialFilters:filterValues,projects,role:revoked?'user':session.role,loading,refreshing,error,fixture,nextCursor,previous:history.length>0,counts,alertNotice,clearAlertNotice:()=>setAlertNotice(null),filter:(key,value)=>{setFilterValues(old=>({...old,[key]:value}));updateFilter(key,value);},
   blockedIds:new Set([...blockedIds,...researchUnknown,...records.filter(item=>!!item.monitoring_state&&item.monitoring_state!=='failed').map(item=>item.discovery_id)]),confirm,ignore,addHome,save,manage,refresh:()=>{void load();},
   next:()=>{if(nextCursor&&!refreshing&&!loading){setHistory(old=>[...old,cursor]);setCursor(nextCursor);}},back:()=>{if(history.length&&!refreshing&&!loading){setCursor(history.at(-1)!);setHistory(old=>old.slice(0,-1));}}};
  return <App live={binding}/>;

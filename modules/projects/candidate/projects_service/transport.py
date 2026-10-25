@@ -9,6 +9,8 @@ from .models import CoreProjectFields, StrictModel, normalize_website
 
 SCOPE='ikun-main'
 UUID4=r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
+# Accept legacy cleanup command IDs (uuid5) so outbox_result can finish them.
+UUID=r'[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
 Rating=Literal['S','A','B','C','D']
 Stage=Literal['todo','researching','watching','participating','completed','paused']
 Membership=Literal['hidden','active','removed']
@@ -173,7 +175,7 @@ class Milestone(StrictModel):
 
 
 class CommandResult(StrictModel):
-    command_id: str=Field(pattern='^cmd_'+UUID4+'$')
+    command_id: str=Field(pattern='^cmd_'+UUID+'$')
     state: Literal['accepted','pending','running','succeeded','failed','unknown']
     project_id: str | None=Field(pattern='^prj_'+UUID4+'$')
     subscription_id: str | None=Field(pattern='^sub_'+UUID4+'$')

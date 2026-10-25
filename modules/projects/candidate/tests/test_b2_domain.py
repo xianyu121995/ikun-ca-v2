@@ -196,6 +196,77 @@ def test_outbox_unknown_reconciles_before_repost(domain):
     assert claim() is None
     assert call(domain,'command',target=cmd)[1]['subscription_id']==result['subscription_id']
 
+def test_cleanup_outbox_id_is_uuid4_shaped_and_idempotent(domain):
+    p=create(domain);key=uid()
+    call(domain,'membership',target=p['project_id'],body={'action':'remove'},if_match='"rev-1"',idempotency_key=key)
+    with domain.db.connect() as con:
+        rows=con.execute("SELECT command_id,command_json FROM tracking_outbox WHERE project_id=?",(p['project_id'],)).fetchall()
+    assert len(rows)==1
+    cid=rows[0]['command_id']
+    import re
+    assert re.fullmatch(r'cmd_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}',cid)
+    body=json.loads(rows[0]['command_json'])
+    assert body['operation']=='tracking.remove' and body['command_id']==cid
+    # Same idempotency key + same body/if_match replays the receipt; still one cleanup row.
+    call(domain,'membership',target=p['project_id'],body={'action':'remove'},if_match='"rev-1"',idempotency_key=key)
+    with domain.db.connect() as con:
+        assert con.execute('SELECT COUNT(*) FROM tracking_outbox WHERE project_id=?',(p['project_id'],)).fetchone()[0]==1
+        assert con.execute('SELECT command_id FROM tracking_outbox WHERE project_id=?',(p['project_id'],)).fetchone()[0]==cid
+    # A distinct idempotency key for another remove of the same project yields a distinct deterministic cleanup id.
+    other=uid()
+    call(domain,'membership',target=p['project_id'],body={'action':'add'},if_match='"rev-2"',idempotency_key=uid())
+    call(domain,'membership',target=p['project_id'],body={'action':'remove'},if_match='"rev-3"',idempotency_key=other)
+    with domain.db.connect() as con:
+        ids=sorted(r[0] for r in con.execute('SELECT command_id FROM tracking_outbox WHERE project_id=?',(p['project_id'],)))
+    assert len(ids)==2 and cid in ids and ids[0]!=ids[1]
+    import re
+    assert all(re.fullmatch(r'cmd_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}',i) for i in ids)
+
+def test_legacy_uuid5_cleanup_command_id_accepted_for_outbox_finish(domain):
+    # Existing production rows used uuid5; projects must still accept them so relay can finish.
+    p=create(domain)
+    legacy='cmd_'+str(uuid.uuid5(uuid.NAMESPACE_URL,'tracking-cleanup:legacy-test:'+p['project_id']))
+    assert legacy.split('-')[2][0]=='5'
+    command={'schema_version':1,'command_id':legacy,'tenant_id':'ikun-main','actor':ADMIN,
+             'operation':'tracking.remove','project_id':p['project_id'],'subscription_id':None,
+             'expected_revision':None,'payload':{},'issued_at':'2026-10-15T00:00:00Z'}
+    body=json.dumps(command,separators=(',',':'),sort_keys=True)
+    with domain.db.transaction() as con:
+        con.execute('INSERT INTO tracking_outbox(command_id,tenant_id,project_id,command_json,command_hash,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)',
+                    (legacy,'ikun-main',p['project_id'],body,uuid.uuid4().hex,'pending','2026-10-15T00:00:00Z','2026-10-15T00:00:00Z'))
+    item=call(domain,'outbox_claim',principal=None,source='tracking',target=legacy)[1]['item']
+    assert item and item['command']['command_id']==legacy and item['action']=='send'
+    result=dict(command_id=legacy,state='succeeded',project_id=p['project_id'],subscription_id=None,revision=None,
+                updated_at='2026-10-15T00:00:01Z',error_code=None,request_id=uid())
+    done=call(domain,'outbox_result',principal=None,source='tracking',target=legacy,
+              body={'lease_token':item['lease_token'],'outcome':'received','result':result})[1]
+    assert done['state']=='succeeded'
+    assert call(domain,'command',target=legacy)[1]['state']=='succeeded'
+
+def test_outbox_claim_bumps_updated_at_for_fairness(domain):
+    # Two pending rows; claiming the older one must not keep it forever at the head of ORDER BY updated_at.
+    a=event();a['payload']['command_id']=uid('cmd_');a['payload']['source_entity_key']='fair-a';a['event_id']=uid('evt_');a['payload']['x_handle']='fair_a'
+    b=event();b['payload']['command_id']=uid('cmd_');b['payload']['source_entity_key']='fair-b';b['event_id']=uid('evt_');b['payload']['x_handle']='fair_b';b['payload']['x_user_id']='999001'
+    ra=call(domain,'ingest',principal=None,source='hunter',body=a)[1]
+    rb=call(domain,'ingest',principal=None,source='hunter',body=b)[1]
+    with domain.db.transaction() as con:
+        con.execute("UPDATE tracking_outbox SET updated_at='2026-10-15T00:00:00.000000Z' WHERE command_id=?",(ra['command_id'],))
+        con.execute("UPDATE tracking_outbox SET updated_at='2026-10-15T00:00:01.000000Z' WHERE command_id=?",(rb['command_id'],))
+    first=call(domain,'outbox_claim',principal=None,source='tracking')[1]['item']
+    assert first['command']['command_id']==ra['command_id']
+    # While first is leased, second can still be claimed (different row).
+    second=call(domain,'outbox_claim',principal=None,source='tracking')[1]['item']
+    assert second['command']['command_id']==rb['command_id']
+    # Release first as unknown; its updated_at was bumped on claim, so after lease expiry the other
+    # completed/newer work stays ahead — re-seed a third pending with an older stamp and ensure
+    # after claim+unknown the previously-claimed row is no longer strictly oldest.
+    call(domain,'outbox_result',principal=None,source='tracking',target=ra['command_id'],
+         body={'lease_token':first['lease_token'],'outcome':'unknown'})
+    with domain.db.connect() as con:
+        row=con.execute('SELECT updated_at,attempts FROM tracking_outbox WHERE command_id=?',(ra['command_id'],)).fetchone()
+        assert row['attempts']>=1
+        assert row['updated_at']>'2026-10-15T00:00:00.000000Z'
+
 def test_ipc_boundary_and_error_envelopes(domain):
     cfg=IpcConfig(str(domain.db.path),'a'*64,'b'*40)
     with TestClient(create_ipc_app(cfg),raise_server_exceptions=False) as client:

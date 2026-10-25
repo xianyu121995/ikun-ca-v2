@@ -12,7 +12,7 @@ from .migration import FormalDatabase
 from .models import CoreProjectImport, CoreProjectPatch, normalize_website
 from .queries import canonical, page, record, summary, milestones
 from . import home
-from .transport import CommandResult, Event, Fields, MembershipAction, Rpc, SCOPE, UUID4
+from .transport import CommandResult, Event, Fields, MembershipAction, Rpc, SCOPE, UUID, UUID4
 from .ratings import RatingsCatalog
 from . import tracking_observations as observations
 
@@ -36,7 +36,9 @@ def receipt_route(method,path,contract):
 
 
 def valid_id(value,prefix='prj_'):
-    if not isinstance(value,str) or not re.fullmatch(prefix+UUID4,value):
+    # cmd_ accepts RFC4122 v1-5 so legacy uuid5 cleanup rows can be claimed/finished.
+    pattern=UUID if prefix=='cmd_' else UUID4
+    if not isinstance(value,str) or not re.fullmatch(prefix+pattern,value):
         raise DomainError(422,'VALIDATION_ERROR','ID 格式不正确')
     return value
 
@@ -179,7 +181,8 @@ class Service:
             if rpc.operation=='completions':cleanup=[r['id'] for r in rows]
             elif rpc.operation in ('delete','completion') or (rpc.operation=='membership' and rpc.body.get('action')=='remove') or (rpc.operation=='patch' and rpc.body.get('complete')):cleanup=[project_id]
             for target in cleanup:
-                cid='cmd_'+str(uuid.uuid5(uuid.NAMESPACE_URL,'tracking-cleanup:'+rpc.principal.user_id+':'+key+':'+target))
+                digest=hashlib.sha256(('tracking-cleanup:'+rpc.principal.user_id+':'+key+':'+target).encode()).digest()
+                cid='cmd_'+str(uuid.UUID(bytes=digest[:16],version=4))
                 command={'schema_version':1,'command_id':cid,'tenant_id':SCOPE,'actor':rpc.principal.model_dump(),'operation':'tracking.remove','project_id':target,'subscription_id':None,'expected_revision':None,'payload':{},'issued_at':now()}
                 body=canonical(command)
                 con.execute('INSERT OR IGNORE INTO tracking_outbox(command_id,tenant_id,project_id,command_json,command_hash,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)',(cid,SCOPE,target,body,hashlib.sha256(body.encode()).hexdigest(),'pending',now(),now()))
@@ -263,7 +266,8 @@ class Service:
                 row=con.execute("SELECT * FROM tracking_outbox WHERE state IN ('pending','unknown','accepted','running') AND (lease_until IS NULL OR lease_until<=?)"+(' AND command_id=?' if wanted else '')+' ORDER BY updated_at,command_id LIMIT 1',(stamp,wanted) if wanted else (stamp,)).fetchone()
                 if not row:return 200,{'item':None},None
                 token=str(uuid.uuid4());action='send' if row['state']=='pending' and not row['delivered'] else 'reconcile'
-                con.execute("UPDATE tracking_outbox SET state=?,lease_until=?,lease_token=?,attempts=attempts+1 WHERE command_id=?",('unknown' if action=='reconcile' else 'sending',stamp+30,token,row['command_id']))
+                # Bump updated_at on claim so a perpetually-failing row rotates behind newer work.
+                con.execute("UPDATE tracking_outbox SET state=?,lease_until=?,lease_token=?,attempts=attempts+1,updated_at=? WHERE command_id=?",('unknown' if action=='reconcile' else 'sending',stamp+30,token,now(),row['command_id']))
                 return 200,{'item':{'command':json.loads(row['command_json']),'action':action,'lease_token':token}},None
             if set(rpc.body)-{'lease_token','outcome','result'}:raise DomainError(422,'VALIDATION_ERROR','回执字段不正确')
             row=con.execute('SELECT * FROM tracking_outbox WHERE command_id=?',(valid_id(rpc.target,'cmd_'),)).fetchone()

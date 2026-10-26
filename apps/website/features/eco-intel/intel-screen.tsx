@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { AppShell, Button } from '@ikun/ui';
+import Link from 'next/link';
+import { AppShell } from '@ikun/ui';
 import { WorkspaceLink } from '../../components/auth/forms';
 import { ProjectsPanel } from './projects-panel';
 import { TweetsPanel } from './tweets-panel';
@@ -44,9 +44,9 @@ export function IntelScreen({ section, session }: {
 }
 
 function SectionSwitcher({ section }: { section: IntelSection }) {
-  const router = useRouter();
   return <>{sections.map(item => {
     const current = item.id === section;
-    return <Button key={item.id} variant={section === 'tweets' && current ? 'primary' : 'secondary'} className={current ? 'soft' : ''} aria-current={current ? 'page' : undefined} onClick={() => { if (!current) router.push(item.href); }}>{item.label}</Button>;
+    const variant = section === 'tweets' && current ? 'primary' : 'secondary';
+    return <Link key={item.id} href={item.href} aria-current={current ? 'page' : undefined} className={`ik-button ik-button--${variant} ik-button--md${current ? ' soft' : ''}`}>{item.label}</Link>;
   })}</>;
 }

@@ -4,7 +4,7 @@ import { requireAuthPage } from '../../lib/auth';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export default async function IntelSeedsPage() {
+export default async function IntelProjectsPage() {
   const session = await requireAuthPage('/intel');
-  return <IntelScreen section="seeds" session={session} />;
+  return <IntelScreen section="projects" session={session} />;
 }

@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { IntelError } from './rules';
 import type { IntelStore } from './store';
+import type { TrackingHandoffResult, TrackingSubmitter } from './tracking';
 import type { IntelPrincipal } from './types';
+
+const TRACK_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 function requestIdOf(request: Request): string {
   const value = request.headers.get('x-request-id');
@@ -91,11 +94,11 @@ function expectedRevision(request: Request): number {
  * Read/write API for the eco-intel skeleton.
  * TODO(6551): do not add a live WSS client here. Provider events belong in acceptProviderEvent().
  */
-export async function handleIntel(store: IntelStore, principal: IntelPrincipal, request: Request): Promise<Response> {
+export async function handleIntel(store: IntelStore, principal: IntelPrincipal, request: Request, ports?: { submitTracking?: TrackingSubmitter }): Promise<Response> {
   const requestId = requestIdOf(request);
   try {
     const url = new URL(request.url);
-    const match = url.pathname.match(/^\/api\/v1\/intel\/(seeds|tweets|follows)(?:\/([A-Za-z0-9_-]+)(?:\/(promote))?)?$/);
+    const match = url.pathname.match(/^\/api\/v1\/intel\/(seeds|tweets|follows)(?:\/([A-Za-z0-9_-]+)(?:\/(promote|track))?)?$/);
     if (!match) return fail(requestId, 404, 'NOT_FOUND', '生态情报入口不存在');
     const collection = match[1] as 'seeds' | 'tweets' | 'follows';
     const id = match[2];
@@ -107,6 +110,10 @@ export async function handleIntel(store: IntelStore, principal: IntelPrincipal, 
     }
     if (principal.role !== 'superadmin') return fail(requestId, 403, 'FORBIDDEN', '当前账号只读');
     if (!['POST', 'PATCH', 'DELETE'].includes(method)) return fail(requestId, 405, 'VALIDATION_ERROR', '不支持的方法');
+    if (method === 'POST' && collection === 'follows' && action === 'track') {
+      if (!id) return fail(requestId, 404, 'NOT_FOUND', '生态情报入口不存在');
+      return await trackFollow(store, principal, request, requestId, id, ports?.submitTracking);
+    }
     const raw = await readRaw(request);
     const body = parseObject(raw);
     const key = idempotencyKey(request);
@@ -135,7 +142,10 @@ function readList(store: IntelStore, collection: 'seeds' | 'tweets' | 'follows',
   const cursor = url.searchParams.get('cursor') ?? undefined;
   if (collection === 'seeds') return store.listSeeds(q, limit, cursor);
   if (collection === 'tweets') return store.listTweets(q, limit, cursor);
-  return store.listFollows(q, url.searchParams.get('status') ?? '', limit, cursor);
+  return store.listFollows(q, url.searchParams.get('status') ?? '', limit, cursor, {
+    chain: url.searchParams.get('chain') ?? '',
+    view: url.searchParams.get('view') ?? '',
+  });
 }
 
 function write(store: IntelStore, method: string, collection: 'seeds' | 'tweets' | 'follows', id: string | undefined, action: string | undefined, body: Record<string, unknown>, request: Request): { status: number; body: unknown } {
@@ -151,7 +161,7 @@ function write(store: IntelStore, method: string, collection: 'seeds' | 'tweets'
       onlyKeys(body, ['x_handle', 'text', 'url', 'occurred_at']);
       return { status: 201, body: store.insertTweet(body) };
     }
-    onlyKeys(body, ['x_handle', 'seed_handle', 'display_name', 'bio', 'recent_summary', 'account_type', 'notes', 'occurred_at']);
+    onlyKeys(body, ['x_handle', 'seed_handle', 'display_name', 'bio', 'recent_summary', 'account_type', 'chain', 'notes', 'occurred_at']);
     return { status: 201, body: store.insertFollow(body) };
   }
   if (!id) throw new IntelError(404, 'NOT_FOUND', '生态情报入口不存在');
@@ -166,7 +176,7 @@ function write(store: IntelStore, method: string, collection: 'seeds' | 'tweets'
     return { status: 200, body: { deleted: true, seed_id: id } };
   }
   if (method === 'PATCH' && collection === 'follows' && !action) {
-    onlyKeys(body, ['notes', 'account_type', 'status']);
+    onlyKeys(body, ['notes', 'account_type', 'chain', 'status']);
     return { status: 200, body: store.updateFollow(id, revision, body) };
   }
   if (method === 'DELETE' && collection === 'follows' && !action) {
@@ -179,4 +189,71 @@ function write(store: IntelStore, method: string, collection: 'seeds' | 'tweets'
     return { status: 200, body: store.promoteFollow(id, revision, body.ecosystem, body.role_label) };
   }
   throw new IntelError(405, 'VALIDATION_ERROR', '不支持的方法');
+}
+
+function trackReceipt(follow: { follow_id: string }, command: unknown, delivery: 'queued' | 'submitted' | 'rejected', remoteState: string, error: string) {
+  const queued = delivery === 'queued';
+  const message = delivery === 'submitted'
+    ? '已提交猎手项目追踪。命令与现有 tracking.create 相同；新推文进入猎手项目追踪。这不表示 6551 已经连通。'
+    : delivery === 'rejected'
+      ? (error || '项目追踪被拒绝')
+      : '已入队与猎手项目追踪相同的 tracking.create。当前环境没有投递成功。TODO(6551)：这里不另开监控。';
+  return {
+    status: delivery === 'rejected' ? 409 : 202,
+    body: {
+      follow,
+      command,
+      delivery,
+      remote_state: remoteState,
+      message,
+      todo: queued ? '6551' : null,
+    },
+  };
+}
+
+async function trackFollow(store: IntelStore, principal: IntelPrincipal, request: Request, requestId: string, id: string, submit?: TrackingSubmitter): Promise<Response> {
+  const raw = await readRaw(request);
+  const body = parseObject(raw);
+  onlyKeys(body, ['confirmed']);
+  if (body.confirmed !== true) throw new IntelError(422, 'VALIDATION_ERROR', '需要确认后才能加入项目追踪');
+  const key = idempotencyKey(request);
+  if (!TRACK_UUID.test(key)) throw new IntelError(422, 'VALIDATION_ERROR', '项目追踪需要 UUID Idempotency-Key');
+  const revision = expectedRevision(request);
+  const hash = createHash('sha256').update(raw).digest('hex');
+  const route = `POST ${new URL(request.url).pathname}`;
+  const prior = store.recall(principal.user_id, route, key);
+  if (prior && prior.body_hash !== hash) throw new IntelError(409, 'CONFLICT', '原请求结果与当前内容不一致');
+  const prepared = store.queueTracking(id, revision, principal.user_id, key);
+  if (prepared.track.state === 'submitted') {
+    const receipt = trackReceipt(prepared.follow, prepared.track.command, 'submitted', prepared.track.remote_state, '');
+    if (!prior) store.transaction(() => store.remember(principal.user_id, route, key, hash, receipt.status, 'data', receipt.body));
+    return ok(requestId, receipt.status, receipt.body);
+  }
+  const handoff: TrackingHandoffResult = submit
+    ? await submit({
+      actorId: principal.user_id,
+      requestId,
+      idempotencyKey: prepared.track.idempotency_key,
+      body: {
+        name: String(prepared.track.command.payload.name ?? ''),
+        x_handle: String(prepared.track.command.payload.x_handle ?? ''),
+        x_user_id: prepared.track.command.payload.x_user_id == null ? null : String(prepared.track.command.payload.x_user_id),
+        notes: String(prepared.track.command.payload.notes ?? ''),
+        confirmed: true,
+        ...(typeof prepared.track.command.project_id === 'string' ? { project_id: prepared.track.command.project_id } : {}),
+      },
+      signal: request.signal,
+    }).catch((error: unknown) => ({
+      ok: false,
+      status: 503,
+      command: null,
+      remoteState: '',
+      error: error instanceof Error ? error.message : 'TODO(6551): 投递未完成',
+    }))
+    : { ok: false, status: 503, command: null, remoteState: '', error: 'TODO(6551): 投递未接线' };
+  const finished = store.finishTracking(id, handoff);
+  const delivery = finished.track.state === 'submitted' ? 'submitted' : finished.track.state === 'rejected' ? 'rejected' : 'queued';
+  const receipt = trackReceipt(finished.follow, finished.track.command, delivery, finished.track.remote_state, finished.track.last_error);
+  if (!prior) store.transaction(() => store.remember(principal.user_id, route, key, hash, receipt.status, 'data', receipt.body));
+  return ok(requestId, receipt.status, receipt.body);
 }

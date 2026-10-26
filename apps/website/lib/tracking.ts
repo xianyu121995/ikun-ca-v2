@@ -1,10 +1,38 @@
-import { createHash } from 'node:crypto';
 import { requireIdentity, requireSuperadmin, withAuth } from '../../../modules/auth/dist/src/server.js';
 import { ipc, requestId, failure } from './projects';
 import { publishedFeed } from './published-feed';
 import { withSseHeartbeat } from './sse-heartbeat';
+import { TRACKING_CREATE_ROUTE, commandId, trackingCreateCommand } from './tracking-command';
+export { commandId, trackingCreateCommand, TRACKING_CREATE_ROUTE };
 const uuid = '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
-export function commandId(actor: string, route: string, key: string) { const bytes = createHash('sha256').update(JSON.stringify([actor, 'ikun-main', route, key])).digest().subarray(0, 16); bytes[6] = (bytes[6]! & 15) | 64; bytes[8] = (bytes[8]! & 63) | 128; const h = bytes.toString('hex'); return 'cmd_' + [h.slice(0, 8), h.slice(8, 12), h.slice(12, 16), h.slice(16, 20), h.slice(20)].join('-'); }
+type TrackingPrincipal = { user_id: string; tenant_id: 'ikun-main'; role: 'superadmin' | 'user' };
+/** Projects tracking_register (when needed) plus the tracking.create command the hunter path also enqueues. */
+export async function submitTrackingCreate(principal: TrackingPrincipal, requestIdValue: string, key: string, body: Record<string, unknown>, signal?: AbortSignal) {
+    if (principal.role !== 'superadmin') return { response: failure(requestIdValue, 403, 'FORBIDDEN', '当前账号只读'), command: null };
+    let projectId = body.project_id;
+    if (typeof projectId !== 'string') {
+        const registered = await ipc({ operation: 'tracking_register', principal, request_id: requestIdValue, idempotency_key: key, body: { name: body.name, x_handle: body.x_handle, notes: body.notes ?? '', rating: body.rating ?? null } }, signal);
+        if (!registered.ok) return { response: registered, command: null };
+        projectId = (await registered.json()).data.project_id;
+    }
+    const canonical = await ipc({ operation: 'get', target: projectId as string, principal, request_id: requestIdValue }, signal);
+    if (!canonical.ok) return { response: canonical, command: null };
+    const record = (await canonical.json()).data;
+    if (record.project_id !== projectId) return { response: failure(requestIdValue, 409, 'CONFLICT', 'canonical 引用不匹配'), command: null };
+    const command = trackingCreateCommand({
+        actor: principal,
+        route: TRACKING_CREATE_ROUTE,
+        idempotencyKey: key,
+        projectId: projectId as string,
+        name: body.name,
+        xUserId: body.x_user_id ?? null,
+        xHandle: body.x_handle,
+        notes: body.notes ?? '',
+        issuedAt: new Date().toISOString(),
+    });
+    const response = await trackingService('commands', requestIdValue, { method: 'POST', body: JSON.stringify(command), signal });
+    return { response, command };
+}
 export async function trackingService(path: string, id: string, options: RequestInit = {}) {
     const target = process.env.TRACKING_API_URL, token = process.env.TRACKING_API_TOKEN;
     if (!target || !token || token.length < 32)
@@ -109,20 +137,7 @@ export async function trackingRoute(original: Request) {
         if (suffix === '/subscriptions' && method === 'POST') {
             if (Object.keys(body).some(k => !['project_id', 'name', 'x_user_id', 'x_handle', 'notes', 'rating', 'confirmed'].includes(k)) || body.confirmed !== true)
                 return failure(id, 422, 'VALIDATION_ERROR', '需要人工确认的项目');
-            if (typeof body.project_id !== 'string') {
-                const registered = await ipc({operation:'tracking_register',principal,request_id:id,idempotency_key:key,body:{name:body.name,x_handle:body.x_handle,notes:body.notes??'',rating:body.rating??null}},request.signal);
-                if (!registered.ok) return registered;
-                body.project_id=(await registered.json()).data.project_id;
-            }
-            const canonical = await ipc({ operation: 'get', target: body.project_id as string, principal, request_id: id }, request.signal);
-            if (!canonical.ok)
-                return canonical;
-            const record = (await canonical.json()).data;
-            if (record.project_id !== body.project_id)
-                return failure(id, 409, 'CONFLICT', 'canonical 引用不匹配');
-            const command = { schema_version: 1, command_id: commandId(principal.user_id, method + ' ' + url.pathname, key), tenant_id: 'ikun-main', actor: principal, operation: 'tracking.create', project_id: body.project_id, subscription_id: null, expected_revision: null,
-                payload: { name: body.name, x_user_id: body.x_user_id ?? null, x_handle: body.x_handle, notes: body.notes ?? '', confirmed: true }, issued_at: new Date().toISOString() };
-            return trackingService('commands', id, { method: 'POST', body: JSON.stringify(command) });
+            return (await submitTrackingCreate(principal, id, key, body, request.signal)).response;
         }
         const match = new RegExp('^/subscriptions/(sub_' + uuid + ')(?:/(start|stop|resume))?$').exec(suffix);
         if (!match || !['PATCH', 'DELETE', 'POST'].includes(method) || method === 'POST' && !match[2])

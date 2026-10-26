@@ -5,6 +5,7 @@ import { Alert, Badge, Button, DataTable, EmptyState, ErrorState, Input, Panel, 
 import { TWEET_TOPICS, labelOf, type SeedRecord, type TweetRecord } from '../../lib/eco-intel/types';
 import { readItems, writeJson } from './client';
 import s from './intel.module.css';
+import { SeedsPanel } from './seeds-panel';
 
 export function TweetsPanel({ csrf, canWrite }: { csrf: string; canWrite: boolean }) {
   const [query, setQuery] = useState('');
@@ -70,7 +71,7 @@ export function TweetsPanel({ csrf, canWrite }: { csrf: string; canWrite: boolea
   ];
 
   return <>
-    <Alert tone="warning" title="推文管道未接通">TODO(6551)：这里应接收种子账号的 WSS 推文。当前只有本地夹具和手工补录。提到黑客松、上线、新协议、发射或融资的文本会标成可推送。</Alert>
+    <Alert tone="warning" title="推文管道未接通">TODO(6551)：这里应接收种子和创始人账号的 WSS 推文。当前只有本地夹具和手工补录。提到黑客松、上线、新协议、发射或融资的文本会标成可推送。</Alert>
     {notice && <Alert tone="info" title="种子推文">{notice}</Alert>}
     <SearchInput label="搜索推文" value={query} onValueChange={setQuery} placeholder="搜索账号或正文" />
     {canWrite && <Panel title="补录一条推文" description="用于验收页面。不会向 X 或 6551 拉取。">
@@ -85,5 +86,9 @@ export function TweetsPanel({ csrf, canWrite }: { csrf: string; canWrite: boolea
       error={error ? <ErrorState title="推文列表不可用" description={error} onRetry={() => void load(false)} pending={refreshing} /> : undefined}
       empty={<EmptyState title="还没有推文" description="WSS 未接入。超级管理员可以手工补录，或等待首次建库写入夹具。" />} />
     {cursor && <div className={s.more}><Button onClick={() => void load(false, cursor)} pending={refreshing}>加载更多</Button></div>}
+    <details className={s.admin}>
+      <summary>种子名单（管理员）</summary>
+      <SeedsPanel csrf={csrf} canWrite={canWrite} />
+    </details>
   </>;
 }

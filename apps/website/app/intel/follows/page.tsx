@@ -1,10 +1,9 @@
-import { IntelScreen } from '../../../features/eco-intel/intel-screen';
-import { requireAuthPage } from '../../../lib/auth';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export default async function IntelFollowsPage() {
-  const session = await requireAuthPage('/intel/follows');
-  return <IntelScreen section="follows" session={session} />;
+/** Old third tab. The follow log now lives under 创始人关注的项目. */
+export default function IntelFollowsRedirect() {
+  redirect('/intel');
 }

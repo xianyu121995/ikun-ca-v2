@@ -1,12 +1,13 @@
 import { withAuth } from '../../../../../../../modules/auth/dist/src/server.js';
 import { handleIntel } from '../../../../../lib/eco-intel/http';
 import { intelStore } from '../../../../../lib/eco-intel/store';
+import { submitIntelTracking } from '../../../../../lib/eco-intel/tracking-bridge';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 async function route(request: Request) {
-  return withAuth(request, principal => handleIntel(intelStore(), principal, request));
+  return withAuth(request, principal => handleIntel(intelStore(), principal, request, { submitTracking: submitIntelTracking }));
 }
 
 export const GET = route;

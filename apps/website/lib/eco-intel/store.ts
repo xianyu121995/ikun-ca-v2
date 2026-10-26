@@ -3,9 +3,11 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { isAbsolute, join, parse, resolve } from 'node:path';
 import { DEFAULT_SEEDS, FIXTURE_AT, STUB_FOLLOWS, STUB_TWEETS } from './fixtures';
-import { IntelError, RULES_ANALYSIS, accountTypeOf, boundedText, classifyTweet, ecosystemOf, followDisposition, normalizeUrl, optionalTimestamp, requireHandle } from './rules';
-import { INTEL_APPLICATION_ID, INTEL_FOUNDATION_SQL, INTEL_MIGRATION_CHECKSUM, INTEL_MIGRATION_SQL, INTEL_SCHEMA_VERSION } from './schema';
-import type { AccountType, Ecosystem, FollowRecord, FollowStatus, IntelPage, QueueKind, QueueRecord, SeedRecord, SeedSource, TweetRecord } from './types';
+import { IntelError, RULES_ANALYSIS, accountTypeOf, boundedText, classifyFollow, classifyTweet, ecosystemOf, inferAccountType, inferChain, isProjectType, normalizeUrl, optionalTimestamp, requireHandle, trackChainOf } from './rules';
+import { INTEL_APPLICATION_ID, INTEL_FOUNDATION_SQL, INTEL_MIGRATION_CHECKSUM, INTEL_MIGRATION_SQL, INTEL_PROJECTS_CHECKSUM, INTEL_PROJECTS_SQL, INTEL_SCHEMA_VERSION } from './schema';
+import { TRACKING_CREATE_ROUTE, trackingCreateCommand, type TrackingCreateCommand } from '../tracking-command';
+import type { TrackingHandoffResult } from './tracking';
+import { isTrackChain, labelOf, TRACK_CHAINS, type AccountType, type Ecosystem, type FollowRecord, type FollowStatus, type IntelPage, type QueueKind, type QueueRecord, type SeedRecord, type SeedSource, type TrackChain, type TrackState, type TweetRecord } from './types';
 
 type Row = Record<string, unknown>;
 
@@ -67,11 +69,15 @@ function followFrom(row: Row): FollowRecord {
     bio: String(row.bio),
     recent_summary: String(row.recent_summary),
     account_type: row.account_type as AccountType,
+    chain: (row.chain ?? '') as TrackChain | '',
+    classification: row.classification as FollowRecord['classification'],
     promote_suggested: flag(row.promote_suggested),
     watch_tweets: flag(row.watch_tweets),
+    track_eligible: row.classification !== 'noise',
     promoted_seed_id: row.promoted_seed_id == null ? null : String(row.promoted_seed_id),
     notes: String(row.notes),
     status: row.status as FollowStatus,
+    track_state: (row.track_state ?? 'none') as TrackState,
     source: row.source as FollowRecord['source'],
     revision: Number(row.revision),
     occurred_at: row.occurred_at == null ? null : String(row.occurred_at),
@@ -135,6 +141,7 @@ export interface FollowInput {
   bio?: unknown;
   recent_summary?: unknown;
   account_type?: unknown;
+  chain?: unknown;
   notes?: unknown;
   occurred_at?: unknown;
   source?: FollowRecord['source'];
@@ -145,7 +152,18 @@ export interface FollowInput {
 export interface FollowPatch {
   notes?: unknown;
   account_type?: unknown;
+  chain?: unknown;
   status?: unknown;
+}
+
+export interface TrackRow {
+  command_id: string;
+  follow_id: string;
+  idempotency_key: string;
+  command: TrackingCreateCommand;
+  state: 'queued' | 'submitted' | 'rejected';
+  remote_state: string;
+  last_error: string;
 }
 
 export interface IdempotencyHit {
@@ -255,15 +273,26 @@ export class IntelStore {
     return this.transaction(() => this.insertTweetRow(input));
   }
 
-  listFollows(query: string, status: string, limit: number, cursor?: string): IntelPage<FollowRecord> {
-    if (status && !['open', 'promoted', 'dismissed'].includes(status)) throw new IntelError(422, 'VALIDATION_ERROR', '状态筛选无效');
+  listFollows(query: string, status: string, limit: number, cursor?: string, filter?: { chain?: string; view?: string }): IntelPage<FollowRecord> {
+    if (status && !['open', 'promoted', 'dismissed', 'pending', 'tracked'].includes(status)) throw new IntelError(422, 'VALIDATION_ERROR', '状态筛选无效');
+    const chain = filter?.chain ?? '';
+    const view = filter?.view ?? '';
+    if (chain && !isTrackChain(chain)) throw new IntelError(422, 'VALIDATION_ERROR', '链只能是 BSC、Solana、ETH、Base 或 Robinhood Chain');
+    if (view && view !== 'projects' && view !== 'noise') throw new IntelError(422, 'VALIDATION_ERROR', '列表视图无效');
     const mark = decodeCursor(cursor);
     const rows = this.db.prepare(`SELECT * FROM intel_follows
       WHERE (? = '' OR status = ?)
-      AND (? = '' OR instr(lower(x_handle), lower(?)) > 0 OR instr(lower(seed_handle), lower(?)) > 0 OR instr(lower(notes), lower(?)) > 0 OR instr(lower(bio), lower(?)) > 0)
+      AND (? = '' OR instr(lower(x_handle), lower(?)) > 0 OR instr(lower(seed_handle), lower(?)) > 0 OR instr(lower(display_name), lower(?)) > 0 OR instr(lower(notes), lower(?)) > 0 OR instr(lower(bio), lower(?)) > 0)
+      AND (? = '' OR chain = ?)
+      AND (? = '' OR (? = 'projects' AND (classification IN ('project', 'pending') OR track_state = 'submitted')) OR (? = 'noise' AND classification = 'noise'))
       AND (? = '' OR updated_at < ? OR (updated_at = ? AND follow_id < ?))
       ORDER BY updated_at DESC, follow_id DESC LIMIT ?`).all(
-      status, status, query, query, query, query, query, mark ? '1' : '', mark?.stamp ?? '', mark?.stamp ?? '', mark?.id ?? '', limit + 1,
+      status, status,
+      query, query, query, query, query, query,
+      chain, chain,
+      view, view, view,
+      mark ? '1' : '', mark?.stamp ?? '', mark?.stamp ?? '', mark?.id ?? '',
+      limit + 1,
     ) as Row[];
     return pageOf(rows.map(followFrom), limit, row => row.updated_at, row => row.follow_id);
   }
@@ -286,15 +315,18 @@ export class IntelStore {
       }
       const notes = patch.notes === undefined ? current.notes : boundedText(patch.notes, 2000, '备注');
       const accountType = patch.account_type === undefined ? current.account_type : accountTypeOf(patch.account_type);
+      const chain = patch.chain === undefined ? current.chain : trackChainOf(patch.chain);
+      const disposition = classifyFollow({ accountType, chain, bio: current.bio, recentSummary: current.recent_summary });
       let status = current.status;
       if (patch.status !== undefined) {
-        if (patch.status !== 'open' && patch.status !== 'dismissed') throw new IntelError(422, 'VALIDATION_ERROR', '状态只能改为待处理或忽略');
+        if (patch.status !== 'open' && patch.status !== 'dismissed' && patch.status !== 'pending') throw new IntelError(422, 'VALIDATION_ERROR', '状态只能改为待处理、待定或忽略');
         status = patch.status;
+      } else if (status === 'open' || status === 'pending') {
+        status = disposition.classification === 'pending' ? 'pending' : 'open';
       }
-      const disposition = followDisposition(accountType);
       const now = new Date().toISOString();
-      const result = this.db.prepare(`UPDATE intel_follows SET notes=?, account_type=?, promote_suggested=?, watch_tweets=?, status=?, revision=revision+1, updated_at=? WHERE follow_id=? AND revision=?`).run(
-        notes, accountType, disposition.promote_suggested ? 1 : 0, disposition.watch_tweets ? 1 : 0, status, now, id, revision,
+      const result = this.db.prepare(`UPDATE intel_follows SET notes=?, account_type=?, chain=?, classification=?, promote_suggested=?, watch_tweets=?, status=?, revision=revision+1, updated_at=? WHERE follow_id=? AND revision=?`).run(
+        notes, disposition.accountType, disposition.chain, disposition.classification, disposition.promote_suggested ? 1 : 0, disposition.watch_tweets ? 1 : 0, status, now, id, revision,
       );
       if (result.changes !== 1) throw new IntelError(409, 'VERSION_CONFLICT', '关注记录已被他人更新，请刷新后重试');
       return this.requireFollow(id);
@@ -404,27 +436,114 @@ export class IntelStore {
     return tweetFrom(row);
   }
 
+  trackCommand(followId: string): TrackRow | null {
+    return this.readTrack(followId);
+  }
+
+  queueTracking(id: string, revision: number, actorId: string, idempotencyKey: string, issuedAt = new Date().toISOString()): { follow: FollowRecord; track: TrackRow } {
+    return this.transaction(() => {
+      const current = this.requireFollow(id);
+      const existing = this.readTrack(id);
+      if (existing && (existing.state === 'submitted' || current.track_state === 'submitted')) return { follow: current, track: existing };
+      if (existing && existing.state === 'queued') return { follow: current, track: existing };
+      if (current.revision !== revision) throw new IntelError(409, 'VERSION_CONFLICT', '关注记录已被他人更新，请刷新后重试');
+      if (!current.track_eligible || current.classification === 'noise') {
+        throw new IntelError(409, 'CONFLICT', '代币、KOL、媒体、交易所、个人、空投和无关账号只记在关注流里，不会进入项目追踪');
+      }
+      if (existing && existing.state === 'rejected') this.db.prepare('DELETE FROM intel_track_outbox WHERE follow_id=?').run(id);
+      const command = trackingCreateCommand({
+        actor: { user_id: actorId, tenant_id: 'ikun-main', role: 'superadmin' },
+        route: TRACKING_CREATE_ROUTE,
+        idempotencyKey,
+        projectId: null,
+        name: current.display_name.trim() || current.x_handle,
+        xUserId: null,
+        xHandle: current.x_handle,
+        notes: trackingNote(current),
+        issuedAt,
+      });
+      this.db.prepare(`INSERT INTO intel_track_outbox(command_id, follow_id, idempotency_key, command_json, state, remote_state, last_error, created_at, updated_at) VALUES (?, ?, ?, ?, 'queued', '', '', ?, ?)`).run(
+        command.command_id, id, idempotencyKey, JSON.stringify(command), issuedAt, issuedAt,
+      );
+      const result = this.db.prepare(`UPDATE intel_follows SET track_state='queued', revision=revision+1, updated_at=? WHERE follow_id=? AND revision=?`).run(issuedAt, id, revision);
+      if (result.changes !== 1) throw new IntelError(409, 'VERSION_CONFLICT', '关注记录已被他人更新，请刷新后重试');
+      return { follow: this.requireFollow(id), track: this.readTrack(id)! };
+    });
+  }
+
+  finishTracking(followId: string, handoff: TrackingHandoffResult): { follow: FollowRecord; track: TrackRow } {
+    return this.transaction(() => {
+      const current = this.readTrack(followId);
+      if (!current) throw new IntelError(404, 'NOT_FOUND', '追踪命令不存在');
+      const now = new Date().toISOString();
+      const error = [...(handoff.error || '')].slice(0, 500).join('');
+      if (handoff.ok && handoff.command) {
+        this.db.prepare(`UPDATE intel_track_outbox SET command_id=?, command_json=?, state='submitted', remote_state=?, last_error='', updated_at=? WHERE follow_id=?`).run(
+          handoff.command.command_id, JSON.stringify(handoff.command), handoff.remoteState.slice(0, 40), now, followId,
+        );
+        this.db.prepare(`UPDATE intel_follows SET track_state='submitted', status=CASE WHEN status IN ('open', 'pending') THEN 'tracked' ELSE status END, revision=revision+1, updated_at=? WHERE follow_id=?`).run(now, followId);
+      } else if (handoff.status >= 400 && handoff.status < 500) {
+        this.db.prepare(`UPDATE intel_track_outbox SET state='rejected', remote_state=?, last_error=?, updated_at=? WHERE follow_id=?`).run(handoff.remoteState.slice(0, 40), error, now, followId);
+        this.db.prepare(`UPDATE intel_follows SET track_state='none', revision=revision+1, updated_at=? WHERE follow_id=?`).run(now, followId);
+      } else {
+        const command = handoff.command ?? current.command;
+        this.db.prepare(`UPDATE intel_track_outbox SET command_id=?, command_json=?, state='queued', remote_state=?, last_error=?, updated_at=? WHERE follow_id=?`).run(
+          command.command_id, JSON.stringify(command), handoff.remoteState.slice(0, 40), error || 'TODO(6551): tracking.create 尚未投递', now, followId,
+        );
+      }
+      const track = this.readTrack(followId);
+      if (!track) throw new IntelError(500, 'INTERNAL_ERROR', '追踪命令未完成');
+      return { follow: this.requireFollow(followId), track };
+    });
+  }
+
+  private readTrack(followId: string): TrackRow | null {
+    const row = this.db.prepare('SELECT * FROM intel_track_outbox WHERE follow_id=?').get(followId) as Row | undefined;
+    if (!row) return null;
+    const command = JSON.parse(String(row.command_json)) as TrackingCreateCommand;
+    return {
+      command_id: String(row.command_id),
+      follow_id: String(row.follow_id),
+      idempotency_key: String(row.idempotency_key),
+      command,
+      state: row.state as TrackRow['state'],
+      remote_state: String(row.remote_state),
+      last_error: String(row.last_error),
+    };
+  }
+
   private insertFollowRow(input: FollowInput): FollowRecord {
     const handle = requireHandle(input.x_handle);
     const seedHandleRaw = input.seed_handle === undefined || input.seed_handle === '' ? '' : requireHandle(input.seed_handle, '种子用户名');
     const seed = seedHandleRaw ? this.findSeedByHandle(seedHandleRaw) : null;
     if (seedHandleRaw && !seed) throw new IntelError(422, 'VALIDATION_ERROR', '来源种子不存在');
-    const accountType = input.account_type === undefined || input.account_type === '' ? 'unclassified' : accountTypeOf(input.account_type);
-    const disposition = followDisposition(accountType);
+    const bio = boundedText(input.bio, 1000, '简介');
+    const summary = boundedText(input.recent_summary, 2000, '近期摘要');
+    const explicit = input.account_type === undefined || input.account_type === '' ? 'unclassified' : accountTypeOf(input.account_type);
+    const chainGiven = input.chain !== undefined;
+    let chain = chainGiven ? trackChainOf(input.chain) : '';
+    if (!chain) chain = inferChain(`${bio}\n${summary}`);
+    const typed = explicit === 'unclassified' ? (inferAccountType(bio, summary) ?? 'unclassified') : explicit;
+    if (!chain && !chainGiven && isProjectType(typed) && seed && isTrackChain(seed.ecosystem)) chain = seed.ecosystem;
+    const disposition = classifyFollow({ accountType: typed, chain, bio, recentSummary: summary });
     const now = input.at ?? new Date().toISOString();
     const followId = input.follow_id ?? `fol_${randomUUID()}`;
-    this.db.prepare(`INSERT INTO intel_follows(follow_id, seed_id, seed_handle, x_handle, display_name, bio, recent_summary, account_type, promote_suggested, watch_tweets, promoted_seed_id, notes, status, source, revision, occurred_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, 'open', ?, 1, ?, ?, ?)`).run(
+    const status = disposition.classification === 'pending' ? 'pending' : 'open';
+    this.db.prepare(`INSERT INTO intel_follows(follow_id, seed_id, seed_handle, x_handle, display_name, bio, recent_summary, account_type, chain, classification, promote_suggested, watch_tweets, promoted_seed_id, notes, status, track_state, source, revision, occurred_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, 'none', ?, 1, ?, ?, ?)`).run(
       followId,
       seed?.seed_id ?? null,
       seed?.x_handle ?? seedHandleRaw,
       handle,
       boundedText(input.display_name, 80, '显示名'),
-      boundedText(input.bio, 1000, '简介'),
-      boundedText(input.recent_summary, 2000, '近期摘要'),
-      accountType,
+      bio,
+      summary,
+      disposition.accountType,
+      disposition.chain,
+      disposition.classification,
       disposition.promote_suggested ? 1 : 0,
       disposition.watch_tweets ? 1 : 0,
       boundedText(input.notes, 2000, '备注'),
+      status,
       input.source ?? 'manual',
       optionalTimestamp(input.occurred_at),
       now,
@@ -437,6 +556,37 @@ export class IntelStore {
 function requireBoolean(raw: unknown, field: string): boolean {
   if (typeof raw !== 'boolean') throw new IntelError(422, 'VALIDATION_ERROR', `${field}须为布尔值`);
   return raw;
+}
+
+function trackingNote(follow: FollowRecord): string {
+  const chain = follow.chain ? labelOf(TRACK_CHAINS, follow.chain) : '链未定';
+  const who = follow.seed_handle ? `来自 @${follow.seed_handle}` : '';
+  const prefix = ['生态情报', chain, follow.account_type, who].filter(Boolean).join(' ');
+  const combined = follow.notes ? `${prefix}。${follow.notes}` : prefix;
+  return [...combined].slice(0, 2000).join('');
+}
+
+function syncFixtureFollows(db: DatabaseSync) {
+  const store = new IntelStore(db, '');
+  for (const follow of STUB_FOLLOWS) {
+    const current = store.getFollow(follow.id);
+    if (current && !(current.source === 'stub' && current.revision === 1 && current.track_state === 'none' && current.status !== 'promoted')) continue;
+    if (current) db.prepare('DELETE FROM intel_follows WHERE follow_id=? AND revision=1').run(follow.id);
+    store.insertFollow({
+      follow_id: follow.id,
+      x_handle: follow.handle,
+      seed_handle: follow.seed,
+      display_name: follow.name,
+      bio: follow.bio,
+      recent_summary: follow.summary,
+      account_type: follow.type,
+      chain: follow.chain,
+      notes: '本地夹具，未连接 6551。',
+      occurred_at: FIXTURE_AT,
+      source: 'stub',
+      at: FIXTURE_AT,
+    });
+  }
 }
 
 function labelFor(accountType: AccountType): string {
@@ -465,21 +615,33 @@ function migrate(db: DatabaseSync) {
     if (identity?.store_name !== 'intel') throw new Error('INTEL_STORE_MISMATCH');
     db.exec('CREATE TABLE IF NOT EXISTS _migration_checksums (version INTEGER PRIMARY KEY, sha256 TEXT NOT NULL) STRICT;');
     const versionRow = db.prepare('SELECT MAX(version) AS version FROM _schema_migrations').get() as { version?: number } | undefined;
-    const version = Number(versionRow?.version ?? 0);
+    let version = Number(versionRow?.version ?? 0);
+    let upgraded = false;
     if (version === 1) {
       db.exec(INTEL_MIGRATION_SQL);
       db.prepare("INSERT INTO _schema_migrations(version, name, applied_at) VALUES (2, 'eco_intel_v1', ?)").run(new Date().toISOString());
       db.prepare('INSERT INTO _migration_checksums(version, sha256) VALUES (2, ?)').run(INTEL_MIGRATION_CHECKSUM);
-      db.exec(`PRAGMA user_version=${INTEL_SCHEMA_VERSION};`);
-      applyFixtures(db);
-    } else if (version === INTEL_SCHEMA_VERSION) {
+      version = 2;
+    }
+    if (version === 2) {
       const sum = db.prepare('SELECT sha256 FROM _migration_checksums WHERE version=2').get() as { sha256?: string } | undefined;
       if (sum?.sha256 !== INTEL_MIGRATION_CHECKSUM) throw new Error('INTEL_MIGRATION_CHECKSUM_MISMATCH');
-      const userVersion = Number((db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0);
-      if (userVersion !== INTEL_SCHEMA_VERSION) throw new Error('INTEL_UNSUPPORTED_VERSION');
-    } else {
-      throw new Error('INTEL_UNSUPPORTED_VERSION');
+      db.exec(INTEL_PROJECTS_SQL);
+      db.prepare("INSERT INTO _schema_migrations(version, name, applied_at) VALUES (3, 'eco_intel_projects', ?)").run(new Date().toISOString());
+      db.prepare('INSERT INTO _migration_checksums(version, sha256) VALUES (3, ?)').run(INTEL_PROJECTS_CHECKSUM);
+      db.exec(`PRAGMA user_version=${INTEL_SCHEMA_VERSION};`);
+      version = 3;
+      upgraded = true;
     }
+    if (version !== INTEL_SCHEMA_VERSION) throw new Error('INTEL_UNSUPPORTED_VERSION');
+    const v2 = db.prepare('SELECT sha256 FROM _migration_checksums WHERE version=2').get() as { sha256?: string } | undefined;
+    const v3 = db.prepare('SELECT sha256 FROM _migration_checksums WHERE version=3').get() as { sha256?: string } | undefined;
+    if (v2?.sha256 !== INTEL_MIGRATION_CHECKSUM || v3?.sha256 !== INTEL_PROJECTS_CHECKSUM) throw new Error('INTEL_MIGRATION_CHECKSUM_MISMATCH');
+    const userVersion = Number((db.prepare('PRAGMA user_version').get() as { user_version?: number } | undefined)?.user_version ?? 0);
+    if (userVersion !== INTEL_SCHEMA_VERSION) throw new Error('INTEL_UNSUPPORTED_VERSION');
+    const fixtures = db.prepare("SELECT value FROM intel_state WHERE key='fixtures_v1'").get() as { value?: string } | undefined;
+    if (!fixtures) applyFixtures(db);
+    else if (upgraded) syncFixtureFollows(db);
     db.exec('COMMIT');
   } catch (error) {
     if (db.isTransaction) db.exec('ROLLBACK');
@@ -521,6 +683,7 @@ function applyFixtures(db: DatabaseSync) {
       bio: follow.bio,
       recent_summary: follow.summary,
       account_type: follow.type,
+      chain: follow.chain,
       notes: '本地夹具，未连接 6551。',
       occurred_at: FIXTURE_AT,
       source: 'stub',

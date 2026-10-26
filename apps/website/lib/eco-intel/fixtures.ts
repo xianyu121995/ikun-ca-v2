@@ -1,4 +1,4 @@
-import type { AccountType, Ecosystem } from './types';
+import type { AccountType, Ecosystem, TrackChain } from './types';
 
 /** Local defaults only. These rows are not sent to 6551 or twitterapi. */
 export const FIXTURE_AT = '2026-10-26T00:00:00.000Z';
@@ -68,35 +68,109 @@ export const STUB_FOLLOWS: readonly {
   handle: string;
   seed: string;
   type: AccountType;
+  chain: TrackChain | '';
   name: string;
   bio: string;
   summary: string;
 }[] = [
   {
+    id: 'fol_fixture_bsc_protocol',
+    handle: 'bscvault',
+    seed: 'cz_binance',
+    type: 'protocol',
+    chain: 'bsc',
+    name: 'BSC Vault',
+    bio: 'DeFi protocol and bridge fixture on BSC. Not a live account.',
+    summary: 'Fixture: oracle and wallet infra testnet.',
+  },
+  {
     id: 'fol_fixture_protocol',
     handle: 'newproto_xyz',
     seed: 'solana',
     type: 'protocol',
+    chain: 'solana',
     name: 'New Proto',
-    bio: 'Onchain protocol fixture. Not a live account.',
+    bio: 'Onchain protocol fixture on Solana. Not a live account.',
     summary: 'Fixture summary: testnet announcement.',
+  },
+  {
+    id: 'fol_fixture_eth_launchpad',
+    handle: 'ethpadfi',
+    seed: 'ETHGlobal',
+    type: 'launchpad',
+    chain: 'eth',
+    name: 'ETH Pad',
+    bio: 'Launchpad fixture on Ethereum. Not a live account.',
+    summary: 'Fixture: upcoming protocol launch.',
   },
   {
     id: 'fol_fixture_launchpad',
     handle: 'padlaunch',
     seed: 'base',
     type: 'launchpad',
+    chain: 'base',
     name: 'Pad Launch',
-    bio: 'Launchpad fixture. Not a live account.',
+    bio: 'Launchpad fixture on Base. Not a live account.',
     summary: 'Fixture summary: upcoming launch.',
+  },
+  {
+    id: 'fol_fixture_hood_hackathon',
+    handle: 'hoodhack',
+    seed: 'vladtenev',
+    type: 'hackathon',
+    chain: 'robinhood',
+    name: 'Hood Hack',
+    bio: 'Official hackathon track host fixture on Robinhood Chain. Not a live account.',
+    summary: 'Fixture: hackathon registration open.',
+  },
+  {
+    id: 'fol_fixture_token',
+    handle: 'meme_token',
+    seed: 'solana',
+    type: 'token',
+    chain: 'bsc',
+    name: 'Meme Token',
+    bio: 'Memecoin and personal token fixture. Not a live account.',
+    summary: 'Fixture: token chatter only.',
+  },
+  {
+    id: 'fol_fixture_kol',
+    handle: 'kol_noise',
+    seed: 'toly',
+    type: 'kol',
+    chain: 'eth',
+    name: 'KOL Noise',
+    bio: 'KOL account fixture. Not a live account.',
+    summary: 'Fixture: commentary, no protocol.',
+  },
+  {
+    id: 'fol_fixture_exchange',
+    handle: 'desk_exch',
+    seed: 'BNBCHAIN',
+    type: 'exchange',
+    chain: 'bsc',
+    name: 'Desk Exchange',
+    bio: 'Exchange brand fixture. Not a live account.',
+    summary: 'Fixture: venue, not a project.',
   },
   {
     id: 'fol_fixture_person',
     handle: 'some_person',
     seed: 'toly',
     type: 'founder',
+    chain: '',
     name: 'Some Person',
     bio: 'Personal account fixture. Not a live account.',
     summary: 'Fixture summary: no project signal.',
+  },
+  {
+    id: 'fol_fixture_pending',
+    handle: 'vagueacct',
+    seed: 'base',
+    type: 'unclassified',
+    chain: '',
+    name: 'Vague Account',
+    bio: '?',
+    summary: '',
   },
 ];

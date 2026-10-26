@@ -3,18 +3,34 @@ export const ECOSYSTEMS = [
   { id: 'solana', label: 'Solana' },
   { id: 'eth', label: 'ETH' },
   { id: 'base', label: 'Base' },
-  { id: 'robinhood', label: 'Robinhood' },
+  { id: 'robinhood', label: 'Robinhood Chain' },
   { id: 'other', label: '其他' },
 ] as const;
 export type Ecosystem = (typeof ECOSYSTEMS)[number]['id'];
 
+/** Chains a followed account must be tied to before it counts as a project. */
+export const TRACK_CHAINS = [
+  { id: 'bsc', label: 'BSC' },
+  { id: 'solana', label: 'Solana' },
+  { id: 'eth', label: 'ETH' },
+  { id: 'base', label: 'Base' },
+  { id: 'robinhood', label: 'Robinhood Chain' },
+] as const;
+export type TrackChain = (typeof TRACK_CHAINS)[number]['id'];
+
 export const ACCOUNT_TYPES = [
-  { id: 'official', label: '官方' },
+  { id: 'protocol', label: '协议' },
   { id: 'launchpad', label: '发射台' },
-  { id: 'hackathon', label: '黑客松项目' },
-  { id: 'protocol', label: '新协议' },
-  { id: 'token', label: '新币·memecoin' },
+  { id: 'hackathon', label: '黑客松' },
+  { id: 'token', label: '代币' },
+  { id: 'kol', label: 'KOL' },
+  { id: 'media', label: '媒体' },
+  { id: 'exchange', label: '交易所' },
+  { id: 'personal', label: '个人' },
+  { id: 'airdrop', label: '空投' },
+  { id: 'brand', label: '无关品牌' },
   { id: 'founder', label: '创始人个人' },
+  { id: 'official', label: '官方' },
   { id: 'unrelated', label: '无关' },
   { id: 'unclassified', label: '待分析' },
 ] as const;
@@ -31,7 +47,9 @@ export type TweetTopic = (typeof TWEET_TOPICS)[number]['id'];
 
 export type SeedSource = 'fixture' | 'manual' | 'promoted';
 export type ActivitySource = 'stub' | 'manual' | 'wss' | 'rest';
-export type FollowStatus = 'open' | 'promoted' | 'dismissed';
+export type FollowStatus = 'open' | 'promoted' | 'dismissed' | 'pending' | 'tracked';
+export type FollowClassification = 'project' | 'noise' | 'pending';
+export type TrackState = 'none' | 'queued' | 'submitted';
 export type QueueKind = 'wss_follow' | 'wss_tweet' | 'ai_analyze';
 
 export interface SeedRecord {
@@ -72,11 +90,15 @@ export interface FollowRecord {
   bio: string;
   recent_summary: string;
   account_type: AccountType;
+  chain: TrackChain | '';
+  classification: FollowClassification;
   promote_suggested: boolean;
   watch_tweets: boolean;
+  track_eligible: boolean;
   promoted_seed_id: string | null;
   notes: string;
   status: FollowStatus;
+  track_state: TrackState;
   source: 'stub' | 'manual' | 'wss';
   revision: number;
   occurred_at: string | null;
@@ -104,4 +126,8 @@ export interface IntelPrincipal {
 
 export function labelOf<T extends { id: string; label: string }>(rows: readonly T[], id: string): string {
   return rows.find(row => row.id === id)?.label ?? id;
+}
+
+export function isTrackChain(value: string): value is TrackChain {
+  return TRACK_CHAINS.some(item => item.id === value);
 }

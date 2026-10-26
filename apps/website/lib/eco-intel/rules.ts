@@ -1,5 +1,5 @@
-import type { AccountType, Ecosystem, TweetTopic } from './types';
-import { ACCOUNT_TYPES, ECOSYSTEMS } from './types';
+import type { AccountType, Ecosystem, FollowClassification, TrackChain, TweetTopic } from './types';
+import { ACCOUNT_TYPES, ECOSYSTEMS, isTrackChain } from './types';
 
 export class IntelError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) {
@@ -9,8 +9,21 @@ export class IntelError extends Error {
 
 const SECRET_KEY = /token|secret|password|authorization|api[_-]?key|cookie|credential/i;
 
-/** 新协议、发射台、黑客松（明确的链上新项目）建议升为种子并继续看推文。个人与无关只记录。 */
-const PROMOTE_TYPES = new Set<AccountType>(['protocol', 'launchpad', 'hackathon']);
+/** Project types eligible for a human 「项目追踪」 click. Nothing here auto-enters hunter. */
+const PROJECT_TYPES = new Set<AccountType>(['protocol', 'launchpad', 'hackathon']);
+/** Logged on the follow stream only. Token is included and never auto-promotes. */
+const NOISE_TYPES = new Set<AccountType>(['token', 'kol', 'media', 'exchange', 'personal', 'airdrop', 'brand', 'founder', 'official', 'unrelated']);
+
+const INFER_TYPES: { type: AccountType; pattern: RegExp }[] = [
+  { type: 'token', pattern: /memecoin|meme\s*coin|个人代币|土狗|\btoken\b|代币/i },
+  { type: 'airdrop', pattern: /airdrop|空投/i },
+  { type: 'exchange', pattern: /\bexchange\b|交易所/i },
+  { type: 'kol', pattern: /\bkol\b|意见领袖|博主/i },
+  { type: 'media', pattern: /\bnews\b|媒体|新闻/i },
+  { type: 'hackathon', pattern: /hackathon|黑客松/i },
+  { type: 'launchpad', pattern: /launchpad|发射台|发射平台/i },
+  { type: 'protocol', pattern: /\bprotocol\b|协议|\bdefi\b|预言机|\boracle\b|跨链桥|\bbridge\b|\bl2\b|layer\s*2|钱包基础设施/i },
+];
 
 const TOPIC_RULES: { id: TweetTopic; pattern: RegExp }[] = [
   { id: 'hackathon', pattern: /黑客松/ },
@@ -46,9 +59,70 @@ export function accountTypeOf(raw: unknown): AccountType {
   return raw as AccountType;
 }
 
-export function followDisposition(accountType: AccountType): { promote_suggested: boolean; watch_tweets: boolean } {
-  const watch = PROMOTE_TYPES.has(accountType);
-  return { promote_suggested: watch, watch_tweets: watch };
+export function trackChainOf(raw: unknown): TrackChain | '' {
+  if (raw === undefined || raw === null || raw === '') return '';
+  if (typeof raw === 'string' && isTrackChain(raw)) return raw;
+  throw new IntelError(422, 'VALIDATION_ERROR', '链只能是 BSC、Solana、ETH、Base 或 Robinhood Chain');
+}
+
+export function inferAccountType(bio: string, summary: string): AccountType | null {
+  const text = `${bio}\n${summary}`;
+  return INFER_TYPES.find(rule => rule.pattern.test(text))?.type ?? null;
+}
+
+/** A single clear chain mention. Two or more chains stay unresolved. */
+export function inferChain(text: string): TrackChain | '' {
+  const value = text.toLowerCase();
+  const hits: TrackChain[] = [];
+  if (/robinhood/.test(value)) hits.push('robinhood');
+  if (/base chain|\bon base\b/.test(value)) hits.push('base');
+  if (/solana/.test(value)) hits.push('solana');
+  if (/ethereum|\bon eth\b|\beth\b/.test(value)) hits.push('eth');
+  if (/bnb chain|bnbchain|\bbsc\b|binance smart chain/.test(value)) hits.push('bsc');
+  return hits.length === 1 ? hits[0] : '';
+}
+
+export function isProjectType(accountType: AccountType): boolean {
+  return PROJECT_TYPES.has(accountType);
+}
+
+export interface FollowClass {
+  accountType: AccountType;
+  chain: TrackChain | '';
+  classification: FollowClassification;
+  promote_suggested: boolean;
+  watch_tweets: boolean;
+  track_eligible: boolean;
+  /** Local rules never enqueue hunter. A person clicks 项目追踪. */
+  auto_track: false;
+}
+
+/**
+ * Project: protocol / launchpad / hackathon tied to one of the five chains.
+ * Token and the other noise types never auto-promote and are not track-eligible.
+ * Unclear type or chain → pending. Pending can be tracked by a person, never automatically.
+ */
+export function classifyFollow(input: {
+  accountType: AccountType;
+  chain: TrackChain | '';
+  bio: string;
+  recentSummary: string;
+}): FollowClass {
+  const text = `${input.bio}\n${input.recentSummary}`;
+  const accountType = input.accountType === 'unclassified' ? (inferAccountType(input.bio, input.recentSummary) ?? 'unclassified') : input.accountType;
+  const chain = input.chain || inferChain(text);
+  const auto_track = false as const;
+  if (accountType === 'token' || NOISE_TYPES.has(accountType)) {
+    return { accountType, chain, classification: 'noise', promote_suggested: false, watch_tweets: false, track_eligible: false, auto_track };
+  }
+  if (PROJECT_TYPES.has(accountType) && chain && isTrackChain(chain)) {
+    return { accountType, chain, classification: 'project', promote_suggested: true, watch_tweets: true, track_eligible: true, auto_track };
+  }
+  return { accountType, chain, classification: 'pending', promote_suggested: false, watch_tweets: false, track_eligible: true, auto_track };
+}
+
+export function followDisposition(accountType: AccountType, chain: TrackChain | '' = '') {
+  return classifyFollow({ accountType, chain, bio: '', recentSummary: '' });
 }
 
 export function classifyTweet(text: string): { topics: TweetTopic[]; push_to_feed: boolean } {

@@ -313,6 +313,69 @@ test('项目追踪 enqueues tracking.create and never auto-promotes a token', as
   }
 });
 
+test('a seed tweet joins 猎手项目监控 through tracking.create and a token tweet does not', async () => {
+  const { root, store } = tempStore();
+  try {
+    const admin = { user_id: 'admin', role: 'superadmin' as const };
+    const before = store.listFollows('ethglobal', '', 50).items.filter(row => row.x_handle.toLowerCase() === 'ethglobal');
+    assert.equal(before.length, 0);
+    const calls: { handle: string; key: string }[] = [];
+    const submit = async (input: { idempotencyKey: string; body: { name: string; x_handle: string; x_user_id: string | null; notes: string; confirmed: true; project_id?: string } }) => {
+      calls.push({ handle: input.body.x_handle, key: input.idempotencyKey });
+      const command = trackingCreateCommand({
+        actor: { user_id: 'admin', tenant_id: 'ikun-main', role: 'superadmin' },
+        route: TRACKING_CREATE_ROUTE,
+        idempotencyKey: input.idempotencyKey,
+        projectId: 'prj_22222222-2222-4222-8222-222222222222',
+        name: input.body.name,
+        xUserId: input.body.x_user_id,
+        xHandle: input.body.x_handle,
+        notes: input.body.notes,
+        issuedAt: '2026-10-26T02:00:00.000Z',
+      });
+      return { ok: true, status: 202, command, remoteState: 'accepted', error: '' };
+    };
+    const key = '44444444-4444-4444-8444-444444444444';
+    const tracked = await handleIntel(store, admin, new Request('http://127.0.0.1/api/v1/intel/tweets/tw_fixture_hackathon/track', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': key },
+      body: JSON.stringify({ confirmed: true }),
+    }), { submitTracking: submit });
+    assert.equal(tracked.status, 202);
+    const body = (await tracked.json()).data;
+    assert.equal(body.delivery, 'submitted');
+    assert.equal(body.command.operation, 'tracking.create');
+    assert.equal(body.command.payload.confirmed, true);
+    assert.equal(String(body.command.payload.x_handle).toLowerCase(), 'ethglobal');
+    assert.equal(body.follow.x_handle.toLowerCase(), 'ethglobal');
+    assert.equal(body.follow.chain, 'eth');
+    assert.equal(body.follow.classification, 'project');
+    assert.equal(body.follow.track_state, 'submitted');
+    assert.equal(calls.length, 1);
+    const replay = await handleIntel(store, admin, new Request('http://127.0.0.1/api/v1/intel/tweets/tw_fixture_hackathon/track', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': key },
+      body: JSON.stringify({ confirmed: true }),
+    }), { submitTracking: submit });
+    assert.equal(replay.status, 202);
+    assert.equal(calls.length, 1);
+
+    const meme = store.insertTweet({ x_handle: 'Pumpfun', text: 'new memecoin, not a protocol' });
+    const denied = await handleIntel(store, admin, new Request(`http://127.0.0.1/api/v1/intel/tweets/${meme.tweet_id}/track`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': '55555555-5555-4555-8555-555555555555' },
+      body: JSON.stringify({ confirmed: true }),
+    }), { submitTracking: submit });
+    assert.equal(denied.status, 409);
+    assert.equal(calls.length, 1);
+    assert.equal(store.listFollows('pumpfun', '', 20).items.filter(row => row.x_handle.toLowerCase() === 'pumpfun').length, 0);
+    assert.equal(store.trackCommand(body.follow.follow_id)?.command.operation, 'tracking.create');
+  } finally {
+    store.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('a foreign sqlite file is refused', () => {
   const root = mkdtempSync(join(tmpdir(), 'eco-intel-foreign-'));
   const path = join(root, 'intel', 'intel.db');

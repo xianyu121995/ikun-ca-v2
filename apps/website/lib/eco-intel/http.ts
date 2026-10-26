@@ -110,9 +110,9 @@ export async function handleIntel(store: IntelStore, principal: IntelPrincipal, 
     }
     if (principal.role !== 'superadmin') return fail(requestId, 403, 'FORBIDDEN', '当前账号只读');
     if (!['POST', 'PATCH', 'DELETE'].includes(method)) return fail(requestId, 405, 'VALIDATION_ERROR', '不支持的方法');
-    if (method === 'POST' && collection === 'follows' && action === 'track') {
+    if (method === 'POST' && action === 'track' && (collection === 'follows' || collection === 'tweets')) {
       if (!id) return fail(requestId, 404, 'NOT_FOUND', '生态情报入口不存在');
-      return await trackFollow(store, principal, request, requestId, id, ports?.submitTracking);
+      return await trackIntoMonitoring(store, principal, request, requestId, collection, id, ports?.submitTracking);
     }
     const raw = await readRaw(request);
     const body = parseObject(raw);
@@ -211,19 +211,21 @@ function trackReceipt(follow: { follow_id: string }, command: unknown, delivery:
   };
 }
 
-async function trackFollow(store: IntelStore, principal: IntelPrincipal, request: Request, requestId: string, id: string, submit?: TrackingSubmitter): Promise<Response> {
+async function trackIntoMonitoring(store: IntelStore, principal: IntelPrincipal, request: Request, requestId: string, collection: 'follows' | 'tweets', id: string, submit?: TrackingSubmitter): Promise<Response> {
   const raw = await readRaw(request);
   const body = parseObject(raw);
   onlyKeys(body, ['confirmed']);
   if (body.confirmed !== true) throw new IntelError(422, 'VALIDATION_ERROR', '需要确认后才能加入项目追踪');
   const key = idempotencyKey(request);
   if (!TRACK_UUID.test(key)) throw new IntelError(422, 'VALIDATION_ERROR', '项目追踪需要 UUID Idempotency-Key');
-  const revision = expectedRevision(request);
+  const revision = collection === 'follows' ? expectedRevision(request) : 0;
   const hash = createHash('sha256').update(raw).digest('hex');
   const route = `POST ${new URL(request.url).pathname}`;
   const prior = store.recall(principal.user_id, route, key);
   if (prior && prior.body_hash !== hash) throw new IntelError(409, 'CONFLICT', '原请求结果与当前内容不一致');
-  const prepared = store.queueTracking(id, revision, principal.user_id, key);
+  const prepared = collection === 'tweets'
+    ? store.queueTweetTracking(id, principal.user_id, key)
+    : store.queueTracking(id, revision, principal.user_id, key);
   if (prepared.track.state === 'submitted') {
     const receipt = trackReceipt(prepared.follow, prepared.track.command, 'submitted', prepared.track.remote_state, '');
     if (!prior) store.transaction(() => store.remember(principal.user_id, route, key, hash, receipt.status, 'data', receipt.body));
@@ -251,7 +253,7 @@ async function trackFollow(store: IntelStore, principal: IntelPrincipal, request
       error: error instanceof Error ? error.message : 'TODO(6551): 投递未完成',
     }))
     : { ok: false, status: 503, command: null, remoteState: '', error: 'TODO(6551): 投递未接线' };
-  const finished = store.finishTracking(id, handoff);
+  const finished = store.finishTracking(prepared.follow.follow_id, handoff);
   const delivery = finished.track.state === 'submitted' ? 'submitted' : finished.track.state === 'rejected' ? 'rejected' : 'queued';
   const receipt = trackReceipt(finished.follow, finished.track.command, delivery, finished.track.remote_state, finished.track.last_error);
   if (!prior) store.transaction(() => store.remember(principal.user_id, route, key, hash, receipt.status, 'data', receipt.body));

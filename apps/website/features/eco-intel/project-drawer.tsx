@@ -22,6 +22,8 @@ export interface EcoDraft {
   track_eligible: boolean;
   track_state: TrackState;
   show_ai: boolean;
+  /** Set when the drawer was opened from a seed tweet. Track uses that tweet's tracking.create route. */
+  tweet_id: string | null;
 }
 
 export function formatTime(value: string | null): string {
@@ -51,6 +53,7 @@ export function draftFromFollow(row: FollowRecord): EcoDraft {
     track_eligible: row.track_eligible,
     track_state: row.track_state,
     show_ai: true,
+    tweet_id: null,
   };
 }
 
@@ -79,7 +82,8 @@ export function ProjectDrawer({ draft, pending, canWrite, dirty, onChange, onClo
 }) {
   const nameRef = useRef<HTMLInputElement>(null);
   useEffect(() => { nameRef.current?.focus(); }, [draft.follow_id, draft.x_handle]);
-  const trackLabel = draft.track_state === 'submitted' ? '已提交追踪' : draft.track_state === 'queued' ? '重试项目追踪' : '＋ 项目追踪';
+  const trackLabel = draft.track_state === 'submitted' ? '已加入监控' : draft.track_state === 'queued' ? '重试加入监控' : draft.tweet_id ? '＋ 加入猎手项目监控' : '＋ 项目追踪';
+  const canTrack = draft.track_eligible && draft.track_state !== 'submitted' && !!(draft.follow_id || draft.tweet_id);
   return <aside className="drawer" aria-label="项目资料编辑面板">
     <header className="drawer-head">
       <Button variant="ghost" className="drawer-back" disabled={pending} onClick={onClose}>← 收起资料 / 返回全宽表格</Button>
@@ -118,7 +122,7 @@ export function ProjectDrawer({ draft, pending, canWrite, dirty, onChange, onClo
         </fieldset>
         <div className="drawer-action">
           <Button type="submit" variant="primary" pending={pending} disabled={!canWrite}>▣ 保存项目资料</Button>
-          <Button className="soft" disabled={pending || !canWrite || !draft.follow_id || !draft.track_eligible || draft.track_state === 'submitted'} onClick={onTrack}>{trackLabel}</Button>
+          <Button className="soft" disabled={pending || !canWrite || !canTrack} onClick={onTrack}>{trackLabel}</Button>
         </div>
         <p className="help">{draft.track_eligible ? '项目追踪需要二次确认。代币、KOL、媒体、交易所和个人不会进入追踪。' : `当前判定：${labelOf(ACCOUNT_TYPES, draft.account_type)}。这类账号不能项目追踪。`}</p>
       </form>

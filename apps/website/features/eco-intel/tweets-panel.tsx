@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Badge, Button, Dialog, EmptyState, Icon, Input, PageHeader, Panel, SearchInput, Select, Skeleton, ToastViewport, Toolbar, type ToastMessage } from '@ikun/ui';
 import { TWEET_TOPICS, labelOf, type FollowRecord, type SeedRecord, type TweetRecord, type TweetTopic } from '../../lib/eco-intel/types';
-import { suggestFollow } from '../../lib/eco-intel/rules';
+import { classifyFollow, suggestFollow } from '../../lib/eco-intel/rules';
 import { displayTime, relativeTime } from '../tracking/final/model';
 import s from '../tracking/final/tracking-page.module.css';
 import { readItems, writeJson } from './client';
@@ -11,6 +11,23 @@ import { SeedsPanel } from './seeds-panel';
 import { ProjectDrawer, draftDirty, draftFromFollow, type EcoDraft } from './project-drawer';
 
 const PAGE_SIZE = 20;
+
+function followOf(row: TweetRecord, follows: FollowRecord[]): FollowRecord | undefined {
+  return follows.find(item => item.x_handle.toLowerCase() === row.x_handle.toLowerCase());
+}
+
+function tweetTrackable(row: TweetRecord, follows: FollowRecord[]): boolean {
+  const existing = followOf(row, follows);
+  if (existing) return existing.track_eligible;
+  return classifyFollow({ accountType: 'unclassified', chain: '', bio: row.text, recentSummary: '' }).classification !== 'noise';
+}
+
+function monitorLabel(row: TweetRecord, follows: FollowRecord[]): string {
+  const state = followOf(row, follows)?.track_state;
+  if (state === 'submitted') return '已加入监控';
+  if (state === 'queued') return '重试加入监控';
+  return '加入猎手项目监控';
+}
 
 export function TweetsPanel({ csrf, canWrite, username, switcher }: { csrf: string; canWrite: boolean; username: string; switcher?: ReactNode }) {
   const [query, setQuery] = useState('');
@@ -33,8 +50,8 @@ export function TweetsPanel({ csrf, canWrite, username, switcher }: { csrf: stri
   const [manager, setManager] = useState(false);
   const [editing, setEditing] = useState<EcoDraft | null>(null);
   const [source, setSource] = useState<FollowRecord | null>(null);
-  const [confirmTrack, setConfirmTrack] = useState(false);
   const [discard, setDiscard] = useState(false);
+  const [monitorTweet, setMonitorTweet] = useState<TweetRecord | null>(null);
   const [now, setNow] = useState<number | null>(null);
 
   const say = (title: string, tone: ToastMessage['tone'] = 'info') => setMessages([{ id: 'intel-tweets', title, tone }]);
@@ -98,10 +115,11 @@ export function TweetsPanel({ csrf, canWrite, username, switcher }: { csrf: stri
     const follow = follows.find(item => item.x_handle.toLowerCase() === row.x_handle.toLowerCase()) ?? null;
     if (follow) {
       setSource(follow);
-      setEditing(draftFromFollow(follow));
+      setEditing({ ...draftFromFollow(follow), tweet_id: row.tweet_id });
       return;
     }
     const ai = suggestFollow({ handle: row.x_handle, displayName: row.x_handle, bio: row.text, recentSummary: '' });
+    const guessed = classifyFollow({ accountType: 'unclassified', chain: '', bio: row.text, recentSummary: '' });
     setSource(null);
     setEditing({
       follow_id: null,
@@ -116,10 +134,11 @@ export function TweetsPanel({ csrf, canWrite, username, switcher }: { csrf: stri
       occurred_at: row.occurred_at,
       created_at: row.received_at,
       seed_handle: row.x_handle,
-      classification: ai.chain && (ai.account_type === 'protocol' || ai.account_type === 'launchpad' || ai.account_type === 'hackathon') ? 'project' : ai.account_type === 'unclassified' ? 'pending' : 'noise',
-      track_eligible: false,
+      classification: guessed.classification,
+      track_eligible: guessed.track_eligible,
       track_state: 'none',
       show_ai: true,
+      tweet_id: row.tweet_id,
     });
   }
 
@@ -145,18 +164,17 @@ export function TweetsPanel({ csrf, canWrite, username, switcher }: { csrf: stri
     } finally { setPending(false); }
   }
 
-  async function track() {
-    if (!source) return;
+  async function monitor(row: TweetRecord) {
     setPending(true);
     try {
-      const result = await writeJson<{ message: string }>(`/api/v1/intel/follows/${source.follow_id}/track`, 'POST', csrf, { confirmed: true }, source.revision);
+      const result = await writeJson<{ message: string }>(`/api/v1/intel/tweets/${row.tweet_id}/track`, 'POST', csrf, { confirmed: true });
       say(result.message);
-      setConfirmTrack(false);
+      setMonitorTweet(null);
       setEditing(null);
       setSource(null);
       await load(false);
     } catch (cause) {
-      say(cause instanceof Error ? cause.message : '项目追踪未确认', 'warning');
+      say(cause instanceof Error ? cause.message : '加入猎手项目监控未确认', 'warning');
     } finally { setPending(false); }
   }
 
@@ -216,6 +234,7 @@ export function TweetsPanel({ csrf, canWrite, username, switcher }: { csrf: stri
                 <span className={s.freshDot} data-old={!now || !Number.isFinite(Date.parse(row.occurred_at ?? row.received_at)) || now - Date.parse(row.occurred_at ?? row.received_at) >= 86400000 ? 'true' : 'false'} />
                 <time className={s.compactTime} dateTime={row.occurred_at ?? row.received_at}>{relativeTime(row.occurred_at ?? row.received_at, now ?? Date.now())} · {displayTime(row.occurred_at ?? row.received_at)}</time>
                 <span className={s.compactActions}>
+                  {canWrite && <Button variant="ghost" size="sm" disabled={pending || followOf(row, follows)?.track_state === 'submitted' || !tweetTrackable(row, follows)} title={tweetTrackable(row, follows) ? '确认后提交与猎手相同的 tracking.create' : '代币、KOL、媒体、交易所和个人不会进入猎手项目监控'} onClick={() => setMonitorTweet(row)}>{monitorLabel(row, follows)}</Button>}
                   <Button variant="ghost" size="sm" onClick={() => openTweet(row)}>编辑</Button>
                   {row.url.startsWith('https://') && <Button variant="ghost" size="sm" className={s.openPost} aria-label={`查看 @${row.x_handle} 原文`} title="打开链接" onClick={() => window.open(row.url, '_blank', 'noopener,noreferrer')}><Icon name="arrow" /></Button>}
                 </span>
@@ -226,12 +245,12 @@ export function TweetsPanel({ csrf, canWrite, username, switcher }: { csrf: stri
           </div>
           <Panel><span>本地规则排序 · 第 {currentPage} 页 · 匹配 {filtered.length} 条 · 本页 {visible.length} 条</span><Button disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>上一页</Button><Button disabled={currentPage >= pages} onClick={() => setPage(currentPage + 1)}>下一页</Button></Panel>
         </section>
-        <footer className={s.footer}><span>本地 intel.db · 不代表 6551 已接通</span><span>编辑打开右侧项目资料。没有关注档案的推文只预填，不写入。</span></footer>
+        <footer className={s.footer}><span>本地 intel.db · 不代表 6551 已接通</span><span>加入猎手项目监控走现有 tracking.create。编辑仍打开右侧项目资料。</span></footer>
       </div>
     </section>
     {editing && <div className="hunter-v3" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 410, height: '100%', minHeight: 0, background: 'transparent', zIndex: 4 }}>
       <div className="main" style={{ height: '100%', minHeight: 0 }}>
-        <ProjectDrawer draft={editing} pending={pending} canWrite={canWrite} dirty={dirty} onChange={patch => setEditing(current => current ? { ...current, ...patch } : current)} onClose={requestClose} onSave={() => void saveEdit()} onTrack={() => { if (source?.track_eligible && source.track_state !== 'submitted') setConfirmTrack(true); }} />
+        <ProjectDrawer draft={editing} pending={pending} canWrite={canWrite} dirty={dirty} onChange={patch => setEditing(current => current ? { ...current, ...patch } : current)} onClose={requestClose} onSave={() => void saveEdit()} onTrack={() => { const row = editing.tweet_id ? rows.find(item => item.tweet_id === editing.tweet_id) : undefined; if (row) setMonitorTweet(row); }} />
       </div>
     </div>}
     <div className={s.managerScope}>
@@ -239,11 +258,11 @@ export function TweetsPanel({ csrf, canWrite, username, switcher }: { csrf: stri
         <SeedsPanel csrf={csrf} canWrite={canWrite} />
       </Dialog>
     </div>
-    <Dialog open={confirmTrack} title="加入项目追踪" pending={pending} onOpenChange={open => { if (!open && !pending) setConfirmTrack(false); }} footer={<>
-      <Button data-dialog-cancel onClick={() => setConfirmTrack(false)}>取消</Button>
-      <Button variant="primary" pending={pending} onClick={() => void track()}>确认提交</Button>
+    <Dialog open={!!monitorTweet} title="加入猎手项目监控" pending={pending} onOpenChange={open => { if (!open && !pending) setMonitorTweet(null); }} footer={<>
+      <Button data-dialog-cancel onClick={() => setMonitorTweet(null)}>取消</Button>
+      <Button variant="primary" pending={pending} disabled={!monitorTweet} onClick={() => { if (monitorTweet) void monitor(monitorTweet); }}>确认加入</Button>
     </>}>
-      <p className="modal-desc">确认把「{editing?.display_name}」提交到现有猎手项目追踪吗？命令与 tracking.create 相同。</p>
+      <p className="modal-desc">确认把 @{monitorTweet?.x_handle} 提交到现有猎手项目监控吗？命令与「加入猎手项目监控」相同，走 tracking.create。不会另开监控，也不会调用 6551。代币不会进入。</p>
     </Dialog>
     <Dialog open={discard} destructive title="放弃未保存的修改？" onOpenChange={open => { if (!open) setDiscard(false); }} footer={<>
       <Button data-dialog-cancel onClick={() => setDiscard(false)}>继续编辑</Button>

@@ -448,6 +448,37 @@ export class IntelStore {
     return this.readTrack(followId);
   }
 
+  /**
+   * Confirmed seed-tweet click. Reuses queueTracking → tracking.create.
+   * Insert does not call this. Token and other noise never get a follow or an outbox row.
+   */
+  queueTweetTracking(tweetId: string, actorId: string, idempotencyKey: string, issuedAt = new Date().toISOString()): { follow: FollowRecord; track: TrackRow } {
+    return this.transaction(() => {
+      const tweet = this.requireTweet(tweetId);
+      const existing = this.findFollowByHandle(tweet.x_handle);
+      if (existing) return this.queueTracking(existing.follow_id, existing.revision, actorId, idempotencyKey, issuedAt);
+      const suggestion = suggestFollow({ handle: tweet.x_handle, displayName: tweet.x_handle, bio: tweet.text, recentSummary: '' });
+      const preview = classifyFollow({ accountType: suggestion.account_type, chain: suggestion.chain, bio: tweet.text, recentSummary: '' });
+      if (preview.classification === 'noise' || !preview.track_eligible) {
+        throw new IntelError(409, 'CONFLICT', '代币、KOL、媒体、交易所、个人、空投和无关账号只记在关注流里，不会进入项目追踪');
+      }
+      const created = this.insertFollowRow({
+        x_handle: tweet.x_handle,
+        seed_handle: tweet.x_handle,
+        display_name: suggestion.name,
+        bio: [...tweet.text].slice(0, 1000).join(''),
+        recent_summary: '',
+        account_type: suggestion.account_type,
+        ...(suggestion.chain ? { chain: suggestion.chain } : {}),
+        notes: suggestion.notes,
+        source: 'manual',
+        occurred_at: tweet.occurred_at,
+        at: issuedAt,
+      });
+      return this.queueTracking(created.follow_id, created.revision, actorId, idempotencyKey, issuedAt);
+    });
+  }
+
   queueTracking(id: string, revision: number, actorId: string, idempotencyKey: string, issuedAt = new Date().toISOString()): { follow: FollowRecord; track: TrackRow } {
     return this.transaction(() => {
       const current = this.requireFollow(id);
@@ -503,6 +534,17 @@ export class IntelStore {
       if (!track) throw new IntelError(500, 'INTERNAL_ERROR', '追踪命令未完成');
       return { follow: this.requireFollow(followId), track };
     });
+  }
+
+  private requireTweet(id: string): TweetRecord {
+    const row = this.db.prepare('SELECT * FROM intel_tweets WHERE tweet_id=?').get(id) as Row | undefined;
+    if (!row) throw new IntelError(404, 'NOT_FOUND', '推文不存在');
+    return tweetFrom(row);
+  }
+
+  private findFollowByHandle(handle: string): FollowRecord | null {
+    const row = this.db.prepare('SELECT * FROM intel_follows WHERE x_handle = ? COLLATE NOCASE ORDER BY updated_at DESC, follow_id DESC LIMIT 1').get(handle) as Row | undefined;
+    return row ? followFrom(row) : null;
   }
 
   private readTrack(followId: string): TrackRow | null {

@@ -81,6 +81,16 @@ export interface TweetRecord {
   created_at: string;
 }
 
+/** Draft applied when 编辑 opens. Same role as hunter `ai_suggestion`; not a saved project. */
+export interface FollowAiSuggestion {
+  name: string;
+  account_type: AccountType;
+  chain: TrackChain | '';
+  notes: string;
+  description: string;
+  engine: 'eco-rules';
+}
+
 export interface FollowRecord {
   follow_id: string;
   seed_id: string | null;
@@ -104,6 +114,7 @@ export interface FollowRecord {
   occurred_at: string | null;
   created_at: string;
   updated_at: string;
+  ai_suggestion: FollowAiSuggestion;
 }
 
 export interface QueueRecord {

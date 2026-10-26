@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { isAbsolute, join, parse, resolve } from 'node:path';
 import { DEFAULT_SEEDS, FIXTURE_AT, STUB_FOLLOWS, STUB_TWEETS } from './fixtures';
-import { IntelError, RULES_ANALYSIS, accountTypeOf, boundedText, classifyFollow, classifyTweet, ecosystemOf, inferAccountType, inferChain, isProjectType, normalizeUrl, optionalTimestamp, requireHandle, trackChainOf } from './rules';
+import { IntelError, RULES_ANALYSIS, accountTypeOf, boundedText, classifyFollow, classifyTweet, ecosystemOf, inferAccountType, inferChain, isProjectType, normalizeUrl, optionalTimestamp, requireHandle, suggestFollow, trackChainOf } from './rules';
 import { INTEL_APPLICATION_ID, INTEL_FOUNDATION_SQL, INTEL_MIGRATION_CHECKSUM, INTEL_MIGRATION_SQL, INTEL_PROJECTS_CHECKSUM, INTEL_PROJECTS_SQL, INTEL_SCHEMA_VERSION } from './schema';
 import { TRACKING_CREATE_ROUTE, trackingCreateCommand, type TrackingCreateCommand } from '../tracking-command';
 import type { TrackingHandoffResult } from './tracking';
@@ -83,6 +83,12 @@ function followFrom(row: Row): FollowRecord {
     occurred_at: row.occurred_at == null ? null : String(row.occurred_at),
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
+    ai_suggestion: suggestFollow({
+      handle: String(row.x_handle),
+      displayName: String(row.display_name),
+      bio: String(row.bio),
+      recentSummary: String(row.recent_summary),
+    }),
   };
 }
 
@@ -150,6 +156,7 @@ export interface FollowInput {
 }
 
 export interface FollowPatch {
+  display_name?: unknown;
   notes?: unknown;
   account_type?: unknown;
   chain?: unknown;
@@ -313,6 +320,7 @@ export class IntelStore {
       if (current.status === 'promoted' && patch.status !== undefined && patch.status !== 'promoted') {
         throw new IntelError(409, 'CONFLICT', '已升为种子的记录不能改回其他状态');
       }
+      const displayName = patch.display_name === undefined ? current.display_name : boundedText(patch.display_name, 80, '显示名');
       const notes = patch.notes === undefined ? current.notes : boundedText(patch.notes, 2000, '备注');
       const accountType = patch.account_type === undefined ? current.account_type : accountTypeOf(patch.account_type);
       const chain = patch.chain === undefined ? current.chain : trackChainOf(patch.chain);
@@ -325,8 +333,8 @@ export class IntelStore {
         status = disposition.classification === 'pending' ? 'pending' : 'open';
       }
       const now = new Date().toISOString();
-      const result = this.db.prepare(`UPDATE intel_follows SET notes=?, account_type=?, chain=?, classification=?, promote_suggested=?, watch_tweets=?, status=?, revision=revision+1, updated_at=? WHERE follow_id=? AND revision=?`).run(
-        notes, disposition.accountType, disposition.chain, disposition.classification, disposition.promote_suggested ? 1 : 0, disposition.watch_tweets ? 1 : 0, status, now, id, revision,
+      const result = this.db.prepare(`UPDATE intel_follows SET display_name=?, notes=?, account_type=?, chain=?, classification=?, promote_suggested=?, watch_tweets=?, status=?, revision=revision+1, updated_at=? WHERE follow_id=? AND revision=?`).run(
+        displayName, notes, disposition.accountType, disposition.chain, disposition.classification, disposition.promote_suggested ? 1 : 0, disposition.watch_tweets ? 1 : 0, status, now, id, revision,
       );
       if (result.changes !== 1) throw new IntelError(409, 'VERSION_CONFLICT', '关注记录已被他人更新，请刷新后重试');
       return this.requireFollow(id);

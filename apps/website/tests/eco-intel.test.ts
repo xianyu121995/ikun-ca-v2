@@ -8,7 +8,7 @@ import { isIntelRead } from '../lib/eco-intel/access.ts';
 import { DEFAULT_SEEDS } from '../lib/eco-intel/fixtures.ts';
 import { handleIntel } from '../lib/eco-intel/http.ts';
 import { acceptProviderEvent } from '../lib/eco-intel/pipeline.ts';
-import { classifyFollow, classifyTweet, followDisposition } from '../lib/eco-intel/rules.ts';
+import { classifyFollow, classifyTweet, followDisposition, suggestFollow } from '../lib/eco-intel/rules.ts';
 import { INTEL_MIGRATION_SQL, INTEL_PROJECTS_SQL } from '../lib/eco-intel/schema.ts';
 import { TRACKING_CREATE_ROUTE, commandId, trackingCreateCommand } from '../lib/tracking-command.ts';
 import { openIntelStore } from '../lib/eco-intel/store.ts';
@@ -51,6 +51,18 @@ test('tweet keywords and follow types follow the intel rules', () => {
   assert.equal(token.classification, 'noise');
   assert.equal(token.promote_suggested, false);
   assert.equal(classifyFollow({ accountType: 'unclassified', chain: '', bio: '?', recentSummary: '' }).classification, 'pending');
+  const projectDraft = suggestFollow({ handle: 'bscvault', displayName: 'BSC Vault', bio: 'DeFi protocol and bridge fixture on BSC', recentSummary: 'oracle' });
+  assert.equal(projectDraft.engine, 'eco-rules');
+  assert.equal(projectDraft.account_type, 'protocol');
+  assert.equal(projectDraft.chain, 'bsc');
+  assert.equal(projectDraft.name, 'BSC上的协议');
+  const tokenDraft = suggestFollow({ handle: 'meme_token', displayName: 'Meme Token', bio: 'Memecoin and personal token fixture', recentSummary: '' });
+  assert.equal(tokenDraft.account_type, 'token');
+  assert.match(tokenDraft.notes, /代币/);
+  const pendingDraft = suggestFollow({ handle: 'vagueacct', displayName: 'Vague Account', bio: '?', recentSummary: '' });
+  assert.equal(pendingDraft.account_type, 'unclassified');
+  assert.equal(pendingDraft.name, 'Vague Account');
+  assert.match(pendingDraft.notes, /待定/);
 });
 
 test('read routes are public to logged-in readers and writes are not', () => {
@@ -82,6 +94,8 @@ test('fresh intel.db seeds fixtures once and stays separate from the four stores
     assert.equal(follows.items.find(row => row.follow_id === 'fol_fixture_person')?.promote_suggested, false);
     assert.equal(follows.items.find(row => row.follow_id === 'fol_fixture_token')?.classification, 'noise');
     assert.equal(follows.items.find(row => row.follow_id === 'fol_fixture_pending')?.status, 'pending');
+    assert.equal(follows.items.find(row => row.follow_id === 'fol_fixture_bsc_protocol')?.ai_suggestion.name, 'BSC上的协议');
+    assert.equal(follows.items.find(row => row.follow_id === 'fol_fixture_token')?.ai_suggestion.account_type, 'token');
     const projects = store.listFollows('', '', 50, undefined, { view: 'projects' });
     assert.equal(projects.items.some(row => row.account_type === 'token'), false);
     assert.equal(new Set(projects.items.filter(row => row.classification === 'project').map(row => row.chain)).size, 5);

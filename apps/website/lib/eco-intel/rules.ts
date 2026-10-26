@@ -1,5 +1,5 @@
-import type { AccountType, Ecosystem, FollowClassification, TrackChain, TweetTopic } from './types';
-import { ACCOUNT_TYPES, ECOSYSTEMS, isTrackChain } from './types';
+import type { AccountType, Ecosystem, FollowAiSuggestion, FollowClassification, TrackChain, TweetTopic } from './types';
+import { ACCOUNT_TYPES, ECOSYSTEMS, TRACK_CHAINS, isTrackChain, labelOf } from './types';
 
 export class IntelError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) {
@@ -123,6 +123,43 @@ export function classifyFollow(input: {
 
 export function followDisposition(accountType: AccountType, chain: TrackChain | '' = '') {
   return classifyFollow({ accountType, chain, bio: '', recentSummary: '' });
+}
+
+const NAME_CHAIN: Record<TrackChain, string> = {
+  bsc: 'BSC',
+  solana: 'SOL',
+  eth: 'ETH',
+  base: 'Base',
+  robinhood: 'RH',
+};
+
+/**
+ * Draft shown when 编辑 opens. Mirrors hunter `withAi`: fill the popup, never save until the person clicks 保存.
+ * Discovery stays on classifyFollow. Hunter's worker cache is not read (it calls 6551).
+ */
+export function suggestFollow(input: { handle: string; displayName: string; bio: string; recentSummary: string }): FollowAiSuggestion {
+  const guessed = classifyFollow({ accountType: 'unclassified', chain: '', bio: input.bio, recentSummary: input.recentSummary });
+  const typeLabel = labelOf(ACCOUNT_TYPES, guessed.accountType);
+  const chainLabel = guessed.chain ? labelOf(TRACK_CHAINS, guessed.chain) : '';
+  const fallback = input.displayName.trim() || input.handle;
+  const name = guessed.classification === 'project' && guessed.chain
+    ? `${NAME_CHAIN[guessed.chain]}上的${typeLabel}`.slice(0, 16)
+    : fallback;
+  const description = guessed.accountType === 'token'
+    ? '简介指向代币。代币只记录，不会自动进入项目追踪。'
+    : guessed.classification === 'project'
+      ? `简介显示这是${chainLabel}上的${typeLabel}。请核对后再保存，不会自动加入猎手。`
+      : guessed.classification === 'noise'
+        ? `简介指向${typeLabel}，只记在关注流里，不进入项目追踪。`
+        : '简介不足以判断类型或链，记为待定。可以手工点项目追踪，不会自动加入猎手。';
+  return {
+    name,
+    account_type: guessed.accountType,
+    chain: guessed.chain,
+    notes: description,
+    description,
+    engine: 'eco-rules',
+  };
 }
 
 export function classifyTweet(text: string): { topics: TweetTopic[]; push_to_feed: boolean } {

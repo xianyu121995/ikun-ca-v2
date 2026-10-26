@@ -176,7 +176,7 @@ function write(store: IntelStore, method: string, collection: 'seeds' | 'tweets'
     return { status: 200, body: { deleted: true, seed_id: id } };
   }
   if (method === 'PATCH' && collection === 'follows' && !action) {
-    onlyKeys(body, ['notes', 'account_type', 'chain', 'status']);
+    onlyKeys(body, ['display_name', 'notes', 'account_type', 'chain', 'status']);
     return { status: 200, body: store.updateFollow(id, revision, body) };
   }
   if (method === 'DELETE' && collection === 'follows' && !action) {

@@ -6,7 +6,7 @@ import {clearClientSession} from '../../lib/client-session-cache';
 
 /** Receiving-only wording approved by the owner; preserve the frozen shared UI. */
 // Owner decision 2026-10-18: workspace pages switch without a full reload so the site-wide voice keeps playing.
-const WORKSPACE=new Set(['/','/hunter','/tracking']);
+const WORKSPACE=new Set(['/','/hunter','/tracking','/intel']);
 function A(p:NavigationLinkProps){return WORKSPACE.has(p.href)?<Link {...p} href={p.href} prefetch={true}/>:<a {...p}/>;}
 export function WorkspaceLink({children,href,...props}:NavigationLinkProps) {
   if(href!=='/tracking')return <A {...props} href={href}>{children}</A>;

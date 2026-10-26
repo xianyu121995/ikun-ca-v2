@@ -1,0 +1,11 @@
+.page { min-width: 0; display: grid; gap: 16px; }
+.subnav { display: flex; flex-wrap: wrap; gap: 8px; }
+.subnav a {
+  display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px;
+  border: 1px solid #293544; border-radius: 6px; background: #111820; color: #a6b4c5; text-decoration: none;
+}
+.subnav a[aria-current="page"] { color: #8ce4c2; border-color: #325546; background: #152821; }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.clamp { max-width: 360px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.more { display: flex; justify-content: flex-end; }

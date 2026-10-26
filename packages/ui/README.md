@@ -4,7 +4,7 @@ ikun.ca 公共视觉组件候选。设计与交互规范见 [DESIGN.md](./DESIGN
 
 第二阶段 UI0 以 [UI0-HANDOFF.md](./UI0-HANDOFF.md) 和 [UI0-VALIDATION.json](./UI0-VALIDATION.json) 为本轮交付入口；旧 HANDOFF 保留第一轮记录。遵循 `phase2-v1.0.0`，冻结基线 `4527ba4` 保留，没有合并规范分支。
 
-三个已定稿页面的统一交互预览见 [review/README.md](./review/README.md)。在本 Worktree 运行 `pnpm --dir packages/ui preview:review`，打开 `http://127.0.0.1:3255`，可从同一个导航切换主页、猎手监控和猎手项目监控。
+三个已定稿页面的统一交互预览见 [review/README.md](./review/README.md)。在本 Worktree 运行 `pnpm --dir packages/ui preview:review`，打开 `http://127.0.0.1:3255`，可从同一个导航切换主页、猎手监控和猎手项目监控。侧栏另有生态情报入口，正式页面在网站 `/intel`，不在这三页预览里。
 
 ## 在当前候选 Worktree 运行
 
@@ -78,7 +78,7 @@ Dialog 使用受控 open；父层 onOpenChange 处理未保存修改。破坏性
 
 Button 的 readOnly 仅控制此操作，保留页面其他读取、搜索和取消能力。operationState 为 pending/running 时禁用，unknown 时显示“结果待核实，请先核对回执”并阻止写入；不会自动重试。mode=live 的业务写按钮只有 canExecute=true 才可操作，缺省拒绝。未传新参数时保留既有原生 Button 行为。role/capability 来自领域的可信 session；这些 props 只控制显示，不能作为服务端授权。disabledReason 在被禁用且非 pending 时显示并通过 aria-describedby 关联；原有 disabled/title 仍保留。
 
-账号链接默认改为 `/auth`（第二阶段规范要求），登录 `/login`；三个业务入口仍是 `/`、`/hunter`、`/tracking`。既有 account.href 显式覆盖能力保留，集成时统一使用规范路径。
+账号链接默认改为 `/auth`（第二阶段规范要求），登录 `/login`。业务入口是 `/`、`/hunter`、`/tracking`、`/intel`。既有 account.href 显式覆盖能力保留，集成时统一使用规范路径。
 
 无脚本安全回归（先 build）：`pnpm --dir packages/ui test:no-js`。浏览器夹具：`pnpm --dir packages/ui preview:no-js -- --port 3251`。它不加载脚本并用 CSP 禁用脚本，固定同源 POST 后可见地返回 415；只计数字节数与脱敏请求元信息，不保存/回显凭据。该夹具只供虚构凭据测试，不属于三个生产服务或 Auth 实现。
 

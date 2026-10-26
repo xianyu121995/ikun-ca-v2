@@ -1,9 +1,0 @@
-/* Dialog sits in the hunter-v3 tree. Reuse the drawer field metrics for the 编辑 popup. */
-.hunter-v3 .ik-dialog .drawer-note { padding: 10px; border: 1px solid #25534b; background: #0c2c2d; border-radius: 5px; color: #8bd9c8; font-size: 10.5px; line-height: 1.55; margin: 0 0 14px; }
-.hunter-v3 .ik-dialog .field { display: block; color: #a8c3cd; font-size: 11px; font-weight: 700; margin-bottom: 15px; }
-.hunter-v3 .ik-dialog .field textarea { display: block; width: 100%; margin-top: 7px; font-weight: 400; background: #0f2230; color: #e4f1f4; border: 1px solid #284454; border-radius: 5px; padding: 9px 10px; min-height: 70px; resize: vertical; }
-.hunter-v3 .ik-dialog .field textarea[readonly] { color: #84a4b3; background: #0a1924; }
-.hunter-v3 .title-buttons a { display: inline-flex; align-items: center; min-height: 0; gap: 7px; border-radius: 6px; border: 1px solid #2a4251; background: #132431; color: #cbdfe8; padding: 9px 12px; font-weight: 650; font-size: 11.5px; text-decoration: none; white-space: nowrap; }
-.hunter-v3 .title-buttons a[aria-current="page"] { background: #0d3435; color: #56e9d3; border-color: #1d5655; }
-.hunter-v3 .noise-fold { margin: 8px 25px 16px; border: 1px solid #203443; border-radius: 7px; background: #0b1721; padding: 8px 12px; }
-.hunter-v3 .noise-fold > summary { cursor: pointer; min-height: 32px; color: #d5deea; font-size: 12px; }

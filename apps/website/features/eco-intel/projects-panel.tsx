@@ -1,47 +1,40 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Badge, Button, DataTable, Dialog, EmptyState, ErrorState, Input, SearchInput, Select, type TableColumn } from '@ikun/ui';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Badge, Button, DataTable, Dialog, EmptyState, ErrorState, Input, SearchInput, Select, ToastViewport, type TableColumn, type ToastMessage } from '@ikun/ui';
 import { ACCOUNT_TYPES, TRACK_CHAINS, labelOf, type AccountType, type FollowRecord, type SeedRecord, type TrackChain } from '../../lib/eco-intel/types';
 import { readItems, writeJson } from './client';
+import { ProjectDrawer, draftDirty, draftFromFollow, formatTime, type EcoDraft } from './project-drawer';
 
+const PER = 10;
 const typeLabel = (row: FollowRecord) => labelOf(ACCOUNT_TYPES, row.account_type);
 const chainLabel = (chain: string) => chain ? labelOf(TRACK_CHAINS, chain) : '未定';
 
-function formatTime(value: string | null): string {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
-  const pad = (part: number) => String(part).padStart(2, '0');
-  return `${date.getUTCMonth() + 1}/${date.getUTCDate()} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
-}
-
-/** Same idea as hunter `withAi`: the popup shows the draft; nothing is written until 保存. */
-function withAi(row: FollowRecord): FollowRecord {
-  const ai = row.ai_suggestion;
-  const untouched = !row.notes.trim() || row.notes.startsWith('本地夹具');
-  return {
-    ...row,
-    display_name: ai.name || row.display_name,
-    account_type: row.account_type === 'unclassified' ? ai.account_type : row.account_type,
-    chain: row.chain || ai.chain,
-    notes: untouched ? ai.notes : row.notes,
-  };
+function statusView(row: FollowRecord): { className: string; label: string } {
+  if (row.track_state === 'submitted') return { className: 'joined', label: '已提交追踪' };
+  if (row.track_state === 'queued') return { className: 'reviewed', label: '已排队' };
+  if (row.classification === 'pending') return { className: 'reviewed', label: '待定' };
+  if (row.classification === 'noise') return { className: '', label: '仅记录' };
+  return { className: 'joined', label: '项目' };
 }
 
 export function ProjectsPanel({ csrf, canWrite, switcher }: { csrf: string; canWrite: boolean; switcher?: ReactNode }) {
-  const [chain, setChain] = useState<'' | TrackChain>('');
   const [query, setQuery] = useState('');
-  const [applied, setApplied] = useState('');
+  const [time, setTime] = useState('all');
+  const [kind, setKind] = useState<'all' | 'project' | 'pending' | 'noise'>('all');
+  const [trackFilter, setTrackFilter] = useState<'all' | 'none' | 'queued' | 'submitted'>('all');
+  const [page, setPage] = useState(1);
   const [rows, setRows] = useState<FollowRecord[]>([]);
-  const [noise, setNoise] = useState<FollowRecord[]>([]);
-  const [seeds, setSeeds] = useState<SeedRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ToastMessage[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [editing, setEditing] = useState<FollowRecord | null>(null);
+  const [editing, setEditing] = useState<EcoDraft | null>(null);
+  const [source, setSource] = useState<FollowRecord | null>(null);
+  const [confirmTrack, setConfirmTrack] = useState(false);
+  const [discard, setDiscard] = useState(false);
+  const [seeds, setSeeds] = useState<SeedRecord[]>([]);
   const [handle, setHandle] = useState('');
   const [seedHandle, setSeedHandle] = useState('');
   const [accountType, setAccountType] = useState<AccountType>('unclassified');
@@ -49,55 +42,92 @@ export function ProjectsPanel({ csrf, canWrite, switcher }: { csrf: string; canW
   const [bio, setBio] = useState('');
   const [summary, setSummary] = useState('');
   const [adding, setAdding] = useState(false);
-  const nameRef = useRef<HTMLInputElement>(null);
+  const [now] = useState(() => Date.now());
+
+  const say = (title: string, tone: ToastMessage['tone'] = 'info') => setMessages(current => [...current.slice(-2), { id: `intel-${Date.now()}`, title, tone }]);
 
   const load = useCallback(async (initial: boolean) => {
     if (initial) setLoading(true); else setRefreshing(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ limit: '100', view: 'projects' });
-      if (applied) params.set('q', applied);
-      if (chain) params.set('chain', chain);
-      const noiseParams = new URLSearchParams({ limit: '100', view: 'noise' });
       const [projects, logged] = await Promise.all([
-        readItems<FollowRecord>('/api/v1/intel/follows?' + params),
-        readItems<FollowRecord>('/api/v1/intel/follows?' + noiseParams),
+        readItems<FollowRecord>('/api/v1/intel/follows?limit=100&view=projects'),
+        readItems<FollowRecord>('/api/v1/intel/follows?limit=100&view=noise'),
       ]);
-      setRows(projects.items);
-      setNoise(logged.items);
+      setRows([...projects.items, ...logged.items]);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '列表不可用');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [applied, chain]);
+  }, []);
 
-  useEffect(() => { const timer = setTimeout(() => setApplied(query.trim()), 200); return () => clearTimeout(timer); }, [query]);
   useEffect(() => { void load(true); }, [load]);
   useEffect(() => {
     if (!canWrite) return;
-    void readItems<SeedRecord>('/api/v1/intel/seeds?limit=100').then(page => {
-      setSeeds(page.items);
-      setSeedHandle(current => current || page.items[0]?.x_handle || '');
+    void readItems<SeedRecord>('/api/v1/intel/seeds?limit=100').then(pageResult => {
+      setSeeds(pageResult.items);
+      setSeedHandle(current => current || pageResult.items[0]?.x_handle || '');
     }).catch(() => setSeeds([]));
   }, [canWrite]);
 
+  const filtered = rows.filter(row => {
+    const q = query.trim().toLowerCase();
+    if (q && !`${row.display_name} ${row.x_handle} ${row.bio} ${row.notes}`.toLowerCase().includes(q)) return false;
+    if (kind !== 'all' && row.classification !== kind) return false;
+    if (trackFilter !== 'all' && row.track_state !== trackFilter) return false;
+    if (time !== 'all') {
+      const at = Date.parse(row.occurred_at ?? row.created_at);
+      if (!Number.isFinite(at) || now - at > Number(time) * 3600000) return false;
+    }
+    return true;
+  });
+  const pages = Math.max(1, Math.ceil(filtered.length / PER));
+  const currentPage = Math.min(page, pages);
+  const visible = filtered.slice((currentPage - 1) * PER, currentPage * PER);
+  const dirty = !!editing && draftDirty(editing, source);
+
+  function reset() {
+    setQuery(''); setTime('all'); setKind('all'); setTrackFilter('all'); setPage(1);
+  }
+
+  function requestClose() {
+    if (pendingId) return;
+    if (dirty) setDiscard(true);
+    else { setEditing(null); setSource(null); }
+  }
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !editing || confirmTrack || discard || adding || pendingId) return;
+      event.preventDefault();
+      if (dirty) setDiscard(true);
+      else { setEditing(null); setSource(null); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [editing, confirmTrack, discard, adding, pendingId, dirty]);
+
   async function track(row: FollowRecord) {
     setPendingId(row.follow_id);
-    setNotice(null);
     try {
       const result = await writeJson<{ message: string }>(`/api/v1/intel/follows/${row.follow_id}/track`, 'POST', csrf, { confirmed: true }, row.revision);
-      setNotice(result.message);
+      say(result.message);
+      setConfirmTrack(false);
       setEditing(null);
+      setSource(null);
       await load(false);
     } catch (cause) {
-      setNotice(cause instanceof Error ? cause.message : '项目追踪未确认');
+      say(cause instanceof Error ? cause.message : '项目追踪未确认', 'warning');
     } finally { setPendingId(null); }
   }
 
   async function saveEdit() {
-    if (!editing) return;
+    if (!editing?.follow_id) {
+      say('没有对应的关注档案，未写入。', 'warning');
+      return;
+    }
     setPendingId(editing.follow_id);
     try {
       await writeJson(`/api/v1/intel/follows/${editing.follow_id}`, 'PATCH', csrf, {
@@ -107,115 +137,121 @@ export function ProjectsPanel({ csrf, canWrite, switcher }: { csrf: string; canW
         chain: editing.chain,
       }, editing.revision);
       setEditing(null);
-      setNotice('项目资料已保存。分类已按本地规则重算。代币不会进入项目追踪。');
+      setSource(null);
+      say('项目资料已保存。分类已按本地规则重算。代币不会进入项目追踪。');
       await load(false);
     } catch (cause) {
-      setNotice(cause instanceof Error ? cause.message : '保存未确认');
+      say(cause instanceof Error ? cause.message : '保存未确认', 'warning');
     } finally { setPendingId(null); }
   }
 
   async function addFollow() {
     setPendingId('add');
-    setNotice(null);
     try {
       await writeJson('/api/v1/intel/follows', 'POST', csrf, {
         x_handle: handle, seed_handle: seedHandle, account_type: accountType, chain: draftChain, bio, recent_summary: summary,
       });
       setHandle(''); setBio(''); setSummary(''); setAdding(false);
-      setNotice('关注已写入。协议、发射台、黑客松且链明确时会出现在上面；代币只留在仅记录。');
+      say('关注已写入。协议、发射台、黑客松且链明确时记为项目；代币只留在仅记录。');
       await load(false);
     } catch (cause) {
-      setNotice(cause instanceof Error ? cause.message : '保存未确认');
+      say(cause instanceof Error ? cause.message : '保存未确认', 'warning');
     } finally { setPendingId(null); }
   }
 
   function openEdit(row: FollowRecord) {
-    setEditing(withAi(row));
+    setSource(row);
+    setEditing(draftFromFollow(row));
   }
 
   const columns: TableColumn<FollowRecord>[] = [
-    { key: 'time', header: '发现时间', width: '105px', render: row => <span className="date">{formatTime(row.occurred_at ?? row.created_at)}</span> },
+    { key: 'time', header: '发现时间', width: '105px', render: row => <span className="date" data-selected={editing?.follow_id === row.follow_id ? 'true' : undefined}>{formatTime(row.occurred_at ?? row.created_at)}</span> },
     { key: 'name', header: 'X 账号', width: '175px', render: row => <div className="account"><span className="avatar" aria-hidden="true">{(row.display_name || row.x_handle).slice(0, 1)}</span><div className="account-info"><strong title={row.display_name || row.x_handle}>{row.display_name || row.x_handle}</strong><small>@{row.x_handle}</small></div></div> },
     { key: 'bio', header: '主页简介 / 项目线索', render: row => <div className="bio" title={row.bio}>{row.bio || '暂无简介'}</div> },
-    { key: 'chain', header: '链', width: '120px', render: row => <span className="hunter-cell"><span className="hunter-number">{chainLabel(row.chain)}</span></span> },
+    { key: 'chain', header: '链', width: '110px', render: row => <span className="hunter-cell"><span className="hunter-number">{chainLabel(row.chain)}</span></span> },
     { key: 'type', header: '类型', width: '88px', render: row => typeLabel(row) },
-    { key: 'class', header: '判定', width: '100px', render: row => <span className={`status ${row.classification === 'pending' ? 'reviewed' : 'joined'}`}><i />{row.track_state === 'submitted' ? '已提交追踪' : row.classification === 'pending' ? '待定' : '项目'}</span> },
+    { key: 'class', header: '判定', width: '110px', render: row => { const view = statusView(row); return <span className={`status ${view.className}`}><i />{view.label}</span>; } },
     { key: 'actions', header: '操作', width: '168px', align: 'right', render: row => <div className="act">
-      {canWrite && row.track_eligible && <Button size="sm" variant="primary" pending={pendingId === row.follow_id} disabled={row.track_state === 'submitted'} onClick={() => void track(row)}>{row.track_state === 'submitted' ? '已追踪' : row.track_state === 'queued' ? '重试追踪' : '项目追踪'}</Button>}
-      <Button size="sm" className="soft" disabled={!canWrite || pendingId === row.follow_id} onClick={() => openEdit(row)}>编辑</Button>
+      <Button size="sm" onClick={() => { const value = row.x_handle.trim().replace(/^@/, ''); if (value) window.open(`https://x.com/${encodeURIComponent(value)}`, '_blank', 'noopener,noreferrer'); }}>X 主页 ↗</Button>
+      <Button size="sm" className="soft" disabled={pendingId === row.follow_id} onClick={() => openEdit(row)}>研究 / 编辑</Button>
     </div> },
   ];
 
-  const noiseColumns: TableColumn<FollowRecord>[] = [
-    { key: 'name', header: 'X 账号', width: '175px', render: row => <div className="account"><span className="avatar" aria-hidden="true">{row.x_handle.slice(0, 1)}</span><div className="account-info"><strong>@{row.x_handle}</strong><small>{row.display_name}</small></div></div> },
-    { key: 'bio', header: '主页简介', render: row => <div className="bio">{row.bio || '—'}</div> },
-    { key: 'type', header: '类型', width: '88px', render: row => typeLabel(row) },
-    { key: 'why', header: '处理', width: '90px', render: () => <Badge tone="neutral">仅记录</Badge> },
-    { key: 'actions', header: '操作', width: '90px', align: 'right', render: row => <div className="act"><Button size="sm" className="soft" disabled={!canWrite} onClick={() => openEdit(row)}>编辑</Button></div> },
-  ];
-
+  const projectCount = rows.filter(row => row.classification === 'project').length;
   const pendingCount = rows.filter(row => row.classification === 'pending').length;
+  const noiseCount = rows.filter(row => row.classification === 'noise').length;
   const trackedCount = rows.filter(row => row.track_state === 'submitted').length;
-  const editingSource = editing ? rows.concat(noise).find(row => row.follow_id === editing.follow_id) : undefined;
+  const start = filtered.length ? (currentPage - 1) * PER + 1 : 0;
+  const end = Math.min(currentPage * PER, filtered.length);
 
-  return <section className="discovery" aria-label="创始人关注的项目">
-    <header className="top">
-      <div className="crumb"><div>控制台 &nbsp;/&nbsp; <b>生态情报 · 创始人关注</b></div><Badge tone="warning" className="prototype-chip">本地分类 · 不连接 6551</Badge></div>
-      <div className="header-row">
-        <div>
-          <h1 className="page-title">创始人关注 <span>/ Founder Follows</span></h1>
-          <p className="subtitle">协议、发射台、黑客松，并且对应 BSC / Solana / ETH / Base / Robinhood Chain。代币不会自动进入项目追踪。</p>
+  return <>
+    <section className="discovery" aria-label="创始人关注的项目">
+      <header className="top">
+        <div className="crumb"><div>控制台 &nbsp;/&nbsp; <b>生态情报 · 创始人关注</b></div><Badge tone="warning" className="prototype-chip">本地分类 · 不连接 6551</Badge></div>
+        <div className="header-row">
+          <div>
+            <h1 className="page-title">创始人关注 <span>/ Founder Follows</span></h1>
+            <p className="subtitle">协议、发射台、黑客松，并且对应 BSC / Solana / ETH / Base / Robinhood Chain。代币不会自动进入项目追踪。</p>
+          </div>
+          <div className="title-buttons">{switcher}{canWrite && <Button className="soft" onClick={() => setAdding(true)}>＋ 补录关注</Button>}</div>
         </div>
-        {switcher}
-      </div>
-      <div className="kpis">{[
-        ['本页项目', rows.filter(row => row.classification === 'project').length, 'teal'],
-        ['待定', pendingCount, 'yellow'],
-        ['仅记录', noise.length, ''],
-        ['已提交追踪', trackedCount, 'blue'],
-      ].map(([label, value, color]) => <div className="kpi" key={String(label)}><div className="kpi-top">{label}</div><strong className={String(color)}>{String(value).padStart(2, '0')}</strong></div>)}</div>
-    </header>
-    <section className="filters" aria-label="搜索和筛选">
-      <div className="search-wrap"><SearchInput label="搜索项目" value={query} onValueChange={setQuery} placeholder="搜索 X 账号、简介、项目名称…" /></div>
-      <div className="seg" role="group" aria-label="按链筛选">
-        <Button aria-pressed={chain === ''} className={chain === '' ? 'on' : ''} onClick={() => setChain('')}>全部</Button>
-        {TRACK_CHAINS.map(item => <Button key={item.id} aria-pressed={chain === item.id} className={chain === item.id ? 'on' : ''} onClick={() => setChain(item.id)}>{item.label}</Button>)}
-      </div>
-      <span className="f-right">{loading ? '—' : rows.length} 条匹配项目</span>
-      {canWrite && <Button className="soft" onClick={() => setAdding(true)}>＋ 补录关注</Button>}
-    </section>
-    {notice && <p className="drawer-note" role="status" style={{ margin: '12px 25px 0' }}>{notice}</p>}
-    <div className="table-shell">
-      <div className="v3-table" data-mode={error && !rows.length ? 'error' : loading ? 'loading' : 'normal'}>
-        <DataTable caption="创始人关注的项目" columns={columns} rows={rows} rowKey={row => row.follow_id} loading={loading} refreshing={refreshing} minWidth={980}
-          error={error ? <ErrorState title="项目列表不可用" description={error} onRetry={() => void load(false)} pending={refreshing} /> : undefined}
-          empty={<EmptyState title="这条筛选下还没有项目" description="待定账号在「全部」里。代币、KOL 和交易所在下方的仅记录。" />} />
-      </div>
-      <details className="noise-fold">
-        <summary>仅记录（不进入项目追踪） · {noise.length}</summary>
-        <DataTable caption="仅记录的新关注" columns={noiseColumns} rows={noise} rowKey={row => row.follow_id} loading={loading} minWidth={720}
-          empty={<EmptyState title="没有仅记录的关注" description="代币、KOL、媒体、交易所、个人和空投会留在这里。" />} />
-      </details>
-    </div>
-    <footer className="table-footer"><div>{loading ? '正在读取本地关注…' : `本页 ${rows.length} 条项目 · 仅记录 ${noise.length} 条`}</div></footer>
-    <Dialog open={!!editing} onOpenChange={open => { if (!open && !pendingId) setEditing(null); }} title="编辑项目资料" pending={!!pendingId} initialFocusRef={nameRef} footer={<>
-      <Button data-dialog-cancel onClick={() => setEditing(null)}>取消</Button>
-      <Button variant="primary" pending={pendingId === editing?.follow_id} disabled={!canWrite} onClick={() => void saveEdit()}>保存项目资料</Button>
-      {editingSource?.track_eligible && <Button className="soft" pending={pendingId === editing?.follow_id} disabled={!canWrite || editingSource.track_state === 'submitted'} onClick={() => void track(editingSource)}>{editingSource.track_state === 'submitted' ? '已提交追踪' : '项目追踪'}</Button>}
-    </>}>
-      {editing && <div className="modal-size">
-        <div className="drawer-note ai-note">✦ AI 已按简介预填名称、类型、链和备注，请核对后点「保存项目资料」。评分不会自动填写。代币不会进入项目追踪。</div>
-        <p className="modal-desc">保存只更新生态情报里的这条关注。点「项目追踪」才会提交与猎手相同的 tracking.create。</p>
-        <Input label="X 账号" value={`@${editing.x_handle}`} readOnly hint="自动识别 · 不可修改" />
-        <Input ref={nameRef} label="项目名称" value={editing.display_name} maxLength={80} onChange={event => setEditing({ ...editing, display_name: event.target.value })} />
-        <label className="field">X 主页简介<textarea readOnly rows={2} value={editing.bio} /></label>
-        <Select label="链" value={editing.chain} onChange={event => setEditing({ ...editing, chain: event.target.value as TrackChain | '' })}>
-          <option value="">未定</option>
-          {TRACK_CHAINS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+        <div className="kpis">{[
+          ['项目', projectCount, 'teal'],
+          ['待定', pendingCount, 'yellow'],
+          ['仅记录', noiseCount, ''],
+          ['已提交追踪', trackedCount, 'blue'],
+        ].map(([label, value, color]) => <div className="kpi" key={String(label)}><div className="kpi-top">{label}</div><strong className={String(color)}>{String(value).padStart(2, '0')}</strong></div>)}</div>
+      </header>
+      <section className="filters" aria-label="搜索和筛选">
+        <div className="search-wrap"><SearchInput label="搜索项目" value={query} onValueChange={value => { setQuery(value); setPage(1); }} placeholder="搜索 X 账号、简介、项目名称…" /></div>
+        <Select label="时间筛选" className="filter-select" value={time} onChange={event => { setTime(event.target.value); setPage(1); }}>
+          <option value="all">全部时间</option>
+          <option value="24">最近 24 小时</option>
+          <option value="72">最近 72 小时</option>
+          <option value="168">最近 7 天</option>
         </Select>
-        <Select label="类型" value={editing.account_type} onChange={event => setEditing({ ...editing, account_type: event.target.value as AccountType })}>{ACCOUNT_TYPES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</Select>
-        <label className="field">个人备注<textarea rows={3} maxLength={2000} value={editing.notes} onChange={event => setEditing({ ...editing, notes: event.target.value })} /></label>
-      </div>}
+        <div className="seg" role="group" aria-label="判定筛选">
+          {([['all', '全部'], ['project', '项目'], ['pending', '待定'], ['noise', '仅记录']] as const).map(([value, label]) => <Button key={value} aria-pressed={kind === value} className={kind === value ? 'on' : ''} onClick={() => { setKind(value); setPage(1); }}>{label}</Button>)}
+        </div>
+        <Select label="状态筛选" className="filter-select" value={trackFilter} onChange={event => { setTrackFilter(event.target.value as typeof trackFilter); setPage(1); }}>
+          <option value="all">全部状态</option>
+          <option value="none">未追踪</option>
+          <option value="queued">已排队</option>
+          <option value="submitted">已提交追踪</option>
+        </Select>
+        <Button variant="ghost" size="sm" onClick={reset}>↺ 重置</Button>
+        <span className="f-right">{loading ? '—' : filtered.length} 条匹配发现</span>
+      </section>
+      <div className="table-shell">
+        <div className="v3-table" data-mode={error && !rows.length ? 'error' : loading ? 'loading' : 'normal'}>
+          <DataTable caption="创始人关注的项目" columns={columns} rows={loading ? [] : visible} rowKey={row => row.follow_id} loading={loading} refreshing={refreshing} minWidth={805}
+            error={error ? <ErrorState title="项目列表不可用" description={error} onRetry={() => void load(false)} pending={refreshing} /> : undefined}
+            empty={<EmptyState title="这条筛选下还没有项目" description="待定和仅记录可以在判定筛选里分开看。代币不会出现在项目里。" />} />
+        </div>
+      </div>
+      <footer className="table-footer">
+        <div>{loading ? '正在读取本地关注…' : `显示 ${start}–${end} / ${filtered.length} 条`}</div>
+        <div className="page-controls">
+          <span>{loading ? '— / —' : `${currentPage} / ${pages}`}</span>
+          <Button size="sm" aria-label="上一页" disabled={loading || currentPage <= 1} onClick={() => setPage(currentPage - 1)}>‹</Button>
+          <Button size="sm" aria-label="下一页" disabled={loading || currentPage >= pages} onClick={() => setPage(currentPage + 1)}>›</Button>
+        </div>
+      </footer>
+    </section>
+    {editing && <ProjectDrawer draft={editing} pending={!!pendingId} canWrite={canWrite} dirty={dirty} onChange={patch => setEditing(current => current ? { ...current, ...patch } : current)} onClose={requestClose} onSave={() => void saveEdit()} onTrack={() => { if (source?.track_eligible && source.track_state !== 'submitted') setConfirmTrack(true); }} />}
+    <Dialog open={confirmTrack} onOpenChange={open => { if (!open && !pendingId) setConfirmTrack(false); }} title="加入项目追踪" pending={!!pendingId} footer={<>
+      <Button data-dialog-cancel onClick={() => setConfirmTrack(false)}>取消</Button>
+      <Button variant="primary" pending={pendingId === source?.follow_id} disabled={!source} onClick={() => { if (source) void track(source); }}>确认提交</Button>
+    </>}>
+      <div className="modal-size" data-size="small">
+        <p className="modal-desc">确认把「{editing?.display_name || source?.display_name}」提交到现有猎手项目追踪吗？命令与 tracking.create 相同，不会另开一套监控，也不会调用 6551。</p>
+      </div>
+    </Dialog>
+    <Dialog open={discard} destructive onOpenChange={open => { if (!open) setDiscard(false); }} title="放弃未保存的修改？" pending={false} footer={<>
+      <Button data-dialog-cancel onClick={() => setDiscard(false)}>继续编辑</Button>
+      <Button variant="danger" onClick={() => { setDiscard(false); setEditing(null); setSource(null); }}>放弃修改</Button>
+    </>}>
+      <div className="modal-size" data-size="small"><p className="modal-desc">当前资料尚未保存。放弃后将丢弃本次修改，包括规则预填。</p></div>
     </Dialog>
     <Dialog open={adding} onOpenChange={open => { if (!open && pendingId !== 'add') setAdding(false); }} title="补录关注" pending={pendingId === 'add'} footer={<>
       <Button data-dialog-cancel onClick={() => setAdding(false)}>取消</Button>
@@ -234,5 +270,6 @@ export function ProjectsPanel({ csrf, canWrite, switcher }: { csrf: string; canW
         <Input label="近期推文摘要" value={summary} maxLength={2000} onChange={event => setSummary(event.target.value)} />
       </div>
     </Dialog>
-  </section>;
+    <ToastViewport messages={messages} onDismiss={id => setMessages(current => current.filter(item => item.id !== id))} />
+  </>;
 }

@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {auth,requireIdentity,requireSuperadmin,withAuth} from '../../../modules/auth/dist/src/server.js';
+import {shutdownSignal} from './shutdown';
 
 type Principal={user_id:string;tenant_id:'ikun-main';role:'superadmin'|'user'};
 const id=(request:Request)=>{const value=request.headers.get('x-request-id');return value&&/^[A-Za-z0-9_-]{1,64}$/.test(value)?value:randomUUID();};
@@ -61,12 +62,15 @@ export async function hunterEventsRoute(original:Request){
     const resume=request.headers.get('last-event-id');if(resume&&!/^hunter:[0-9]{1,15}$/.test(resume))return fail(requestId,422,'VALIDATION_ERROR','Hunter 事件游标无效');
     let after=resume?Number(resume.slice(7)):0,done=false,timer:ReturnType<typeof setTimeout>|undefined,wake:(()=>void)|undefined;
     const controller=new AbortController(),encoder=new TextEncoder();let heartbeat=Date.now();
-    const body=new ReadableStream<Uint8Array>({async pull(stream){
+    let output:ReadableStreamDefaultController<Uint8Array>|undefined;
+    const release=()=>shutdownSignal().removeEventListener('abort',shutdown);
+    function shutdown(){release();if(done)return;done=true;controller.abort();clearTimeout(timer);wake?.();try{output?.close();}catch{}}
+    const body=new ReadableStream<Uint8Array>({start(stream){output=stream;if(shutdownSignal().aborted)shutdown();else shutdownSignal().addEventListener('abort',shutdown,{once:true});},async pull(stream){
       try{
         while(!done){
           const principal=liveIdentity();
           const result=await hunterCall('/internal/v1/events?after='+after,requestId,principal,'GET',undefined,{},controller.signal);
-          if(!result.ok){done=true;stream.close();return;}
+          if(!result.ok){done=true;release();stream.close();return;}
           const envelope=await result.json();const frames=envelope.data.items;
           if(!Array.isArray(frames))throw Error('INVALID_EVENTS');
           if(frames.length){
@@ -80,8 +84,8 @@ export async function hunterEventsRoute(original:Request){
           if(Date.now()-heartbeat>=15000){liveIdentity();heartbeat=Date.now();stream.enqueue(encoder.encode(': heartbeat\n\n'));return;}
           await new Promise<void>(resolve=>{wake=resolve;timer=setTimeout(resolve,500);});
         }
-      }catch{if(!done){done=true;controller.abort();stream.close();}}
-    },cancel(){done=true;controller.abort();clearTimeout(timer);wake?.();}});
+      }catch{release();if(!done){done=true;controller.abort();stream.close();}}
+    },cancel(){done=true;release();controller.abort();clearTimeout(timer);wake?.();}});
     return new Response(body,{headers:{'content-type':'text/event-stream','cache-control':'no-store','x-request-id':requestId,'x-accel-buffering':'no'}});
   });
 }

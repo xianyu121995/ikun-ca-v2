@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {withAuth,requireIdentity} from '../../../modules/auth/dist/src/server.js';
 import {ipc,projectsAuth,failure,requestId} from './projects';
+import {untilShutdown} from './shutdown';
 
 export async function projectEvents(request:Request){
   projectsAuth();const id=requestId(request);const headers=new Headers(request.headers);headers.set('x-request-id',id);request=new Request(request,{headers});
@@ -13,7 +14,9 @@ export async function projectEvents(request:Request){
     const body=new ReadableStream<Uint8Array>({
       start(controller){
         const stop=()=>{if(stopped)return;stopped=true;clearTimeout(timer);abort.abort();try{controller.close();}catch{}};
-        request.signal.addEventListener('abort',stop,{once:true});
+        const ended=untilShutdown(request.signal);
+        if(ended.aborted){stop();return;}
+        ended.addEventListener('abort',stop,{once:true});
         async function poll(){
           if(stopped)return;
           try{

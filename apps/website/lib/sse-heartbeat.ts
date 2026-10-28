@@ -1,5 +1,8 @@
+import { untilShutdown } from './shutdown';
+
 /** Keep quiet authenticated event streams open through proxies without creating application events. */
-export function withSseHeartbeat(response: Response, signal: AbortSignal, intervalMs = 25_000): Response {
+export function withSseHeartbeat(response: Response, requestSignal: AbortSignal, intervalMs = 25_000): Response {
+  const signal = untilShutdown(requestSignal);
   if (!response.ok || !response.body || !response.headers.get('content-type')?.startsWith('text/event-stream')) return response;
   const reader = response.body.getReader(), encoder = new TextEncoder();
   let done = false, timer: ReturnType<typeof setInterval> | undefined;

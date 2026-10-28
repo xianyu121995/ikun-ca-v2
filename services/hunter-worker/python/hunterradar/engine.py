@@ -63,7 +63,7 @@ class Engine:
         self.store.set_state('worker_error', None)
         loops = [asyncio.create_task(self.supervise(name, fn)) for name, fn in
                  [('profiles', self.profile_loop), ('rest', self.rest_loop), ('wss', self.wss_loop),
-                  ('watch', self.watch_loop), ('outbox', self.outbox_loop), ('heartbeat', self.heartbeat_loop),('retention',self.retention_loop),('ai',self.ai_loop)]]
+                  ('watch', self.watch_loop), ('outbox', self.outbox_loop), ('outcome', self.outcome_loop), ('heartbeat', self.heartbeat_loop),('retention',self.retention_loop),('ai',self.ai_loop)]]
         try:
             await self.stop.wait()
         finally:
@@ -499,3 +499,57 @@ class Engine:
                     await self.deliver(task)
                     continue
             await self.pause(2)
+
+    @staticmethod
+    def _parse_command_outcome(task, payload):
+        data=payload.get('data') if isinstance(payload,dict) else None
+        if not isinstance(data,dict) or data.get('event_id')!=task.get('event_id') or data.get('command_id')!=task.get('command_id'):
+            return None
+        state=data.get('command_state')
+        if state=='sending':state='pending'
+        if state not in ('pending','accepted','running','succeeded','failed','unknown'):
+            return None
+        error=data.get('error_code')
+        if error=='':error=None
+        if error is not None and (not isinstance(error,str) or len(error)>64):
+            return None
+        return state,error
+
+    async def reconcile_outcomes(self, now=None):
+        """Read projects receipts for delivered joins. GET only; never posts a command."""
+        if self.settings.delivery_protocol!='v2-event' or not self.settings.project_url or len(self.settings.project_token)<32:
+            return 0
+        now=time.time() if now is None else now
+        rows=await asyncio.to_thread(self.store.due_delivered_outcomes, now, 40)
+        if not rows:return 0
+        parsed=urlsplit(self.settings.project_url)
+        origin=f'{parsed.scheme}://{parsed.netloc}'
+        headers={'Authorization':'Bearer '+self.settings.project_token}
+        semaphore=asyncio.Semaphore(4)
+        async def one(row):
+            async with semaphore:
+                delay,state,error=60,None,None
+                try:
+                    response=await self.providers.client.get(origin+'/internal/v1/receipts/hunter/'+row['event_id'],headers=headers,timeout=5,follow_redirects=False)
+                    if response.status_code==200:
+                        outcome=self._parse_command_outcome(row,response.json())
+                        if outcome:
+                            state,error=outcome
+                            delay=120 if state=='unknown' else 30
+                    elif response.status_code in (401,403):
+                        delay=300
+                except (httpx.HTTPError,ValueError,TypeError):
+                    delay=60
+                return row['id'],state,error,now+delay
+        updates=await asyncio.gather(*(one(row) for row in rows))
+        await asyncio.to_thread(self.store.apply_delivered_outcomes, list(updates), now)
+        return len(rows)
+
+    async def outcome_loop(self):
+        while not self.stop.is_set():
+            worked=0
+            try:worked=await self.reconcile_outcomes()
+            except LeaseLost:raise
+            except Exception as error:LOG.warning('outcome_reconcile_failed %s',type(error).__name__)
+            # A full batch may have more due rows; otherwise wait. Not a tight poll.
+            await self.pause(0.2 if worked>=40 else 30)

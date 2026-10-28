@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import App from '../features/hunter-discovery/v3/App';
-import {beginMonitoringSubmit,finishMonitoringSubmit,selectUnverifiedIds,type Project,type Grade,type Filters,type MonitoringState} from '../features/hunter-discovery/v3/model';
+import {beginMonitoringSubmit,finishMonitoringSubmit,liveMonitoringPatch,selectUnverifiedIds,type Project,type Grade,type Filters,type MonitoringState} from '../features/hunter-discovery/v3/model';
 import type {DiscoveryDTO,CommandResult,HunterAccountDTO,ProjectFields} from '../features/hunter-discovery/model';
 import './hunter-host.css';
 import {clearClientSession,invalidateClientData,peekClientData,readClientData,saveClientData} from '../lib/client-session-cache';
@@ -65,10 +65,11 @@ export default function HunterController({session,fixture=false}:{session:Sessio
   const started=Date.now(),path='/api/v1/hunter/signals?'+new URLSearchParams({...query,limit:'100',...(target?{cursor:target}:{})});
   try{const [original,subscriptions]=await Promise.all([readClientData(scope,path,()=>api(path,'GET',undefined,{},AbortSignal.timeout(12000)),750),loadTrackingSubscriptions(scope,true).catch(()=>[])]);
    const page={...original,items:original.items.map((item:DiscoveryDTO)=>({...item}))};
-   for (const item of page.items) if(item.review_state==='tracking') {
-    const sub=subscriptions.find(s=>s.project_id===item.project_id);
-    item.monitoring_state=sub?.error_code?'failed':sub?.desired_state==='running'&&sub.observed_state==='running'&&sub.connection==='connected'?'succeeded':'pending';
-    item.monitoring_message=sub?.error_code?'失败：'+sub.error_code:item.monitoring_state==='succeeded'?'追踪中':sub?.desired_state==='removed'?'追踪已移除':sub?.desired_state==='stopped'?'追踪已停止':sub?'监听连接中':'订阅投递中或追踪服务暂不可用';
+   for (const item of page.items) {
+    const next=liveMonitoringPatch(item,subscriptions.find(s=>s.project_id===item.project_id));
+    if(next===item)continue;
+    item.monitoring_state=next.monitoring_state;
+    (item as DiscoveryDTO & {monitoring_message?:string}).monitoring_message=next.monitoring_message;
    }
    if(version!==generation.current||controller.signal.aborted)return;readAt.current=started;setRecords(page.items);setNextCursor(page.next_cursor);runAlert(page.items.map(toCue));
    saveClientData(scope,'hunter:view',{records:page.items,nextCursor:page.next_cursor,cursor:target,history,query,counts,filterValues});

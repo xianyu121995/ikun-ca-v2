@@ -439,6 +439,19 @@ class Worker:
                 stored = 0
             await self.pause(1 if stored else 3)
 
+    async def timeline(self):
+        # Alongside translation: one stored tweet per pass, off the event loop, no 6551 calls.
+        from .timeline_extract import run_pass
+
+        failures: dict = {}
+        while not self.stop.is_set():
+            try:
+                stored = await asyncio.to_thread(run_pass, self.store, failures)
+            except Exception:  # noqa: BLE001 - timeline extraction must never stop the worker
+                logging.getLogger(__name__).warning("tracking_timeline_pass_failed")
+                stored = 0
+            await self.pause(2 if stored else 30)
+
     def retry_adoptions(self):
         for row in self.store.projects():
             if self.adoptable(row) and row['desired']=='running' and row['error']=='ownership_conflict':
@@ -450,6 +463,7 @@ class Worker:
         self.retry_adoptions()
         tasks = [
             asyncio.create_task(self.translations()),
+            asyncio.create_task(self.timeline()),
             asyncio.create_task(self.ticks()),
             asyncio.create_task(self.streams()),
             asyncio.create_task(self.pulse()),

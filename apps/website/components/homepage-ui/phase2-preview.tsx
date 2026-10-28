@@ -3,14 +3,14 @@ import {useRef,useState,type AnchorHTMLAttributes} from 'react';
 import {AppShell,Select} from '@ikun/ui';
 import '@ikun/ui/styles.css';
 import ReferenceHomepage from './reference-homepage';
-import {DEMO_AS_OF,referenceFixtures} from '../../features/homepage/reference-fixtures';
+import {DEMO_AS_OF,fixtureAiEntries,referenceFixtures} from '../../features/homepage/reference-fixtures';
 import {pickFields} from '../../features/homepage/view-model';
 import type {HomepageData,HomepageQuery,OperationResult,ProjectRecordProjection,ProjectRef} from '../../features/homepage/types';
-import type {ArchiveNote,EditorDraft,ProjectMilestone,ReferenceCallbacks} from '../../features/homepage/reference-types';
+import type {AiTimelineEntry,AiTimelinePatch,ArchiveNote,EditorDraft,ProjectMilestone,ReferenceCallbacks} from '../../features/homepage/reference-types';
 
 function PreviewLink(props:AnchorHTMLAttributes<HTMLAnchorElement>&{href:string}){return <a {...props} title="本次仅验收主页，其他页面由对应窗口开发" onClick={event=>event.preventDefault()}/>;}
 export default function Phase2Preview(){
-  const [initial]=useState(referenceFixtures),[items,setItems]=useState(initial.projects),[milestones,setMilestones]=useState(initial.milestones),[archiveNotes,setArchiveNotes]=useState<ArchiveNote[]>([]);
+  const [initial]=useState(referenceFixtures),[items,setItems]=useState(initial.projects),[milestones,setMilestones]=useState(initial.milestones),[archiveNotes,setArchiveNotes]=useState<ArchiveNote[]>([]),[aiEntries,setAiEntries]=useState(fixtureAiEntries);
   const [mode,setMode]=useState<'demo'|'live'>('demo'),[role,setRole]=useState<'superadmin'|'user'>('superadmin'),[scenario,setScenario]=useState('success'),[listCase,setListCase]=useState('ready');
   const [calls,setCalls]=useState(0),[last,setLast]=useState('尚未调用回调'),[query,setQuery]=useState<HomepageQuery|null>(null),[foundDate,setFoundDate]=useState<string|null>(null);
   const counter=useRef(0),generation=useRef(0),pendingApply=useRef<null|(()=>void)>(null);
@@ -53,6 +53,8 @@ export default function Phase2Preview(){
     onDiscoveryDateChange:setFoundDate,
     onReload:()=>{setListCase('refreshing');setTimeout(()=>setListCase('ready'),400);},
     onNextPage:cursor=>audit('next-cursor',{cursor}),
+    onAiUpdate:async(entry:AiTimelineEntry,patch:AiTimelinePatch)=>{setAiEntries(previous=>previous.map(item=>item.entry_id===entry.entry_id?{...item,...patch}:item));return null;},
+    onAiDelete:async(entry:AiTimelineEntry)=>{setAiEntries(previous=>previous.filter(item=>item.entry_id!==entry.entry_id));return null;},
   };
   const error={code:'UPSTREAM_UNAVAILABLE',message:'模拟数据读取失败，保留已加载内容。',retryable:true,request_id:'demo-reference-list'};
   const data:HomepageData=mode==='live'?{status:'error',items:[],next_cursor:null,error:{code:'AUTH_NOT_CONFIGURED',message:'Live 数据提供者尚未接入，没有演示回退。',retryable:false,request_id:null}}:{status:listCase==='loading'?'loading':listCase==='empty'?'empty':listCase.includes('error')?'error':'ready',items:['loading','empty','error'].includes(listCase)?[]:items,next_cursor:listCase==='page'?'demo-next-cursor':null,refreshing:listCase==='refreshing',error:listCase.includes('error')?error:null};
@@ -64,6 +66,6 @@ export default function Phase2Preview(){
       <Select label="回调结果演示" disabled={mode==='live'} value={scenario} onChange={event=>setScenario(event.target.value)}>{['success','denied','timeout','conflict','accepted','pending','running','unknown','throw'].map(value=><option key={value}>{value}</option>)}</Select>
       <output aria-label="操作回调次数">回调 {calls} 次</output><details><summary>查看回调参数</summary><pre data-testid="callback-log">{last}</pre><pre data-testid="query-log">{JSON.stringify({query,foundDate})}</pre></details>
     </div></details>
-    <ReferenceHomepage context={mode==='demo'?{mode,role,capabilities:{can_edit_projects:role==='superadmin'}}:{mode:'live'}} data={data} callbacks={mode==='demo'?callbacks:{}} milestones={mode==='demo'?milestones:[]} archiveNotes={mode==='demo'?archiveNotes:[]} asOfDate={mode==='demo'?DEMO_AS_OF:undefined}/>
+    <ReferenceHomepage context={mode==='demo'?{mode,role,capabilities:{can_edit_projects:role==='superadmin'}}:{mode:'live'}} data={data} callbacks={mode==='demo'?callbacks:{}} milestones={mode==='demo'?milestones:[]} aiEntries={mode==='demo'?aiEntries:[]} archiveNotes={mode==='demo'?archiveNotes:[]} asOfDate={mode==='demo'?DEMO_AS_OF:undefined}/>
   </AppShell></div>;
 }

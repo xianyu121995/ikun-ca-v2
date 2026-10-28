@@ -6,7 +6,7 @@ import type {AuthHttp} from '../../../modules/auth/dist/src/http.js';
 
 const uuid='[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
 const readPaths=[/^\/api\/v1\/projects\/(?:home-summary|milestones)$/,new RegExp('^/api/v1/projects/operations/'+uuid+'$')];
-readPaths.push(/^\/api\/v1\/hunter\/events$/, /^\/api\/v1\/tracking\/events$/);
+readPaths.push(/^\/api\/v1\/hunter\/events$/, /^\/api\/v1\/tracking\/events$/, /^\/api\/v1\/tracking\/timeline-events$/);
 const globalState=globalThis as typeof globalThis & {ikunAuth?:AuthHttp;ikunProjectsPolicy?:boolean};
 /** Reviewed additive route admission on the very same B1 store/singleton. */
 export function projectsAuth(){

@@ -336,3 +336,27 @@ def test_hunter_first_discovered_at_is_preserved(domain):
     result=call(domain,'ingest',principal=None,source='hunter',body=e)[1]
     p=call(domain,'get',target=result['project_id'])[1]
     assert p['discovered_at']=='2026-10-14T08:12:34.123000Z'
+
+def test_hunter_receipt_reports_command_outcome_without_writing(domain):
+    data=event();created=call(domain,'ingest',principal=None,source='hunter',body=data)[1]
+    assert created['command_state']=='pending' and created['error_code'] is None
+    assert set(created)=={'event_id','project_id','receipt_id','accepted_at','duplicate','command_id','command_state','error_code'}
+    with domain.db.connect() as con:
+        before=[tuple(row) for row in con.execute('SELECT command_id,state,error_code,attempts,delivered FROM tracking_outbox')]
+        assert con.execute('SELECT COUNT(*) FROM event_inbox').fetchone()[0]==1
+    plain_keys={'event_id','project_id','receipt_id','accepted_at','duplicate','command_id'}
+    def read():return call(domain,'receipt',principal=None,source='hunter',target=data['event_id'])[1]
+    assert set(read())-plain_keys=={'command_state','error_code'}
+    cases=[('succeeded',None),('failed','ABANDONED_INVALID_ID_V5'),('failed','ABANDONED_DUPLICATE_CREATE_409'),('unknown','UPSTREAM_TIMEOUT'),('unknown','ownership_conflict'),('sending',None),('running',None)]
+    for state,error in cases:
+        with domain.db.transaction() as con:
+            con.execute('UPDATE tracking_outbox SET state=?,error_code=? WHERE command_id=?',(state,error,created['command_id']))
+        outcome=read()
+        assert outcome['command_id']==created['command_id']
+        assert outcome['command_state']==('pending' if state=='sending' else state)
+        assert outcome['error_code']==error
+        assert outcome['duplicate'] is True
+    with domain.db.connect() as con:
+        assert [tuple(row) for row in con.execute('SELECT command_id,attempts,delivered FROM tracking_outbox')]==[(before[0][0],before[0][3],before[0][4])]
+        assert con.execute('SELECT COUNT(*) FROM tracking_outbox').fetchone()[0]==1
+        assert con.execute('SELECT COUNT(*) FROM event_inbox').fetchone()[0]==1

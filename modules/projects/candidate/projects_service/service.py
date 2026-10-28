@@ -93,7 +93,8 @@ class Service:
                     row=con.execute('SELECT * FROM event_inbox WHERE source=? AND event_id=? AND tenant_id=?',(rpc.source,valid_id(rpc.target,'evt_'),SCOPE)).fetchone()
                     if not row:raise DomainError(404,'NOT_FOUND','受理回执不存在')
                     if rpc.source=='tracking':observations.verify_hash(expected,row['body_hash'])
-                    return 200,self.event_receipt(row,True),None
+                    outcome=self.command_outcome(con,row) if rpc.source=='hunter' else None
+                    return 200,self.event_receipt(row,True,outcome),None
                 if rpc.operation=='command':
                     row=con.execute('SELECT * FROM tracking_outbox WHERE command_id=? AND tenant_id=?',(valid_id(rpc.target,'cmd_'),SCOPE)).fetchone()
                     if not row:raise DomainError(404,'NOT_FOUND','命令不存在')
@@ -192,8 +193,19 @@ class Service:
             return status,output,f'"rev-{revision_value}"' if revision_value else None
 
     @staticmethod
-    def event_receipt(row,duplicate):
-        return {key:row[key] for key in ('event_id','project_id','receipt_id','accepted_at','command_id')}|{'duplicate':duplicate}
+    def event_receipt(row,duplicate,outcome=None):
+        body={key:row[key] for key in ('event_id','project_id','receipt_id','accepted_at','command_id')}|{'duplicate':duplicate}
+        # Hunter receipts stay the acceptance record and also carry the linked
+        # tracking command's current state. Tracking observation receipts do not.
+        return body if outcome is None else body|outcome
+
+    @staticmethod
+    def command_outcome(con,row):
+        """Read-only projection of the command this hunter event already created."""
+        if not row['command_id']:return {'command_state':None,'error_code':None}
+        command=con.execute('SELECT state,error_code FROM tracking_outbox WHERE command_id=? AND tenant_id=?',(row['command_id'],SCOPE)).fetchone()
+        if not command:return {'command_state':None,'error_code':None}
+        return {'command_state':'pending' if command['state']=='sending' else command['state'],'error_code':command['error_code']}
 
     def ingest(self,rpc):
         claimed=rpc.body.get('source')
@@ -213,7 +225,7 @@ class Service:
             old=con.execute('SELECT * FROM event_inbox WHERE tenant_id=? AND source=? AND event_id=?',(SCOPE,event.source,event.event_id)).fetchone()
             if old:
                 if old['body_hash']!=hashed:raise DomainError(409,'CONFLICT','事件 ID 对应不同资料，需人工核对')
-                return 200,self.event_receipt(old,True),None
+                return 200,self.event_receipt(old,True,self.command_outcome(con,old)),None
             aliases=[payload.source_entity_key]+(['x-user:'+payload.x_user_id] if payload.x_user_id else [])
             mapped={row['project_id'] for key in aliases for row in con.execute('SELECT project_id FROM project_sources WHERE tenant_id=? AND source=? AND external_id=?',(SCOPE,event.source,key))}
             if event.project_id:mapped.add(event.project_id)
@@ -246,7 +258,7 @@ class Service:
             con.execute('INSERT INTO event_inbox(source,event_id,tenant_id,body_hash,project_id,command_id,receipt_id,accepted_at) VALUES(?,?,?,?,?,?,?,?)',
                         (event.source,event.event_id,SCOPE,hashed,target,payload.command_id,receipt_id,now()))
             row=con.execute('SELECT * FROM event_inbox WHERE tenant_id=? AND source=? AND event_id=?',(SCOPE,event.source,event.event_id)).fetchone()
-            return 200,self.event_receipt(row,False),None
+            return 200,self.event_receipt(row,False,self.command_outcome(con,row)),None
 
     @staticmethod
     def command(row,request_id):

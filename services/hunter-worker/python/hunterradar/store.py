@@ -484,6 +484,37 @@ class Store:
                 db.execute("UPDATE task_outbox SET status='delivering',attempts=attempts+1,command_revision=command_revision+1,updated_at=? WHERE id=?", (now,row['id']))
                 return dict(row) | {'attempts': row['attempts']+1}
 
+    def due_delivered_outcomes(self, now, limit=40):
+        """Delivered joins whose public state is not terminal. Keyed rows only; no body."""
+        with self.connect() as db:
+            rows=db.execute('''SELECT id,event_id,command_id,public_state FROM task_outbox
+                WHERE status='delivered' AND posted=1 AND command_id IS NOT NULL AND event_id IS NOT NULL
+                  AND public_state IN ('pending','accepted','running','unknown') AND next_attempt_at<=?
+                ORDER BY next_attempt_at,confirmed_at LIMIT ?''',(now,int(limit))).fetchall()
+            return [dict(row) for row in rows]
+
+    def apply_delivered_outcomes(self, updates, now):
+        """Persist a projects command outcome. Never changes status, posted, or attempts."""
+        with self.connect(True) as db:
+            for identifier,state,error,retry_at in updates:
+                row=db.execute("SELECT * FROM task_outbox WHERE id=? AND status='delivered' AND posted=1",(identifier,)).fetchone()
+                if not row or row['public_state'] in ('succeeded','failed'):continue
+                if state not in ('pending','accepted','running','succeeded','failed','unknown'):
+                    db.execute("UPDATE task_outbox SET next_attempt_at=? WHERE id=? AND status='delivered' AND posted=1",(retry_at,identifier))
+                    continue
+                stored=error if state in ('failed','unknown') else None
+                changed=row['public_state']!=state or (row['last_error'] or None)!=(stored or None)
+                if not changed:
+                    db.execute("UPDATE task_outbox SET next_attempt_at=? WHERE id=? AND status='delivered' AND posted=1",(retry_at,identifier))
+                    continue
+                db.execute('''UPDATE task_outbox SET public_state=?,last_error=?,next_attempt_at=?,updated_at=?,command_revision=command_revision+1
+                    WHERE id=? AND status='delivered' AND posted=1''',(state,stored,retry_at,now,identifier))
+                task=db.execute('SELECT * FROM task_outbox WHERE id=?',(identifier,)).fetchone()
+                if task and task['command_id']:
+                    from .formal import command_dto
+                    db.execute('INSERT INTO public_changes(type,entity_id,data,received_at) VALUES(?,?,?,?)',('command.updated',task['command_id'],json.dumps(command_dto(task,task['request_id'])),now))
+                    if task['target']:self.change(db,task['target'],now)
+
     def finish_task(self, identifier, status, *, code=None, retry_at=0, receipt=None, now=None,canonical=None,receipt_data=None):
         with self.connect(True) as db:
             stamp=time.time() if now is None else now

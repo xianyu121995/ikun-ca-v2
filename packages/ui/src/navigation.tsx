@@ -4,12 +4,11 @@ import type { AnchorHTMLAttributes, ComponentType, ReactNode } from "react";
 import { Icon, type IconName } from "./icons.js";
 import { cx } from "./primitives.js";
 
-// Presentation routes. The shell does not create the pages.
+// Phase-two presentation routes; these do not create business pages.
 export const BUSINESS_NAVIGATION: ReadonlyArray<{ href: string; label: string; icon: IconName }> = [
   { href: "/", label: "主页", icon: "home" },
   { href: "/hunter", label: "猎手监控", icon: "radar" },
   { href: "/tracking", label: "猎手项目监控", icon: "layers" },
-  { href: "/intel", label: "生态情报", icon: "eye" },
 ];
 export function isNavigationActive(pathname: string, href: string): boolean {
   const path = pathname.split(/[?#]/)[0]?.replace(/\/+$/, "") || "/";

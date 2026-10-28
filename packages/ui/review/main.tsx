@@ -18,20 +18,17 @@ class PageBoundary extends Component<{ children: ReactNode }, { failed: boolean 
 }
 function Review() {
   const [route, setRoute] = useState<Route>(() => asRoute(location.pathname));
-  const [notice, setNotice] = useState<string | null>(null);
   useEffect(() => { const pop = () => setRoute(asRoute(location.pathname)); window.addEventListener("popstate", pop); return () => window.removeEventListener("popstate", pop); }, []);
   const Link = useCallback(function ReviewLink({ href, children, ...props }: NavigationLinkProps) {
     return <a {...props} href={href} onClick={event => {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
-      if (href === "/intel") { event.preventDefault(); setNotice("生态情报在网站 /intel，不在这三页定稿预览里。"); return; }
       if (!routes.includes(href as Route)) return;
       event.preventDefault();
-      setNotice(null);
       if (location.pathname === href) return;
       history.pushState({}, "", href); setRoute(href as Route); window.scrollTo(0, 0);
     }}>{children}</a>;
   }, []);
-  return <div className="ik-theme review-app"><AppShell pathname={route} LinkComponent={Link} footer={<div className="review-sidebar-note"><Badge tone="warning">定稿 UI 联调</Badge><p>演示数据 · 本地预览<br />切页或刷新会重置修改</p>{notice && <p>{notice}</p>}</div>}>
+  return <div className="ik-theme review-app"><AppShell pathname={route} LinkComponent={Link} footer={<div className="review-sidebar-note"><Badge tone="warning">定稿 UI 联调</Badge><p>演示数据 · 本地预览<br />切页或刷新会重置修改</p></div>}>
     <div className={`review-page review-page--${route === "/" ? "home" : route === "/hunter" ? "hunter" : "tracking"}`} data-review-route={route}>
       <PageBoundary key={route}>{route === "/" ? <Home /> : route === "/hunter" ? <Hunter /> : <TrackingWorkspace demo />}</PageBoundary>
     </div>

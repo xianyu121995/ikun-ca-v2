@@ -6,17 +6,14 @@ import { createRef } from "react";
 import * as publicUi from "../src/index.js";
 import { Alert, AppShell, BUSINESS_NAVIGATION, Button, DataTable, Dialog, Input, LoginPanel, ScoreBadge, SearchInput, isNavigationActive } from "../src/index.js";
 
-test("business navigation includes eco-intel and matches complete path segments", () => {
-  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.label), ["主页", "猎手监控", "猎手项目监控", "生态情报"]);
+test("business navigation has exactly three entries and matches complete path segments", () => {
+  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.label), ["主页", "猎手监控", "猎手项目监控"]);
   assert.equal(isNavigationActive("/hunter/signals?sort=time", "/hunter"), true);
   assert.equal(isNavigationActive("/hunter-extra", "/hunter"), false);
-  assert.equal(isNavigationActive("/intel/tweets?x=1", "/intel"), true);
-  assert.equal(isNavigationActive("/intel-extra", "/intel"), false);
   assert.equal(isNavigationActive("/hunter", "/"), false);
   assert.equal(isNavigationActive("/?view=all", "/"), true);
-  const html = renderToStaticMarkup(<AppShell pathname="/intel/follows" account={{ name: "示例" }}>内容</AppShell>);
+  const html = renderToStaticMarkup(<AppShell pathname="/tracking/abc" account={{ name: "示例" }}>内容</AppShell>);
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
-  assert.match(html, /aria-label="生态情报"/);
   assert.match(html, /aria-label="猎手项目监控"/);
   assert.match(html, /href="\/auth"/);
 });

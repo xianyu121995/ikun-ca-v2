@@ -13,7 +13,7 @@ export PATH="/Users/lvlei/Documents/ChatGPT/ikun.ca开发/ikun-ca-v2/.tools/node
 pnpm --dir packages/ui preview:review -- --port 3255
 ```
 
-打开 `http://127.0.0.1:3255`。预览可切换 `/`、`/hunter`、`/tracking`。侧栏里的生态情报只说明网站路由 `/intel`，不在这个预览里打开。支持浏览器后退、前进、直接刷新路由；服务仅绑定 `127.0.0.1`，Ctrl+C 退出。没有 HMR，修改后重启并刷新。
+打开 `http://127.0.0.1:3255`。左侧只有三个业务入口：`/`、`/hunter`、`/tracking`。支持浏览器后退、前进、直接刷新路由；服务仅绑定 `127.0.0.1`，Ctrl+C 退出。没有 HMR，修改后重启并刷新。
 
 ## 定稿来源
 

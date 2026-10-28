@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import App from '../features/hunter-discovery/v3/App';
-import type {Project,Grade,Filters} from '../features/hunter-discovery/v3/model';
+import {beginMonitoringSubmit,finishMonitoringSubmit,selectUnverifiedIds,type Project,type Grade,type Filters,type MonitoringState} from '../features/hunter-discovery/v3/model';
 import type {DiscoveryDTO,CommandResult,HunterAccountDTO,ProjectFields} from '../features/hunter-discovery/model';
 import './hunter-host.css';
 import {clearClientSession,invalidateClientData,peekClientData,readClientData,saveClientData} from '../lib/client-session-cache';
@@ -12,12 +12,15 @@ type Session={user_id:string;role:'superadmin'|'user';csrf_token:string;must_cha
 type Snapshot={records:DiscoveryDTO[];nextCursor:string|null;cursor:string|null;history:(string|null)[];query:Record<string,string>;filterValues:Filters;counts:{total:number;enabled:number}|null};
 type PublicError={code:string;message:string};
 type Outcome={ok:true;message:string;project?:Project}|{ok:false;error:PublicError};
+const MONITORING_STATES=['accepted','pending','running','succeeded','failed','unknown'] as const;
+function monitoringStateOf(value:DiscoveryDTO['monitoring_state']):MonitoringState|null{return value&&(MONITORING_STATES as readonly string[]).includes(value)?value as MonitoringState:value?'unknown':null;}
+function monitoringMessageFor(state:NonNullable<DiscoveryDTO['monitoring_state']>):string|undefined{if(state==='succeeded')return '追踪中';if(state==='accepted')return '已受理';if(state==='pending'||state==='running')return '确认处理中';if(state==='failed')return '确认失败';return undefined;}
 const toProject=(row:DiscoveryDTO):Project=>({id:row.discovery_id,name:row.project.name,handle:row.x_handle,bio:row.profile_bio,hunters:row.signal_count,grade:row.project.rating as Grade,
- status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,category:row.project.category||'',notes:row.project.notes,watch:row.monitoring_state==='succeeded',monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message,ai:(row as DiscoveryDTO & {ai_suggestion?:Project['ai']}).ai_suggestion??null});
+ status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,category:row.project.category||'',notes:row.project.notes,watch:row.monitoring_state==='succeeded',monitoringState:monitoringStateOf(row.monitoring_state),monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message,ai:(row as DiscoveryDTO & {ai_suggestion?:Project['ai']}).ai_suggestion??null});
 export interface LiveBinding{
  initialFilters?:Filters;
  projects:Project[];role:'superadmin'|'user';loading:boolean;refreshing:boolean;error:string|null;
- fixture:boolean;nextCursor:string|null;previous:boolean;blockedIds:ReadonlySet<string>;
+ fixture:boolean;nextCursor:string|null;previous:boolean;blockedIds:ReadonlySet<string>;unverifiedIds:ReadonlySet<string>;
  counts:{total:number;enabled:number}|null;
  alertNotice:string|null;clearAlertNotice:()=>void;
  confirm:(project:Project)=>Promise<Outcome>;ignore:(project:Project)=>Promise<Outcome>;addHome:(project:Project)=>Promise<Outcome>;save:(project:Project)=>Promise<Outcome>;manage:(action:'add'|'enable'|'disable'|'remove',handle:string)=>Promise<Outcome>;
@@ -40,6 +43,9 @@ export default function HunterController({session,fixture=false}:{session:Sessio
  const [filterValues,setFilterValues]=useState<Filters>(snapshot?.filterValues??{query:'',time:'all',grade:'all',status:'all'});
  const researchOps=useRef(new Map<string,{key:string;body:string;revision:number}>());
  const [researchUnknown,setResearchUnknown]=useState<ReadonlySet<string>>(new Set());
+ const monitoringUnknownRef=useRef(new Set<string>());
+ const [monitoringUnknown,setMonitoringUnknown]=useState<ReadonlySet<string>>(new Set());
+ function markUnknown(id:string,on:boolean){if(on)monitoringUnknownRef.current.add(id);else monitoringUnknownRef.current.delete(id);setMonitoringUnknown(new Set(monitoringUnknownRef.current));}
  const [alertNotice,setAlertNotice]=useState<string|null>(null);
  const notifyAlert=(message:string)=>setAlertNotice(message);
  const toCue=(row:Pick<DiscoveryDTO,'discovery_id'|'discovered_at'|'x_handle'>):DiscoveryCue=>({discovery_id:row.discovery_id,discovered_at:row.discovered_at,x_handle:row.x_handle});
@@ -131,24 +137,28 @@ export default function HunterController({session,fixture=false}:{session:Sessio
  async function confirm(project:Project):Promise<Outcome>{
   if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};
   const initialRow=records.find(item=>item.discovery_id===project.id);if(!initialRow)return {ok:false,error:{code:'NOT_FOUND',message:'发现记录不在当前页'}};let row:DiscoveryDTO=initialRow;
-  if(pending.current.has(project.id)||blockedIds.has(project.id)||researchOps.current.has(project.id))return {ok:false,error:{code:'CONFLICT',message:'该操作已提交或待核实，请核对原结果'}};
-  if(!operations.current.has(project.id)){try{row=await api('/api/v1/hunter/discoveries/'+encodeURIComponent(project.id));}catch(e){return {ok:false,error:{code:'UPSTREAM_UNAVAILABLE',message:e instanceof Error?e.message:'最新版本读取失败'}};}}
-  if(row!.review_state==='tracking')return {ok:false,error:{code:'CONFLICT',message:'已加入追踪，请刷新核对'}};
-  const fields:ProjectFields={...row.project,name:project.name,description:project.description,website_url:project.website||null,notes:project.notes,rating:project.grade,category:project.category||null};
-  const body={confirmed:true,project:fields};const serialized=JSON.stringify(body);let operation=operations.current.get(project.id);
-  if(operation&&operation.body!==serialized)return {ok:false,error:{code:'CONFLICT',message:'原确认结果尚未核实，不能替换资料重试'}};
-  if(!operation){operation={key:crypto.randomUUID(),body:serialized};operations.current.set(project.id,operation);}
-  pending.current.add(project.id);setBlockedIds(old=>new Set([...old,project.id]));
+  if(pending.current.has(project.id)||monitoringUnknownRef.current.has(project.id)||researchOps.current.has(project.id))return {ok:false,error:{code:'CONFLICT',message:'该操作已提交或待核实，请核对原结果'}};
+  pending.current.add(project.id);setBlockedIds(old=>beginMonitoringSubmit(old,project.id));
   try{
+   if(!operations.current.has(project.id)){try{row=await api('/api/v1/hunter/discoveries/'+encodeURIComponent(project.id));}catch(e){return {ok:false,error:{code:'UPSTREAM_UNAVAILABLE',message:e instanceof Error?e.message:'最新版本读取失败'}};}}
+   if(row.monitoring_state==='unknown'){markUnknown(project.id,true);return {ok:false,error:{code:'CONFLICT',message:'该操作已提交或待核实，请核对原结果'}};}
+   if(row.review_state==='tracking')return {ok:false,error:{code:'CONFLICT',message:'已加入追踪，请刷新核对'}};
+   const fields:ProjectFields={...row.project,name:project.name,description:project.description,website_url:project.website||null,notes:project.notes,rating:project.grade,category:project.category||null};
+   const body={confirmed:true,project:fields};const serialized=JSON.stringify(body);let operation=operations.current.get(project.id);
+   if(operation&&operation.body!==serialized)return {ok:false,error:{code:'CONFLICT',message:'原确认结果尚未核实，不能替换资料重试'}};
+   if(!operation){operation={key:crypto.randomUUID(),body:serialized};operations.current.set(project.id,operation);}
    const result:CommandResult=await api('/api/v1/hunter/discoveries/'+encodeURIComponent(row.discovery_id)+'/monitoring-requests','POST',body,{'if-match':'"rev-'+row.revision+'"','idempotency-key':operation.key});
+   const message=monitoringMessageFor(result.state);
    // 202 only acknowledges durable receipt; it never becomes "joined/running" here.
-   setRecords(old=>old.map(item=>item.discovery_id===row.discovery_id?{...item,monitoring_state:result.state,review_state:'tracking'}:item));
+   setRecords(old=>old.map(item=>{if(item.discovery_id!==row.discovery_id)return item;const next={...item,monitoring_state:result.state,review_state:'tracking' as const} as DiscoveryDTO & {monitoring_message?:string};if(message)next.monitoring_message=message;return next;}));
+   if(result.state==='unknown')markUnknown(project.id,true);else{markUnknown(project.id,false);operations.current.delete(project.id);}
    invalidateTrackingSubscriptions(scope);void load();return {ok:true,message:'已提交加入追踪，页面将自动显示追踪状态或失败原因。'};
   }catch(e){
    const code=e instanceof ApiError?e.code:'UPSTREAM_TIMEOUT';
-   if(['FORBIDDEN','VALIDATION_ERROR','VERSION_CONFLICT','CONFLICT','NOT_FOUND'].includes(code)){operations.current.delete(project.id);setBlockedIds(old=>{const next=new Set(old);next.delete(project.id);return next;});}
+   if(['FORBIDDEN','VALIDATION_ERROR','VERSION_CONFLICT','CONFLICT','NOT_FOUND'].includes(code)){operations.current.delete(project.id);markUnknown(project.id,false);}
+   else markUnknown(project.id,true);
    return {ok:false,error:{code,message:e instanceof Error?e.message:'确认结果待核实；禁止重复提交'}};
-  }finally{pending.current.delete(project.id);}
+  }finally{pending.current.delete(project.id);setBlockedIds(old=>finishMonitoringSubmit(old,project.id));}
  }
  async function ignore(project:Project):Promise<Outcome>{
   if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};
@@ -196,7 +206,7 @@ export default function HunterController({session,fixture=false}:{session:Sessio
  const projects:Project[]=records.map(toProject);
  const updateFilter=(key:string,value:string)=>{setCursor(null);setHistory([]);setQuery(old=>{const next={...old};if(key==='query'){if(value)next.q=value;else delete next.q;}if(key==='grade'){if(value!=='all')next.rating=value==='none'?'unrated':value;else delete next.rating;}if(key==='status'){if(value!=='all')next.review_state=value==='joined'?'tracking':value;else delete next.review_state;}if(key==='time'){delete next.since;delete next.until;if(value!=='all'){next.since=new Date(Date.now()-Number(value)*3600000).toISOString();next.until=new Date().toISOString();}}return JSON.stringify(old)===JSON.stringify(next)?old:next;});};
  const binding:LiveBinding={initialFilters:filterValues,projects,role:revoked?'user':session.role,loading,refreshing,error,fixture,nextCursor,previous:history.length>0,counts,alertNotice,clearAlertNotice:()=>setAlertNotice(null),filter:(key,value)=>{setFilterValues(old=>({...old,[key]:value}));updateFilter(key,value);},
-  blockedIds:new Set([...blockedIds,...researchUnknown,...records.filter(item=>!!item.monitoring_state&&item.monitoring_state!=='failed').map(item=>item.discovery_id)]),confirm,ignore,addHome,save,manage,refresh:()=>{void load();},
+  blockedIds,unverifiedIds:selectUnverifiedIds([...researchUnknown,...monitoringUnknown],projects),confirm,ignore,addHome,save,manage,refresh:()=>{void load();},
   next:()=>{if(nextCursor&&!refreshing&&!loading){setHistory(old=>[...old,cursor]);setCursor(nextCursor);}},back:()=>{if(history.length&&!refreshing&&!loading){setCursor(history.at(-1)!);setHistory(old=>old.slice(0,-1));}}};
  return <App live={binding}/>;
 }

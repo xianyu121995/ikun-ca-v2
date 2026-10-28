@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Button} from '@ikun/ui';
 import ReferenceHomepage from './homepage-ui/reference-homepage';
-import type {ArchiveNote,EditorDraft,ProjectMilestone,ReferenceCallbacks} from '../features/homepage/reference-types';
+import type {AiTimelineEntry,AiTimelinePatch,ArchiveNote,EditorDraft,ProjectMilestone,ReferenceCallbacks} from '../features/homepage/reference-types';
 import type {HomepageContext,HomepageData,HomepageQuery,OperationResult,ProjectRecordProjection,ProjectRef,PublicError} from '../features/homepage/types';
 import {canEdit} from '../features/homepage/view-model';
 import './projects-home-access.css';
@@ -28,6 +28,7 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   const cachedRead=(path:string,signal?:AbortSignal)=>readClientData(userId,path,()=>read(path,AbortSignal.timeout(10000)),750).then(data=>{if(signal?.aborted)throw new DOMException('Aborted','AbortError');return data;});
   const [query,setQuery]=useState(snapshot?.query??initial),[main,setMain]=useState<Page>(snapshot?.main??emptyPage),[completed,setCompleted]=useState<Page>(emptyPage),[other,setOther]=useState<Page>(emptyPage);
   const [summary,setSummary]=useState(snapshot?.summary??emptySummary),[events,setEvents]=useState<Home[]>(snapshot?.events??[]),[asOf,setAsOf]=useState<string|undefined>(snapshot?.asOf),[windowDays,setWindow]=useState(snapshot?.windowDays??'3'),[xHandles,setXHandles]=useState<Record<string,string>>(snapshot?.xHandles??{});
+  const [aiEntries,setAiEntries]=useState<AiTimelineEntry[]>([]);
   const [detail,setDetail]=useState<Home|null>(null),[error,setError]=useState<PublicError|null>(null),[loading,setLoading]=useState(!snapshot),[version,setVersion]=useState(0),[page,setPage]=useState(snapshot?.page??1);
   const [completedOpen,setCompletedOpen]=useState(false),[otherOpen,setOtherOpen]=useState(false);
   const [completedIndex,setCompletedIndex]=useState(1),[otherIndex,setOtherIndex]=useState(1);
@@ -64,6 +65,7 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
   useEffect(()=>{if(!loading){const t=setTimeout(()=>fitRef.current(),50);return()=>clearTimeout(t);}},[loading]);
   useEffect(()=>{const abort=new AbortController();const suffix=query.discovered_on?'?discovered_on='+query.discovered_on:'';cachedRead('/api/v1/projects/home-summary'+suffix,abort.signal).then(setSummary).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[query.discovered_on,version]);
   useEffect(()=>{const abort=new AbortController();const search=new URLSearchParams({window_days:windowDays,limit:'100'});if(query.rating!=='all')search.set('rating',query.rating);cachedRead('/api/v1/projects/milestones?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setEvents(data.items.map((p:Home)=>({...p,completion:null})));setAsOf(data.as_of_date);}}).catch(e=>{if(!abort.signal.aborted)setError(e);});return()=>abort.abort();},[query.rating,windowDays,version]);
+  useEffect(()=>{const abort=new AbortController();fetch('/api/v1/tracking/timeline-events',{cache:'no-store',signal:abort.signal}).then(async response=>{if(!response.ok)return;const value=await response.json();if(!abort.signal.aborted&&Array.isArray(value?.data?.items))setAiEntries(value.data.items);}).catch(()=>{});return()=>abort.abort();},[version]);
   useEffect(()=>{if(!loading&&limit!==null&&!error)saveClientData(userId,'home:view',{query,main,summary,events,asOf,windowDays,xHandles,page,limit,mainCursors:mainCursors.current});},[loading,query,main,summary,events,asOf,windowDays,xHandles,page,limit,error,userId]);
   useEffect(()=>{if(!completedOpen)return;setCompletedPending(true);setCompletedError(null);const abort=new AbortController();const search=new URLSearchParams({view:'home-v1',collection:'completed',limit:'9'});const cursor=completedCursors.current[completedIndex-1];if(cursor)search.set('cursor',cursor);read('/api/v1/projects?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setCompleted(data);setCompletedLoaded(completedIndex);completedCursors.current[completedIndex]=data.next_cursor;}}).catch(e=>{if(!abort.signal.aborted){setError(e);setCompletedError(e.message||'记录读取失败，请关闭后重试');}}).finally(()=>{if(!abort.signal.aborted)setCompletedPending(false);});return()=>abort.abort();},[completedOpen,completedIndex,version]);
   useEffect(()=>{if(!otherOpen)return;setOtherPending(true);setOtherError(null);const abort=new AbortController();const search=new URLSearchParams({view:'home-v1',collection:'other',limit:'9'});const cursor=otherCursors.current[otherIndex-1];if(cursor)search.set('cursor',cursor);read('/api/v1/projects?'+search,abort.signal).then(data=>{if(!abort.signal.aborted){setOther(data);setOtherLoaded(otherIndex);otherCursors.current[otherIndex]=data.next_cursor;}}).catch(e=>{if(!abort.signal.aborted){setError(e);setOtherError(e.message||'记录读取失败，请关闭后重试');}}).finally(()=>{if(!abort.signal.aborted)setOtherPending(false);});return()=>abort.abort();},[otherOpen,otherIndex,version]);
@@ -102,6 +104,14 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
     return '项目刚被修改，请重试';
   }
   async function openDetail(id:string){try{setDetail(await read('/api/v1/projects/'+id+'?view=home-v1'));}catch(e){setError(e as PublicError);}}
+  async function writeAi(entry:AiTimelineEntry,method:'PATCH'|'DELETE',body:unknown):Promise<string|null>{
+    if(!canWrite)return '当前账号只读';
+    try{const response=await fetch('/api/v1/tracking/timeline-events/'+entry.entry_id,{method,headers:{'content-type':'application/json','x-csrf-token':csrf,'idempotency-key':crypto.randomUUID()},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
+      const value=await response.json();if(!response.ok)return publicError(value).message;return null;
+    }catch{return '保存结果未确认，请刷新核对';}
+  }
+  async function saveAi(entry:AiTimelineEntry,patch:AiTimelinePatch){const error=await writeAi(entry,'PATCH',patch);if(!error)setAiEntries(previous=>previous.map(item=>item.entry_id===entry.entry_id?{...item,...patch}:item));return error;}
+  async function deleteAi(entry:AiTimelineEntry){const error=await writeAi(entry,'DELETE',{});if(!error)setAiEntries(previous=>previous.filter(item=>item.entry_id!==entry.entry_id));return error;}
   const latest=new Map<string,Home>();
   for(const home of [...main.items,...completed.items,...other.items,...events,...(detail?[detail]:[])]){const previous=latest.get(home.project.project_id);if(!previous||home.project.revision>=previous.project.revision)latest.set(home.project.project_id,home);}
   const homes=[...latest.values()];
@@ -112,8 +122,8 @@ export default function ProjectsHome({context,csrf,userId}:{context:HomepageCont
       onCreateDraft:draft=>write('/api/v1/projects','POST',draftBody(draft)),onUpdateDraft:(target,draft)=>write('/api/v1/projects/'+target.project_id,'PATCH',{fields:draft.fields,milestone:draft.milestone,...(draft.archive_after_save?{complete:true}:{})},target).then(draft.archive_after_save?thenStop([target.project_id]):(r:OperationResult)=>r),
       onDelete:target=>write('/api/v1/projects/'+target.project_id,'DELETE',{},target).then(thenStop([target.project_id])),onMembership:(target,action)=>write('/api/v1/projects/'+target.project_id+'/home-membership','POST',{action},target).then(action==='remove'?thenStop([target.project_id]):(r:OperationResult)=>r),
       onArchive:targets=>write('/api/v1/projects/completions','POST',{items:targets.map(t=>({project_id:t.project_id,revision:t.revision}))}).then(thenStop(targets.map(t=>t.project_id))),onRestore:target=>write('/api/v1/projects/'+target.project_id+'/restore','POST',{},target)}:{};
-  return <div className="projects-home-access" data-project-access={canWrite?'write':'readonly'}><ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
-    callbacks={{...mutations,onReconcile:reconcile,
+  return <div className="projects-home-access" data-project-access={canWrite?'write':'readonly'}><ReferenceHomepage context={context} data={data} milestones={homes.map(p=>({...p.milestone,project_id:p.project.project_id}))} aiEntries={aiEntries} archiveNotes={homes.flatMap(p=>p.completion?[{project_id:p.project.project_id,previous_stage:p.completion.previous_stage,completed_on:p.completion.completed_at}]:[])} asOfDate={asOf}
+    callbacks={{...mutations,onReconcile:reconcile,onAiUpdate:canWrite?saveAi:undefined,onAiDelete:canWrite?deleteAi:undefined,
       onQueryChange:(q:HomepageQuery)=>change({q:q.q,rating:q.rating,progress_stage:q.progress_stage,category:q.category??'all'}),onDiscoveryDateChange:day=>change({discovered_on:day??''}),onReload:reload}}
     server={{query,mainIds:main.items.map(p=>p.project.project_id),completedIds:completed.items.map(p=>p.project.project_id),otherIds:other.items.map(p=>p.project.project_id),eventIds:events.map(p=>p.project.project_id),total:main.total,page,pageSize:limit??9,xHandles,renderJoinTracking:canWrite?(projectId,disabled)=><JoinProjectTracking key={projectId} projectId={projectId} csrf={csrf} canManage={canWrite} disabled={disabled} onJoined={reload}/>:undefined,onQuickEdit:canWrite?quickEdit:undefined,hasNext:!!main.next_cursor,summary,
       onSort:value=>change({sort:value.key,direction:value.direction}),canPage,onPage:next=>{if(canPage(next))setPage(next);},onWindow:setWindow,onDetail:id=>void openDetail(id),

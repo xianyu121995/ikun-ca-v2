@@ -6,7 +6,8 @@ import {ReferenceEditor} from './reference-editor';
 import {canEdit,membershipLabels,safeRejectedError,toPageViews} from '../../features/homepage/view-model';
 import {EventTimeline} from './event-timeline';
 import {PROJECT_TYPES,currentMilestone,dateNumber,dayDistance,matchesDiscoveryDate,milestoneLabel,milestoneNumber,referenceStageLabels,shortDiscovery,upcomingProjects} from '../../features/homepage/reference-model';
-import type {EditorDraft,ReferenceHomepageProps} from '../../features/homepage/reference-types';
+import {aiTimelineRows,shownMilestone} from '../../features/homepage/ai-timeline';
+import type {AiTimelineEntry,EditorDraft,ReferenceHomepageProps} from '../../features/homepage/reference-types';
 import type {HomepageQuery,OperationResult,ProjectRef,ProjectView} from '../../features/homepage/types';
 import './reference-homepage.css';
 
@@ -18,13 +19,14 @@ function ResultMessage({result,busy,onReconcile}:{result:OperationResult|null;bu
   if(!result)return null;
   return <Alert tone={result.state==='succeeded'?'success':result.state==='failed'?'danger':'warning'} title={operationLabels[result.state]} action={awaiting(result)&&onReconcile?<Button size="sm" pending={busy} onClick={onReconcile}>核对结果</Button>:undefined}>{result.error?.message}{awaiting(result)&&<p>保留原操作记录，先核对结果，不重复写入。</p>}</Alert>;
 }
-export default function ReferenceHomepage({context,data,callbacks={},milestones=[],archiveNotes=[],asOfDate,server}:ReferenceHomepageProps){
+export default function ReferenceHomepage({context,data,callbacks={},milestones=[],aiEntries=[],archiveNotes=[],asOfDate,server}:ReferenceHomepageProps){
   const [query,setQuery]=useState(()=>({q:server?.query?.q??'',rating:server?.query?.rating??'all',stage:server?.query?.progress_stage??'all',foundDate:server?.query?.discovered_on??'',category:server?.query?.category??'all'})),[sort,setSort]=useState<TableSort>({key:server?.query?.sort??'discovered',direction:server?.query?.direction??'desc'});
   const [page,setPage]=useState(1),[windowDays,setWindowDays]=useState('7'),[selected,setSelected]=useState<Set<string>>(new Set());
   const [editor,setEditor]=useState<{project?:ProjectView}|null>(null),[detail,setDetail]=useState<string|null>(null),[archiveOpen,setArchiveOpen]=useState(false),[otherOpen,setOtherOpen]=useState(false);
   const [toast,setToast]=useState<string|null>(null);
   useEffect(()=>{if(!toast)return;const timer=setTimeout(()=>setToast(null),2000);return()=>clearTimeout(timer);},[toast]);
   const [quickBusy,setQuickBusy]=useState<string|null>(null),[timeEdit,setTimeEdit]=useState<{view:ProjectView;date:string;hour:string;title:string;status:'confirmed'|'estimated';error:string}|null>(null);
+  const [aiEdit,setAiEdit]=useState<{entry:AiTimelineEntry;date:string;hour:string;title:string;status:'confirmed'|'estimated';error:string}|null>(null),[aiBusy,setAiBusy]=useState(false);
   const [confirmation,setConfirmation]=useState<ProjectView[]|null>(null),[deleteTarget,setDeleteTarget]=useState<ProjectView|null>(null),[busy,setBusy]=useState(false),[result,setResult]=useState<OperationResult|null>(null),[notice,setNotice]=useState('');
   const inFlight=useRef(false),epoch=useRef(0),selectAll=useRef<HTMLInputElement>(null),search=useRef<HTMLDivElement>(null);
   const editable=canEdit(context),blocked=busy||awaiting(result);
@@ -47,6 +49,8 @@ export default function ReferenceHomepage({context,data,callbacks={},milestones=
   const shown=server?active:filtered.slice((currentPage-1)*pageSize,currentPage*pageSize);
   const chosen=shown.filter(view=>selected.has(view.key));
   const events=server?byId(server.eventIds).map(project=>({project,event:currentMilestone(project,milestones)})):upcomingProjects(active.filter(view=>query.rating==='all'||view.record.rating===query.rating),milestones,asOfDate,windowDays==='all'?null:Number(windowDays));
+  const timelineRows=[...events,...aiTimelineRows(aiEntries,projection.items)];
+  const openAi=(entry:AiTimelineEntry)=>setAiEdit({entry,date:entry.date,hour:entry.hour||'',title:entry.title,status:entry.status,error:''});
   const current=projection.items.find(view=>view.key===detail);
   const loading=data.status==='loading'&&!data.items.length,error=projection.error||data.error;
   useEffect(()=>{if(selectAll.current)selectAll.current.indeterminate=chosen.length>0&&chosen.length<shown.length;},[chosen.length,shown.length]);
@@ -70,6 +74,14 @@ export default function ReferenceHomepage({context,data,callbacks={},milestones=
     const milestone=clear||!t.date?{date:null,hour:null,title:clear?'':t.title.trim(),status:'unconfirmed' as const}:{date:t.date,hour:t.hour||null,title:t.title.trim(),status:t.status};
     const error=await quick(t.view,{milestone});
     if(error)setTimeEdit({...t,error});else setTimeEdit(null);
+  }
+  async function saveAi(remove:boolean){
+    if(!aiEdit||aiBusy)return;const t=aiEdit;
+    if(!remove&&(!t.date||!t.title.trim())){setAiEdit({...t,error:'填了日期就要写事件名，例如 TGE、主网上线'});return;}
+    setAiBusy(true);
+    const error=remove?await callbacks.onAiDelete?.(t.entry):await callbacks.onAiUpdate?.(t.entry,{date:t.date,hour:t.hour||null,title:t.title.trim(),status:t.status});
+    setAiBusy(false);
+    if(error)setAiEdit({...t,error});else setAiEdit(null);
   }
   const ref=(view:ProjectView):ProjectRef=>({project_id:view.key,revision:view.record.revision});
   const reason=(available:boolean)=>!editable?'只读：没有项目编辑能力':blocked?'先核对当前操作结果':!available?'操作回调尚未接入':undefined;
@@ -99,8 +111,9 @@ export default function ReferenceHomepage({context,data,callbacks={},milestones=
     {key:'progress',header:'进度',width:'115px',render:view=>{const stage=view.record.progress_stage,tone=stage==='watching'||stage==='completed'?'success':stage==='todo'?'warning':'info';
       if(!quickOk||stage==='completed')return <Badge tone={tone}>{referenceStageLabels[stage]}</Badge>;
       return <select className={`hpv2-inline-stage hpv2-inline-stage--${tone}`} aria-label={`修改「${view.record.name}」的进度`} title="点击直接修改进度" value={stage} disabled={!!quickBusy} onChange={event=>void quick(view,{fields:{progress_stage:event.target.value}})}>{Object.entries(referenceStageLabels).filter(([key])=>key!=='completed').map(([key,label])=><option key={key} value={key}>{label}</option>)}</select>;}},
-    {key:'event',header:'重要时间',sortable:true,width:'118px',render:view=>{const event=currentMilestone(view,milestones);const title=event.date?`${milestoneLabel(event,true)} · 北京时间 · ${event.title} · ${event.status==='estimated'?'预计':event.status==='confirmed'?'已确认':'未确认'}`:'未确认';
-      if(!quickOk)return <span className="hpv2-found" title={title}>{milestoneLabel(event)}</span>;
+    {key:'event',header:'重要时间',sortable:true,width:'148px',render:view=>{const shown=shownMilestone(view,milestones,aiEntries);const event=shown.event;const title=event.date?`${milestoneLabel(event,true)} · 北京时间 · ${event.title} · ${event.status==='estimated'?'预计':event.status==='confirmed'?'已确认':'未确认'}${shown.ai?' · AI 识别':''}`:'未确认';
+      if(shown.ai&&callbacks.onAiUpdate)return <button type="button" className="hpv2-inline-time" title={`${title}（点击修改）`} aria-label={`修改「${view.record.name}」的 AI 识别时间`} disabled={aiBusy} onClick={()=>openAi(shown.ai!)}>{milestoneLabel(event)} <em className="hpv2-ai-badge">AI 识别</em></button>;
+      if(!quickOk)return <span className="hpv2-found" title={title}>{milestoneLabel(event)}{shown.ai?<em className="hpv2-ai-badge">AI 识别</em>:null}</span>;
       return <button type="button" className="hpv2-inline-time" title={`${title}（点击修改）`} aria-label={`修改「${view.record.name}」的重要时间`} disabled={!!quickBusy} onClick={()=>setTimeEdit({view,date:event.date||'',hour:event.hour||'',title:event.title||'',status:event.status==='confirmed'?'confirmed':'estimated',error:''})}>{milestoneLabel(event)}<span className="hpv2-inline-pen" aria-hidden="true">✎</span></button>;}},    {key:'notes',header:'备注',render:view=><span className="hpv2-truncate hpv2-wrap">{view.record.notes||'—'}</span>},
     {key:'actions',header:'操作',width:'134px',render:view=><div className="hpv2-row-actions"><Button size="sm" disabled={!editable||blocked||!callbacks.onUpdateDraft} title={reason(!!callbacks.onUpdateDraft)} onClick={()=>beginEdit(view)}>编辑</Button><Button size="sm" variant="danger" disabled={!editable||blocked||!callbacks.onArchive} title={reason(!!callbacks.onArchive)} onClick={()=>askArchive([view])}>移除</Button></div>},
   ];
@@ -120,7 +133,7 @@ export default function ReferenceHomepage({context,data,callbacks={},milestones=
     {(()=>{const floating=!editor&&!confirmation&&!archiveOpen&&!otherOpen&&result&&result.state!=='succeeded';return (floating||notice)?<div className="hpv2-float">{floating&&<div className="hpv2-float-item">{message}<Button variant="ghost" size="sm" aria-label="关闭提示" onClick={()=>setResult(null)}><Icon name="close"/></Button></div>}{notice&&<div className="hpv2-float-item"><Alert tone="warning" title={notice}/><Button variant="ghost" size="sm" aria-label="关闭提示" onClick={()=>setNotice('')}><Icon name="close"/></Button></div>}</div>:null;})()}
 
     <Panel className="ik-panel--table hpv2-events" title={<span className="hpv2-section-title">近期重要时间</span>} description="已跟踪项目 · 未来 3 天时间线">
-      <EventTimeline rows={loading?[]:events} days={3} onOpen={key=>{server?.onDetail(key);setDetail(key);}}/>
+      <EventTimeline rows={loading?[]:timelineRows} days={3} onOpen={(key,ai)=>{if(ai){openAi(ai);return;}server?.onDetail(key);setDetail(key);}}/>
     </Panel>
     <Panel className="ik-panel--table hpv2-projects" title={<span className="hpv2-section-title">持续跟踪项目 <small>({server?server.summary.tracked_total:dateActive.length})</small></span>} description="我的项目研究清单" actions={<><Button size="sm" variant="primary" disabled={!editable||blocked||!callbacks.onCreateDraft} title={reason(!!callbacks.onCreateDraft)} onClick={()=>beginEdit()}>＋ 新增项目</Button><Button size="sm" onClick={()=>setArchiveOpen(true)}>已完成记录 ({server?server.summary.completed_total:archived.length})</Button>{(server?server.summary.other_total:other.length)>0&&<Button size="sm" onClick={()=>setOtherOpen(true)}>其他项目 ({server?server.summary.other_total:other.length})</Button>}<Select label="表格排序" value={`${sort.key}:${sort.direction}`} onChange={event=>{const [key,direction]=event.target.value.split(':');changeSort({key:key!,direction:direction as TableSort['direction']});}}><option value="discovered:desc">发现时间 · 新到旧</option><option value="discovered:asc">发现时间 · 旧到新</option><option value="event:asc">重要时间 · 最近</option><option value="rating:asc">项目评分 · S 优先</option>{sort.key==='name'&&<option value={`name:${sort.direction}`}>名称排序</option>}{!['name','discovered'].includes(sort.key)&&sort.direction==='desc'&&<option value={`${sort.key}:desc`}>当前倒序</option>}</Select></>}>
       <Toolbar className="hpv2-table-toolbar"><div className="hpv2-grade-filters" aria-label="评分筛选">{['all','S','A','B'].map(grade=><Button key={grade} className={grade==='all'?undefined:`hpv2-grade-chip hpv2-grade-chip--${grade}`} size="sm" variant={query.rating===grade?'primary':'secondary'} aria-pressed={query.rating===grade} onClick={()=>changeQuery({...query,rating:grade})}>{grade==='all'?'全部':`${grade}级`} <span>({server?(grade==='all'?server.summary.tracked_total:server.summary.by_rating[grade as 'S'|'A'|'B']):grade==='all'?dateActive.length:dateActive.filter(view=>view.record.rating===grade).length})</span></Button>)}</div><div className="hpv2-grade-filters hpv2-type-filters" aria-label="类型筛选">{['all',...PROJECT_TYPES,'none'].map(value=><Button key={value} size="sm" variant={query.category===value?'primary':'secondary'} aria-pressed={query.category===value} onClick={()=>changeQuery({...query,category:value})}>{value==='all'?'全部类型':value==='none'?'未分类':value}</Button>)}</div><Select label="进度筛选" value={query.stage} onChange={event=>changeQuery({...query,stage:event.target.value})}><option value="all">全部进度</option>{Object.entries(referenceStageLabels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</Select><Input className="hpv2-found-date" label="发现日期" aria-label="按项目发现日期筛选" type="date" value={query.foundDate} onChange={event=>changeQuery({...query,foundDate:event.target.value})}/><Button size="sm" disabled={!query.foundDate} onClick={()=>changeQuery({...query,foundDate:''})}>全部日期</Button><Button size="sm" disabled={!chosen.length||!editable||blocked||!callbacks.onArchive} title={reason(!!callbacks.onArchive)} onClick={()=>askArchive(chosen)}>移除已选 ({chosen.length})</Button><div className="hpv2-search" ref={search}><SearchInput label="搜索项目" value={query.q} placeholder="搜索项目、官网、备注…" onValueChange={q=>changeQuery({...query,q})}/></div>{(query.q||query.rating!=='all'||query.stage!=='all'||query.foundDate||query.category!=='all')&&<Button size="sm" variant="ghost" onClick={()=>changeQuery({q:'',rating:'all',stage:'all',foundDate:'',category:'all'})}>清除筛选</Button>}</Toolbar>
@@ -140,6 +153,15 @@ export default function ReferenceHomepage({context,data,callbacks={},milestones=
       <Input data-initial-focus label="事件" maxLength={240} placeholder="例如：TGE、主网上线、白名单开放" value={timeEdit.title} onChange={event=>setTimeEdit({...timeEdit,title:event.target.value,error:''})}/>
       {timeEdit.error&&<Alert tone="danger" title={timeEdit.error}/>}
       <div className="hpv2-dialog-actions"><Button disabled={!!quickBusy} onClick={()=>void saveTime(true)}>清空</Button><Button variant="primary" pending={!!quickBusy} onClick={()=>void saveTime(false)}>保存</Button></div>
+    </HomepageDialog>}
+    {aiEdit&&<HomepageDialog title={`重要时间 · ${aiEdit.entry.project_name}`} pending={aiBusy} close={()=>{if(!aiBusy)setAiEdit(null);}} className="hpv2-time-edit">
+      <p className="hpv2-ai-note"><em className="hpv2-ai-badge">AI 识别</em> 来自已跟踪推文。删除后，后续推文不会把同一事件再加回来。{aiEdit.entry.source_url&&<> <a href={aiEdit.entry.source_url} target="_blank" rel="noopener noreferrer">查看原推文</a></>}</p>
+      <div className="hpv2-event-time-fields"><Input label="日期（北京时间）" type="date" value={aiEdit.date} disabled={!editable} onChange={event=>setAiEdit({...aiEdit,date:event.target.value,error:''})}/>
+        <Select label="小时" value={aiEdit.hour} disabled={!editable||!aiEdit.date} onChange={event=>setAiEdit({...aiEdit,hour:event.target.value,error:''})}><option value="">未定</option>{Array.from({length:24},(_,hour)=>String(hour).padStart(2,'0')).map(hour=><option key={hour} value={hour}>{hour}时</option>)}</Select>
+        <Select label="状态" value={aiEdit.status} disabled={!editable||!aiEdit.date} onChange={event=>setAiEdit({...aiEdit,status:event.target.value as 'confirmed'|'estimated',error:''})}><option value="estimated">预计</option><option value="confirmed">已确认</option></Select></div>
+      <Input data-initial-focus label="事件" maxLength={60} placeholder="例如：TGE、主网上线、白名单开放" value={aiEdit.title} disabled={!editable} onChange={event=>setAiEdit({...aiEdit,title:event.target.value,error:''})}/>
+      {aiEdit.error&&<Alert tone="danger" title={aiEdit.error}/>}
+      <div className="hpv2-dialog-actions"><Button variant="danger" disabled={!editable||aiBusy||!callbacks.onAiDelete} onClick={()=>void saveAi(true)}>删除</Button><Button variant="primary" pending={aiBusy} disabled={!editable||!callbacks.onAiUpdate} onClick={()=>void saveAi(false)}>保存</Button></div>
     </HomepageDialog>}
     {current&&!editor&&!deleteTarget&&<HomepageDialog title="项目资料" close={()=>setDetail(null)} className="hpv2-detail"><div className="hpv2-detail-title"><h3>{current.record.name}</h3><ScoreBadge grade={current.record.rating}/>{server?.xHandles?.[current.key]&&<a className="hpv2-detail-x" href={`https://x.com/${server.xHandles[current.key]}`} target="_blank" rel="noopener noreferrer">𝕏 @{server.xHandles[current.key]} ↗</a>}</div><dl>{[['发现时间',current.discoveredLabel+' · 北京时间'],['项目类型',current.record.category||'未分类'],['主页状态',membershipLabels[current.record.home_membership]],['进度',`${referenceStageLabels[current.record.progress_stage]}`],['重要事件',currentMilestone(current,milestones).title||'未提供'],['重要时间',milestoneLabel(currentMilestone(current,milestones),true)+' · 北京时间'],['发币日期',current.tokenLabel],['官网',current.website||'未提供'],['项目 ID',current.key],['版本',String(current.record.revision)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl><h4>项目简介</h4><p>{current.record.description||'尚未填写。'}</p><h4>备注</h4><p>{current.record.notes||'尚未填写。'}</p><div className="hpv2-dialog-actions"><Button disabled={!editable||blocked||!callbacks.onDelete} onClick={()=>{if(editable&&!blocked&&callbacks.onDelete){setResult(null);setDeleteTarget(current);}}}>删除主页条目</Button><Button variant="primary" disabled={!editable||blocked||!callbacks.onUpdateDraft} onClick={()=>beginEdit(current)}>编辑资料</Button></div></HomepageDialog>}
   </div>;

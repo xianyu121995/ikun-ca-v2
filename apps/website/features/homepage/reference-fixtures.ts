@@ -1,5 +1,5 @@
 import type {ProjectRecordProjection} from './types';
-import type {ProjectMilestone} from './reference-types';
+import type {AiTimelineEntry,ProjectMilestone} from './reference-types';
 
 export const DEMO_AS_OF='2026-10-15';
 // Fictional inputs adapted from the user-supplied HTML, never canonical IDs or live evidence.
@@ -17,6 +17,14 @@ const seeds=[
   ['Delta DAO','A','2026-10-05T04:00:00Z','delta','去中心化治理与激励平台。','researching','2026-12-21','治理提案','观察治理参与度。'],
   ['Amber Finance','B','2026-10-03T08:00:00Z','amber','面向多链的收益聚合产品。','watching','2026-12-26','协议升级','需评估合约风险。'],
 ] as const;
+/** Fixture AI rows inside the next three Beijing days, so the timeline can show them without a live worker. */
+export function fixtureAiEntries(now=Date.now()):AiTimelineEntry[]{
+  const day=(offset:number)=>new Date(now+offset*86400000+8*3600000).toISOString().slice(0,10);
+  return [
+    {entry_id:'tle_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1',project_id:'demo-reference-1',project_name:'Prism Labs',rating:'S',event_type:'tge',title:'TGE 开盘',date:day(1),hour:'20',status:'confirmed',source_url:'https://x.com/prism_labs/status/1866001001',source_tweet_id:'1866001001',confidence:0.94},
+    {entry_id:'tle_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2',project_id:'demo-reference-2',project_name:'Nova Network',rating:'A',event_type:'launch',title:'主网上线',date:day(2),hour:'09',status:'estimated',source_url:'https://x.com/nova_network/status/1866001002',source_tweet_id:'1866001002',confidence:0.88},
+  ];
+}
 export function referenceFixtures():{projects:ProjectRecordProjection[];milestones:ProjectMilestone[]}{
   return {projects:seeds.map((seed,index)=>({project_id:`demo-reference-${index+1}`,name:seed[0],rating:seed[1],description:seed[4],website_url:`https://${seed[3]}.example`,progress_stage:seed[5],progress_percent:null,notes:seed[8],category:null,home_membership:'active',discovered_at:seed[2],revision:1,created_at:'2026-10-15T00:00:00Z',updated_at:'2026-10-15T00:00:00Z',token_date:index===0?seed[6]:null,token_date_status:index===0?'estimated':'unconfirmed'})),milestones:seeds.map((seed,index)=>({project_id:`demo-reference-${index+1}`,date:seed[6],hour:String([14,9,16,11,10,15,14,20,8,13,12,16][index]).padStart(2,'0'),title:seed[7],status:'estimated'}))};
 }

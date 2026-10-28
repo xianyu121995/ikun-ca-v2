@@ -2,9 +2,9 @@
 /** Owner decision 2026-10-19: upcoming milestones as a horizontal timeline (S/A/B colors, live "now" marker). */
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { ProjectView } from '../../features/homepage/types';
-import type { ProjectMilestone } from '../../features/homepage/reference-types';
+import type { AiTimelineEntry, ProjectMilestone } from '../../features/homepage/reference-types';
 
-type Row = { project: ProjectView; event: ProjectMilestone };
+type Row = { project: ProjectView; event: ProjectMilestone; ai?: AiTimelineEntry };
 const HOUR = 3600_000, DAY = 24 * HOUR, MAX_STACK = 4;
 // Owner 2026-10-19 (scheme 1): S red / A gold / B blue, same as the table badges.
 const COLORS: Record<string, string> = { S: '#ef4444', A: '#eab308', B: '#3b82f6' };
@@ -13,7 +13,7 @@ const at = (date: string, hour: string | null) => Date.parse(`${date}T${hour ?? 
 const pad = (n: number) => String(n).padStart(2, '0');
 const bj = (ms: number) => new Date(ms + 8 * HOUR);
 
-export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; days: number | null; onOpen: (key: string) => void }) {
+export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; days: number | null; onOpen: (key: string, ai?: AiTimelineEntry) => void }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidth, setTrackWidth] = useState(700);
   useEffect(() => {
@@ -25,7 +25,7 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
   }, []);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
-  const items = useMemo(() => rows.filter(r => r.event.date && ['S', 'A', 'B'].includes(r.project.record.rating ?? ''))
+  const items = useMemo(() => rows.filter(r => r.event.date && (r.ai || ['S', 'A', 'B'].includes(r.project.record.rating ?? '')))
     .map(r => ({ ...r, t: at(r.event.date!, r.event.hour) })).filter(r => Number.isFinite(r.t) && r.t >= now - HOUR)
     .sort((a, b) => a.t - b.t), [rows, now]);
   const start = now;
@@ -39,8 +39,8 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
   const lanes = new Map<string, number>();
   for (const [key, list] of groups) {
     const anchor = pos(list[0].t) * trackWidth / 100;
-    const left = pos(list[0].t) > 72 ? anchor - 190 : anchor;
-    const right = left + 198, height = Math.min(list.length, MAX_STACK);
+    const left = pos(list[0].t) > 72 ? anchor - 240 : anchor;
+    const right = left + 258, height = Math.min(list.length, MAX_STACK);
     let lane = 0;
     while (occupied.some(r => left < r.right && right > r.left && lane < r.lane + r.height && lane + height > r.lane)) lane++;
     occupied.push({left,right,lane,height});
@@ -59,15 +59,18 @@ export function EventTimeline({ rows, days, onOpen }: { rows: readonly Row[]; da
       {[...groups.entries()].map(([key, list]) => <div key={key} className="hpv2-tl-stack" data-right={pos(list[0].t) > 72 || undefined} style={{ left: `${pos(list[0].t)}%`, bottom: 6 + (lanes.get(key) ?? 0) * 36 }}>
         {list.slice(0, list.length > MAX_STACK ? MAX_STACK - 1 : MAX_STACK).map(it => {
           const e = it.event, d = bj(it.t);
-          const label = `${it.project.record.name} · ${e.title || '重要事件'} · ${d.getUTCMonth() + 1}/${d.getUTCDate()} ${e.hour ? e.hour + '时' : '（未定小时）'} · ${e.status === 'confirmed' ? '已确认' : '预计'}`;
-          return <button key={it.project.key} type="button" role="listitem" className="hpv2-tl-dot" data-hourless={!e.hour || undefined}
-            style={{ '--tl-color': COLORS[it.project.record.rating!] } as CSSProperties} title={label} aria-label={label} onClick={() => onOpen(it.project.key)}>
-            <i aria-hidden="true">{it.project.record.rating ?? '·'}</i><span>{it.project.record.name}</span>{e.hour ? <small>{e.hour}时</small> : null}</button>;
+          const label = `${it.project.record.name} · ${e.title || '重要事件'} · ${d.getUTCMonth() + 1}/${d.getUTCDate()} ${e.hour ? e.hour + '时' : '（未定小时）'} · ${e.status === 'confirmed' ? '已确认' : '预计'}${it.ai ? ' · AI 识别' : ''}`;
+          const color = COLORS[it.project.record.rating ?? ''] ?? '#a78bfa';
+          return <div key={it.ai?.entry_id ?? it.project.key} className="hpv2-tl-chip" data-ai={it.ai ? 'true' : undefined}>
+            <button type="button" role="listitem" className="hpv2-tl-dot" data-hourless={!e.hour || undefined}
+            style={{ '--tl-color': color } as CSSProperties} title={label} aria-label={label} onClick={() => onOpen(it.project.key, it.ai)}>
+            <i aria-hidden="true">{it.project.record.rating ?? '·'}</i><span>{it.project.record.name}</span>{it.ai ? <em className="hpv2-ai-badge">AI 识别</em> : null}{e.hour ? <small>{e.hour}时</small> : null}</button>
+            {it.ai?.source_url ? <a className="hpv2-ai-link" href={it.ai.source_url} target="_blank" rel="noopener noreferrer">原推文</a> : null}</div>;
         })}
         {list.length > MAX_STACK && <span className="hpv2-tl-more" title={list.slice(MAX_STACK - 1).map(it => it.project.record.name).join('、')}>+{list.length - MAX_STACK + 1}</span>}
       </div>)}
     </div>
     {!groups.size && <p className="hpv2-tl-empty">{days ? `未来 ${days} 天` : '目前'}没有已定日期的重要事件</p>}
-    <div className="hpv2-tl-legend"><span><i style={{ background: COLORS.S }} />S</span><span><i style={{ background: COLORS.A }} />A</span><span><i style={{ background: COLORS.B }} />B</span><small>虚线圈 = 只定了日期、未定小时</small></div>
+    <div className="hpv2-tl-legend"><span><i style={{ background: COLORS.S }} />S</span><span><i style={{ background: COLORS.A }} />A</span><span><i style={{ background: COLORS.B }} />B</span><span><i style={{ background: '#a78bfa' }} />AI 识别</span><small>虚线圈 = 只定了日期、未定小时</small></div>
   </div>;
 }

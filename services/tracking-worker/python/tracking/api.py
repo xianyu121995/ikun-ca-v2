@@ -376,4 +376,41 @@ def create_app(cfg: Config, store: Store | None = None):
 
         return StreamingResponse(frames(), media_type="text/event-stream")
 
+    @app.get("/internal/v1/timeline-events", dependencies=[Depends(service)])
+    def timeline_events(request: Request):
+        from .timeline_extract import list_public
+
+        with store.connect() as db:
+            return reply(request, {"items": list_public(db)})
+
+    def timeline_actor(value):
+        if not isinstance(value, dict) or value.get("actor") is None:
+            raise DomainError(422, "VALIDATION_ERROR", "actor required")
+        actor = Principal.model_validate(value["actor"])
+        if actor.role != "superadmin":
+            raise DomainError(403, "FORBIDDEN", "superadmin required")
+        return actor
+
+    @app.patch("/internal/v1/timeline-events/{entry_id}", dependencies=[Depends(service)])
+    async def timeline_edit(entry_id: str, request: Request, idempotency_key: str = Header()):
+        from .timeline_extract import edit_entry
+
+        checked_id(idempotency_key, "")
+        value = await body(request)
+        if set(value) != {"actor", "patch"}:
+            raise DomainError(422, "VALIDATION_ERROR", "timeline edit envelope required")
+        actor = timeline_actor(value)
+        return reply(request, edit_entry(store, entry_id, value["patch"], actor.user_id, idempotency_key))
+
+    @app.delete("/internal/v1/timeline-events/{entry_id}", dependencies=[Depends(service)])
+    async def timeline_delete(entry_id: str, request: Request, idempotency_key: str = Header()):
+        from .timeline_extract import delete_entry
+
+        checked_id(idempotency_key, "")
+        value = await body(request)
+        if set(value) != {"actor"}:
+            raise DomainError(422, "VALIDATION_ERROR", "timeline delete envelope required")
+        actor = timeline_actor(value)
+        return reply(request, delete_entry(store, entry_id, actor.user_id, idempotency_key))
+
     return app

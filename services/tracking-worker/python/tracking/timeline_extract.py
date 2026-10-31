@@ -57,16 +57,35 @@ PROMPT = (
     "'tomorrow 20:00 UTC' → {\"kind\":\"wall\",\"day_offset\":1,\"hour\":20,\"minute\":0,\"timezone\":\"UTC\"}；"
     "绝对时间必须带时区，例如 {\"kind\":\"absolute\",\"iso\":\"2026-11-02T20:00:00Z\"}；"
     "只有日期没有钟点 → {\"kind\":\"date\",\"date\":\"2026-11-02\",\"timezone\":\"Asia/Shanghai\",\"hour\":null}。\n"
-    "只写钟点、没写日期（如 '12:00'、'12：00'、'晚8点'）也算具体时刻：用 wall，没写时区默认 Asia/Shanghai；"
-    "参照 created_at_local（发推的北京时间），该钟点今天还没到 day_offset=0，已过则 day_offset=1。"
-    "例：23:52 发 '官方池12：00建立' → {\"kind\":\"wall\",\"day_offset\":1,\"hour\":12,\"minute\":0,\"timezone\":\"Asia/Shanghai\"}。"
-    "全角冒号 '：' 与半角 ':' 等价。\n"
+    "只写钟点、没写日期（如 '12:00'、'12：00'、'8点'、'20:00'、'下午3点'）也算具体时刻：用 wall，"
+    "没写时区默认 Asia/Shanghai。hour 填推文里的原始数字，不要把 12 小时制改写成 24 小时，"
+    "也不要为只写钟点填写 day_offset（明天/后天这类明确偏移仍用 day_offset，并参照 created_at_local）。"
+    "minute 缺省为 0。有上午/早上/中午/下午/晚上/凌晨/半夜/AM/PM 时 meridiem 填该词原文，否则 meridiem=null。"
+    "hour 为 1-12 且没有上述修饰、又不是明确的 24 小时制（hour 13-23 或 00:xx）时 ambiguous=true；"
+    "hour 为 0 或 13-23 时 ambiguous=false。全角冒号 '：' 与半角 ':' 等价。\n"
+    "最终时刻由服务端确定：无修饰且 hour 为 1-12 时，同时考虑 H 和 H+12（12 点同时考虑 12:00 和 00:00），"
+    "取 created_at 之后最近的一次。有修饰则按修饰：晚上12点/半夜12点/凌晨0点=00:00，中午12点=12:00，"
+    "下午3点=15:00，上午/早上/AM 的 1-11 点保持上午。\n"
+    "例：23:52 发 '官方池12：00建立' → {\"kind\":\"wall\",\"hour\":12,\"minute\":0,\"meridiem\":null,"
+    "\"ambiguous\":true,\"timezone\":\"Asia/Shanghai\"}；"
+    "'中午12点' → {\"kind\":\"wall\",\"hour\":12,\"minute\":0,\"meridiem\":\"中午\",\"ambiguous\":false}；"
+    "'8点' → {\"kind\":\"wall\",\"hour\":8,\"minute\":0,\"meridiem\":null,\"ambiguous\":true}；"
+    "'20:00' → {\"kind\":\"wall\",\"hour\":20,\"minute\":0,\"meridiem\":null,\"ambiguous\":false}。\n"
     "建池、开池、加池子、官方池建立、开盘、开放交易都算 launch 事件，announces=true。\n"
     "event_type 只能是 tge,mint,airdrop,listing,whitelist,launch,mainnet,snapshot,other 之一。"
     "title 用不超过 40 字的简体中文。confidence 是 0 到 1 的小数，明确写出时间才 ≥0.8；明确写出钟点（即使没写日期）也应 ≥0.8。\n"
     "只输出一个 JSON：{\"announces\":true|false,\"event_type\":\"tge\",\"title\":\"\",\"confidence\":0.0,"
     "\"concrete\":true|false,\"schedule\":{\"kind\":\"vague\"}}。\n\n"
 )
+_MERIDIEM = {
+    "am": "am", "a.m.": "am", "a.m": "am",
+    "pm": "pm", "p.m.": "pm", "p.m": "pm",
+    "上午": "morning", "早上": "morning", "morning": "morning",
+    "中午": "noon", "正午": "noon", "noon": "noon",
+    "下午": "afternoon", "afternoon": "afternoon",
+    "晚上": "evening", "傍晚": "evening", "evening": "evening",
+    "凌晨": "midnight", "半夜": "midnight", "午夜": "midnight", "midnight": "midnight",
+}
 
 
 def extract_enabled() -> bool:
@@ -126,6 +145,71 @@ def _at_clock(day: datetime, hour: int, minute: int, zone) -> datetime:
     return stamped.astimezone(timezone.utc)
 
 
+def _meridiem(value):
+    """Qualifier copied from the tweet. None means the clock may be 12-hour ambiguous."""
+    if value is None or value is False:
+        return None
+    if isinstance(value, bool) or not isinstance(value, str):
+        return "invalid"
+    text = re.sub(r"[0-9０-９\s点:：]+", "", value).strip()
+    if not text or text.lower() in {"null", "none", "ambiguous"}:
+        return None
+    key = text.lower() if text.isascii() else text
+    return _MERIDIEM.get(key, "invalid")
+
+
+def _qualify(hour: int, meridiem: str) -> int | None:
+    """Apply a written am/pm word. 12 is midnight or noon depending on the word."""
+    if meridiem in ("am", "morning"):
+        if hour == 12:
+            return 0
+        return hour if 0 <= hour <= 11 else None
+    if meridiem == "noon":
+        return 12 if hour in (0, 12) else None
+    if meridiem in ("pm", "afternoon"):
+        if hour in (0, 12):
+            return 12
+        return hour + 12 if 1 <= hour <= 11 else None
+    if meridiem == "evening":
+        if hour in (0, 12):
+            return 0
+        return hour + 12 if 1 <= hour <= 11 else None
+    if meridiem == "midnight":
+        if hour == 12:
+            return 0
+        return hour if 0 <= hour <= 11 else None
+    return None
+
+
+def _candidate_clocks(hour: int, minute: int, meridiem: str | None) -> list[tuple[int, int]] | None:
+    """24h candidates. Hour 1-12 with no qualifier yields both H and H+12 (12 → 12:00 and 00:00)."""
+    if not 0 <= minute <= 59:
+        return None
+    if meridiem is None:
+        if hour == 0 or 13 <= hour <= 23:
+            return [(hour, minute)]
+        if 1 <= hour <= 11:
+            return [(hour, minute), (hour + 12, minute)]
+        if hour == 12:
+            return [(12, minute), (0, minute)]
+        return None
+    if meridiem == "invalid":
+        return None
+    if hour == 0 or 13 <= hour <= 23:
+        return [(hour, minute)]
+    resolved = _qualify(hour, meridiem)
+    if resolved is None:
+        return None
+    return [(resolved, minute)]
+
+
+def _next_occurrence(created: datetime, hour: int, minute: int, zone) -> datetime:
+    today = _at_clock(created, hour, minute, zone)
+    if today > created:
+        return today
+    return _at_clock(created.astimezone(zone) + timedelta(days=1), hour, minute, zone)
+
+
 def _schedule(schedule, created_at: float | None) -> tuple[datetime, str | None] | None:
     """Return (utc instant, display hour or None when the source had no clock)."""
     if not isinstance(schedule, dict):
@@ -168,21 +252,24 @@ def _schedule(schedule, created_at: float | None) -> tuple[datetime, str | None]
         minute = _number(schedule.get("minute") if schedule.get("minute") is not None else 0, integer=True)
         if zone is None or created is None or clock is None or minute is None:
             return None
-        if not 0 <= clock <= 23 or not 0 <= minute <= 59:
+        meridiem = _meridiem(schedule.get("meridiem"))
+        candidates = _candidate_clocks(clock, minute, meridiem)
+        if not candidates:
             return None
         raw_offset = schedule.get("day_offset")
-        if raw_offset is None:
-            # Next occurrence of that clock after the tweet was posted.
-            today = _at_clock(created, clock, minute, zone)
-            offset = 0 if today > created else 1
-        else:
+        # Ambiguous 12-hour clocks ignore the model's day_offset and pick the nearer future time.
+        if len(candidates) == 1 and raw_offset is not None:
             offset = _number(raw_offset, integer=True)
-        if offset is None:
-            return None
-        if not 0 <= offset <= 366 or not 0 <= clock <= 23 or not 0 <= minute <= 59:
-            return None
-        day = created.astimezone(zone) + timedelta(days=offset)
-        return _at_clock(day, clock, minute, zone), f"{_at_clock(day, clock, minute, zone).astimezone(SHANGHAI).hour:02d}"
+            if offset is None or not 0 <= offset <= 366:
+                return None
+            hour, minute = candidates[0]
+            when = _at_clock(created.astimezone(zone) + timedelta(days=offset), hour, minute, zone)
+        else:
+            when = min(
+                (_next_occurrence(created, hour, minute, zone) for hour, minute in candidates),
+                key=lambda item: item.timestamp(),
+            )
+        return when, f"{when.astimezone(SHANGHAI).hour:02d}"
     return None
 
 

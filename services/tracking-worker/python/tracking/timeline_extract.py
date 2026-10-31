@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import time
@@ -38,6 +39,16 @@ ENTRY_ID = re.compile(r"^tle_[0-9a-f]{32}$")
 PROJECT_ID = re.compile(r"^prj_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 HANDLE = re.compile(r"^[A-Za-z0-9_]{1,15}$")
 TWEET_ID = re.compile(r"^[0-9]{1,40}$")
+LOG = logging.getLogger(__name__)
+ZONE_ALIASES = {
+    "UTC": "UTC", "Z": "UTC", "GMT": "UTC", "UTC+0": "UTC", "UTC+00:00": "UTC",
+    "ASIA/SHANGHAI": "Asia/Shanghai", "SHANGHAI": "Asia/Shanghai", "BEIJING": "Asia/Shanghai",
+    "ASIA/BEIJING": "Asia/Shanghai", "CST": "Asia/Shanghai", "CHINA": "Asia/Shanghai",
+    "UTC+8": "Asia/Shanghai", "UTC+08": "Asia/Shanghai", "UTC+08:00": "Asia/Shanghai",
+    "GMT+8": "Asia/Shanghai", "GMT+08:00": "Asia/Shanghai", "+08:00": "Asia/Shanghai",
+    "北京时间": "Asia/Shanghai", "北京": "Asia/Shanghai",
+    "ASIA/HONG_KONG": "Asia/Shanghai", "ASIA/SINGAPORE": "Asia/Shanghai", "ASIA/TAIPEI": "Asia/Shanghai",
+}
 PROMPT = (
     "你是加密项目研究助手。阅读下面这条已抓取的推文（含被引用推文），判断它是否公布了一个"
     "有具体日期或时刻的事件（上线、TGE、发币、开盘、mint、空投、上所、白名单、主网、快照）。\n"
@@ -46,11 +57,35 @@ PROMPT = (
     "'tomorrow 20:00 UTC' → {\"kind\":\"wall\",\"day_offset\":1,\"hour\":20,\"minute\":0,\"timezone\":\"UTC\"}；"
     "绝对时间必须带时区，例如 {\"kind\":\"absolute\",\"iso\":\"2026-11-02T20:00:00Z\"}；"
     "只有日期没有钟点 → {\"kind\":\"date\",\"date\":\"2026-11-02\",\"timezone\":\"Asia/Shanghai\",\"hour\":null}。\n"
+    "只写钟点、没写日期（如 '12:00'、'12：00'、'8点'、'20:00'、'下午3点'）也算具体时刻：用 wall，"
+    "没写时区默认 Asia/Shanghai。hour 填推文里的原始数字，不要把 12 小时制改写成 24 小时，"
+    "也不要为只写钟点填写 day_offset（明天/后天这类明确偏移仍用 day_offset，并参照 created_at_local）。"
+    "minute 缺省为 0。有上午/早上/中午/下午/晚上/凌晨/半夜/AM/PM 时 meridiem 填该词原文，否则 meridiem=null。"
+    "hour 为 1-12 且没有上述修饰、又不是明确的 24 小时制（hour 13-23 或 00:xx）时 ambiguous=true；"
+    "hour 为 0 或 13-23 时 ambiguous=false。全角冒号 '：' 与半角 ':' 等价。\n"
+    "最终时刻由服务端确定：无修饰且 hour 为 1-12 时，同时考虑 H 和 H+12（12 点同时考虑 12:00 和 00:00），"
+    "取 created_at 之后最近的一次。有修饰则按修饰：晚上12点/半夜12点/凌晨0点=00:00，中午12点=12:00，"
+    "下午3点=15:00，上午/早上/AM 的 1-11 点保持上午。\n"
+    "例：23:52 发 '官方池12：00建立' → {\"kind\":\"wall\",\"hour\":12,\"minute\":0,\"meridiem\":null,"
+    "\"ambiguous\":true,\"timezone\":\"Asia/Shanghai\"}；"
+    "'中午12点' → {\"kind\":\"wall\",\"hour\":12,\"minute\":0,\"meridiem\":\"中午\",\"ambiguous\":false}；"
+    "'8点' → {\"kind\":\"wall\",\"hour\":8,\"minute\":0,\"meridiem\":null,\"ambiguous\":true}；"
+    "'20:00' → {\"kind\":\"wall\",\"hour\":20,\"minute\":0,\"meridiem\":null,\"ambiguous\":false}。\n"
+    "建池、开池、加池子、官方池建立、开盘、开放交易都算 launch 事件，announces=true。\n"
     "event_type 只能是 tge,mint,airdrop,listing,whitelist,launch,mainnet,snapshot,other 之一。"
-    "title 用不超过 40 字的简体中文。confidence 是 0 到 1 的小数，明确写出时间才 ≥0.8。\n"
+    "title 用不超过 40 字的简体中文。confidence 是 0 到 1 的小数，明确写出时间才 ≥0.8；明确写出钟点（即使没写日期）也应 ≥0.8。\n"
     "只输出一个 JSON：{\"announces\":true|false,\"event_type\":\"tge\",\"title\":\"\",\"confidence\":0.0,"
     "\"concrete\":true|false,\"schedule\":{\"kind\":\"vague\"}}。\n\n"
 )
+_MERIDIEM = {
+    "am": "am", "a.m.": "am", "a.m": "am",
+    "pm": "pm", "p.m.": "pm", "p.m": "pm",
+    "上午": "morning", "早上": "morning", "morning": "morning",
+    "中午": "noon", "正午": "noon", "noon": "noon",
+    "下午": "afternoon", "afternoon": "afternoon",
+    "晚上": "evening", "傍晚": "evening", "evening": "evening",
+    "凌晨": "midnight", "半夜": "midnight", "午夜": "midnight", "midnight": "midnight",
+}
 
 
 def extract_enabled() -> bool:
@@ -71,6 +106,8 @@ def _number(value, *, integer=False):
 
 
 def _zone(name):
+    if isinstance(name, str):
+        name = ZONE_ALIASES.get(name.strip().upper(), ZONE_ALIASES.get(name.strip(), name.strip()))
     if name in ("UTC", "Z", "GMT"):
         return timezone.utc
     if name == "Asia/Shanghai":
@@ -108,6 +145,71 @@ def _at_clock(day: datetime, hour: int, minute: int, zone) -> datetime:
     return stamped.astimezone(timezone.utc)
 
 
+def _meridiem(value):
+    """Qualifier copied from the tweet. None means the clock may be 12-hour ambiguous."""
+    if value is None or value is False:
+        return None
+    if isinstance(value, bool) or not isinstance(value, str):
+        return "invalid"
+    text = re.sub(r"[0-9０-９\s点:：]+", "", value).strip()
+    if not text or text.lower() in {"null", "none", "ambiguous"}:
+        return None
+    key = text.lower() if text.isascii() else text
+    return _MERIDIEM.get(key, "invalid")
+
+
+def _qualify(hour: int, meridiem: str) -> int | None:
+    """Apply a written am/pm word. 12 is midnight or noon depending on the word."""
+    if meridiem in ("am", "morning"):
+        if hour == 12:
+            return 0
+        return hour if 0 <= hour <= 11 else None
+    if meridiem == "noon":
+        return 12 if hour in (0, 12) else None
+    if meridiem in ("pm", "afternoon"):
+        if hour in (0, 12):
+            return 12
+        return hour + 12 if 1 <= hour <= 11 else None
+    if meridiem == "evening":
+        if hour in (0, 12):
+            return 0
+        return hour + 12 if 1 <= hour <= 11 else None
+    if meridiem == "midnight":
+        if hour == 12:
+            return 0
+        return hour if 0 <= hour <= 11 else None
+    return None
+
+
+def _candidate_clocks(hour: int, minute: int, meridiem: str | None) -> list[tuple[int, int]] | None:
+    """24h candidates. Hour 1-12 with no qualifier yields both H and H+12 (12 → 12:00 and 00:00)."""
+    if not 0 <= minute <= 59:
+        return None
+    if meridiem is None:
+        if hour == 0 or 13 <= hour <= 23:
+            return [(hour, minute)]
+        if 1 <= hour <= 11:
+            return [(hour, minute), (hour + 12, minute)]
+        if hour == 12:
+            return [(12, minute), (0, minute)]
+        return None
+    if meridiem == "invalid":
+        return None
+    if hour == 0 or 13 <= hour <= 23:
+        return [(hour, minute)]
+    resolved = _qualify(hour, meridiem)
+    if resolved is None:
+        return None
+    return [(resolved, minute)]
+
+
+def _next_occurrence(created: datetime, hour: int, minute: int, zone) -> datetime:
+    today = _at_clock(created, hour, minute, zone)
+    if today > created:
+        return today
+    return _at_clock(created.astimezone(zone) + timedelta(days=1), hour, minute, zone)
+
+
 def _schedule(schedule, created_at: float | None) -> tuple[datetime, str | None] | None:
     """Return (utc instant, display hour or None when the source had no clock)."""
     if not isinstance(schedule, dict):
@@ -142,39 +244,67 @@ def _schedule(schedule, created_at: float | None) -> tuple[datetime, str | None]
             return None
         when = created + timedelta(seconds=seconds)
         return when, f"{when.astimezone(SHANGHAI).hour:02d}"
-    if kind == "wall":
-        zone = _zone(schedule.get("timezone"))
-        offset = _number(schedule.get("day_offset"), integer=True)
+    if kind in ("wall", "time", "clock"):
+        tz_name = schedule.get("timezone")
+        # Clock-only tweets ("12：00") usually omit the zone; default to Beijing time.
+        zone = SHANGHAI if tz_name in (None, "") else _zone(tz_name)
         clock = _number(schedule.get("hour"), integer=True)
-        minute = _number(schedule.get("minute", 0), integer=True)
-        if zone is None or created is None or offset is None or clock is None or minute is None:
+        minute = _number(schedule.get("minute") if schedule.get("minute") is not None else 0, integer=True)
+        if zone is None or created is None or clock is None or minute is None:
             return None
-        if not 0 <= offset <= 366 or not 0 <= clock <= 23 or not 0 <= minute <= 59:
+        meridiem = _meridiem(schedule.get("meridiem"))
+        candidates = _candidate_clocks(clock, minute, meridiem)
+        if not candidates:
             return None
-        day = created.astimezone(zone) + timedelta(days=offset)
-        return _at_clock(day, clock, minute, zone), f"{_at_clock(day, clock, minute, zone).astimezone(SHANGHAI).hour:02d}"
+        raw_offset = schedule.get("day_offset")
+        # Ambiguous 12-hour clocks ignore the model's day_offset and pick the nearer future time.
+        if len(candidates) == 1 and raw_offset is not None:
+            offset = _number(raw_offset, integer=True)
+            if offset is None or not 0 <= offset <= 366:
+                return None
+            hour, minute = candidates[0]
+            when = _at_clock(created.astimezone(zone) + timedelta(days=offset), hour, minute, zone)
+        else:
+            when = min(
+                (_next_occurrence(created, hour, minute, zone) for hour, minute in candidates),
+                key=lambda item: item.timestamp(),
+            )
+        return when, f"{when.astimezone(SHANGHAI).hour:02d}"
     return None
 
 
 def interpret(raw: dict, created_at: float | None) -> dict | None:
     """Normalize one model object. None means it must not be added to the timeline."""
-    if not isinstance(raw, dict) or raw.get("announces") is not True or raw.get("concrete") is not True:
-        return None
+    return explain(raw, created_at)[0]
+
+
+def explain(raw: dict, created_at: float | None) -> tuple[dict | None, str | None]:
+    """Like interpret, plus why a result was dropped (None reason when kept)."""
+    if not isinstance(raw, dict):
+        return None, "not_object"
+    if raw.get("announces") is not True:
+        return None, "announces_false"
+    if raw.get("concrete") is not True:
+        return None, "concrete_false"
     confidence = _number(raw.get("confidence"))
     if confidence is None or not HIGH_CONFIDENCE <= confidence <= 1:
-        return None
+        return None, "low_confidence"
     event_type = raw.get("event_type")
     title = raw.get("title")
-    if event_type not in TYPES or not isinstance(title, str) or not title.strip():
-        return None
-    resolved = _schedule(raw.get("schedule"), created_at)
+    if event_type not in TYPES:
+        return None, "bad_event_type"
+    if not isinstance(title, str) or not title.strip():
+        return None, "empty_title"
+    schedule = raw.get("schedule")
+    resolved = _schedule(schedule, created_at)
     if resolved is None:
-        return None
+        kind = schedule.get("kind") if isinstance(schedule, dict) else None
+        return None, "vague_schedule" if kind == "vague" else "bad_schedule"
     when, hour = resolved
-    if raw.get("schedule", {}).get("kind") == "date" and raw["schedule"].get("hour") is not None:
-        clock = _number(raw["schedule"].get("hour"), integer=True)
+    if schedule.get("kind") == "date" and schedule.get("hour") is not None:
+        clock = _number(schedule.get("hour"), integer=True)
         if clock is None:
-            return None
+            return None, "bad_schedule"
         # Display the source clock converted to Asia/Shanghai, not the noon placeholder.
         hour = f"{when.astimezone(SHANGHAI).hour:02d}"
     local = when.astimezone(SHANGHAI)
@@ -187,7 +317,7 @@ def interpret(raw: dict, created_at: float | None) -> dict | None:
         "date": local.date().isoformat(),
         "hour": hour,
         "status": status,
-    }
+    }, None
 
 
 def entry_id_for(project_id: str, event_type: str) -> str:
@@ -300,6 +430,25 @@ def pending(db, limit=8, horizon_s=24 * 3600):
     return [dict(r) for r in rows]
 
 
+def _model_summary(raw) -> dict | None:
+    """A small, size-capped copy of the model answer kept for debugging dropped tweets."""
+    if not isinstance(raw, dict):
+        return None
+    keep = {}
+    for key in ("announces", "concrete", "event_type", "confidence"):
+        value = raw.get(key)
+        if value is None or isinstance(value, (bool, int, float)) or (isinstance(value, str) and len(value) <= 40):
+            keep[key] = value
+    title = raw.get("title")
+    if isinstance(title, str):
+        keep["title"] = title[:60]
+    schedule = raw.get("schedule")
+    if isinstance(schedule, dict):
+        encoded = json.dumps(schedule, ensure_ascii=False)
+        keep["schedule"] = schedule if len(encoded) <= 300 else {"kind": str(schedule.get("kind"))[:20]}
+    return keep
+
+
 def run_pass(store, failures: dict, now=None) -> int:
     """Analyze a few recent tweets. Returns how many analyses were stored. Never raises for AI failures."""
     if not extract_enabled() or not gemini.enabled():
@@ -317,9 +466,18 @@ def run_pass(store, failures: dict, now=None) -> int:
         text = row.get("text") or ""
         quote = row.get("quote") or ""
         if not text.strip() and not quote.strip():
-            result, action = None, "none"
+            result, action, reason, model = None, "none", "empty_text", None
         else:
-            payload = {"text": text[:4000], "quote": quote[:2000] or None, "created_at": row.get("created_at")}
+            created_at = row.get("created_at")
+            local = None
+            if isinstance(created_at, (int, float)) and not isinstance(created_at, bool):
+                local = datetime.fromtimestamp(created_at, SHANGHAI).strftime("%Y-%m-%d %H:%M (Asia/Shanghai)")
+            payload = {
+                "text": text[:4000],
+                "quote": quote[:2000] or None,
+                "created_at": created_at,
+                "created_at_local": local,
+            }
             try:
                 raw = gemini.generate_json(PROMPT + json.dumps(payload, ensure_ascii=False))
             except gemini.AIUnavailable as exc:
@@ -327,8 +485,11 @@ def run_pass(store, failures: dict, now=None) -> int:
                 if str(exc) in ("ai_not_configured", "ai_key_rejected", "ai_codex_missing"):
                     break
                 continue
-            result = interpret(raw, row.get("created_at"))
+            result, reason = explain(raw, row.get("created_at"))
             action = None
+            model = _model_summary(raw)
+            if reason:
+                LOG.info("tracking_timeline_dropped tweet_id=%s reason=%s", row["tweet_id"], reason)
         with store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             try:
@@ -338,6 +499,10 @@ def run_pass(store, failures: dict, now=None) -> int:
                 if result is not None and action is None:
                     action = apply_event(db, row, result, now)
                 recorded = {"applied": action or "none", "event": result}
+                if result is None:
+                    recorded["reason"] = reason
+                    if model is not None:
+                        recorded["model"] = model
                 _put(db, ANALYZE + row["tweet_id"], recorded, now)
                 db.execute("COMMIT")
             except Exception:

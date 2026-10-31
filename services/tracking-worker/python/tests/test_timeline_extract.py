@@ -10,8 +10,10 @@ from tracking import gemini
 from tracking.api import create_app
 from tracking.events import normalize
 from tracking.timeline_extract import (
+    PROMPT,
     delete_entry,
     edit_entry,
+    explain,
     interpret,
     list_public,
     run_pass,
@@ -259,3 +261,146 @@ def test_http_lists_edits_and_keeps_tombstone(cfg, store, monkeypatch, tmp_path)
     assert run_pass(store, {}) == 1
     with store.connect() as db:
         assert list_public(db) == []
+
+
+# --- Clock-only Chinese tweets (@toshprotocol 2026-10-31, Asia/Shanghai) -------------------------
+TOSH = [
+    # (tweet text, created_at epoch seconds as stored by tracking)
+    ("请勿被私池骗！！！官方池12：00建立！税0.2%！！！", 1793461961.0),  # 23:52:41 +08
+    ("请勿被私池骗！！！官方池12：00建立！税0.2%！！", 1793462009.0),  # 23:53:29 +08
+    ("12:00正式上线！", 1793461262.0),  # 23:41:02 +08
+    ("12：00", 1793460975.0),  # 23:36:15 +08
+    ("https://toshx.xyz/projects/0x984B5B24414E482b8B5E58046BbE41A55e736291 已正式开启", 1793459387.0),
+]
+# 2026-11-01 00:00 Asia/Shanghai. 23:52 '12：00' is 8 minutes from midnight, not noon.
+MIDNIGHT_NEXT = "2026-10-31T16:00:00Z"
+NOON_SAME_DAY = "2026-10-31T04:00:00Z"  # 2026-10-31 12:00 Asia/Shanghai
+NOON_NEXT_DAY = "2026-11-01T04:00:00Z"  # 2026-11-01 12:00 Asia/Shanghai
+EVENING_SAME = "2026-10-31T12:00:00Z"  # 2026-10-31 20:00 Asia/Shanghai
+LATE = TOSH[0][1]  # 23:52:41 +08
+MORNING = datetime(2026, 10, 31, 9, 0, tzinfo=timezone.utc).timestamp() - 8 * 3600  # 09:00 +08
+TEN_AM = datetime(2026, 10, 31, 10, 0, tzinfo=timezone.utc).timestamp() - 8 * 3600  # 10:00 +08
+
+
+def launch(schedule, **extra):
+    body = {
+        "announces": True,
+        "event_type": "launch",
+        "title": "官方池 12:00 建立",
+        "confidence": 0.85,
+        "concrete": True,
+        "schedule": schedule,
+    }
+    body.update(extra)
+    return body
+
+
+def test_prompt_covers_clock_only_fullwidth_and_pool_creation():
+    assert "只写钟点" in PROMPT and "：" in PROMPT
+    for word in ("建池", "开池", "加池子"):
+        assert word in PROMPT
+    assert "created_at_local" in PROMPT
+    assert "钟点（即使没写日期）也应 ≥0.8" in PROMPT
+    assert "meridiem" in PROMPT and "ambiguous" in PROMPT
+    assert "H+12" in PROMPT and "00:00" in PROMPT and "中午12点" in PROMPT
+    assert '"hour":12,"minute":0,"day_offset":1' not in PROMPT
+
+
+def test_clock_only_wall_defaults_to_shanghai_and_nearest_future():
+    for _text, created in TOSH[:4]:
+        # 23:xx '12：00' with no qualifier is nearer to 00:00 than to noon.
+        bare = interpret(launch({"kind": "wall", "hour": 12, "minute": 0}), created)
+        assert bare["starts_at"] == MIDNIGHT_NEXT
+        assert bare["date"] == "2026-11-01" and bare["hour"] == "00"
+        # A model-supplied day_offset must not force noon; the code picks the nearer clock.
+        forced = interpret(
+            launch({"kind": "wall", "day_offset": 1, "hour": 12, "minute": 0, "timezone": "Asia/Shanghai"}), created
+        )
+        assert forced["starts_at"] == MIDNIGHT_NEXT
+
+
+def test_clock_still_ahead_today_uses_same_day():
+    item = interpret(launch({"kind": "wall", "hour": 12, "minute": 0, "timezone": None}), MORNING)
+    assert item["starts_at"] == NOON_SAME_DAY
+    assert item["date"] == "2026-10-31" and item["hour"] == "12"
+
+
+def test_ambiguous_clock_picks_nearest_and_honors_meridiem():
+    midnight = interpret(launch({"kind": "wall", "hour": 12, "minute": 0, "ambiguous": True}), LATE)
+    assert midnight["starts_at"] == MIDNIGHT_NEXT and midnight["hour"] == "00"
+    # ambiguous:false without a qualifier is still 12-hour ambiguous.
+    ignored = interpret(launch({"kind": "wall", "hour": 12, "minute": 0, "ambiguous": False}), LATE)
+    assert ignored["starts_at"] == MIDNIGHT_NEXT
+
+    noon = interpret(launch({"kind": "wall", "hour": 12, "minute": 0}), TEN_AM)
+    assert noon["starts_at"] == NOON_SAME_DAY and noon["date"] == "2026-10-31" and noon["hour"] == "12"
+
+    qualified = interpret(launch({"kind": "wall", "hour": 12, "minute": 0, "meridiem": "中午"}), LATE)
+    assert qualified["starts_at"] == NOON_NEXT_DAY and qualified["hour"] == "12"
+    for word, hour in (("晚上12点", 12), ("半夜", 12), ("凌晨", 0)):
+        night = interpret(launch({"kind": "wall", "hour": hour, "minute": 0, "meridiem": word}), LATE)
+        assert night["starts_at"] == MIDNIGHT_NEXT and night["hour"] == "00", word
+    afternoon = interpret(launch({"kind": "wall", "hour": 3, "minute": 0, "meridiem": "下午"}), MORNING)
+    assert afternoon["date"] == "2026-10-31" and afternoon["hour"] == "15"
+    assert afternoon["starts_at"] == "2026-10-31T07:00:00Z"
+
+    eight = interpret(launch({"kind": "wall", "hour": 8, "minute": 0, "meridiem": None}), MORNING)
+    assert eight["starts_at"] == EVENING_SAME and eight["date"] == "2026-10-31" and eight["hour"] == "20"
+    twenty = interpret(launch({"kind": "wall", "hour": 20, "minute": 0, "ambiguous": False}), MORNING)
+    assert twenty["starts_at"] == EVENING_SAME and twenty["hour"] == "20"
+    later = interpret(launch({"kind": "wall", "hour": 20, "minute": 0}), LATE)
+    assert later["date"] == "2026-11-01" and later["hour"] == "20"
+    assert later["starts_at"] == "2026-11-01T12:00:00Z"
+
+
+def test_zone_aliases_are_accepted():
+    for name in ("CST", "Beijing", "UTC+8", "+08:00", "北京时间", "asia/shanghai", "GMT+8"):
+        item = interpret(
+            launch({"kind": "wall", "day_offset": 1, "hour": 20, "minute": 0, "timezone": name}), LATE
+        )
+        assert item is not None and item["starts_at"] == "2026-11-01T12:00:00Z", name
+    assert interpret(launch({"kind": "wall", "day_offset": 1, "hour": 20, "timezone": "Mars/Base"}), LATE) is None
+
+
+def test_explain_reports_drop_reasons():
+    created = TOSH[0][1]
+    assert explain(launch({"kind": "wall", "hour": 12}, announces=False), created) == (None, "announces_false")
+    assert explain(launch({"kind": "vague"}, concrete=False), created) == (None, "concrete_false")
+    assert explain(launch({"kind": "wall", "hour": 12}, confidence=0.6), created) == (None, "low_confidence")
+    assert explain(launch({"kind": "vague"}), created) == (None, "vague_schedule")
+    assert explain(launch({"kind": "wall", "hour": 25}), created) == (None, "bad_schedule")
+    assert explain(launch({"kind": "wall", "hour": 12}, event_type="pool"), created) == (None, "bad_event_type")
+    kept, reason = explain(launch({"kind": "wall", "hour": 12}), created)
+    assert reason is None and kept["event_type"] == "launch"
+
+
+def test_run_pass_sends_local_time_and_records_drop_reason(store, monkeypatch, tmp_path):
+    row = target(store)
+    enable(monkeypatch, tmp_path)
+    for index, (text, created) in enumerate(TOSH, start=601):
+        observe(store, row, str(index), text=text, at=created)
+    prompts = []
+
+    def fake(prompt, **kw):
+        prompts.append(prompt)
+        payload = json.loads(prompt[len(PROMPT):])
+        assert payload["created_at_local"].endswith("(Asia/Shanghai)")
+        if "已正式开启" in payload["text"]:
+            return {"announces": False, "event_type": "other", "title": "", "confidence": 0.3,
+                    "concrete": False, "schedule": {"kind": "vague"}}
+        return launch({"kind": "wall", "hour": 12, "minute": 0})
+
+    monkeypatch.setattr(gemini, "generate_json", fake)
+    stored = 0
+    for _ in range(len(TOSH)):
+        stored += run_pass(store, {})
+    assert stored == len(TOSH) and len(prompts) == len(TOSH)
+    with store.connect() as db:
+        items = list_public(db)
+        dropped = json.loads(
+            db.execute("SELECT result FROM receipts WHERE key=?", ("tracking.timeline.analyze.v1:605",)).fetchone()[0]
+        )
+    assert len(items) == 1 and items[0]["event_type"] == "launch" and items[0]["hour"] == "00"
+    assert items[0]["starts_at"] == MIDNIGHT_NEXT
+    assert dropped["applied"] == "none" and dropped["event"] is None
+    assert dropped["reason"] == "announces_false" and dropped["model"]["announces"] is False

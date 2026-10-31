@@ -21,6 +21,7 @@ def record(row):
         'description':row['description'],'website_url':row['website'] or None,'notes':row['notes'],
         'category':row['category'],'progress_stage':row['progress'],'progress_percent':row['progress_percent'],
         'token_date':row['token_date'],'token_date_status':row['token_date_status'],'home_membership':row['home_membership'],
+        'x_handle':row['x_handle'] if 'x_handle' in row.keys() else None,
         'discovered_at':row['discovered_at'],'revision':row['version'],'created_at':row['created_at'],'updated_at':row['updated_at']}
 
 

@@ -86,7 +86,7 @@ class Service:
                 if rpc.operation=='summary':return 200,summary(con,rpc.query),None
                 if rpc.operation=='milestones':return 200,milestones(con,rpc.query),None
                 if rpc.operation=='get':
-                    row=entity(con,rpc.target);return 200,home.projection(con,row) if rpc.contract=='projects-home-v1' else record(row),f'"rev-{row["version"]}"'
+                    row=entity(con,rpc.target);return 200,home.projection(con,row) if rpc.contract=='projects-home-v1' else home.with_x(con,record(row)),f'"rev-{row["version"]}"'
                 if rpc.operation=='receipt':
                     if rpc.source is None:raise DomainError(403,'FORBIDDEN','来源凭证未绑定')
                     expected=observations.expected_hash(rpc.query) if rpc.source=='tracking' else None

@@ -17,6 +17,7 @@ export interface ProjectFieldsProjection {
   progress_percent: number | null;
   token_date: string | null;
   token_date_status: 'confirmed' | 'estimated' | 'unconfirmed';
+  x_handle?: string | null; // Official X account, lowercase handle without @.
 }
 export interface ProjectRecordProjection extends ProjectFieldsProjection {
   project_id: string; // Supplied by Projects. UI never creates canonical IDs.

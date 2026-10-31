@@ -9,10 +9,30 @@ from .transport import Fields, Milestone, SCOPE
 
 EMPTY={'date':None,'hour':None,'title':'','status':'unconfirmed'}
 
+X_SOURCE='manual-tracking'  # same mapping key tracking_register uses, so both paths dedupe on one handle
+X_PREFIX='x-handle:'
+
+def official_x(con,project_id):
+    row=con.execute("SELECT external_id FROM project_sources WHERE tenant_id=? AND project_id=? AND source=? AND external_id LIKE 'x-handle:%' ORDER BY added_at,external_id LIMIT 1",(SCOPE,project_id,X_SOURCE)).fetchone()
+    return row[0][len(X_PREFIX):] if row else None
+
+def save_official_x(con,project_id,handle,actor):
+    current=official_x(con,project_id)
+    if handle==current:return False
+    if handle:
+        owner=con.execute('SELECT project_id FROM project_sources WHERE tenant_id=? AND source=? AND external_id=?',(SCOPE,X_SOURCE,X_PREFIX+handle)).fetchone()
+        if owner and owner[0]!=project_id:raise DomainError(409,'CONFLICT','该官推已关联其他项目')
+    if current:con.execute('DELETE FROM project_sources WHERE tenant_id=? AND project_id=? AND source=? AND external_id=?',(SCOPE,project_id,X_SOURCE,X_PREFIX+current))
+    if handle:con.execute('INSERT INTO project_sources(tenant_id,source,external_id,project_id,added_by,added_at) VALUES(?,?,?,?,?,?)',(SCOPE,X_SOURCE,X_PREFIX+handle,project_id,actor,now()))
+    return True
+
+def with_x(con,data):
+    return {**data,'x_handle':official_x(con,data['project_id'])}
+
 def projection(con,row):
     milestone=con.execute('SELECT date,hour,title,status FROM project_milestones WHERE project_id=?',(row['id'],)).fetchone()
     completion=con.execute('SELECT completion_id,previous_stage,previous_percent,completed_at,restore_basis FROM project_completions WHERE project_id=? AND restored_at IS NULL',(row['id'],)).fetchone()
-    return {'project':record(row),'milestone':dict(milestone) if milestone else dict(EMPTY),'completion':dict(completion) if completion else None}
+    return {'project':with_x(con,record(row)),'milestone':dict(milestone) if milestone else dict(EMPTY),'completion':dict(completion) if completion else None}
 
 def save_milestone(con,project_id,value):
     data=Milestone.model_validate(value).model_dump(mode='json')
@@ -35,9 +55,12 @@ def apply(con,rpc,current=None):
         p=core.insert_project(con,fields.core(),rpc.principal.user_id,SCOPE,extras={**fields.extras(),'home_membership':'removed' if body['complete'] else 'active','discovered_at':None})
         current=core.get_project(con,p['id'],SCOPE,include_removed=True,full=True)
         save_milestone(con,p['id'],milestone.model_dump(mode='json'))
+        if fields.x_handle:
+            save_official_x(con,p['id'],fields.x_handle,rpc.principal.user_id)
+            core.audit(con,rpc.principal.user_id,'update',p['id'],('x_handle',),SCOPE)
         if body['complete']:snapshot(con,current,True)
         return p['id']
-    view=projection(con,current);fields_data=record(current);fields_data={k:v for k,v in fields_data.items() if k in Fields.model_fields}
+    view=projection(con,current);fields_data={k:v for k,v in view['project'].items() if k in Fields.model_fields};baseline=dict(fields_data)
     complete=rpc.operation=='completion';restore=rpc.operation=='restore';milestone=None
     if rpc.operation=='patch':
         if not body or set(body)-{'fields','milestone','complete'}:raise DomainError(422,'VALIDATION_ERROR','复合编辑字段不正确')
@@ -64,9 +87,10 @@ def apply(con,rpc,current=None):
         fields_data['progress_stage']=completion['previous_stage'];fields_data['progress_percent']=completion['previous_percent'];membership='active'
         con.execute('UPDATE project_completions SET restored_at=? WHERE completion_id=?',(now(),completion['completion_id']))
     fields=Fields.model_validate(fields_data)
-    changed=fields_data!={k:v for k,v in record(current).items() if k in Fields.model_fields} or membership!=current['home_membership'] or (milestone is not None and milestone!=view['milestone'])
+    changed=fields.model_dump(mode='json')!=Fields.model_validate(baseline).model_dump(mode='json') or membership!=current['home_membership'] or (milestone is not None and milestone!=view['milestone'])
     if rpc.operation=='patch' and not changed and not complete:raise DomainError(422,'VALIDATION_ERROR','没有实际修改或完成动作')
     if milestone is not None:save_milestone(con,current['id'],milestone)
+    if changed and fields.x_handle!=baseline.get('x_handle'):save_official_x(con,current['id'],fields.x_handle,rpc.principal.user_id)
     if changed:
         patch=CoreProjectPatch(expected_version=current['version'],**fields.core().model_dump(mode='json'))
         core.patch_project(con,current['id'],patch,rpc.principal.user_id,SCOPE,include_removed=True,extras={**fields.extras(),'home_membership':membership})

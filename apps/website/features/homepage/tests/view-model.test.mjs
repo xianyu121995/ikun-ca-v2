@@ -51,3 +51,14 @@ test('live edit capability defaults false, user stays read-only, rejected callba
   assert.equal(canEdit({mode:'live',role:'superadmin',capabilities:{can_edit_projects:true}}),true);
   const error=safeRejectedError('public-request');assert.equal(error.code,'INTERNAL_ERROR');assert.equal(error.request_id,'public-request');assert.equal(error.retryable,false);
 });
+
+test('official X handle normalization and validation',async()=>{
+  const {normalizeXHandle}=await import('../view-model.ts');
+  for(const raw of ['@IkunCA','ikunca','https://x.com/IkunCA','twitter.com/ikunca/','https://www.x.com/IkunCA?s=21'])assert.equal(normalizeXHandle(raw),'ikunca');
+  for(const raw of ['','https://x.com/home','bad handle!','@'+'a'.repeat(16),'https://example.com/ikunca'])assert.equal(normalizeXHandle(raw),null);
+  const base={name:'P',rating:'B',description:'',website_url:null,notes:'',category:null,progress_stage:'researching',progress_percent:null,token_date:null,token_date_status:'unconfirmed'};
+  assert.equal(validateFields({...base,x_handle:'ikunca'}),null);
+  assert.match(validateFields({...base,x_handle:'https://x.com/home'}),/官推/);
+  assert.equal('x_handle' in pickFields(base),false);
+  assert.equal(pickFields({...base,x_handle:'ikunca'}).x_handle,'ikunca');
+});

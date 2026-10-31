@@ -193,3 +193,32 @@ def test_milestone_three_day_window_and_cursor_binding(domain):
     second = call(domain, 'milestones', query={**query, 'cursor': cursor})[1]
     assert [p['project']['project_id'] for p in first['items'] + second['items']] == expected
     assert second['next_cursor'] is None
+
+@pytest.mark.parametrize('raw',['@IkunCA','ikunca','https://x.com/IkunCA','twitter.com/ikunca/','https://www.x.com/IkunCA?s=21'])
+def test_official_x_create_normalizes_and_projects(domain,raw):
+    p=home_create(domain,x_handle=raw)
+    assert p['project']['x_handle']=='ikunca' and p['project']['revision']==1
+    target=p['project']['project_id']
+    assert call(domain,'get',target=target,contract='projects-home-v1')[1]['project']['x_handle']=='ikunca'
+    assert call(domain,'get',target=target)[1]['x_handle']=='ikunca'
+    listed=call(domain,'list',contract='projects-home-v1',query={})[1]['items']
+    assert [i['project']['x_handle'] for i in listed if i['project']['project_id']==target]==['ikunca']
+
+@pytest.mark.parametrize('raw',['https://x.com/home','bad handle!','@'+'a'*16,'https://example.com/ikunca'])
+def test_official_x_rejects_invalid(domain,raw):
+    with pytest.raises(ValidationError):home_create(domain,x_handle=raw)
+
+def test_official_x_edit_clear_and_conflict(domain):
+    p=home_create(domain);target=p['project']['project_id']
+    assert p['project']['x_handle'] is None
+    p=call(domain,'patch',target=target,contract='projects-home-v1',idempotency_key=uid(),if_match='"rev-1"',body={'fields':{'x_handle':'@First'}})[1]
+    assert p['project']['x_handle']=='first' and p['project']['revision']==2
+    with pytest.raises(DomainError):call(domain,'patch',target=target,contract='projects-home-v1',idempotency_key=uid(),if_match='"rev-2"',body={'fields':{'x_handle':'first'}})
+    p=call(domain,'patch',target=target,contract='projects-home-v1',idempotency_key=uid(),if_match='"rev-2"',body={'fields':{'x_handle':'second'}})[1]
+    assert p['project']['x_handle']=='second'
+    other=home_create(domain,name='other')
+    with pytest.raises(DomainError) as exc:call(domain,'patch',target=other['project']['project_id'],contract='projects-home-v1',idempotency_key=uid(),if_match='"rev-1"',body={'fields':{'x_handle':'second'}})
+    assert exc.value.code=='CONFLICT'
+    p=call(domain,'patch',target=target,contract='projects-home-v1',idempotency_key=uid(),if_match='"rev-3"',body={'fields':{'x_handle':None,'notes':'n'}})[1]
+    assert p['project']['x_handle'] is None
+    with domain.db.connect() as con:assert con.execute("SELECT COUNT(*) FROM project_sources WHERE external_id LIKE 'x-handle:%'").fetchone()[0]==0

@@ -23,6 +23,22 @@ class Principal(StrictModel):
     role: Literal['superadmin','user']
 
 
+X_HANDLE_URL=re.compile(r'^(?:https?://)?(?:www\.|mobile\.)?(?:x|twitter)\.com/([A-Za-z0-9_]{1,15})/?(?:[?#].*)?$',re.I)
+
+
+def normalize_x_handle(value):
+    """Accept @handle, handle, or an x.com/twitter.com profile link; store lowercase handle."""
+    if value is None:return None
+    if not isinstance(value,str):raise ValueError('x_handle must be a string')
+    text=value.strip()
+    if not text:return None
+    match=X_HANDLE_URL.match(text)
+    handle=match.group(1) if match else text.removeprefix('@')
+    if not re.fullmatch(r'[A-Za-z0-9_]{1,15}',handle) or handle.lower() in ('home','i','intent','search','explore','share'):
+        raise ValueError('官推需为 @handle 或 x.com/handle 链接')
+    return handle.lower()
+
+
 class Fields(StrictModel):
     name: str=Field(min_length=1,max_length=120)
     rating: Rating | None
@@ -34,6 +50,9 @@ class Fields(StrictModel):
     progress_percent: float | None=Field(ge=0,le=100,allow_inf_nan=False,strict=True)
     token_date: date | None
     token_date_status: Literal['confirmed','estimated','unconfirmed']
+    # 官推 (official X account). Optional so hunter/tracking payloads stay compatible;
+    # stored as a project_sources mapping, not a projects column (no schema migration).
+    x_handle: str | None=None
 
     @field_validator('token_date',mode='before')
     @classmethod
@@ -47,6 +66,11 @@ class Fields(StrictModel):
         if value is not None and not value.strip():
             raise ValueError('website must be a URL or null')
         return normalize_website(value)[0] if value is not None else None
+
+    @field_validator('x_handle',mode='before')
+    @classmethod
+    def valid_x_handle(cls,value):
+        return normalize_x_handle(value)
 
     @model_validator(mode='after')
     def date_status(self):

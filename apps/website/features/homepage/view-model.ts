@@ -23,12 +23,22 @@ function validDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(parsed)&&new Date(parsed).toISOString().slice(0,10)===value;
 }
 // Validation checks display fields only; this is neither auth nor a domain writer.
+const reservedX=new Set(['home','explore','search','i','intent','share','settings','notifications','messages','login','signup','tos','privacy']);
+/** Accepts @handle, handle or an x.com / twitter.com profile link; returns the lowercase handle or null. */
+export function normalizeXHandle(raw:string|null|undefined):string|null {
+  const value=(raw||'').trim();if(!value)return null;
+  const link=/^(?:https?:\/\/)?(?:www\.|mobile\.)?(?:x|twitter)\.com\/@?([A-Za-z0-9_]{1,15})\/?(?:[?#].*)?$/i.exec(value);
+  const handle=link?link[1]:value.replace(/^@/,'');
+  if(!/^[A-Za-z0-9_]{1,15}$/.test(handle)||reservedX.has(handle.toLowerCase()))return null;
+  return handle.toLowerCase();
+}
 export function validateFields(fields: ProjectFieldsProjection): string | null {
   if (!fields.name.trim()||fields.name.length>120) return '项目名称需为 1–120 字符。';
   if (fields.rating!==null&&!ratings.includes(fields.rating)) return '评分需为 S/A/B 或未评分。';
   if (fields.description.length>4000||fields.notes.length>4000) return '简介和备注各不得超过 4000 字符。';
   if (fields.category!==null&&fields.category.length>80) return '分类不得超过 80 字符。';
   if (fields.website_url!==null&&!safeWebsite(fields.website_url)) return '官网需为不含用户名或密码的 http(s) 地址。';
+  if (fields.x_handle!=null&&normalizeXHandle(fields.x_handle)!==fields.x_handle) return '官推需为 @handle 或 https://x.com/handle。';
   if (!progressStages.includes(fields.progress_stage)) return '进度阶段无效。';
   if (fields.progress_percent!==null&&(!Number.isFinite(fields.progress_percent)||fields.progress_percent<0||fields.progress_percent>100)) return '进度需为 0–100，未知请留空。';
   if (fields.token_date===null&&fields.token_date_status!=='unconfirmed') return '无发币日期时状态需为未确认。';
@@ -38,7 +48,8 @@ export function validateFields(fields: ProjectFieldsProjection): string | null {
 export function pickFields(input: ProjectFieldsProjection): ProjectFieldsProjection {
   return {name:input.name,rating:input.rating,description:input.description,website_url:input.website_url,
     notes:input.notes,category:input.category,progress_stage:input.progress_stage,progress_percent:input.progress_percent,
-    token_date:input.token_date,token_date_status:input.token_date_status};
+    token_date:input.token_date,token_date_status:input.token_date_status,
+    ...(input.x_handle!==undefined?{x_handle:input.x_handle}:{})};
 }
 export function toProjectView(input: ProjectRecordProjection, mode: HomepageContext['mode']): ProjectView {
   if ((mode==='live'&&!isCanonicalId(input.project_id))||!input.project_id||!Number.isInteger(input.revision)||input.revision<1||validateFields(input)||!['active','hidden','removed'].includes(input.home_membership)) throw new Error('INVALID_PROJECT_PROJECTION');

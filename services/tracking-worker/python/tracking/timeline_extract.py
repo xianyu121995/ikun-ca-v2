@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import time
@@ -38,6 +39,16 @@ ENTRY_ID = re.compile(r"^tle_[0-9a-f]{32}$")
 PROJECT_ID = re.compile(r"^prj_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 HANDLE = re.compile(r"^[A-Za-z0-9_]{1,15}$")
 TWEET_ID = re.compile(r"^[0-9]{1,40}$")
+LOG = logging.getLogger(__name__)
+ZONE_ALIASES = {
+    "UTC": "UTC", "Z": "UTC", "GMT": "UTC", "UTC+0": "UTC", "UTC+00:00": "UTC",
+    "ASIA/SHANGHAI": "Asia/Shanghai", "SHANGHAI": "Asia/Shanghai", "BEIJING": "Asia/Shanghai",
+    "ASIA/BEIJING": "Asia/Shanghai", "CST": "Asia/Shanghai", "CHINA": "Asia/Shanghai",
+    "UTC+8": "Asia/Shanghai", "UTC+08": "Asia/Shanghai", "UTC+08:00": "Asia/Shanghai",
+    "GMT+8": "Asia/Shanghai", "GMT+08:00": "Asia/Shanghai", "+08:00": "Asia/Shanghai",
+    "北京时间": "Asia/Shanghai", "北京": "Asia/Shanghai",
+    "ASIA/HONG_KONG": "Asia/Shanghai", "ASIA/SINGAPORE": "Asia/Shanghai", "ASIA/TAIPEI": "Asia/Shanghai",
+}
 PROMPT = (
     "你是加密项目研究助手。阅读下面这条已抓取的推文（含被引用推文），判断它是否公布了一个"
     "有具体日期或时刻的事件（上线、TGE、发币、开盘、mint、空投、上所、白名单、主网、快照）。\n"
@@ -46,8 +57,13 @@ PROMPT = (
     "'tomorrow 20:00 UTC' → {\"kind\":\"wall\",\"day_offset\":1,\"hour\":20,\"minute\":0,\"timezone\":\"UTC\"}；"
     "绝对时间必须带时区，例如 {\"kind\":\"absolute\",\"iso\":\"2026-11-02T20:00:00Z\"}；"
     "只有日期没有钟点 → {\"kind\":\"date\",\"date\":\"2026-11-02\",\"timezone\":\"Asia/Shanghai\",\"hour\":null}。\n"
+    "只写钟点、没写日期（如 '12:00'、'12：00'、'晚8点'）也算具体时刻：用 wall，没写时区默认 Asia/Shanghai；"
+    "参照 created_at_local（发推的北京时间），该钟点今天还没到 day_offset=0，已过则 day_offset=1。"
+    "例：23:52 发 '官方池12：00建立' → {\"kind\":\"wall\",\"day_offset\":1,\"hour\":12,\"minute\":0,\"timezone\":\"Asia/Shanghai\"}。"
+    "全角冒号 '：' 与半角 ':' 等价。\n"
+    "建池、开池、加池子、官方池建立、开盘、开放交易都算 launch 事件，announces=true。\n"
     "event_type 只能是 tge,mint,airdrop,listing,whitelist,launch,mainnet,snapshot,other 之一。"
-    "title 用不超过 40 字的简体中文。confidence 是 0 到 1 的小数，明确写出时间才 ≥0.8。\n"
+    "title 用不超过 40 字的简体中文。confidence 是 0 到 1 的小数，明确写出时间才 ≥0.8；明确写出钟点（即使没写日期）也应 ≥0.8。\n"
     "只输出一个 JSON：{\"announces\":true|false,\"event_type\":\"tge\",\"title\":\"\",\"confidence\":0.0,"
     "\"concrete\":true|false,\"schedule\":{\"kind\":\"vague\"}}。\n\n"
 )
@@ -71,6 +87,8 @@ def _number(value, *, integer=False):
 
 
 def _zone(name):
+    if isinstance(name, str):
+        name = ZONE_ALIASES.get(name.strip().upper(), ZONE_ALIASES.get(name.strip(), name.strip()))
     if name in ("UTC", "Z", "GMT"):
         return timezone.utc
     if name == "Asia/Shanghai":
@@ -142,12 +160,24 @@ def _schedule(schedule, created_at: float | None) -> tuple[datetime, str | None]
             return None
         when = created + timedelta(seconds=seconds)
         return when, f"{when.astimezone(SHANGHAI).hour:02d}"
-    if kind == "wall":
-        zone = _zone(schedule.get("timezone"))
-        offset = _number(schedule.get("day_offset"), integer=True)
+    if kind in ("wall", "time", "clock"):
+        tz_name = schedule.get("timezone")
+        # Clock-only tweets ("12：00") usually omit the zone; default to Beijing time.
+        zone = SHANGHAI if tz_name in (None, "") else _zone(tz_name)
         clock = _number(schedule.get("hour"), integer=True)
-        minute = _number(schedule.get("minute", 0), integer=True)
-        if zone is None or created is None or offset is None or clock is None or minute is None:
+        minute = _number(schedule.get("minute") if schedule.get("minute") is not None else 0, integer=True)
+        if zone is None or created is None or clock is None or minute is None:
+            return None
+        if not 0 <= clock <= 23 or not 0 <= minute <= 59:
+            return None
+        raw_offset = schedule.get("day_offset")
+        if raw_offset is None:
+            # Next occurrence of that clock after the tweet was posted.
+            today = _at_clock(created, clock, minute, zone)
+            offset = 0 if today > created else 1
+        else:
+            offset = _number(raw_offset, integer=True)
+        if offset is None:
             return None
         if not 0 <= offset <= 366 or not 0 <= clock <= 23 or not 0 <= minute <= 59:
             return None
@@ -158,23 +188,36 @@ def _schedule(schedule, created_at: float | None) -> tuple[datetime, str | None]
 
 def interpret(raw: dict, created_at: float | None) -> dict | None:
     """Normalize one model object. None means it must not be added to the timeline."""
-    if not isinstance(raw, dict) or raw.get("announces") is not True or raw.get("concrete") is not True:
-        return None
+    return explain(raw, created_at)[0]
+
+
+def explain(raw: dict, created_at: float | None) -> tuple[dict | None, str | None]:
+    """Like interpret, plus why a result was dropped (None reason when kept)."""
+    if not isinstance(raw, dict):
+        return None, "not_object"
+    if raw.get("announces") is not True:
+        return None, "announces_false"
+    if raw.get("concrete") is not True:
+        return None, "concrete_false"
     confidence = _number(raw.get("confidence"))
     if confidence is None or not HIGH_CONFIDENCE <= confidence <= 1:
-        return None
+        return None, "low_confidence"
     event_type = raw.get("event_type")
     title = raw.get("title")
-    if event_type not in TYPES or not isinstance(title, str) or not title.strip():
-        return None
-    resolved = _schedule(raw.get("schedule"), created_at)
+    if event_type not in TYPES:
+        return None, "bad_event_type"
+    if not isinstance(title, str) or not title.strip():
+        return None, "empty_title"
+    schedule = raw.get("schedule")
+    resolved = _schedule(schedule, created_at)
     if resolved is None:
-        return None
+        kind = schedule.get("kind") if isinstance(schedule, dict) else None
+        return None, "vague_schedule" if kind == "vague" else "bad_schedule"
     when, hour = resolved
-    if raw.get("schedule", {}).get("kind") == "date" and raw["schedule"].get("hour") is not None:
-        clock = _number(raw["schedule"].get("hour"), integer=True)
+    if schedule.get("kind") == "date" and schedule.get("hour") is not None:
+        clock = _number(schedule.get("hour"), integer=True)
         if clock is None:
-            return None
+            return None, "bad_schedule"
         # Display the source clock converted to Asia/Shanghai, not the noon placeholder.
         hour = f"{when.astimezone(SHANGHAI).hour:02d}"
     local = when.astimezone(SHANGHAI)
@@ -187,7 +230,7 @@ def interpret(raw: dict, created_at: float | None) -> dict | None:
         "date": local.date().isoformat(),
         "hour": hour,
         "status": status,
-    }
+    }, None
 
 
 def entry_id_for(project_id: str, event_type: str) -> str:
@@ -300,6 +343,25 @@ def pending(db, limit=8, horizon_s=24 * 3600):
     return [dict(r) for r in rows]
 
 
+def _model_summary(raw) -> dict | None:
+    """A small, size-capped copy of the model answer kept for debugging dropped tweets."""
+    if not isinstance(raw, dict):
+        return None
+    keep = {}
+    for key in ("announces", "concrete", "event_type", "confidence"):
+        value = raw.get(key)
+        if value is None or isinstance(value, (bool, int, float)) or (isinstance(value, str) and len(value) <= 40):
+            keep[key] = value
+    title = raw.get("title")
+    if isinstance(title, str):
+        keep["title"] = title[:60]
+    schedule = raw.get("schedule")
+    if isinstance(schedule, dict):
+        encoded = json.dumps(schedule, ensure_ascii=False)
+        keep["schedule"] = schedule if len(encoded) <= 300 else {"kind": str(schedule.get("kind"))[:20]}
+    return keep
+
+
 def run_pass(store, failures: dict, now=None) -> int:
     """Analyze a few recent tweets. Returns how many analyses were stored. Never raises for AI failures."""
     if not extract_enabled() or not gemini.enabled():
@@ -317,9 +379,18 @@ def run_pass(store, failures: dict, now=None) -> int:
         text = row.get("text") or ""
         quote = row.get("quote") or ""
         if not text.strip() and not quote.strip():
-            result, action = None, "none"
+            result, action, reason, model = None, "none", "empty_text", None
         else:
-            payload = {"text": text[:4000], "quote": quote[:2000] or None, "created_at": row.get("created_at")}
+            created_at = row.get("created_at")
+            local = None
+            if isinstance(created_at, (int, float)) and not isinstance(created_at, bool):
+                local = datetime.fromtimestamp(created_at, SHANGHAI).strftime("%Y-%m-%d %H:%M (Asia/Shanghai)")
+            payload = {
+                "text": text[:4000],
+                "quote": quote[:2000] or None,
+                "created_at": created_at,
+                "created_at_local": local,
+            }
             try:
                 raw = gemini.generate_json(PROMPT + json.dumps(payload, ensure_ascii=False))
             except gemini.AIUnavailable as exc:
@@ -327,8 +398,11 @@ def run_pass(store, failures: dict, now=None) -> int:
                 if str(exc) in ("ai_not_configured", "ai_key_rejected", "ai_codex_missing"):
                     break
                 continue
-            result = interpret(raw, row.get("created_at"))
+            result, reason = explain(raw, row.get("created_at"))
             action = None
+            model = _model_summary(raw)
+            if reason:
+                LOG.info("tracking_timeline_dropped tweet_id=%s reason=%s", row["tweet_id"], reason)
         with store.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             try:
@@ -338,6 +412,10 @@ def run_pass(store, failures: dict, now=None) -> int:
                 if result is not None and action is None:
                     action = apply_event(db, row, result, now)
                 recorded = {"applied": action or "none", "event": result}
+                if result is None:
+                    recorded["reason"] = reason
+                    if model is not None:
+                        recorded["model"] = model
                 _put(db, ANALYZE + row["tweet_id"], recorded, now)
                 db.execute("COMMIT")
             except Exception:

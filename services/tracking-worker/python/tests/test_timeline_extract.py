@@ -259,3 +259,108 @@ def test_http_lists_edits_and_keeps_tombstone(cfg, store, monkeypatch, tmp_path)
     assert run_pass(store, {}) == 1
     with store.connect() as db:
         assert list_public(db) == []
+
+
+# --- Clock-only Chinese tweets (@toshprotocol 2026-10-31, Asia/Shanghai) -------------------------
+from tracking.timeline_extract import PROMPT, explain
+
+TOSH = [
+    # (tweet text, created_at epoch seconds as stored by tracking)
+    ("请勿被私池骗！！！官方池12：00建立！税0.2%！！！", 1793461961.0),  # 23:52:41 +08
+    ("请勿被私池骗！！！官方池12：00建立！税0.2%！！", 1793462009.0),  # 23:53:29 +08
+    ("12:00正式上线！", 1793461262.0),  # 23:41:02 +08
+    ("12：00", 1793460975.0),  # 23:36:15 +08
+    ("https://toshx.xyz/projects/0x984B5B24414E482b8B5E58046BbE41A55e736291 已正式开启", 1793459387.0),
+]
+NOON_NEXT_DAY = "2026-11-01T04:00:00Z"  # 2026-11-01 12:00 Asia/Shanghai
+
+
+def launch(schedule, **extra):
+    body = {
+        "announces": True,
+        "event_type": "launch",
+        "title": "官方池 12:00 建立",
+        "confidence": 0.85,
+        "concrete": True,
+        "schedule": schedule,
+    }
+    body.update(extra)
+    return body
+
+
+def test_prompt_covers_clock_only_fullwidth_and_pool_creation():
+    assert "只写钟点" in PROMPT and "：" in PROMPT
+    for word in ("建池", "开池", "加池子"):
+        assert word in PROMPT
+    assert "created_at_local" in PROMPT
+    assert "钟点（即使没写日期）也应 ≥0.8" in PROMPT
+
+
+def test_clock_only_wall_defaults_to_shanghai_and_next_occurrence():
+    for _text, created in TOSH[:4]:
+        # Model omitted both timezone and day_offset: next 12:00 Beijing after the tweet.
+        bare = interpret(launch({"kind": "wall", "hour": 12, "minute": 0}), created)
+        assert bare["starts_at"] == NOON_NEXT_DAY
+        assert bare["date"] == "2026-11-01" and bare["hour"] == "12"
+        # Explicit day_offset from the prompt rule gives the same answer.
+        explicit = interpret(
+            launch({"kind": "wall", "day_offset": 1, "hour": 12, "minute": 0, "timezone": "Asia/Shanghai"}), created
+        )
+        assert explicit["starts_at"] == NOON_NEXT_DAY
+
+
+def test_clock_still_ahead_today_uses_same_day():
+    morning = datetime(2026, 10, 31, 9, 0, tzinfo=timezone.utc).timestamp() - 8 * 3600  # 09:00 +08
+    item = interpret(launch({"kind": "wall", "hour": 12, "minute": 0, "timezone": None}), morning)
+    assert item["date"] == "2026-10-31" and item["hour"] == "12"
+
+
+def test_zone_aliases_are_accepted():
+    created = TOSH[0][1]
+    for name in ("CST", "Beijing", "UTC+8", "+08:00", "北京时间", "asia/shanghai", "GMT+8"):
+        item = interpret(launch({"kind": "wall", "day_offset": 1, "hour": 12, "minute": 0, "timezone": name}), created)
+        assert item is not None and item["starts_at"] == NOON_NEXT_DAY, name
+    assert interpret(launch({"kind": "wall", "day_offset": 1, "hour": 12, "timezone": "Mars/Base"}), created) is None
+
+
+def test_explain_reports_drop_reasons():
+    created = TOSH[0][1]
+    assert explain(launch({"kind": "wall", "hour": 12}, announces=False), created) == (None, "announces_false")
+    assert explain(launch({"kind": "vague"}, concrete=False), created) == (None, "concrete_false")
+    assert explain(launch({"kind": "wall", "hour": 12}, confidence=0.6), created) == (None, "low_confidence")
+    assert explain(launch({"kind": "vague"}), created) == (None, "vague_schedule")
+    assert explain(launch({"kind": "wall", "hour": 25}), created) == (None, "bad_schedule")
+    assert explain(launch({"kind": "wall", "hour": 12}, event_type="pool"), created) == (None, "bad_event_type")
+    kept, reason = explain(launch({"kind": "wall", "hour": 12}), created)
+    assert reason is None and kept["event_type"] == "launch"
+
+
+def test_run_pass_sends_local_time_and_records_drop_reason(store, monkeypatch, tmp_path):
+    row = target(store)
+    enable(monkeypatch, tmp_path)
+    for index, (text, _created) in enumerate(TOSH, start=601):
+        observe(store, row, str(index), text=text)
+    prompts = []
+
+    def fake(prompt, **kw):
+        prompts.append(prompt)
+        payload = json.loads(prompt[len(PROMPT):])
+        assert payload["created_at_local"].endswith("(Asia/Shanghai)")
+        if "已正式开启" in payload["text"]:
+            return {"announces": False, "event_type": "other", "title": "", "confidence": 0.3,
+                    "concrete": False, "schedule": {"kind": "vague"}}
+        return launch({"kind": "wall", "hour": 12, "minute": 0})
+
+    monkeypatch.setattr(gemini, "generate_json", fake)
+    stored = 0
+    for _ in range(len(TOSH)):
+        stored += run_pass(store, {})
+    assert stored == len(TOSH) and len(prompts) == len(TOSH)
+    with store.connect() as db:
+        items = list_public(db)
+        dropped = json.loads(
+            db.execute("SELECT result FROM receipts WHERE key=?", ("tracking.timeline.analyze.v1:605",)).fetchone()[0]
+        )
+    assert len(items) == 1 and items[0]["event_type"] == "launch" and items[0]["hour"] == "12"
+    assert dropped["applied"] == "none" and dropped["event"] is None
+    assert dropped["reason"] == "announces_false" and dropped["model"]["announces"] is False

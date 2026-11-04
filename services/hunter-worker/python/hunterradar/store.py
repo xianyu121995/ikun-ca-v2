@@ -455,6 +455,7 @@ class Store:
             if not db.execute('UPDATE discoveries SET name=?,description=?,website=?,notes=?,rating=?,category=?,stage=?,ignored=?,version=version+1 WHERE target=? AND version=?',
                               (data['name'], data['description'], data['website'], data['notes'], data['rating'],data.get('category','其他'),data.get('stage','未知'),int(data.get('ignored',False)),target, version)).rowcount:
                 raise Conflict('stale_discovery_version')
+            db.execute("UPDATE discoveries SET rating_source='human' WHERE target=?", (target,))
             self.audit(db, actor, 'discovery.review', target, now or time.time())
         return self.discovery(target)
 

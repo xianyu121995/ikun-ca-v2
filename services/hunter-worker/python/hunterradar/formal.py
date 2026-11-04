@@ -28,7 +28,10 @@ def discovery_dto(db,target,now):
     followers=stored.get('followers_count') if isinstance(stored,dict) else None
     if type(followers) is not int or followers<0:followers=None
     suggestion=ai_suggestion(db,row['discovery_id'])
-    column_reason=row['rating_reason'] if 'rating_reason' in row.keys() and isinstance(row['rating_reason'],str) and row['rating_reason'].strip() else None
+    keys=set(row.keys())
+    column_reason=row['rating_reason'] if 'rating_reason' in keys and isinstance(row['rating_reason'],str) and row['rating_reason'].strip() else None
+    rating_source=row['rating_source'] if 'rating_source' in keys and row['rating_source'] in ('ai','human') else None
+    if row['project_json']:rating_source='human'
     if suggestion is None and row['rating']=='忽略' and not row['ignored']:
         suggestion={'name':row['name'] or profile.get('target_name') or row['target'],'rating':'忽略','rating_reason':column_reason or ''}
     elif isinstance(suggestion,dict) and column_reason and not suggestion.get('rating_reason'):
@@ -37,7 +40,8 @@ def discovery_dto(db,target,now):
         project=legacy_project(row,profile),x_user_id=identity['x_user_id'] if identity else None,x_handle=identity['current_handle'] if identity else target,
         profile_bio=profile.get('description') or '',followers=followers,signal_count=counts[0],first_seen_at=iso(counts[1]),last_seen_at=iso(counts[2]),
         discovered_at=iso(row['first_discovered_at']),review_state='tracking' if task else 'ignored' if row['ignored'] else 'reviewed' if row['project_json'] or row['name'] else 'pending',
-        monitoring_state=task['public_state'] if task else None,revision=row['version'],ai_suggestion=suggestion)
+        monitoring_state=task['public_state'] if task else None,revision=row['version'],ai_suggestion=suggestion,
+        rating_source=rating_source,rating_reason=column_reason)
 
 def account_dto(db,row,now):
     states={r['key']:json.loads(r['value']) for r in db.execute("SELECT key,value FROM state WHERE key IN ('worker_heartbeat','last_pong_at','wss_state')")}
@@ -147,6 +151,7 @@ class FormalService:
                 elif 'rating' in body and row['ignored']:
                     # A person picked S/A/B/C/D/待定 instead of 忽略; the row stays and shows again.
                     db.execute('UPDATE discoveries SET ignored=0 WHERE discovery_id=?',(identifier,))
+                if 'rating' in body:db.execute("UPDATE discoveries SET rating_source='human' WHERE discovery_id=?",(identifier,))
                 project=ProjectFields.model_validate(current['project']|fields).model_dump(mode='json') if fields or row['project_json'] else None
                 if project is not None:db.execute('UPDATE discoveries SET project_json=? WHERE discovery_id=?',(canonical(project),identifier))
                 db.execute('UPDATE discoveries SET version=version+1,updated_at=? WHERE discovery_id=?',(stamp,identifier))
@@ -193,7 +198,7 @@ class FormalService:
                     serialized=canonical(event)
                     db.execute('INSERT INTO task_outbox(id,target,idempotency_key,request_key,request_hash,body,confirmed_by,confirmed_at,event_id,command_id,request_id,updated_at,discovery_id,target_x_user_id,source_entity_key,body_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                         (command,row['target'],command.removeprefix('cmd_'),str(uuid.uuid4()),hashed,serialized,principal.user_id,stamp,event_id,command,request_id,stamp,identifier,current['x_user_id'],identity['entity_key'],hashlib.sha256(serialized.encode()).hexdigest()))
-                    db.execute('UPDATE discoveries SET project_json=?,version=version+1,updated_at=? WHERE target=?',(canonical(project),stamp,row['target']))
+                    db.execute("UPDATE discoveries SET project_json=?,rating_source='human',version=version+1,updated_at=? WHERE target=?",(canonical(project),stamp,row['target']))
                     self.store.audit(db,principal.user_id,'monitoring.confirm',identifier,stamp)
                     self.store.change(db,row['target'],stamp)
                     output=command_dto(db.execute('SELECT * FROM task_outbox WHERE command_id=?',(command,)).fetchone(),request_id)

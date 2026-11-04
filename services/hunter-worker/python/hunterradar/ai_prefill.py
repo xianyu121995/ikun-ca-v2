@@ -208,15 +208,16 @@ def apply_rating(store, item, suggestion) -> None:
         row = db.execute('SELECT * FROM discoveries WHERE discovery_id=?', (item['discovery_id'],)).fetchone()
         if row is None:
             return
-        human = bool(row['project_json']) or bool((row['name'] or '').strip()) or bool(row['ignored']) or row['rating'] in ('S', 'A', 'B', 'C', 'D')
+        human = bool(row['project_json']) or bool((row['name'] or '').strip()) or bool(row['ignored']) or row['rating'] in ('S', 'A', 'B', 'C', 'D') or row['rating_source']=='human'
         if human:
             logging.getLogger(__name__).info('hunter_ai_rating_kept discovery=%s', item['discovery_id'])
             return
         now = time.time()
         changed = db.execute(
-            '''UPDATE discoveries SET rating=?, rating_reason=?, version=version+1, updated_at=?
+            '''UPDATE discoveries SET rating=?, rating_reason=?, rating_source='ai', version=version+1, updated_at=?
                WHERE discovery_id=? AND version=? AND ignored=0
-               AND rating NOT IN ('S','A','B','C','D')''',
+               AND rating NOT IN ('S','A','B','C','D')
+               AND COALESCE(rating_source,'')!='human' ''',
             (rating, reason, now, item['discovery_id'], row['version'])).rowcount
         if changed:
             store.change(db, row['target'], now)

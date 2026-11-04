@@ -78,11 +78,13 @@ def metadata(db, *, complete=True):
     return versions,columns
 
 def ensure_rating_reason(value) -> bool:
-    """Add discoveries.rating_reason when it is missing.
+    """Add discoveries.rating_reason and rating_source when missing.
 
     Idempotent and outside the checksummed 001–005 chain, so a database already
-    at version 5 picks the column up on hunter startup without a version bump.
-    Returns True when this call added the column.
+    at version 5 picks the columns up on hunter startup without a version bump.
+    rating_source is 'ai' or 'human'. Rows already prefilled by AI (a rating,
+    no saved name, no project_json) are marked ai once. Returns True when this
+    call added a column.
     """
     path = location(value, require_exists=True)
     db = sqlite3.connect(path, timeout=5)
@@ -94,6 +96,12 @@ def ensure_rating_reason(value) -> bool:
         if 'rating_reason' not in columns:
             db.execute('ALTER TABLE discoveries ADD COLUMN rating_reason TEXT')
             added = True
+        if 'rating_source' not in columns:
+            db.execute('ALTER TABLE discoveries ADD COLUMN rating_source TEXT')
+            added = True
+        db.execute("""UPDATE discoveries SET rating_source='ai'
+                      WHERE rating_source IS NULL AND rating IN ('S','A','B','忽略')
+                      AND COALESCE(project_json,'')='' AND COALESCE(name,'')='' AND ignored=0""")
         db.commit()
     except sqlite3.OperationalError as exc:
         db.rollback()

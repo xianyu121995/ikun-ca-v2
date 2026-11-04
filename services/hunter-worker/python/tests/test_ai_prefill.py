@@ -51,8 +51,9 @@ def test_ai_ignore_stays_in_the_default_list(store, monkeypatch, tmp_path):
     assert current['ai_suggestion']['rating'] == '忽略'
     assert current['ai_suggestion']['rating_reason'] == '只有喊单，看不出项目。'
     with store.connect() as db:
-        row = db.execute('SELECT ignored,rating,rating_reason FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
-    assert row['ignored'] == 0 and row['rating'] == '忽略' and row['rating_reason'] == '只有喊单，看不出项目。'
+        row = db.execute('SELECT ignored,rating,rating_reason,rating_source FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert row['ignored'] == 0 and row['rating'] == '忽略' and row['rating_reason'] == '只有喊单，看不出项目。' and row['rating_source'] == 'ai'
+    assert current['rating_source'] == 'ai'
 
 
 def test_existing_human_rating_is_not_replaced(store, monkeypatch, tmp_path):
@@ -192,8 +193,8 @@ def test_apply_rating_writes_prefill_and_keeps_human_decisions(store):
     dto = FormalService(store).discovery(discover(store)['discovery_id'], NOW)
     ai_prefill.apply_rating(store, dto, {'rating': '忽略', 'rating_reason': '  广告号  '})
     with store.connect() as db:
-        row = db.execute('SELECT ignored,rating,rating_reason FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
-    assert row['ignored'] == 0 and row['rating'] == '忽略' and row['rating_reason'] == '广告号'
+        row = db.execute('SELECT ignored,rating,rating_reason,rating_source FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert row['ignored'] == 0 and row['rating'] == '忽略' and row['rating_reason'] == '广告号' and row['rating_source'] == 'ai'
     listed = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
     assert dto['discovery_id'] in [item['discovery_id'] for item in listed]
     with store.connect(True) as db:
@@ -229,7 +230,33 @@ def test_human_ignore_still_hides_until_a_person_picks_another_level(store):
     FormalService(store).write(admin, 'PATCH', path, {'rating': 'B'}, '33333333-3333-4333-8333-333333333333', f'"rev-{current["revision"]}"', 'fixture-research', NOW)
     restored = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
     assert dto['discovery_id'] in [item['discovery_id'] for item in restored]
-    assert FormalService(store).discovery(dto['discovery_id'], NOW)['project']['rating'] == 'B'
+    saved = FormalService(store).discovery(dto['discovery_id'], NOW)
+    assert saved['project']['rating'] == 'B' and saved['rating_source'] == 'human'
+    with store.connect() as db:
+        assert db.execute('SELECT rating_source FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()[0] == 'human'
+
+
+def test_rating_source_stays_ai_until_the_owner_sets_a_rating(store):
+    dto = FormalService(store).discovery(discover(store)['discovery_id'], NOW)
+    ai_prefill.apply_rating(store, dto, {'rating': 'S', 'rating_reason': '机制和入口都清楚。'})
+    current = FormalService(store).discovery(dto['discovery_id'], NOW)
+    assert current['rating_source'] == 'ai' and current['project']['rating'] == 'S'
+    assert current['rating_reason'] == '机制和入口都清楚。'
+    from hunterradar.protocol import Principal
+    admin = Principal(user_id='fixture-admin', tenant_id='ikun-main', role='superadmin')
+    path = '/api/v1/hunter/discoveries/' + dto['discovery_id']
+    FormalService(store).write(admin, 'PATCH', path, {'rating': 'A'}, '44444444-4444-4444-8444-444444444444', f'"rev-{current["revision"]}"', 'fixture-research', NOW)
+    saved = FormalService(store).discovery(dto['discovery_id'], NOW)
+    assert saved['rating_source'] == 'human' and saved['project']['rating'] == 'A'
+    ai_prefill.apply_rating(store, dto, {'rating': '忽略', 'rating_reason': '不该覆盖人工评级。'})
+    again = FormalService(store).discovery(dto['discovery_id'], NOW)
+    assert again['rating_source'] == 'human' and again['project']['rating'] == 'A' and again['review_state'] != 'ignored'
+    with store.connect(True) as db:
+        db.execute("UPDATE discoveries SET rating='B', rating_source=NULL, name='', project_json=NULL, ignored=0 WHERE discovery_id=?", (dto['discovery_id'],))
+    from hunterradar.migration import ensure_rating_reason
+    assert ensure_rating_reason(store.path) is False
+    with store.connect() as db:
+        assert db.execute('SELECT rating_source FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()[0] == 'ai'
 
 
 def test_rating_reason_column_is_added_once(store):
@@ -238,11 +265,12 @@ def test_rating_reason_column_is_added_once(store):
     assert ensure_rating_reason(store.path) is False
     with sqlite3.connect(store.path) as db:
         db.execute('ALTER TABLE discoveries DROP COLUMN rating_reason')
+        db.execute('ALTER TABLE discoveries DROP COLUMN rating_source')
     assert ensure_rating_reason(store.path) is True
     assert ensure_rating_reason(store.path) is False
     with sqlite3.connect(store.path) as db:
         columns = [row[1] for row in db.execute('PRAGMA table_info(discoveries)')]
-    assert 'rating_reason' in columns
+    assert 'rating_reason' in columns and 'rating_source' in columns
 
 
 def test_followings_follower_count_is_stored_without_a_new_request(store):

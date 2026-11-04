@@ -6,7 +6,21 @@ export type MonitoringState = 'accepted'|'pending'|'running'|'succeeded'|'failed
 export interface AiDraft {name:string;website:string;description:string;notes:string;category?:string;rating?:'S'|'A'|'B'|'忽略';rating_reason?:string}
 // Owner decision 2026-10-19: 项目类型 replaces the never-opened 代币计划 field ('' = 未分类).
 export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛','链游'] as const;
-export interface Project {ai?:AiDraft|null;id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;category:string;notes:string;watch:boolean;dismissed?:boolean;monitoringMessage?:string;monitoringState?:MonitoringState|null}
+export type RatingSource = 'ai' | 'human';
+export interface Project {ai?:AiDraft|null;id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;category:string;notes:string;watch:boolean;dismissed?:boolean;monitoringMessage?:string;monitoringState?:MonitoringState|null;followers?:number|null;ratingSource?:RatingSource|null;ratingReason?:string|null}
+/** AI 忽略 is a visible prefill. A human ignore is status ignored / dismissed and is not this. */
+export function showAiIgnorePrefill(project:Pick<Project,'status'|'grade'|'dismissed'|'ai'|'ratingSource'>):boolean{return project.status==='pending'&&!project.dismissed&&!project.grade&&project.ratingSource!=='human'&&project.ai?.rating==='忽略';}
+/** S/A/B written by AI, not by the owner. A human rating stays solid. */
+export function isAiRating(project:Pick<Project,'status'|'grade'|'dismissed'|'ratingSource'|'ai'>):boolean{if(project.status==='ignored'||project.dismissed||!project.grade||project.ratingSource==='human')return false;if(project.ratingSource==='ai')return true;return project.status==='pending'&&project.ai?.rating===project.grade;}
+/** Compact follower label: 3,150 under 1万, otherwise one decimal 万. */
+export function formatFollowers(count:number):string{if(!Number.isFinite(count)||count<0)return '';const n=Math.floor(count);if(n<10000)return n.toLocaleString('zh-CN');const wan=Math.round(n/1000)/10;return `${Number.isInteger(wan)?wan.toFixed(0):wan.toFixed(1)}万`;}
+/** Unsaved only after the owner changes the opened draft. AI overlay alone is not dirty. */
+export function projectDirty(baseline:string|null,draft:unknown):boolean{return baseline!==null&&draft!==null&&baseline!==JSON.stringify(draft);}
+export type ScoreButton = Grade | '忽略';
+/** Untouched AI suggestion. Null after the owner picks, or when the rating is already human. */
+export function aiSuggestedScore(input:{touched?:boolean;dismissed?:boolean;status?:Status;ratingSource?:RatingSource|null;aiRating?:string|null}):Exclude<ScoreButton,null>|null{if(input.touched||input.dismissed||input.status==='ignored'||input.ratingSource==='human')return null;const rating=input.aiRating;return rating==='S'||rating==='A'||rating==='B'||rating==='忽略'?rating:null;}
+/** solid = owner choice, ai = outlined suggestion, off = not the current choice. 待定 is solid only when nothing is suggested. */
+export function scoreButtonMode(input:{button:ScoreButton;draftGrade:Grade;dismissed?:boolean;suggestion:Exclude<ScoreButton,null>|null}):'solid'|'ai'|'off'{if(input.button==='忽略'){if(input.dismissed)return 'solid';if(input.suggestion==='忽略')return 'ai';return 'off';}if(input.dismissed)return 'off';if(input.suggestion)return input.suggestion===input.button?'ai':'off';return input.draftGrade===input.button?'solid':'off';}
 export interface Filters {query:string;time:string;grade:string;status:string}
 export const initialFilters:Filters={query:'',time:'all',grade:'all',status:'all'};
 export const statusText:Record<Status,string>={pending:'待研究',reviewed:'已研究',joined:'已加入监控',ignored:'已忽略'};

@@ -77,6 +77,44 @@ def metadata(db, *, complete=True):
     if max(versions)>=5 and not set(TAKEOVER_TABLES)<=tables:raise ValueError('hunter_migration_required')
     return versions,columns
 
+def ensure_rating_reason(value) -> bool:
+    """Add discoveries.rating_reason and rating_source when missing.
+
+    Idempotent and outside the checksummed 001–005 chain, so a database already
+    at version 5 picks the columns up on hunter startup without a version bump.
+    rating_source is 'ai' or 'human'. A rated row is marked ai only when
+    rating_reason is set, because only apply_rating writes that column.
+    Every other rated row defaults to human. Unrated rows stay unset so a
+    later prefill can still run. Returns True when this call added a column.
+    """
+    path = location(value, require_exists=True)
+    db = sqlite3.connect(path, timeout=5)
+    added = False
+    try:
+        db.execute('PRAGMA busy_timeout=5000')
+        db.execute('BEGIN IMMEDIATE')
+        columns = {row[1] for row in db.execute('PRAGMA table_info(discoveries)')}
+        if 'rating_reason' not in columns:
+            db.execute('ALTER TABLE discoveries ADD COLUMN rating_reason TEXT')
+            added = True
+        if 'rating_source' not in columns:
+            db.execute('ALTER TABLE discoveries ADD COLUMN rating_source TEXT')
+            added = True
+        db.execute("""UPDATE discoveries SET rating_source='ai'
+                      WHERE rating_source IS NULL
+                      AND rating_reason IS NOT NULL AND TRIM(rating_reason)<>''""")
+        db.execute("""UPDATE discoveries SET rating_source='human'
+                      WHERE rating_source IS NULL AND rating IN ('S','A','B','C','D','忽略')""")
+        db.commit()
+    except sqlite3.OperationalError as exc:
+        db.rollback()
+        if 'duplicate column' not in str(exc).lower():
+            raise
+    finally:
+        db.close()
+    return added
+
+
 def inspect(value):
     path=location(value,require_exists=True)
     with sqlite3.connect(path.as_uri()+'?mode=ro',uri=True,timeout=5) as db:

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .parsers import Follow, Target, handle
-from .migration import location, inspect, migrate
+from .migration import location, inspect, migrate, ensure_rating_reason
 from .retention import advance,active,retired,micros,TTL_US
 
 APP_ID = 0x494b0201
@@ -36,6 +36,25 @@ CACHE_PRUNE_INTERVAL_SECONDS = 24 * 3600
 PROTECTED_STATE_PREFIXES = ('provider_intent:', 'provider_result:followings:', 'provider_result:profile:',
                             'cooldown:', 'rest_batches:', 'rest_cutover:', 'watch', LEGACY_DIRECTORY_PREFIX)
 ACTIVE_TRANSACTION=ContextVar('hunter_transaction',default=None)
+
+
+def _remember_followers(db, target, followers):
+    """Keep a follower count that was already on a received follow user object."""
+    if type(followers) is not int or followers < 0:
+        return
+    row = db.execute('SELECT profile_json FROM discoveries WHERE target=?', (target,)).fetchone()
+    if not row:
+        return
+    try:
+        document = json.loads(row['profile_json'] or '{}')
+    except ValueError:
+        document = {}
+    if not isinstance(document, dict):
+        document = {}
+    if document.get('followers_count') == followers:
+        return
+    document['followers_count'] = followers
+    db.execute('UPDATE discoveries SET profile_json=? WHERE target=?', (json.dumps(document), target))
 
 
 class Conflict(Exception):
@@ -62,6 +81,9 @@ class Store:
         self.worker_token = None
         if initialize:migrate(self.path)
         inspect(self.path)
+        # Production starts the API and worker with initialize=False. The column
+        # still has to appear on startup; numbered migrate is not re-run there.
+        ensure_rating_reason(self.path)
 
     def inspect(self):
         return inspect(self.path)
@@ -315,11 +337,16 @@ class Store:
                 identifier='dsc_'+str(uuid.uuid4())
                 created=db.execute('INSERT OR IGNORE INTO target_discovery_ledger(scope,platform,x_user_id,discovery_id,first_discovered_at_us) VALUES(?,?,?,?,?)',('ikun-main','x',event.target.user_id,identifier,stamp)).rowcount
                 if created:
+                    profile={'target_name':event.target.name,'description':event.target.description}
+                    if type(event.target.followers) is int and event.target.followers>=0:
+                        profile['followers_count']=event.target.followers
                     db.execute('INSERT INTO discoveries(target,first_discovered_at,discovery_id,updated_at,first_discovered_at_us,profile_json) VALUES(?,?,?,?,?,?)',
-                               (target,stamp/1e6,identifier,event.received_at,stamp,json.dumps({'target_name':event.target.name,'description':event.target.description})))
+                               (target,stamp/1e6,identifier,event.received_at,stamp,json.dumps(profile)))
                 elif not db.execute('SELECT 1 FROM discoveries WHERE target=?',(target,)).fetchone():
                     raise Conflict('discovery_ledger_requires_recovery')
-                else:db.execute('UPDATE discoveries SET version=version+1,updated_at=? WHERE target=?',(event.received_at,target))
+                else:
+                    _remember_followers(db,target,event.target.followers)
+                    db.execute('UPDATE discoveries SET version=version+1,updated_at=? WHERE target=?',(event.received_at,target))
                 self.change(db,target,effective,initial=bool(created))
         return bool(count)
 
@@ -428,6 +455,7 @@ class Store:
             if not db.execute('UPDATE discoveries SET name=?,description=?,website=?,notes=?,rating=?,category=?,stage=?,ignored=?,version=version+1 WHERE target=? AND version=?',
                               (data['name'], data['description'], data['website'], data['notes'], data['rating'],data.get('category','其他'),data.get('stage','未知'),int(data.get('ignored',False)),target, version)).rowcount:
                 raise Conflict('stale_discovery_version')
+            db.execute("UPDATE discoveries SET rating_source='human' WHERE target=?", (target,))
             self.audit(db, actor, 'discovery.review', target, now or time.time())
         return self.discovery(target)
 

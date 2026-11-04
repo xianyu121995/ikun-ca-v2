@@ -77,6 +77,33 @@ def metadata(db, *, complete=True):
     if max(versions)>=5 and not set(TAKEOVER_TABLES)<=tables:raise ValueError('hunter_migration_required')
     return versions,columns
 
+def ensure_rating_reason(value) -> bool:
+    """Add discoveries.rating_reason when it is missing.
+
+    Idempotent and outside the checksummed 001–005 chain, so a database already
+    at version 5 picks the column up on hunter startup without a version bump.
+    Returns True when this call added the column.
+    """
+    path = location(value, require_exists=True)
+    db = sqlite3.connect(path, timeout=5)
+    added = False
+    try:
+        db.execute('PRAGMA busy_timeout=5000')
+        db.execute('BEGIN IMMEDIATE')
+        columns = {row[1] for row in db.execute('PRAGMA table_info(discoveries)')}
+        if 'rating_reason' not in columns:
+            db.execute('ALTER TABLE discoveries ADD COLUMN rating_reason TEXT')
+            added = True
+        db.commit()
+    except sqlite3.OperationalError as exc:
+        db.rollback()
+        if 'duplicate column' not in str(exc).lower():
+            raise
+    finally:
+        db.close()
+    return added
+
+
 def inspect(value):
     path=location(value,require_exists=True)
     with sqlite3.connect(path.as_uri()+'?mode=ro',uri=True,timeout=5) as db:

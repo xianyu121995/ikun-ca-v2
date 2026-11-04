@@ -6,7 +6,9 @@ export type MonitoringState = 'accepted'|'pending'|'running'|'succeeded'|'failed
 export interface AiDraft {name:string;website:string;description:string;notes:string;category?:string;rating?:'S'|'A'|'B'|'忽略';rating_reason?:string}
 // Owner decision 2026-10-19: 项目类型 replaces the never-opened 代币计划 field ('' = 未分类).
 export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛','链游'] as const;
-export interface Project {ai?:AiDraft|null;id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;category:string;notes:string;watch:boolean;dismissed?:boolean;monitoringMessage?:string;monitoringState?:MonitoringState|null}
+export interface Project {ai?:AiDraft|null;id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;category:string;notes:string;watch:boolean;dismissed?:boolean;monitoringMessage?:string;monitoringState?:MonitoringState|null;followers?:number|null}
+/** AI 忽略 is a visible prefill. A human ignore is status ignored / dismissed and is not this. */
+export function showAiIgnorePrefill(project:Pick<Project,'status'|'grade'|'dismissed'|'ai'>):boolean{return project.status==='pending'&&!project.dismissed&&!project.grade&&project.ai?.rating==='忽略';}
 export interface Filters {query:string;time:string;grade:string;status:string}
 export const initialFilters:Filters={query:'',time:'all',grade:'all',status:'all'};
 export const statusText:Record<Status,string>={pending:'待研究',reviewed:'已研究',joined:'已加入监控',ignored:'已忽略'};

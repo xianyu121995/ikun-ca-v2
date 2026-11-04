@@ -23,11 +23,21 @@ def discovery_dto(db,target,now):
     counts=db.execute('SELECT count(DISTINCT hunter_x_id),min(window_at),max(window_at) FROM follow_events WHERE target=? AND target_id IS NOT NULL AND window_at>=? AND window_at<=?',(target,now-WINDOW,now)).fetchone()
     task=db.execute('SELECT * FROM task_outbox WHERE target=?',(target,)).fetchone()
     profile=dict(profile) if profile else json.loads(row['profile_json'] or '{}')
+    try:stored=json.loads(row['profile_json'] or '{}')
+    except (TypeError,ValueError):stored={}
+    followers=stored.get('followers_count') if isinstance(stored,dict) else None
+    if type(followers) is not int or followers<0:followers=None
+    suggestion=ai_suggestion(db,row['discovery_id'])
+    column_reason=row['rating_reason'] if 'rating_reason' in row.keys() and isinstance(row['rating_reason'],str) and row['rating_reason'].strip() else None
+    if suggestion is None and row['rating']=='忽略' and not row['ignored']:
+        suggestion={'name':row['name'] or profile.get('target_name') or row['target'],'rating':'忽略','rating_reason':column_reason or ''}
+    elif isinstance(suggestion,dict) and column_reason and not suggestion.get('rating_reason'):
+        suggestion=dict(suggestion,rating_reason=column_reason)
     return dict(discovery_id=row['discovery_id'],project_id=task['project_id'] if task else None,
         project=legacy_project(row,profile),x_user_id=identity['x_user_id'] if identity else None,x_handle=identity['current_handle'] if identity else target,
-        profile_bio=profile.get('description') or '',followers=None,signal_count=counts[0],first_seen_at=iso(counts[1]),last_seen_at=iso(counts[2]),
+        profile_bio=profile.get('description') or '',followers=followers,signal_count=counts[0],first_seen_at=iso(counts[1]),last_seen_at=iso(counts[2]),
         discovered_at=iso(row['first_discovered_at']),review_state='tracking' if task else 'ignored' if row['ignored'] else 'reviewed' if row['project_json'] or row['name'] else 'pending',
-        monitoring_state=task['public_state'] if task else None,revision=row['version'],ai_suggestion=ai_suggestion(db,row['discovery_id']))
+        monitoring_state=task['public_state'] if task else None,revision=row['version'],ai_suggestion=suggestion)
 
 def account_dto(db,row,now):
     states={r['key']:json.loads(r['value']) for r in db.execute("SELECT key,value FROM state WHERE key IN ('worker_heartbeat','last_pong_at','wss_state')")}

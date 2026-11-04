@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createProjects,filterProjects,initialFilters,validateProject,normalizeProject,normalizeHandle,beginMonitoringSubmit,finishMonitoringSubmit,selectUnverifiedIds,discoveryStatusLabel,joinActionLabel,joinSubmissionBlocked,isTrackedDiscovery,liveMonitoringPatch,SUBMITTING_LABEL,UNVERIFIED_LABEL} from './model';
+import {createProjects,filterProjects,initialFilters,validateProject,normalizeProject,normalizeHandle,beginMonitoringSubmit,finishMonitoringSubmit,selectUnverifiedIds,discoveryStatusLabel,joinActionLabel,joinSubmissionBlocked,isTrackedDiscovery,liveMonitoringPatch,showAiIgnorePrefill,SUBMITTING_LABEL,UNVERIFIED_LABEL} from './model';
 const now=Date.UTC(2026,9,15,4),rows=createProjects(now),sort={key:'time',direction:'desc'} as const;
 test('V3 reference fixture: synthetic identities, unique IDs, anonymous hunter counts, 18 records',()=>{assert.equal(rows.length,18);assert.equal(new Set(rows.map(p=>p.id)).size,18);assert(rows.every(p=>p.id.startsWith('demo-')&&p.hunters>=2));assert.equal(rows.filter(p=>p.status==='pending').length,8);assert.equal(rows.filter(p=>p.grade).length,10);assert.equal(rows.filter(p=>p.status==='joined').length,4);});
 test('search covers case-insensitive handle, bio, saved notes; whitespace does not hide rows',()=>{assert.equal(filterProjects(rows,{...initialFilters,query:' AETHER_LABS '},sort,now)[0]?.name,'Aether Labs');assert.equal(filterProjects(rows,{...initialFilters,query:'GPU'},sort,now)[0]?.name,'Vanta Compute');assert.equal(filterProjects(rows,{...initialFilters,query:'   '},sort,now).length,18);assert.equal(filterProjects([{...rows[0]!,notes:'研究记录'}],{...initialFilters,query:'研究记录'},sort,now).length,1);});
@@ -23,4 +23,13 @@ test('settled hunter outcomes are not replaced by a missing or quiet subscriptio
   assert.equal(unknown.monitoring_state,'unknown');assert.equal(discoveryStatusLabel({...base,monitoringState:unknown.monitoring_state},{}),'结果待核实');
   const waiting=liveMonitoringPatch({review_state:'tracking',monitoring_state:'pending' as const,project_id:'prj_1'},undefined);
   assert.equal(waiting.monitoring_state,'pending');assert.equal(waiting.monitoring_message,'订阅投递中或追踪服务暂不可用');
+});
+test('AI 忽略 is a visible prefill and is not the human ignore state',()=>{
+  const ai={name:'x',website:'',description:'',notes:'',rating:'忽略' as const,rating_reason:'个人号'};
+  const pending={status:'pending' as const,grade:null,dismissed:false,ai};
+  assert.equal(showAiIgnorePrefill(pending),true);
+  assert.equal(showAiIgnorePrefill({...pending,status:'ignored',dismissed:true}),false);
+  assert.equal(showAiIgnorePrefill({...pending,grade:'B'}),false);
+  assert.equal(showAiIgnorePrefill({...pending,ai:{...ai,rating:'A'}}),false);
+  assert.equal(showAiIgnorePrefill({...pending,dismissed:true}),false);
 });

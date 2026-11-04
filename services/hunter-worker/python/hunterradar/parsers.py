@@ -25,12 +25,30 @@ def timestamp(value) -> float:
     return dt.timestamp()
 
 
+def follower_count(data) -> int | None:
+    """Follower count already present on a user object. Missing or invalid stays None.
+
+    twitterapi.io followings (UserProfileSnake) includes followers_count. WSS
+    content sometimes does not. This never triggers a request.
+    """
+    if not isinstance(data, dict):
+        return None
+    for key in ('followers_count', 'followersCount', 'followerCount', 'followers', 'follower_count'):
+        if key not in data:
+            continue
+        value = data[key]
+        if type(value) is int and value >= 0:
+            return value
+    return None
+
+
 @dataclass(frozen=True)
 class Target:
     username: str
     user_id: str | None = None
     name: str = ''
     description: str = ''
+    followers: int | None = None
 
 
 @dataclass(frozen=True)
@@ -67,7 +85,8 @@ def wss_events(payload: dict, received_at: float) -> list[Follow]:
         if item.get('twId') is not None and (isinstance(item['twId'],bool) or not re.fullmatch(r'[0-9]{1,40}',str(item['twId']))):
             raise ValueError('invalid_target_stable_id')
         target = Target(handle(item.get('twAccount')), str(item['twId']) if item.get('twId') else None,
-                        str(item.get('twUserName') or '')[:200], str(item.get('description') or '')[:10000])
+                        str(item.get('twUserName') or '')[:200], str(item.get('description') or '')[:10000],
+                        follower_count(item))
         if hunter == target.username:
             continue
         # Include target even when one envelope id contains many targets.
@@ -101,7 +120,7 @@ def followings(payload: dict) -> list[Target]:
             raise ValueError('invalid_following_identity')
         name = handle(row.get('userName'))
         if name not in seen:
-            result.append(Target(name, str(row['id']), str(row.get('name') or name)[:200], str(row.get('description') or '')[:10000]))
+            result.append(Target(name, str(row['id']), str(row.get('name') or name)[:200], str(row.get('description') or '')[:10000], follower_count(row)))
             seen.add(name)
     return result
 

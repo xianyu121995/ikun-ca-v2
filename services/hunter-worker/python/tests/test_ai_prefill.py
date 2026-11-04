@@ -23,11 +23,17 @@ def test_prefill_stored_as_suggestion_only(store, monkeypatch, tmp_path):
     assert s['name'] == 'SOL上的AI审计发射台' and s['website'] == '' and s['rating'] == 'S'
     assert s['rating_reason'] == '官网和推文都写了正在做的审计产品。'
     assert current['project']['rating'] == 'S' and current['review_state'] == 'pending'
+    assert '融资' not in ai_prefill.PROMPT and '团队' not in ai_prefill.PROMPT
+    assert ai_prefill.RATING_RUBRIC in ai_prefill.PROMPT
+    assert '同生态' not in ai_prefill.RATING_RUBRIC and '不是忽略理由' in ai_prefill.RATING_RUBRIC
+    with store.connect() as db:
+        stored = db.execute('SELECT ignored,rating_reason FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert stored['ignored'] == 0 and stored['rating_reason'] == '官网和推文都写了正在做的审计产品。'
     assert current['revision'] == dto['revision'] + 1
     assert ai_prefill.run_pass(store, {}) == 0  # not repeated
 
 
-def test_ignore_hides_the_row_until_a_person_picks_another_level(store, monkeypatch, tmp_path):
+def test_ai_ignore_stays_in_the_default_list(store, monkeypatch, tmp_path):
     dto = FormalService(store).discovery(discover(store)['discovery_id'], NOW)
     cfg = tmp_path / 'ai.json'; cfg.write_text(json.dumps({'enabled': True, 'api_key': 'AIza' + 'x' * 35}))
     monkeypatch.setenv('IKUN_AI_CONFIG', str(cfg))
@@ -37,19 +43,16 @@ def test_ignore_hides_the_row_until_a_person_picks_another_level(store, monkeypa
     assert ai_prefill.run_pass(store, {}) == 1
     monkeypatch.setattr(FormalService, 'page', real_page)
     listed = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
-    assert dto['discovery_id'] not in [item['discovery_id'] for item in listed]
+    assert dto['discovery_id'] in [item['discovery_id'] for item in listed]
     hidden = FormalService(store).page('signals', {'limit': '100', 'review_state': 'ignored'}, NOW)['items']
-    assert [item['discovery_id'] for item in hidden] == [dto['discovery_id']]
+    assert hidden == []
+    current = FormalService(store).discovery(dto['discovery_id'], NOW)
+    assert current['review_state'] == 'pending' and current['project']['rating'] is None
+    assert current['ai_suggestion']['rating'] == '忽略'
+    assert current['ai_suggestion']['rating_reason'] == '只有喊单，看不出项目。'
     with store.connect() as db:
-        row = db.execute('SELECT ignored,rating FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
-    assert row['ignored'] == 1 and row['rating'] == '待定'
-    from hunterradar.protocol import Principal
-    admin = Principal(user_id='fixture-admin', tenant_id='ikun-main', role='superadmin')
-    current = hidden[0]
-    FormalService(store).write(admin, 'PATCH', '/api/v1/hunter/discoveries/' + dto['discovery_id'], {'rating': 'B'}, '11111111-1111-4111-8111-111111111111', f'"rev-{current["revision"]}"', 'fixture-research', NOW)
-    restored = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
-    assert dto['discovery_id'] in [item['discovery_id'] for item in restored]
-    assert FormalService(store).discovery(dto['discovery_id'], NOW)['project']['rating'] == 'B'
+        row = db.execute('SELECT ignored,rating,rating_reason FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert row['ignored'] == 0 and row['rating'] == '忽略' and row['rating_reason'] == '只有喊单，看不出项目。'
 
 
 def test_existing_human_rating_is_not_replaced(store, monkeypatch, tmp_path):
@@ -160,3 +163,133 @@ def test_watch_error_since_tracks_start_and_clears(store):
     assert store.states()['watch_error_since'] == first
     store.set_state('watch_error', None)
     assert 'watch_error_since' not in store.states()
+
+
+def test_clean_keeps_a_known_rating_only_with_a_reason():
+    assert 'rating' not in ai_prefill.clean({'rating': '忽略'}, 'h', '')
+    out = ai_prefill.clean({'rating': '忽略', 'rating_reason': '  广告号  '}, 'h', '')
+    assert out['rating'] == '忽略' and out['rating_reason'] == '广告号'
+    assert len(ai_prefill.clean({'rating': 'B', 'rating_reason': '理' * 50}, 'h', '')['rating_reason']) == 40
+    assert 'rating' not in ai_prefill.clean({'rating': 'C', 'rating_reason': '不是等级'}, 'h', '')
+    assert '纯 PFP' in ai_prefill.RATING_RUBRIC and '未来才开始也不是忽略' in ai_prefill.RATING_RUBRIC
+
+
+def test_prompt_input_passes_signal_count_and_known_followers_only():
+    item = {'x_handle': 'h', 'project': {'name': 'N'}, 'signal_count': 4, 'followers': None}
+    site = {'site': '', 'docs': ''}
+    payload = ai_prefill.prompt_input(item, 'bio', [], [], site)
+    assert payload['signal_count'] == 4 and 'followers_count' not in payload
+    item['followers'] = 15000
+    assert ai_prefill.prompt_input(item, 'bio', [], [], site)['followers_count'] == 15000
+    item['followers'] = True
+    item['followers_count'] = 9
+    assert ai_prefill.prompt_input(item, 'bio', [], [], site)['followers_count'] == 9
+    item['followers_count'] = None
+    assert 'followers_count' not in ai_prefill.prompt_input(item, 'bio', [], [], site)
+
+
+def test_apply_rating_writes_prefill_and_keeps_human_decisions(store):
+    dto = FormalService(store).discovery(discover(store)['discovery_id'], NOW)
+    ai_prefill.apply_rating(store, dto, {'rating': '忽略', 'rating_reason': '  广告号  '})
+    with store.connect() as db:
+        row = db.execute('SELECT ignored,rating,rating_reason FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert row['ignored'] == 0 and row['rating'] == '忽略' and row['rating_reason'] == '广告号'
+    listed = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
+    assert dto['discovery_id'] in [item['discovery_id'] for item in listed]
+    with store.connect(True) as db:
+        db.execute("UPDATE discoveries SET name='已命名', rating='待定', rating_reason=NULL WHERE discovery_id=?", (dto['discovery_id'],))
+    ai_prefill.apply_rating(store, dto, {'rating': 'S', 'rating_reason': '不该覆盖。'})
+    with store.connect() as db:
+        row = db.execute('SELECT rating,rating_reason,ignored FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert row['rating'] == '待定' and row['rating_reason'] is None and row['ignored'] == 0
+    with store.connect(True) as db:
+        db.execute("UPDATE discoveries SET name='', rating='A' WHERE discovery_id=?", (dto['discovery_id'],))
+    ai_prefill.apply_rating(store, dto, {'rating': '忽略', 'rating_reason': '不该覆盖。'})
+    with store.connect() as db:
+        row = db.execute('SELECT rating,ignored FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert row['rating'] == 'A' and row['ignored'] == 0
+    with store.connect(True) as db:
+        db.execute("UPDATE discoveries SET rating='待定', ignored=1 WHERE discovery_id=?", (dto['discovery_id'],))
+    ai_prefill.apply_rating(store, dto, {'rating': 'S', 'rating_reason': '不该打开。'})
+    with store.connect() as db:
+        row = db.execute('SELECT rating,ignored FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert row['ignored'] == 1 and row['rating'] == '待定'
+
+
+def test_human_ignore_still_hides_until_a_person_picks_another_level(store):
+    dto = FormalService(store).discovery(discover(store)['discovery_id'], NOW)
+    from hunterradar.protocol import Principal
+    admin = Principal(user_id='fixture-admin', tenant_id='ikun-main', role='superadmin')
+    path = '/api/v1/hunter/discoveries/' + dto['discovery_id']
+    FormalService(store).write(admin, 'PATCH', path, {'ignored': True}, '22222222-2222-4222-8222-222222222222', f'"rev-{dto["revision"]}"', 'fixture-research', NOW)
+    listed = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
+    assert dto['discovery_id'] not in [item['discovery_id'] for item in listed]
+    hidden = FormalService(store).page('signals', {'limit': '100', 'review_state': 'ignored'}, NOW)['items']
+    current = hidden[0]
+    FormalService(store).write(admin, 'PATCH', path, {'rating': 'B'}, '33333333-3333-4333-8333-333333333333', f'"rev-{current["revision"]}"', 'fixture-research', NOW)
+    restored = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
+    assert dto['discovery_id'] in [item['discovery_id'] for item in restored]
+    assert FormalService(store).discovery(dto['discovery_id'], NOW)['project']['rating'] == 'B'
+
+
+def test_rating_reason_column_is_added_once(store):
+    import sqlite3
+    from hunterradar.migration import ensure_rating_reason
+    assert ensure_rating_reason(store.path) is False
+    with sqlite3.connect(store.path) as db:
+        db.execute('ALTER TABLE discoveries DROP COLUMN rating_reason')
+    assert ensure_rating_reason(store.path) is True
+    assert ensure_rating_reason(store.path) is False
+    with sqlite3.connect(store.path) as db:
+        columns = [row[1] for row in db.execute('PRAGMA table_info(discoveries)')]
+    assert 'rating_reason' in columns
+
+
+def test_followings_follower_count_is_stored_without_a_new_request(store):
+    from conftest import ready
+    from hunterradar.parsers import Follow, Target, followings
+    assert followings({'followings': [{'userName': 'Target', 'id': '123'}]})[0].followers is None
+    assert followings({'followings': [{'userName': 'Target', 'id': '123', 'followers_count': 15000, 'followers': 1}]})[0].followers == 15000
+    for index in (1, 2):
+        ready(store, 'fh' + str(index), followers=5000, user_id=str(200 + index), now=NOW)
+        store.ingest_wss(Follow('fh' + str(index), Target('counted', '1001', 'Counted', 'bio', 15000), NOW, NOW, '6551_WSS', 'counted-' + str(index)))
+    found = FormalService(store).discovery(store.discovery('counted')['discovery_id'], NOW)
+    assert found['followers'] == 15000
+    dto = discover(store)
+    assert FormalService(store).discovery(dto['discovery_id'], NOW)['followers'] is None
+    ready(store, 'hunter3', followers=5000, user_id='103', now=NOW)
+    store.ingest_wss(Follow('hunter3', Target('project1', '999', 'Project One', 'Evidence bio', 8000), NOW, NOW, '6551_WSS', 'later-count'))
+    assert FormalService(store).discovery(dto['discovery_id'], NOW)['followers'] == 8000
+
+
+def test_restore_script_clears_only_listed_rows_without_a_human_ignore(store):
+    import importlib.util
+    from conftest import event
+    from pathlib import Path
+    first = discover(store)
+    store.ingest_wss(event('hunter1', 'project2', key='p2a', target_id='1002'))
+    store.ingest_wss(event('hunter2', 'project2', key='p2b', target_id='1002'))
+    second = store.discovery('project2')
+    with store.connect(True) as db:
+        db.execute('UPDATE discoveries SET ignored=1 WHERE discovery_id IN (?,?)', (first['discovery_id'], second['discovery_id']))
+        store.audit(db, 'usr_owner', 'discovery.research.patch', first['discovery_id'], NOW, '{"fields":["ignored"]}')
+    path = Path(__file__).resolve().parents[1] / 'scripts' / 'restore_ai_ignored.py'
+    spec = importlib.util.spec_from_file_location('restore_ai_ignored', path)
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+    planned = script.run(store.path, ['project1', 'project2', 'missing'])
+    by_input = {row['input']: row['action'] for row in planned}
+    assert by_input == {'project1': 'skipped_human', 'project2': 'would_clear', 'missing': 'missing'}
+    with store.connect() as db:
+        assert db.execute('SELECT ignored FROM discoveries WHERE target=?', ('project2',)).fetchone()[0] == 1
+    blocked = script.run(store.path, ['project2', 'missing'], apply=True)
+    assert {row['action'] for row in blocked} == {'not_applied', 'missing'}
+    with store.connect() as db:
+        assert db.execute('SELECT ignored FROM discoveries WHERE target=?', ('project2',)).fetchone()[0] == 1
+    applied = script.run(store.path, ['@project2'], apply=True)
+    assert applied[0]['action'] == 'cleared' and applied[0]['rating'] == '待定'
+    with store.connect() as db:
+        row = db.execute('SELECT ignored,rating FROM discoveries WHERE target=?', ('project2',)).fetchone()
+    assert row['ignored'] == 0 and row['rating'] == '待定'
+    again = script.run(store.path, ['project2'], apply=True)
+    assert again[0]['action'] == 'unchanged'

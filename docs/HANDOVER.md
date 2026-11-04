@@ -110,11 +110,13 @@ Cloudflare 隧道配置 `/var/lib/ikun/production/config/cloudflared.yml`，凭�
 | --- | --- | --- |
 | 6551 | Tracking 被动 WSS；Watch 控制面查询/用户批准的增删；历史 Hunter 支持仍保留但现已停用 | config/tracking.live.environment.json 的 IKUN_TRACKING_6551_TOKEN；config/tracking.live.json；历史 config/hunter.live.environment.json 的 OPENNEWS_TOKEN |
 | twitterapi.io | 现在线上猎手所有启用账号的定时推文扫描、用户资料等 | config/hunter.live.environment.json 的 TWITTERAPI_IO_API_KEY |
-| 网站/监控 AI | 服务端 Codex CLI；AI 分析实现仍有 gemini.py 的历史文件名，不能据此断定使用 Gemini 计费 | config/ai.json 指定 provider=codex、enabled=true、codex_bin=/usr/local/bin/codex；登录状态 /var/lib/ikun/.codex/auth.json |
+| 网站/监控 AI | 服务端 Codex CLI；AI 分析实现仍有 gemini.py 的历史文件名，不能据此断定使用 Gemini 计费。代码另支持 provider=deepseek（与 gemini、codex 并列），当前线上未因本文切换 | config/ai.json 指定 provider=codex、enabled=true、codex_bin=/usr/local/bin/codex；登录状态 /var/lib/ikun/.codex/auth.json。DeepSeek 字段名：provider、model、base_url、timeout、deepseek_api_key 或 api_key、fallback_provider、gemini_api_key、gemini_model，以及既有 codex_bin、codex_model、proxy。密钥也可只放环境变量 DEEPSEEK_API_KEY |
 | 领域服务互调 | Web/BFF 到 Hunter/Tracking/Projects，方向隔离 | config/web.environment.json、hunter.live.environment.json、tracking.live.environment.json；由启动器加载 |
 | Cloudflare | 网站公网隧道 | config/cloudflared.yml、config/tunnel.credentials.json |
 
 这里 config/ 均相对 `/var/lib/ikun/production/`。AI 使用 CLI 默认模型；未查询 Codex 额度，未重新登录，不能承诺免费/无限。文件本身包含登录秘密，不交给聊天或一般代码读取工具。
+
+DeepSeek 密钥只放两处之一，不要写入 Git：环境变量 `DEEPSEEK_API_KEY`（生产由 `run_production.py` 从 `config/hunter.live.environment.json` 与 `config/tracking.live.environment.json` 载入），或 `config/ai.json` 的 `deepseek_api_key` / `api_key`。`ai.json` 每次调用重读。换上含 DeepSeek 客户端的代码后重启 `ikun-hunter.service` 与 `ikun-tracking-live.service`；只改 `ai.json` 不必为了读新字段而重启，改环境变量文件则要重启对应服务。
 
 ### 6551 收费与共享账本
 

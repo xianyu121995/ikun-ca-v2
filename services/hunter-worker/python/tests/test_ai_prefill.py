@@ -1,4 +1,4 @@
-"""Owner decision 2026-10-18: AI Chinese prefill for new discoveries; draft only, no rating."""
+"""AI prefill: text fields stay a draft; S/A/B/忽略 is written immediately."""
 import json
 
 from conftest import NOW, discover
@@ -15,13 +15,67 @@ def test_prefill_stored_as_suggestion_only(store, monkeypatch, tmp_path):
     cfg = tmp_path / 'ai.json'; cfg.write_text(json.dumps({'enabled': True, 'api_key': 'AIza' + 'x' * 35}))
     monkeypatch.setenv('IKUN_AI_CONFIG', str(cfg))
     monkeypatch.setattr(FormalService, 'page', lambda self, kind, query, now=None: {'items': [dto | {'profile_bio': 'AI audits on Solana. vaultstreet.fun'}], 'next_cursor': None})
-    monkeypatch.setattr(gemini, 'generate_json', lambda prompt, **kw: {'name': 'SOL上的AI审计发射台', 'website': 'invented.io', 'description': '为 Solana 项目做 AI 审计。', 'notes': '关注代币', 'rating': 'S'})
+    monkeypatch.setattr(gemini, 'generate_json', lambda prompt, **kw: {'name': 'SOL上的AI审计发射台', 'website': 'invented.io', 'description': '为 Solana 项目做 AI 审计。', 'notes': '关注代币', 'rating': 'S', 'rating_reason': '官网和推文都写了正在做的审计产品。'})
+    assert '忽略' in ai_prefill.PROMPT and 'rating_reason' in ai_prefill.PROMPT
     assert ai_prefill.run_pass(store, {}) == 1
     current = FormalService(store).discovery(dto['discovery_id'], NOW)
     s = current['ai_suggestion']
-    assert s['name'] == 'SOL上的AI审计发射台' and s['website'] == '' and 'rating' not in s
-    assert current['review_state'] == 'pending' and current['revision'] == dto['revision']
+    assert s['name'] == 'SOL上的AI审计发射台' and s['website'] == '' and s['rating'] == 'S'
+    assert s['rating_reason'] == '官网和推文都写了正在做的审计产品。'
+    assert current['project']['rating'] == 'S' and current['review_state'] == 'pending'
+    assert current['revision'] == dto['revision'] + 1
     assert ai_prefill.run_pass(store, {}) == 0  # not repeated
+
+
+def test_ignore_hides_the_row_until_a_person_picks_another_level(store, monkeypatch, tmp_path):
+    dto = FormalService(store).discovery(discover(store)['discovery_id'], NOW)
+    cfg = tmp_path / 'ai.json'; cfg.write_text(json.dumps({'enabled': True, 'api_key': 'AIza' + 'x' * 35}))
+    monkeypatch.setenv('IKUN_AI_CONFIG', str(cfg))
+    real_page = FormalService.page
+    monkeypatch.setattr(FormalService, 'page', lambda self, kind, query, now=None: {'items': [dto | {'profile_bio': 'airdrop spam'}], 'next_cursor': None})
+    monkeypatch.setattr(gemini, 'generate_json', lambda prompt, **kw: {'name': '喊单', 'website': '', 'description': '没有产品', 'notes': '', 'rating': '忽略', 'rating_reason': '只有喊单，看不出项目。'})
+    assert ai_prefill.run_pass(store, {}) == 1
+    monkeypatch.setattr(FormalService, 'page', real_page)
+    listed = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
+    assert dto['discovery_id'] not in [item['discovery_id'] for item in listed]
+    hidden = FormalService(store).page('signals', {'limit': '100', 'review_state': 'ignored'}, NOW)['items']
+    assert [item['discovery_id'] for item in hidden] == [dto['discovery_id']]
+    with store.connect() as db:
+        row = db.execute('SELECT ignored,rating FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()
+    assert row['ignored'] == 1 and row['rating'] == '待定'
+    from hunterradar.protocol import Principal
+    admin = Principal(user_id='fixture-admin', tenant_id='ikun-main', role='superadmin')
+    current = hidden[0]
+    FormalService(store).write(admin, 'PATCH', '/api/v1/hunter/discoveries/' + dto['discovery_id'], {'rating': 'B'}, '11111111-1111-4111-8111-111111111111', f'"rev-{current["revision"]}"', 'fixture-research', NOW)
+    restored = FormalService(store).page('signals', {'limit': '100'}, NOW)['items']
+    assert dto['discovery_id'] in [item['discovery_id'] for item in restored]
+    assert FormalService(store).discovery(dto['discovery_id'], NOW)['project']['rating'] == 'B'
+
+
+def test_existing_human_rating_is_not_replaced(store, monkeypatch, tmp_path):
+    dto = FormalService(store).discovery(discover(store)['discovery_id'], NOW)
+    with store.connect(True) as db:
+        db.execute("UPDATE discoveries SET rating='A' WHERE discovery_id=?", (dto['discovery_id'],))
+    cfg = tmp_path / 'ai.json'; cfg.write_text(json.dumps({'enabled': True, 'provider': 'codex', 'api_key': 'AIza' + 'x' * 35}))
+    monkeypatch.setenv('IKUN_AI_CONFIG', str(cfg))
+    monkeypatch.setattr(FormalService, 'page', lambda self, kind, query, now=None: {'items': [dto | {'profile_bio': 'built a protocol'}], 'next_cursor': None})
+    monkeypatch.setattr(gemini, 'generate_json', lambda prompt, **kw: {'name': '新名', 'website': '', 'description': '简介', 'notes': '', 'rating': '忽略', 'rating_reason': '不该覆盖人工评级。'})
+    assert ai_prefill.run_pass(store, {}) == 1
+    current = FormalService(store).discovery(dto['discovery_id'], NOW)
+    assert current['project']['rating'] == 'A' and current['review_state'] == 'pending'
+    assert current['ai_suggestion']['rating'] == '忽略'
+
+
+def test_rating_without_a_reason_is_not_applied(store, monkeypatch, tmp_path):
+    dto = FormalService(store).discovery(discover(store)['discovery_id'], NOW)
+    cfg = tmp_path / 'ai.json'; cfg.write_text(json.dumps({'enabled': True, 'provider': 'deepseek', 'api_key': 'sk-' + 'd' * 32}))
+    monkeypatch.setenv('IKUN_AI_CONFIG', str(cfg))
+    monkeypatch.setattr(FormalService, 'page', lambda self, kind, query, now=None: {'items': [dto], 'next_cursor': None})
+    monkeypatch.setattr(gemini, 'generate_json', lambda prompt, **kw: {'name': '未评级', 'website': '', 'description': '简介', 'notes': '', 'rating': 'C'})
+    assert ai_prefill.run_pass(store, {}) == 1
+    current = FormalService(store).discovery(dto['discovery_id'], NOW)
+    assert current['project']['rating'] is None and current['review_state'] == 'pending'
+    assert 'rating' not in current['ai_suggestion']
 
 
 def test_failures_do_not_raise_and_are_retried_later(store, monkeypatch, tmp_path):

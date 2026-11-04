@@ -1,15 +1,15 @@
 import seed from './reference/seed.json';
 import type {TableSort} from '@ikun/ui';
 export type Grade = 'S'|'A'|'B'|'C'|'D'|null;
-export type Status = 'pending'|'reviewed'|'joined';
+export type Status = 'pending'|'reviewed'|'joined'|'ignored';
 export type MonitoringState = 'accepted'|'pending'|'running'|'succeeded'|'failed'|'unknown';
-export interface AiDraft {name:string;website:string;description:string;notes:string;category?:string}
+export interface AiDraft {name:string;website:string;description:string;notes:string;category?:string;rating?:'S'|'A'|'B'|'忽略';rating_reason?:string}
 // Owner decision 2026-10-19: 项目类型 replaces the never-opened 代币计划 field ('' = 未分类).
 export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛','链游'] as const;
-export interface Project {ai?:AiDraft|null;id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;category:string;notes:string;watch:boolean;monitoringMessage?:string;monitoringState?:MonitoringState|null}
+export interface Project {ai?:AiDraft|null;id:string;name:string;handle:string;bio:string;hunters:number;grade:Grade;status:Status;foundAt:number;website:string;description:string;category:string;notes:string;watch:boolean;dismissed?:boolean;monitoringMessage?:string;monitoringState?:MonitoringState|null}
 export interface Filters {query:string;time:string;grade:string;status:string}
 export const initialFilters:Filters={query:'',time:'all',grade:'all',status:'all'};
-export const statusText:Record<Status,string>={pending:'待研究',reviewed:'已研究',joined:'已加入监控'};
+export const statusText:Record<Status,string>={pending:'待研究',reviewed:'已研究',joined:'已加入监控',ignored:'已忽略'};
 export const SUBMITTING_LABEL='提交中';
 export const UNVERIFIED_LABEL='结果待核实';
 const succeeded=(project:Pick<Project,'status'|'monitoringState'>)=>project.monitoringState==='succeeded'||(project.status==='joined'&&project.monitoringState!=='unknown');

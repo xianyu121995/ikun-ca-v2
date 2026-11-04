@@ -134,6 +134,9 @@ class FormalService:
                 current=discovery_dto(db,row['target'],stamp)
                 fields={k:v for k,v in body.items() if k!='ignored'}
                 if 'ignored' in body:db.execute('UPDATE discoveries SET ignored=? WHERE discovery_id=?',(int(body['ignored']),identifier))
+                elif 'rating' in body and row['ignored']:
+                    # A person picked S/A/B/C/D/待定 instead of 忽略; the row stays and shows again.
+                    db.execute('UPDATE discoveries SET ignored=0 WHERE discovery_id=?',(identifier,))
                 project=ProjectFields.model_validate(current['project']|fields).model_dump(mode='json') if fields or row['project_json'] else None
                 if project is not None:db.execute('UPDATE discoveries SET project_json=? WHERE discovery_id=?',(canonical(project),identifier))
                 db.execute('UPDATE discoveries SET version=version+1,updated_at=? WHERE discovery_id=?',(stamp,identifier))

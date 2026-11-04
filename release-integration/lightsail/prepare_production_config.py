@@ -41,6 +41,9 @@ objects = {'web.environment.json': web,
            'hunter.live.environment.json': rewrite(load('hunter.live.environment.json')),
            'tracking.live.environment.json': rewrite(load('tracking.live.environment.json')),
            'tracking.live.json': rewrite(load('tracking.live.json')),
+           # DeepSeek is opt-in. Field names, not set here: provider, model, base_url, timeout,
+           # deepseek_api_key or api_key, fallback_provider, gemini_api_key, gemini_model.
+           # The key may also be the DEEPSEEK_API_KEY environment variable.
            'ai.json': {'provider': 'codex', 'enabled': True, 'proxy': '', 'codex_bin': '/usr/local/bin/codex'},
            'tunnel.credentials.json': load('tunnel.credentials.json')}
 for name, value in objects.items():

@@ -16,7 +16,7 @@ const MONITORING_STATES=['accepted','pending','running','succeeded','failed','un
 function monitoringStateOf(value:DiscoveryDTO['monitoring_state']):MonitoringState|null{return value&&(MONITORING_STATES as readonly string[]).includes(value)?value as MonitoringState:value?'unknown':null;}
 function monitoringMessageFor(state:NonNullable<DiscoveryDTO['monitoring_state']>):string|undefined{if(state==='succeeded')return '追踪中';if(state==='accepted')return '已受理';if(state==='pending'||state==='running')return '确认处理中';if(state==='failed')return '确认失败';return undefined;}
 const toProject=(row:DiscoveryDTO):Project=>({id:row.discovery_id,name:row.project.name,handle:row.x_handle,bio:row.profile_bio,hunters:row.signal_count,grade:row.project.rating as Grade,
- status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,category:row.project.category||'',notes:row.project.notes,watch:row.monitoring_state==='succeeded',monitoringState:monitoringStateOf(row.monitoring_state),monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message,ai:(row as DiscoveryDTO & {ai_suggestion?:Project['ai']}).ai_suggestion??null});
+ status:row.monitoring_state==='succeeded'?'joined':row.review_state==='reviewed'?'reviewed':row.review_state==='ignored'?'ignored':'pending',foundAt:row.discovered_at?Date.parse(row.discovered_at):NaN,website:row.project.website_url||'',description:row.project.description,category:row.project.category||'',notes:row.project.notes,watch:row.monitoring_state==='succeeded',dismissed:row.review_state==='ignored',monitoringState:monitoringStateOf(row.monitoring_state),monitoringMessage:(row as DiscoveryDTO & {monitoring_message?:string}).monitoring_message,ai:(row as DiscoveryDTO & {ai_suggestion?:Project['ai']}).ai_suggestion??null});
 export interface LiveBinding{
  initialFilters?:Filters;
  projects:Project[];role:'superadmin'|'user';loading:boolean;refreshing:boolean;error:string|null;
@@ -117,7 +117,9 @@ export default function HunterController({session,fixture=false}:{session:Sessio
   if(!manageable)return {ok:false,error:{code:'FORBIDDEN',message:'当前账号只读'}};
   const row=records.find(item=>item.discovery_id===project.id);if(!row)return {ok:false,error:{code:'NOT_FOUND',message:'发现记录已不可用，请刷新核对'}};
   if(pending.current.has(project.id))return {ok:false,error:{code:'CONFLICT',message:'操作正在核对'}};
-  const body={name:project.name,description:project.description,website_url:project.website||null,notes:project.notes,rating:project.grade,category:project.category||null},serialized=JSON.stringify(body);
+  const body:Record<string,unknown>={name:project.name,description:project.description,website_url:project.website||null,notes:project.notes,rating:project.grade,category:project.category||null};
+  if(project.dismissed)body.ignored=true;else if(row.review_state==='ignored')body.ignored=false;
+  const serialized=JSON.stringify(body);
   let operation=researchOps.current.get(project.id);
   if(operation&&operation.body!==serialized)return {ok:false,error:{code:'CONFLICT',message:'原保存结果待核实，请保持原草稿重试核对'}};
   if(!operation){try{const fresh:DiscoveryDTO=await api('/api/v1/hunter/discoveries/'+encodeURIComponent(project.id));operation={key:crypto.randomUUID(),body:serialized,revision:fresh.revision};researchOps.current.set(project.id,operation);}catch(e){return {ok:false,error:{code:'UPSTREAM_UNAVAILABLE',message:e instanceof Error?e.message:'最新版本读取失败'}};}}

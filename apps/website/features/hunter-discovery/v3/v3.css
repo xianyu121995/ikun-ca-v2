@@ -131,6 +131,8 @@
 .hunter-v3 .score-buttons .ik-button[data-grade="ignore"] {color:#e38b8b;border-color:#5a2f35;}
 .hunter-v3 .score-buttons .ik-button[data-grade="ignore"]:hover {background:#3a1d22;color:#ffb3b3;}
 .hunter-v3 .drawer-note.ai-note {border-color:#2b5f55;background:#0f2a26;color:#8fe3cf;margin-bottom:8px;}
+.hunter-v3 .ik-score--ignore {font-size:9px;font-weight:700;color:#e7c4b0;background:#3a2a28;border-color:#6a463c;min-width:36px;white-space:nowrap;}
+.hunter-v3 .status.ignored {color:#e7c4b0;}
 
 /* New-discovery sound alert controls (frontend-only) */
 .hunter-v3 .alert-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 6px;border:1px solid #2a4251;border-radius:7px;background:#0d1d27}

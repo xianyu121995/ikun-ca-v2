@@ -1,7 +1,10 @@
 """AI Chinese prefill for new Hunter discoveries (owner decision 2026-10-18).
 
-Suggestions are stored in the state table as 'ai:<discovery_id>' and only shown as a draft in the
-drawer; nothing is saved to the project or tracked until the owner clicks save. No rating is suggested.
+Name, website, description, notes and category stay a draft in state 'ai:<discovery_id>' until the
+owner saves. The rating is different: Codex, Gemini and DeepSeek all return it through generate_json,
+and it is written onto the discovery immediately. S/A/B reuse discoveries.rating. 忽略 reuses
+discoveries.ignored so the row stays in the database and drops out of the default list. A rating a
+person already saved is left alone. The one-sentence reason stays on the AI suggestion.
 """
 from __future__ import annotations
 
@@ -26,9 +29,16 @@ PROMPT = (
     "- description：两到三句中文简介，说明项目具体做什么（产品/机制/所在链）、进展到哪（如测试网/主网），依据官网文档、简介和推文，不要编造。\n"
     "- notes：一句中文备注，点出值得关注的信号（如代币、白名单、测试网、空投、NFT、即将上线），没有就给空字符串。\n"
     "- category：项目类型，只能从 NFT、发射台、新协议、撸毛、链游 五个里选一个最贴切的（链游=区块链游戏/GameFi；撸毛=主要玩法是做任务/交互/测试网拿空投积分；发射台=帮别人发币/发项目的平台；NFT=以 NFT 为核心；新协议=其他新的链上协议/产品/基础设施），实在判断不了给空字符串。\n"
-    "只输出 JSON：{\"name\": ..., \"website\": ..., \"description\": ..., \"notes\": ..., \"category\": ...}\n\n"
+    "- rating：只能是 S、A、B、忽略 四个字面量之一，不要输出别的等级。依据简介、最近推文、官网首页（site）、文档（docs），以及这些材料里实际写到的团队、融资和热度来判断，材料没写的不要编造：\n"
+    "  S：产品或机制已经清楚，并且材料里有明确的融资、上线、交易所或很高的讨论热度，值得马上看。\n"
+    "  A：方向清楚，推文或官网能看出正在推进（测试网、主网、集成、合作）。\n"
+    "  B：能看出是一个项目，但信息少、热度弱，先记下来。\n"
+    "  忽略：广告、跟风喊单、与加密项目无关、信息少到无法判断，或不值得继续跟。\n"
+    "- rating_reason：一句简体中文，不超过 40 个字，只解释这个评级，不要换行。\n"
+    "只输出 JSON：{\"name\": ..., \"website\": ..., \"description\": ..., \"notes\": ..., \"category\": ..., \"rating\": \"S\"|\"A\"|\"B\"|\"忽略\", \"rating_reason\": ...}\n\n"
 )
 PROJECT_TYPES = ('NFT', '发射台', '新协议', '撸毛', '链游')
+RATINGS = ('S', 'A', 'B', '忽略')
 DOMAIN = re.compile(r'^(?:https?://)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)(?:/\S*)?$', re.I)
 
 
@@ -143,9 +153,41 @@ def clean(value: dict, handle: str, bio: str, domains=()) -> dict:
     # Only keep a domain that actually appears in the bio (never invented).
     host = match.group(1).lower().removeprefix('www.') if match else ''
     website = ('https://' + host) if host and (host in bio.lower() or host in domains) else ''
-    return {'name': text('name', 60) or handle, 'website': website, 'description': text('description', 600),
-            'notes': text('notes', 300), 'category': text('category', 10) if text('category', 10) in PROJECT_TYPES else '',
-            'generated_at': time.time()}
+    reason = ' '.join(text('rating_reason', 80).split())
+    rating = text('rating', 8)
+    out = {'name': text('name', 60) or handle, 'website': website, 'description': text('description', 600),
+           'notes': text('notes', 300), 'category': text('category', 10) if text('category', 10) in PROJECT_TYPES else '',
+           'generated_at': time.time()}
+    if rating in RATINGS and reason:
+        out['rating'] = rating
+        out['rating_reason'] = reason[:40]
+    return out
+
+
+def apply_rating(store, item, suggestion) -> None:
+    """Write S/A/B or 忽略 onto the discovery. Skip when a person already set one."""
+    rating = suggestion.get('rating')
+    if rating not in RATINGS:
+        return
+    with store.connect(True) as db:
+        row = db.execute('SELECT * FROM discoveries WHERE discovery_id=?', (item['discovery_id'],)).fetchone()
+        if row is None:
+            return
+        human = bool(row['project_json']) or bool((row['name'] or '').strip()) or bool(row['ignored']) or row['rating'] in ('S', 'A', 'B', 'C', 'D')
+        if human:
+            logging.getLogger(__name__).info('hunter_ai_rating_kept discovery=%s', item['discovery_id'])
+            return
+        now = time.time()
+        if rating == '忽略':
+            changed = db.execute(
+                'UPDATE discoveries SET ignored=1, version=version+1, updated_at=? WHERE discovery_id=? AND version=? AND ignored=0',
+                (now, item['discovery_id'], row['version'])).rowcount
+        else:
+            changed = db.execute(
+                'UPDATE discoveries SET rating=?, version=version+1, updated_at=? WHERE discovery_id=? AND version=? AND rating NOT IN (\'S\',\'A\',\'B\',\'C\',\'D\')',
+                (rating, now, item['discovery_id'], row['version'])).rowcount
+        if changed:
+            store.change(db, row['target'], now)
 
 
 def run_pass(store, failures: dict, limit=3, settings=None) -> int:
@@ -197,7 +239,9 @@ def run_pass(store, failures: dict, limit=3, settings=None) -> int:
             if str(exc) in ('ai_not_configured', 'ai_key_rejected', 'ai_network', 'ai_rate_limited', 'ai_codex_missing'):
                 break
             continue
-        store.set_state(PREFIX + item['discovery_id'], clean(value, item['x_handle'], bio, domains))
+        suggestion = clean(value, item['x_handle'], bio, domains)
+        store.set_state(PREFIX + item['discovery_id'], suggestion)
+        apply_rating(store, item, suggestion)
         failures.pop(item['discovery_id'], None)
         stored += 1
     # Drop suggestions whose discovery no longer exists (72h retention).

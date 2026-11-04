@@ -192,7 +192,7 @@ def test_prefill_uses_deepseek_body(store, monkeypatch, tmp_path):
     assert ai_prefill.run_pass(store, {}) == 0
 
     write_cfg(tmp_path, monkeypatch, {"enabled": True, "provider": "deepseek", "api_key": KEY, "model": "deepseek-flash"})
-    payload = {"name": "SOL上的AI审计发射台", "website": "", "description": "简介", "notes": "", "category": ""}
+    payload = {"name": "SOL上的AI审计发射台", "website": "", "description": "简介", "notes": "", "category": "", "rating": "A", "rating_reason": "推文写了测试网进展。"}
     seen = scripted(monkeypatch, lambda url, headers, body: deepseek_response(payload))
     monkeypatch.setattr(
         FormalService, "page",
@@ -206,3 +206,4 @@ def test_prefill_uses_deepseek_body(store, monkeypatch, tmp_path):
     assert "预填" in body["messages"][0]["content"]
     current = FormalService(store).discovery(dto["discovery_id"], NOW)
     assert current["ai_suggestion"]["name"] == "SOL上的AI审计发射台"
+    assert current["ai_suggestion"]["rating"] == "A" and current["project"]["rating"] == "A"

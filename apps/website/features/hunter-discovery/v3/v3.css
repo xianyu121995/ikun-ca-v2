@@ -143,6 +143,12 @@
 .hunter-v3 .account small.followers {margin-top:1px;overflow:visible;text-overflow:clip;white-space:nowrap;color:#9ec0ce;}
 .hunter-v3 .ai-prefill-mark {color:#8fe3cf;font-weight:400;}
 .hunter-v3 .score-buttons .ai-hint {display:block;margin-top:1px;font-size:8px;font-weight:650;letter-spacing:0;line-height:1.1;color:#c7b4ae;}
+.hunter-v3 .score-buttons .ik-button.ai {background:transparent;border-style:dashed;}
+.hunter-v3 .score-buttons [data-grade="S"].ai {border-color:#d6a64a;color:#ffd481;}
+.hunter-v3 .score-buttons [data-grade="A"].ai {border-color:#3d9a86;color:#48eac9;}
+.hunter-v3 .score-buttons [data-grade="B"].ai {border-color:#4d7ea8;color:#8ccefb;}
+.hunter-v3 .score-buttons [data-grade="ignore"].ai {background:transparent;border-style:dashed;border-color:#8a6a62;color:#e7c4b0;}
+.hunter-v3 .score-buttons [data-grade="ignore"].on {background:#3a1d22;border-style:solid;border-color:#a15a52;color:#ffb3b3;}
 .hunter-v3 .status.ignored {color:#e7c4b0;}
 
 /* New-discovery sound alert controls (frontend-only) */

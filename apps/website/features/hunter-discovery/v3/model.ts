@@ -16,6 +16,11 @@ export function isAiRating(project:Pick<Project,'status'|'grade'|'dismissed'|'ra
 export function formatFollowers(count:number):string{if(!Number.isFinite(count)||count<0)return '';const n=Math.floor(count);if(n<10000)return n.toLocaleString('zh-CN');const wan=Math.round(n/1000)/10;return `${Number.isInteger(wan)?wan.toFixed(0):wan.toFixed(1)}万`;}
 /** Unsaved only after the owner changes the opened draft. AI overlay alone is not dirty. */
 export function projectDirty(baseline:string|null,draft:unknown):boolean{return baseline!==null&&draft!==null&&baseline!==JSON.stringify(draft);}
+export type ScoreButton = Grade | '忽略';
+/** Untouched AI suggestion. Null after the owner picks, or when the rating is already human. */
+export function aiSuggestedScore(input:{touched?:boolean;dismissed?:boolean;status?:Status;ratingSource?:RatingSource|null;aiRating?:string|null}):Exclude<ScoreButton,null>|null{if(input.touched||input.dismissed||input.status==='ignored'||input.ratingSource==='human')return null;const rating=input.aiRating;return rating==='S'||rating==='A'||rating==='B'||rating==='忽略'?rating:null;}
+/** solid = owner choice, ai = outlined suggestion, off = not the current choice. 待定 is solid only when nothing is suggested. */
+export function scoreButtonMode(input:{button:ScoreButton;draftGrade:Grade;dismissed?:boolean;suggestion:Exclude<ScoreButton,null>|null}):'solid'|'ai'|'off'{if(input.button==='忽略'){if(input.dismissed)return 'solid';if(input.suggestion==='忽略')return 'ai';return 'off';}if(input.dismissed)return 'off';if(input.suggestion)return input.suggestion===input.button?'ai':'off';return input.draftGrade===input.button?'solid':'off';}
 export interface Filters {query:string;time:string;grade:string;status:string}
 export const initialFilters:Filters={query:'',time:'all',grade:'all',status:'all'};
 export const statusText:Record<Status,string>={pending:'待研究',reviewed:'已研究',joined:'已加入监控',ignored:'已忽略'};

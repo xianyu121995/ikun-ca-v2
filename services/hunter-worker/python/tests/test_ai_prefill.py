@@ -251,12 +251,22 @@ def test_rating_source_stays_ai_until_the_owner_sets_a_rating(store):
     ai_prefill.apply_rating(store, dto, {'rating': '忽略', 'rating_reason': '不该覆盖人工评级。'})
     again = FormalService(store).discovery(dto['discovery_id'], NOW)
     assert again['rating_source'] == 'human' and again['project']['rating'] == 'A' and again['review_state'] != 'ignored'
-    with store.connect(True) as db:
-        db.execute("UPDATE discoveries SET rating='B', rating_source=NULL, name='', project_json=NULL, ignored=0 WHERE discovery_id=?", (dto['discovery_id'],))
     from hunterradar.migration import ensure_rating_reason
+    with store.connect(True) as db:
+        db.execute("UPDATE discoveries SET rating='B', rating_source=NULL, rating_reason=NULL, name='', project_json=NULL, ignored=0 WHERE discovery_id=?", (dto['discovery_id'],))
     assert ensure_rating_reason(store.path) is False
     with store.connect() as db:
+        assert db.execute('SELECT rating_source FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()[0] == 'human'
+    with store.connect(True) as db:
+        db.execute("UPDATE discoveries SET rating='S', rating_source=NULL, rating_reason='机制清楚。' WHERE discovery_id=?", (dto['discovery_id'],))
+    ensure_rating_reason(store.path)
+    with store.connect() as db:
         assert db.execute('SELECT rating_source FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()[0] == 'ai'
+    with store.connect(True) as db:
+        db.execute("UPDATE discoveries SET rating='待定', rating_source=NULL, rating_reason=NULL WHERE discovery_id=?", (dto['discovery_id'],))
+    ensure_rating_reason(store.path)
+    with store.connect() as db:
+        assert db.execute('SELECT rating_source FROM discoveries WHERE discovery_id=?', (dto['discovery_id'],)).fetchone()[0] is None
 
 
 def test_rating_reason_column_is_added_once(store):

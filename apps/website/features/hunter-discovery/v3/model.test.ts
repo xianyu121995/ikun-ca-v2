@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {createProjects,filterProjects,initialFilters,validateProject,normalizeProject,normalizeHandle,beginMonitoringSubmit,finishMonitoringSubmit,selectUnverifiedIds,discoveryStatusLabel,joinActionLabel,joinSubmissionBlocked,isTrackedDiscovery,liveMonitoringPatch,showAiIgnorePrefill,isAiRating,formatFollowers,projectDirty,SUBMITTING_LABEL,UNVERIFIED_LABEL} from './model';
+import {createProjects,filterProjects,initialFilters,validateProject,normalizeProject,normalizeHandle,beginMonitoringSubmit,finishMonitoringSubmit,selectUnverifiedIds,discoveryStatusLabel,joinActionLabel,joinSubmissionBlocked,isTrackedDiscovery,liveMonitoringPatch,showAiIgnorePrefill,isAiRating,formatFollowers,projectDirty,aiSuggestedScore,scoreButtonMode,SUBMITTING_LABEL,UNVERIFIED_LABEL} from './model';
 const now=Date.UTC(2026,9,15,4),rows=createProjects(now),sort={key:'time',direction:'desc'} as const;
 test('V3 reference fixture: synthetic identities, unique IDs, anonymous hunter counts, 18 records',()=>{assert.equal(rows.length,18);assert.equal(new Set(rows.map(p=>p.id)).size,18);assert(rows.every(p=>p.id.startsWith('demo-')&&p.hunters>=2));assert.equal(rows.filter(p=>p.status==='pending').length,8);assert.equal(rows.filter(p=>p.grade).length,10);assert.equal(rows.filter(p=>p.status==='joined').length,4);});
 test('search covers case-insensitive handle, bio, saved notes; whitespace does not hide rows',()=>{assert.equal(filterProjects(rows,{...initialFilters,query:' AETHER_LABS '},sort,now)[0]?.name,'Aether Labs');assert.equal(filterProjects(rows,{...initialFilters,query:'GPU'},sort,now)[0]?.name,'Vanta Compute');assert.equal(filterProjects(rows,{...initialFilters,query:'   '},sort,now).length,18);assert.equal(filterProjects([{...rows[0]!,notes:'研究记录'}],{...initialFilters,query:'研究记录'},sort,now).length,1);});
@@ -50,4 +50,16 @@ test('AI S/A/B is distinct from a human rating, and follower labels stay compact
   assert.equal(projectDirty(baseline,opened),false);
   assert.equal(projectDirty(baseline,{...opened,name:'改过'}),true);
   assert.equal(projectDirty(null,opened),false);
+  const ignore=aiSuggestedScore({status:'pending',ratingSource:'ai',aiRating:'忽略'});
+  assert.equal(scoreButtonMode({button:null,draftGrade:null,suggestion:ignore}),'off');
+  assert.equal(scoreButtonMode({button:'忽略',draftGrade:null,suggestion:ignore}),'ai');
+  assert.equal(scoreButtonMode({button:'S',draftGrade:null,suggestion:ignore}),'off');
+  const suggestedS=aiSuggestedScore({status:'pending',aiRating:'S'});
+  assert.equal(scoreButtonMode({button:'S',draftGrade:'S',suggestion:suggestedS}),'ai');
+  assert.equal(scoreButtonMode({button:null,draftGrade:'S',suggestion:suggestedS}),'off');
+  assert.equal(aiSuggestedScore({touched:true,aiRating:'忽略'}),null);
+  assert.equal(scoreButtonMode({button:null,draftGrade:null,suggestion:null}),'solid');
+  assert.equal(scoreButtonMode({button:'忽略',draftGrade:null,dismissed:true,suggestion:null}),'solid');
+  assert.equal(aiSuggestedScore({ratingSource:'human',aiRating:'A'}),null);
+  assert.equal(scoreButtonMode({button:'A',draftGrade:'A',suggestion:null}),'solid');
 });

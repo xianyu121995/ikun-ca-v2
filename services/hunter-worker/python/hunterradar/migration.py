@@ -82,9 +82,10 @@ def ensure_rating_reason(value) -> bool:
 
     Idempotent and outside the checksummed 001–005 chain, so a database already
     at version 5 picks the columns up on hunter startup without a version bump.
-    rating_source is 'ai' or 'human'. Rows already prefilled by AI (a rating,
-    no saved name, no project_json) are marked ai once. Returns True when this
-    call added a column.
+    rating_source is 'ai' or 'human'. A rated row is marked ai only when
+    rating_reason is set, because only apply_rating writes that column.
+    Every other rated row defaults to human. Unrated rows stay unset so a
+    later prefill can still run. Returns True when this call added a column.
     """
     path = location(value, require_exists=True)
     db = sqlite3.connect(path, timeout=5)
@@ -100,8 +101,10 @@ def ensure_rating_reason(value) -> bool:
             db.execute('ALTER TABLE discoveries ADD COLUMN rating_source TEXT')
             added = True
         db.execute("""UPDATE discoveries SET rating_source='ai'
-                      WHERE rating_source IS NULL AND rating IN ('S','A','B','忽略')
-                      AND COALESCE(project_json,'')='' AND COALESCE(name,'')='' AND ignored=0""")
+                      WHERE rating_source IS NULL
+                      AND rating_reason IS NOT NULL AND TRIM(rating_reason)<>''""")
+        db.execute("""UPDATE discoveries SET rating_source='human'
+                      WHERE rating_source IS NULL AND rating IN ('S','A','B','C','D','忽略')""")
         db.commit()
     except sqlite3.OperationalError as exc:
         db.rollback()

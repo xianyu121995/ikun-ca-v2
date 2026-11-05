@@ -6,6 +6,7 @@ import { TrackingPage } from '../features/tracking/final/tracking-page';
 import { emptyFilters, type Account, type Post, type Filters } from '../features/tracking/final/model';
 import {clearClientSession,invalidateClientData,keyedRefresh,peekClientData,readClientData,saveClientData} from '../lib/client-session-cache';
 import {loadTrackingSubscriptions,invalidateTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
+import {countIntendedMonitors,visibleMonitors} from '../lib/tracking-monitor-count';
 import {subscribeTrackingEvents} from '../lib/tracking-events-client';
 import { TrackingHomeEditor, type EditTarget } from './tracking-home-editor';
 import { useSiteVoice } from './voice-dock';
@@ -49,7 +50,8 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
     const [homeEdit, setHomeEdit] = useState<EditTarget | null>(null);
     // Owner 2026-10-19: 取消追踪 from a tweet = remove the subscription (also drops ikun's 6551 Watch); homepage untouched, old tweets stay.
     const [untrack, setUntrack] = useState<Subscription | null>(null);
-    const [subs, setSubs] = useState<Subscription[]>(snapshot?.subs??[]), [accounts, setAccounts] = useState<Account[]>(snapshot?.accounts??[]), [posts, setPosts] = useState<Post[]>(snapshot?.posts??[]);
+    const [subs, setSubs] = useState<Subscription[]>(snapshot?.subs??[]), [accounts, setAccounts] = useState<Account[]>(() => snapshot ? snapshot.accounts.filter(account => visibleMonitors(snapshot.subs).some(row => row.subscription_id === account.ui_key)) : []), [posts, setPosts] = useState<Post[]>(snapshot?.posts??[]);
+    const [monitorCount, setMonitorCount] = useState(() => countIntendedMonitors(snapshot?.subs ?? []));
     const [loading, setLoading] = useState(!snapshot), [error, setError] = useState(''), [cursor, setCursor] = useState<string | null>(snapshot?.cursor??null), [cursors, setCursors] = useState<(string | null)[]>(snapshot?.cursors??[null]), [page, setPage] = useState(snapshot?.page??0), [busy, setBusy] = useState(false);
     const [edit, setEdit] = useState<Subscription | null>(null), [editName, setEditName] = useState(''), [editNotes, setEditNotes] = useState(''), [command, setCommand] = useState('');
     const [add, setAdd] = useState({ name: '', x_handle: '', notes: '', rating: 'B', confirmed: false });
@@ -84,7 +86,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
         try {
             const started=Date.now(),path='tracking/latest?'+query.toString()+(cursors[page]?'&cursor='+encodeURIComponent(cursors[page]!):'');
             const [rows,data]=await Promise.all([loadTrackingSubscriptions(scope,true),readClientData(scope,path+'|'+queryView.current,()=>api(path),750)]);
-            const visible = rows.filter(r => !(r.desired_state === 'removed' && r.observed_state === 'absent' && r.operation_state === 'succeeded'));
+            const visible = visibleMonitors(rows);
             if (!mounted.current||latestView.current !== key)return;
             if(data.items.some((item:Activity)=>!rows.some(row=>row.subscription_id===item.subscription_id)))throw Error("VERSION_CONFLICT · 订阅投影已变化，请刷新");
             const grades=new Map<string,Activity['rating']>(data.items.map((item:Activity)=>[item.subscription_id,item.rating]));
@@ -93,6 +95,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             setTotals({matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating});
             setCursor(data.next_cursor);
             setSubs(rows);
+            setMonitorCount(countIntendedMonitors(rows));
             setAccounts(accountRows.filter(account=>visible.some(row=>row.subscription_id===account.ui_key)));
             setHistoryAccounts(accountRows);
             readAt.current=started;saveClientData(scope,'tracking:view',{subs:rows,posts:postRows,accounts:accountRows.filter(account=>visible.some(row=>row.subscription_id===account.ui_key)),historyAccounts:accountRows,cursor:data.next_cursor,totals:{matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating},filters,windowFrom,page,cursors,queryView:queryView.current});
@@ -214,7 +217,7 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             const row = subs.find(r => r.subscription_id === id);
             if (row && !(await operate(row, 'remove')))
                 throw Error('移除未确认');
-        }} live={{ connected,historyAccounts,server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password' onClick={voice.revoke}>修改本人密码</a><span onClickCapture={voice.revoke}><LogoutButton /></span></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
+        }} live={{ connected,historyAccounts,monitorCount,server:{filters,onFiltersChange:changeFilters,matchedTotal:totals?.matchedTotal??null,subscriptionCounts:totals?.subscriptionCounts??null},accountMenu: <details><summary>{username}</summary><a href='/auth/password' onClick={voice.revoke}>修改本人密码</a><span onClickCapture={voice.revoke}><LogoutButton /></span></details>, canManage: canManage && !error && !busy, refresh: () => void refresh(), onOpenPost: post => {
                 if (post.original_url && /^https:\/\/x\.com\/[A-Za-z0-9_]+\/status\/[0-9]+$/.test(post.original_url))
                     window.open(post.original_url, '_blank', 'noopener,noreferrer');
             },

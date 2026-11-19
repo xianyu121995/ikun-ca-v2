@@ -53,6 +53,22 @@ test('history, baseline, duplicates and reconnect do not notify twice', () => {
   assert.equal(sealWatermark('nope', 9), 9);
 });
 
+test('a new verified repository notifies once and does not speak untrusted text', () => {
+  const event = {
+    id: 9,
+    source: 'github-discover:FLAP',
+    kind: 'new',
+    title: 'FLAP 官方账号 flap-sh 新增公开仓库 Demo <script>',
+  };
+  assert.equal(shouldNotify(event, 0, new Set()), true);
+  assert.equal(shouldNotify(event, 9, new Set()), false);
+  assert.equal(voiceLine(event), 'FLAP，有新变化');
+  assert.equal(voiceLine({source: 'github-discover:FLAP', kind: 'baseline', title: '已建立 FLAP 官方仓库基线'}), null);
+  assert.equal(safeHref('https://github.com/flap-sh/Demo'), 'https://github.com/flap-sh/Demo');
+  assert.equal(safeHref('javascript:alert(1)'), '');
+  assert.equal(safeHref('https://user:pass@github.com/flap-sh/Demo'), '');
+});
+
 test('voice follows the gesture gate and speaks project plus motion once', () => {
   const event = {id: 7, source: 'docs:flap', kind: 'gone', title: '文档页面删除'};
   assert.equal(voiceLine(event), 'FLAP，有删除');

@@ -61,6 +61,45 @@
         {"repo": "four-meme-community/fourmeme-docs", "branch": "main"}
       ]
     },
+    "discover": {
+      "enabled": true,
+      "interval": 3600,
+      "token": "",
+      "owners": [
+        {
+          "login": "flap-sh",
+          "project": "FLAP",
+          "enabled": true,
+          "evidence": [
+            "https://docs.flap.sh/en/flap/developers/vault-developers/quick-start-vault-developers",
+            "https://docs.flap.sh/en/flap/v2/developers/bonding-curve/build-on-bonding-curve"
+          ]
+        }
+      ],
+      "unconfigured": [
+        {
+          "project": "four.meme",
+          "reason": "官方 GitBook 开发页只链接 four-meme-community 的两个文档仓库。不把该社区账号当作官方 owner，也没有找到官网明确指向的其他 GitHub 组织。"
+        }
+      ],
+      "doc_clues": [
+        {
+          "project": "FLAP",
+          "url": "https://docs.flap.sh/en/flap/developers/vault-developers/quick-start-vault-developers",
+          "allowed_logins": ["flap-sh"]
+        },
+        {
+          "project": "four.meme",
+          "url": "https://four-meme.gitbook.io/four.meme/developer/openfour-integration",
+          "allowed_logins": []
+        },
+        {
+          "project": "four.meme",
+          "url": "https://four-meme.gitbook.io/four.meme/developer/fourmeme-integration",
+          "allowed_logins": []
+        }
+      ]
+    },
     "schema": {
       "enabled": false,
       "interval": 900,

@@ -1,0 +1,242 @@
+{
+  "http": {
+    "timeout": 20,
+    "retries": 3,
+    "proxy": ""
+  },
+  "notify": {
+    "console": true,
+    "min_level": "info",
+    "heartbeat_hours": 24,
+    "webhook_url": "",
+    "telegram": {
+      "token": "",
+      "chat_id": ""
+    }
+  },
+  "probes": {
+    "docs": {
+      "enabled": true,
+      "interval": 1800,
+      "targets": [
+        {
+          "name": "fourmeme",
+          "mode": "llms",
+          "url": "https://four-meme.gitbook.io/four.meme/llms.txt",
+          "hot": ["mode", "openfour", "tapefour", "agent", "royalty", "subscription", "yield", "mining", "stock", "4stock", "protocol", "beta", "preview"],
+          "warm": ["guide", "developer", "integration", "update", "wallet"],
+          "ignore": ["/terms", "/brand/", "wallet-guide"]
+        },
+        {
+          "name": "flap",
+          "mode": "html",
+          "url": "https://docs.flap.sh/en/flap",
+          "href_prefix": "/en/flap",
+          "hot": ["mode", "protocol", "launch", "dock", "extension", "agent", "preview", "beta", "new"],
+          "warm": ["vault", "tax", "oracle", "trigger", "locker", "indexer", "economics", "media"],
+          "ignore": ["/en/flap/archive"]
+        },
+        {
+          "name": "flap-addresses",
+          "mode": "text",
+          "url": "https://docs.flap.sh/en/flap/v2/developers/deployed-contract-addresses",
+          "watch_addresses": true,
+          "watch_content": true
+        },
+        {
+          "name": "fourmeme-addresses",
+          "mode": "text",
+          "url": "https://raw.githubusercontent.com/four-meme-community/fourmeme-docs/main/docs/integration-guide.md",
+          "watch_addresses": true,
+          "watch_content": true
+        }
+      ]
+    },
+    "github": {
+      "enabled": true,
+      "interval": 1800,
+      "token": "",
+      "repos": [
+        {"repo": "four-meme-community/openfour-docs", "branch": "main"},
+        {"repo": "four-meme-community/fourmeme-docs", "branch": "main"}
+      ]
+    },
+    "schema": {
+      "enabled": false,
+      "interval": 900,
+      "targets": [
+        {
+          "name": "fourmeme-api",
+          "enabled": false,
+          "url": "https://four.meme/meme-api/v1/public/token/list?page=1&size=20",
+          "enum_paths": ["data.list[].mode", "data.list[].launchType"],
+          "headers": {}
+        }
+      ]
+    },
+    "onchain": {
+      "enabled": true,
+      "interval": 60,
+      "chains": {
+        "bsc": {
+          "chain_id": 56,
+          "transport": "wss",
+          "wss": "",
+          "http_polling": "disabled",
+          "explorer": {
+            "name": "bscscan",
+            "tx": "https://bscscan.com/tx/{tx}"
+          },
+          "lookback_blocks": 1000,
+          "max_range": 2000,
+          "log_addresses": [
+            "0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0",
+            "0x90497450f2a706f1951b5bdda52B4E5d16f34C06",
+            "0x000042108465206185A077Edc3F3fd2b49060000"
+          ],
+          "contracts": [
+            {"name": "flap-portal-bonding", "address": "0xe2cE6ab80874Fa9Fa2aAE65D277Dd6B8e65C9De0", "kind": "proxy"},
+            {"name": "flap-vault-portal", "address": "0x90497450f2a706f1951b5bdda52B4E5d16f34C06", "kind": "proxy"},
+            {"name": "flap-portal-pool", "address": "0x000042108465206185A077Edc3F3fd2b49060000", "kind": "proxy"},
+            {"name": "flap-token-dock-open", "address": "0x0000E34C74b9eC7b52F35528249Aa9C4AdE00000", "kind": "code"},
+            {"name": "flap-token-dock-verified", "address": "0x00004B06D90Df7a39491264744BF187D90Df0000", "kind": "code"},
+            {"name": "fourmeme-tokenmanager-v1", "address": "0xEC4549caDcE5DA21Df6E6422d448034B5233bFbC", "kind": "auto"},
+            {"name": "fourmeme-tokenmanager-v2", "address": "0x5c952063c7fc8610FFDB798152D69F0B9550762b", "kind": "auto"},
+            {"name": "fourmeme-helper3", "address": "0xF251F83e40a78868FcfA3FA4599Dad6494E46034", "kind": "auto"}
+          ],
+          "events": [
+            {
+              "name": "TokenExtensionEnabled",
+              "signature": "TokenExtensionEnabled(address,bytes32,address,uint8)",
+              "indexed": 0,
+              "watch": [
+                {
+                  "index": 1,
+                  "label": "extensionID",
+                  "entity_index": 0,
+                  "level": "crit",
+                  "known": {
+                    "0xc87a159bf445e83477134d6374216c321695c2f3e23ee3351c8d3df6ec740253": "extension array v1",
+                    "0x9c312f81d9a1b68ba5472ca93c5447d57f897fbf4a8c468b315a67fe8016d1ab": "Agent ID gate v1",
+                    "0x0f1f338177d85790dd81a6e795b59ae3a205cb498e034240ce2261bf753f13a4": "signed curve price v2",
+                    "0x3526f6a0e790306d64c896eeda5ec66052ea17889e20632ff0cf512923153dad": "signed curve price v1 (retired)"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TokenMigratorSet",
+              "signature": "TokenMigratorSet(address,uint8)",
+              "indexed": 0,
+              "watch": [
+                {
+                  "index": 1,
+                  "label": "migratorType",
+                  "entity_index": 0,
+                  "level": "crit",
+                  "known": {
+                    "0": "V3", "1": "V2", "2": "Uniswap V4", "3": "PancakeSwap Infinity CL"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "TokenDexPreferenceSet",
+              "signature": "TokenDexPreferenceSet(address,uint8,uint8)",
+              "indexed": 0,
+              "watch": [
+                {
+                  "index": 1,
+                  "label": "dexId",
+                  "entity_index": 0,
+                  "level": "warn",
+                  "known": {"0": "DEX0", "1": "DEX1", "2": "DEX2"}
+                },
+                {
+                  "index": 2,
+                  "label": "lpFeeProfile",
+                  "entity_index": 0,
+                  "level": "warn",
+                  "known": {"0": "STANDARD"}
+                }
+              ]
+            },
+            {
+              "name": "TokenVersionSet",
+              "signature": "TokenVersionSet(address,uint8)",
+              "indexed": 0,
+              "watch": [
+                {
+                  "index": 1,
+                  "label": "tokenVersion",
+                  "entity_index": 0,
+                  "level": "crit",
+                  "known": {
+                    "0": "legacy", "1": "legacy", "2": "v2 permit", "3": "goplus",
+                    "4": "taxed v1", "5": "taxed v2", "6": "taxed v3", "7": "v3 permit"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "FlapTaxVaultFactoryRegistered",
+              "signature": "FlapTaxVaultFactoryRegistered(address,bool,bool,uint8)",
+              "indexed": 0,
+              "watch": [
+                {
+                  "index": 0,
+                  "label": "vaultFactory",
+                  "entity_index": 0,
+                  "level": "crit",
+                  "known": {}
+                }
+              ]
+            }
+          ],
+          "unknown_scan": {
+            "enabled": false,
+            "window_blocks": 200,
+            "addresses": [],
+            "known_topics": []
+          }
+        },
+        "bsc_testnet": {
+          "enabled": false,
+          "transport": "wss",
+          "wss": "",
+          "http_polling": "disabled",
+          "explorer": {"name": "bscscan-testnet", "tx": "https://testnet.bscscan.com/tx/{tx}"},
+          "lookback_blocks": 500,
+          "log_addresses": [
+            "0x5bEacaF7ABCbB3aB280e80D007FD31fcE26510e9",
+            "0x027e3704fC5C16522e9393d04C60A3ac5c0d775f"
+          ],
+          "contracts": [
+            {"name": "flap-portal-testnet", "address": "0x5bEacaF7ABCbB3aB280e80D007FD31fcE26510e9", "kind": "proxy"},
+            {"name": "flap-vault-portal-testnet", "address": "0x027e3704fC5C16522e9393d04C60A3ac5c0d775f", "kind": "proxy"}
+          ],
+          "events": [
+            {
+              "name": "TokenExtensionEnabled",
+              "signature": "TokenExtensionEnabled(address,bytes32,address,uint8)",
+              "indexed": 0,
+              "watch": [{"index": 1, "label": "extensionID", "entity_index": 0, "level": "crit", "known": {}}]
+            }
+          ]
+        },
+        "fourmeme": {
+          "enabled": false,
+          "transport": "wss",
+          "wss": "",
+          "http_polling": "disabled",
+          "_limit": "空 TODO。没有官方事件签名和地址就保持禁用，不能把 BSC 上的 FLAP 事件或三个 TokenManager 身份探测说成 four.meme 事件监控。",
+          "explorer": {"name": "bscscan", "tx": "https://bscscan.com/tx/{tx}"},
+          "lookback_blocks": 200,
+          "log_addresses": [],
+          "contracts": [],
+          "events": []
+        }
+      }
+    }
+  }
+}

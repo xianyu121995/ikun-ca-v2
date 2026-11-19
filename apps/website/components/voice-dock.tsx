@@ -1,7 +1,8 @@
 'use client';
 /** Site-wide tweet voice (owner decision 2026-10-18, option 2): lives in the root layout so it keeps
  *  speaking while the owner moves between pages with client-side navigation. */
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import {VoiceContext} from './voice-context';
 import { VoiceControls, type TrackingVoiceController, type VoiceSession } from '@ikun/ui';
 import {loadTrackingSubscriptions} from '../lib/tracking-subscriptions-cache';
 import {publishTrackingEvent} from '../lib/tracking-events-client';
@@ -9,9 +10,9 @@ import { useTrackingVoice } from './tracking-voice';
 import {PublishedVoiceFeed} from '../lib/published-voice-feed';
 import {bindVoiceOwner} from '../lib/voice-browser-owner';
 import {VoiceTest} from './voice-test';
+import {RadarAlerts} from '../features/radar/radar-alerts';
 
-const VoiceContext = createContext<TrackingVoiceController | null>(null);
-export const useSiteVoice = () => useContext(VoiceContext);
+export {useSiteVoice} from './voice-context';
 
 type Me = { user_id: string; role: 'superadmin' | 'user'; must_change_password: boolean };
 
@@ -29,7 +30,7 @@ export function VoiceDock({ children }: { children: ReactNode }) {
     return () => { stopped = true; };
   }, []);
   // Keep the page under the same provider before/after auth resolves; moving it into Live remounted it.
-  return <VoiceContext.Provider value={controller}>{children}{session&&<Live session={session} onController={setController}/>}</VoiceContext.Provider>;
+  return <VoiceContext.Provider value={controller}>{children}{session&&<Live session={session} onController={setController}/>}{session&&<RadarAlerts userId={session.user_id}/>}</VoiceContext.Provider>;
 }
 
 function Live({ session, onController }: { session: VoiceSession; onController:(controller:ReturnType<typeof useTrackingVoice>['controller'])=>void }) {

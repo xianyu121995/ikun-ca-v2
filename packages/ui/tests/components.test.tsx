@@ -6,16 +6,25 @@ import { createRef } from "react";
 import * as publicUi from "../src/index.js";
 import { Alert, AppShell, BUSINESS_NAVIGATION, Button, DataTable, Dialog, Input, LoginPanel, ScoreBadge, SearchInput, isNavigationActive } from "../src/index.js";
 
-test("business navigation has exactly three entries and matches complete path segments", () => {
-  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.label), ["主页", "猎手监控", "猎手项目监控"]);
+test("business navigation keeps the workspace entries and highlights only the current route", () => {
+  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.label), ["主页", "猎手监控", "猎手项目监控", "flap+four监控"]);
+  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.href), ["/", "/hunter", "/tracking", "/radar"]);
   assert.equal(isNavigationActive("/hunter/signals?sort=time", "/hunter"), true);
   assert.equal(isNavigationActive("/hunter-extra", "/hunter"), false);
   assert.equal(isNavigationActive("/hunter", "/"), false);
   assert.equal(isNavigationActive("/?view=all", "/"), true);
-  const html = renderToStaticMarkup(<AppShell pathname="/tracking/abc" account={{ name: "示例" }}>内容</AppShell>);
-  assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
-  assert.match(html, /aria-label="猎手项目监控"/);
-  assert.match(html, /href="\/auth"/);
+  assert.equal(isNavigationActive("/radar", "/radar"), true);
+  assert.equal(isNavigationActive("/radar?from=nav", "/radar"), true);
+  assert.equal(isNavigationActive("/prototypes/radar", "/radar"), false);
+  assert.equal(isNavigationActive("/hunter", "/radar"), false);
+  const tracking = renderToStaticMarkup(<AppShell pathname="/tracking/abc" account={{ name: "示例" }}>内容</AppShell>);
+  assert.equal((tracking.match(/aria-current="page"/g) ?? []).length, 1);
+  assert.match(tracking, /aria-label="猎手项目监控"/);
+  assert.match(tracking, /href="\/auth"/);
+  const radar = renderToStaticMarkup(<AppShell pathname="/radar" account={{ name: "admin", detail: "超级管理员" }}>内容</AppShell>);
+  assert.equal((radar.match(/aria-current="page"/g) ?? []).length, 1);
+  assert.match(radar, /aria-current="page"[^>]*aria-label="flap\+four监控"|aria-label="flap\+four监控"[^>]*aria-current="page"/);
+  assert.doesNotMatch(radar, /aria-current="page"[^>]*aria-label="猎手监控"/);
 });
 
 test("pending button prevents duplicate submission and retains its label", () => {

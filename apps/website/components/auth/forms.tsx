@@ -29,7 +29,7 @@ async function csrfToken() {
 }
 function safeNext() {
   const path=new URLSearchParams(location.search).get('next')??'/';
-  return /^\/(?:$|hunter(?:\/|$)|tracking(?:\/|$))/.test(path)&&!/[\\\r\n]/.test(path)?path:'/';
+  return /^\/(?:$|hunter(?:\/|$)|tracking(?:\/|$)|radar$|prototypes\/radar$)/.test(path)&&!/[\\\r\n]/.test(path)?path:'/';
 }
 export function LoginForm() {
   const [pending,setPending]=useState(false),[error,setError]=useState('');

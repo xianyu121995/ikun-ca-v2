@@ -1,0 +1,37 @@
+# 模板。不要在未批准时安装，不要覆盖现有网站、猎手、追踪或隧道 unit。
+# 占位符由运维替换。工作目录必须是这份隔离代码，不能是 /home/ubuntu/sniper。
+
+[Unit]
+Description=ikun.ca isolated FLAP/four.meme mode radar
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=radar
+Group=radar
+WorkingDirectory=/opt/mode-radar
+EnvironmentFile=/etc/mode-radar.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=TZ=Asia/Shanghai
+ExecStart=/usr/bin/python3 -X utf8 -m radar.main --loop --db /var/lib/mode-radar/radar.sqlite3
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+StateDirectory=mode-radar
+ReadWritePaths=/var/lib/mode-radar
+
+[Install]
+WantedBy=multi-user.target

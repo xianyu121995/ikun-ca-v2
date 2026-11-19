@@ -104,6 +104,28 @@ def test_race_keeps_the_existing_draft(store, monkeypatch):
     assert protected(store, item['discovery_id'])[3]['name'] == '先写入'
 
 
+def test_human_edit_during_generation_is_left_in_place(store, monkeypatch):
+    discover(store)
+    item = add_target(store, 'editduring', 'A protocol.', '711', [{'text': 'testnet open', 'links': []}])
+    before = protected(store, item['discovery_id'])
+
+    def fake(prompt):
+        with store.connect(True) as db:
+            db.execute(
+                "UPDATE discoveries SET ignored=1, notes=?, project_json=?, rating='S', rating_source='human' WHERE discovery_id=?",
+                ('human note', '{"name":"human"}', item['discovery_id']))
+        return {'name': '草稿', 'website': '', 'description': '简介', 'notes': '模型备注', 'rating': '忽略', 'rating_reason': '只进草稿'}
+
+    monkeypatch.setattr(gemini, 'enabled', lambda: True)
+    report = run(store.path, [('handle', 'editduring')], apply=True, interval=0, sleep=lambda _s: None, generate=fake)
+    assert report['items'][0]['action'] == 'wrote'
+    current, changes, audits, draft = protected(store, item['discovery_id'])
+    assert current['ignored'] == 1 and current['notes'] == 'human note' and current['project_json'] == '{"name":"human"}'
+    assert current['rating'] == 'S' and current['rating_source'] == 'human'
+    assert changes == before[1] and audits == before[2]
+    assert draft['rating'] == '忽略' and draft['notes'] == '模型备注' and current['notes'] == 'human note'
+
+
 def test_dry_run_does_not_call_the_model_or_write(store, monkeypatch):
     discover(store)
     item = add_target(store, 'dryhandle', 'A protocol.', '801', [{'text': 'testnet', 'links': []}])

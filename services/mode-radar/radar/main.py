@@ -15,6 +15,7 @@ from .core.http import Http
 from .core.notify import Notifier
 from .core.state import State
 from .probes.base import Ctx, Signal
+from .probes.discover import DiscoverProbe
 from .probes.docs import DocsProbe
 from .probes.github import GithubProbe
 from .probes.onchain import OnchainProbe
@@ -23,6 +24,7 @@ from .probes.schema import SchemaProbe
 PROBES = {
     "docs": DocsProbe,
     "github": GithubProbe,
+    "discover": DiscoverProbe,
     "schema": SchemaProbe,
     "onchain": OnchainProbe,
 }
@@ -69,6 +71,9 @@ def apply_env(cfg, env):
         chains.setdefault("bsc", {})["ignored_http_rpc"] = "ignored"
     if env.get("RADAR_ALLOW_EXTERNAL_NOTIFY") == "1":
         cfg.setdefault("notify", {})["allow_external"] = True
+    token = ((cfg.get("probes") or {}).get("github") or {}).get("token") or ""
+    if token:
+        cfg.setdefault("probes", {}).setdefault("discover", {})["token"] = token
     return cfg
 
 

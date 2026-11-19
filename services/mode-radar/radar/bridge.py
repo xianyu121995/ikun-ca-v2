@@ -92,7 +92,7 @@ def snapshot(cfg, state, started_at):
         "sample": False,
         "chains": chains,
         "probes": probes,
-        "coverage": coverage_report(cfg),
+        "coverage": coverage_report(cfg, state),
         "events": rows,
         "latest_event_id": state.max_event_id(),
     }

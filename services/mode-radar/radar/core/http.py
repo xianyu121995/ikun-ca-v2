@@ -20,6 +20,15 @@ class HttpError(RuntimeError):
     pass
 
 
+def _header_map(headers):
+    out = {}
+    if not headers:
+        return out
+    for key in headers.keys():
+        out[key.lower()] = headers.get(key)
+    return out
+
+
 class Http:
     def __init__(self, timeout=20, retries=3, user_agent=DEFAULT_UA, proxy=None):
         self.timeout = timeout
@@ -65,6 +74,31 @@ class Http:
             if attempt < self.retries - 1:
                 time.sleep(min(8, 1.5 * (2 ** attempt)) * (0.7 + random.random() * 0.6))
         raise last
+
+    def conditional_get(self, url, headers=None, timeout=None):
+        """One GET. Returns (status, headers, body). 304 and 4xx are results, not retries."""
+        hdrs = {
+            "User-Agent": self.user_agent,
+            "Accept": "application/vnd.github+json, application/json;q=0.8, text/plain;q=0.7",
+            "Accept-Encoding": "gzip",
+        }
+        if headers:
+            hdrs.update(headers)
+        req = urllib.request.Request(url, headers=hdrs, method="GET")
+        try:
+            with self._opener.open(req, timeout=timeout or self.timeout) as resp:
+                data = resp.read()
+                if resp.headers.get("Content-Encoding") == "gzip":
+                    data = gzip.GzipFile(fileobj=io.BytesIO(data)).read()
+                return resp.status, _header_map(resp.headers), data
+        except urllib.error.HTTPError as e:
+            data = e.read() if e.fp else b""
+            if e.headers and e.headers.get("Content-Encoding") == "gzip" and data:
+                try:
+                    data = gzip.GzipFile(fileobj=io.BytesIO(data)).read()
+                except OSError:
+                    pass
+            return e.code, _header_map(e.headers), data
 
     def get_text(self, url, **kw):
         status, data = self.request("GET", url, **kw)

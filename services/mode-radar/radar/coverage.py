@@ -23,8 +23,11 @@ def chain_mode(ccfg) -> str:
     return "configured"
 
 
-def coverage_report(cfg) -> list[dict]:
+def coverage_report(cfg, state=None) -> list[dict]:
     probes = cfg.get("probes") or {}
+    discover = probes.get("discover") or {}
+    owners = [o.get("login") for o in (discover.get("owners") or []) if o.get("enabled", True) and o.get("login")]
+    missing = [item.get("project") for item in (discover.get("unconfigured") or [])]
     docs = [t.get("name") for t in (probes.get("docs") or {}).get("targets") or [] if t.get("enabled", True)]
     repos = [r.get("repo") for r in (probes.get("github") or {}).get("repos") or [] if r.get("enabled", True)]
     bsc = _chain(cfg, "bsc")
@@ -53,9 +56,9 @@ def coverage_report(cfg) -> list[dict]:
             "id": "flap-github",
             "project": "FLAP",
             "kind": "仓库",
-            "state": "unconfigured",
-            "summary": "附件没有配置 FLAP 源代码仓库。",
-            "limit": "不能把 four.meme 社区仓库说成 FLAP 代码覆盖。",
+            "state": "configured" if "flap-sh" in owners else "unconfigured",
+            "summary": "已核实官方 GitHub owner：flap-sh。每小时列出其公开仓库，发现新仓库后站内提醒。",
+            "limit": "依据是 docs.flap.sh 开发页上的 github.com/flap-sh 链接。不读取、不执行仓库内容。无 token 时和文件树探针共用每小时 60 次 API 额度，所以不是秒级。four.meme 社区仓库不算 FLAP。",
         },
         {
             "id": "flap-identity",
@@ -86,8 +89,8 @@ def coverage_report(cfg) -> list[dict]:
             "project": "four.meme",
             "kind": "仓库",
             "state": "configured" if repos else "unconfigured",
-            "summary": "、".join(repos) if repos else "未配置仓库",
-            "limit": "这是社区文档仓库的文件树，不是官方私有仓库，也不是完整协议审计。",
+            "summary": ("仍只跟踪社区文档仓库文件树：" + "、".join(repos)) if repos else "未配置仓库",
+            "limit": "官方 owner 未配置：" + ("、".join(missing) if missing else "没有已核实的 four.meme GitHub 组织") + "。不把 four-meme-community 的新仓库当成官方发现，也不做全网关键词搜索。",
         },
         {
             "id": "four-identity",

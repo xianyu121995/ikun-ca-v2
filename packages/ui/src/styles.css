@@ -176,8 +176,9 @@
   .ik-theme .ik-sidebar { position: static; height: auto; padding: 14px 12px 10px; border-right: 0; border-bottom: 1px solid var(--ik-border); }
   .ik-theme .ik-brand { margin: 0 4px 14px; }
   .ik-theme .ik-nav-label, .ik-theme .ik-nav-arrow, .ik-theme .ik-sidebar-footer { display: none; }
-  .ik-theme .ik-nav { display: flex; gap: 4px; }
-  .ik-theme .ik-nav-link { flex: 1; justify-content: center; gap: 5px; padding: 8px 4px; font-size: 11px; min-width: 0; }
+  .ik-theme .ik-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+  .ik-theme .ik-nav-link { flex: 1 1 calc(33.33% - 4px); justify-content: center; gap: 5px; padding: 8px 4px; font-size: 11px; min-width: 0; }
+  .ik-theme .ik-nav-link > span { min-width: 0; overflow-wrap: anywhere; text-align: center; line-height: 1.15; }
   .ik-theme .ik-nav-link svg { width: 15px; flex-shrink: 0; }
   .ik-theme .ik-sidebar-bottom { position: absolute; top: 16px; right: 16px; padding: 0; margin: 0; }
   .ik-theme .ik-account-link { border: 0; padding: 0; }

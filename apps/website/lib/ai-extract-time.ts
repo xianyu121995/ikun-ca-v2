@@ -35,15 +35,21 @@ function proxyOf(value: unknown) {
   return typeof value === 'string' && PROXY.test(value) ? value : undefined;
 }
 
-function deepseekKey(data: Record<string, unknown>, env: NodeJS.ProcessEnv) {
-  for (const value of [env.DEEPSEEK_API_KEY, data.deepseek_api_key, data.api_key]) {
+function envValue(env: object, key: string) {
+  if (!(key in env)) return undefined;
+  const value = (env as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function deepseekKey(data: Record<string, unknown>, env: object) {
+  for (const value of [envValue(env, 'DEEPSEEK_API_KEY'), data.deepseek_api_key, data.api_key]) {
     if (typeof value === 'string' && KEY.test(value)) return value;
   }
   return null;
 }
 
 /** Same gate the route uses. A missing or non-codex/deepseek provider stays unconfigured. */
-export function configFrom(data: unknown, env: NodeJS.ProcessEnv = {}): AiConfig | null {
+export function configFrom(data: unknown, env: object = {}): AiConfig | null {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
   const row = data as Record<string, unknown>;
   if (row.enabled === false) return null;
@@ -61,7 +67,7 @@ export function configFrom(data: unknown, env: NodeJS.ProcessEnv = {}): AiConfig
   return { provider: 'deepseek', apiKey, model, baseUrl, timeoutMs, proxy };
 }
 
-export function unconfiguredMessage(data: unknown, env: NodeJS.ProcessEnv = {}) {
+export function unconfiguredMessage(data: unknown, env: object = {}) {
   if (data && typeof data === 'object' && !Array.isArray(data) && (data as { provider?: unknown }).provider === 'deepseek' && !deepseekKey(data as Record<string, unknown>, env)) {
     return 'DeepSeek 未配置密钥';
   }
@@ -139,3 +145,9 @@ export async function deepseekExtract(cfg: DeepSeekConfig, prompt: string, fetch
     clearTimeout(timer);
   }
 }
+
+type Assert<T extends true> = T;
+type _processEnvFits = Assert<NodeJS.ProcessEnv extends Parameters<typeof configFrom>[1] ? true : never>;
+type _emptyEnvFits = Assert<Record<string, never> extends Parameters<typeof configFrom>[1] ? true : never>;
+type _processEnvMessageFits = Assert<NodeJS.ProcessEnv extends Parameters<typeof unconfiguredMessage>[1] ? true : never>;
+type _emptyMessageFits = Assert<Record<string, never> extends Parameters<typeof unconfiguredMessage>[1] ? true : never>;

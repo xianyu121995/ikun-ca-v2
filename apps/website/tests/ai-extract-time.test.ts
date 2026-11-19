@@ -55,6 +55,8 @@ test('codex config is unchanged and deepseek is selected from the same file', ()
   assert.equal(deepseek.baseUrl, DEEPSEEK_BASE);
   assert.equal(deepseek.timeoutMs, 60_000);
   assert.equal(configFrom({ provider: 'deepseek' }), null);
+  assert.equal(configFrom({ enabled: true, provider: 'deepseek', api_key: KEY }).provider, 'deepseek');
+  assert.equal(unconfiguredMessage({ provider: 'deepseek' }, {}), 'DeepSeek 未配置密钥');
   assert.equal(unconfiguredMessage({ provider: 'deepseek' }), 'DeepSeek 未配置密钥');
   assert.match(unconfiguredMessage({ provider: 'codex', enabled: false }), /Codex 或 DeepSeek/);
 });

@@ -1,8 +1,10 @@
 """Loopback read-only snapshot and SSE bridge.
 
-The website is the only intended client. This server binds 127.0.0.1, requires a
-shared bearer token, and never accepts a URL, file path, or webhook from the caller.
-A fresh SSE connection does not replay history. Last-Event-ID resumes after that id.
+The ikun.ca website no longer calls this bridge. While mode-radar is still running
+it binds 127.0.0.1, requires a shared bearer token, and never accepts a URL, file
+path, or webhook from the caller. Stopping the process is a separate ops step and
+must keep /var/lib/mode-radar. A fresh SSE connection does not replay history.
+Last-Event-ID resumes after that id.
 """
 
 from __future__ import annotations

@@ -13,7 +13,7 @@
 - 文档和仓库仍是限速定时检查。页面或文件消失会记成删除。抓取失败不会把整个目录当成被删光。
 - four.meme 的事件枚举仍然未配置。名为 `fourmeme` 的链是空的，保持禁用。BSC 合约表里的 TokenManager 只做身份比对，不代表事件已覆盖。
 - 新公开仓库只在已核实的 GitHub owner 下发现。当前只有官方文档写明的 `flap-sh`。`four-meme-community` 仍只做原来的文件树对比，不把它的新仓库当成官方。证据见 `docs/radar/GITHUB-OWNERS.md`。发现周期默认 1 小时，不读仓库内容。
-- 网站通知走本机回环上的只读 HTTP + SSE，不走未认证的公网 webhook。10 分钟静态导出不能当作及时通知。
+- ikun.ca 网站已去掉 flap+four 页面、侧栏和站内通知，不再连接 `127.0.0.1:3921`。进程仍在时，本机回环上的只读 HTTP + SSE 还会监听；停掉它是单独的运维步骤，并且要保留 `/var/lib/mode-radar`。外部 webhook 默认关闭。
 
 ## 命令
 
@@ -30,4 +30,4 @@ python3 -m unittest discover -s tests
 
 ## 不要做的事
 
-不要执行任何会安装 systemd、创建用户或重启现有网站/猎手/追踪/隧道的脚本。部署步骤写在 `docs/radar/DEPLOY.md`，等明确批准后再由运维执行。
+不要执行任何会安装 systemd、创建用户、停止 mode-radar、删除 `/var/lib/mode-radar`，或重启现有网站/猎手/追踪/隧道的脚本。网站入口已经从代码里去掉。停服务并保留数据是之后的单独步骤，写在 `docs/radar/DEPLOY.md`，等明确批准后再由运维执行。

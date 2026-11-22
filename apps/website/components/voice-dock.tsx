@@ -10,7 +10,6 @@ import { useTrackingVoice } from './tracking-voice';
 import {PublishedVoiceFeed} from '../lib/published-voice-feed';
 import {bindVoiceOwner} from '../lib/voice-browser-owner';
 import {VoiceTest} from './voice-test';
-import {RadarAlerts} from '../features/radar/radar-alerts';
 
 export {useSiteVoice} from './voice-context';
 
@@ -30,7 +29,7 @@ export function VoiceDock({ children }: { children: ReactNode }) {
     return () => { stopped = true; };
   }, []);
   // Keep the page under the same provider before/after auth resolves; moving it into Live remounted it.
-  return <VoiceContext.Provider value={controller}>{children}{session&&<Live session={session} onController={setController}/>}{session&&<RadarAlerts userId={session.user_id}/>}</VoiceContext.Provider>;
+  return <VoiceContext.Provider value={controller}>{children}{session&&<Live session={session} onController={setController}/>}</VoiceContext.Provider>;
 }
 
 function Live({ session, onController }: { session: VoiceSession; onController:(controller:ReturnType<typeof useTrackingVoice>['controller'])=>void }) {

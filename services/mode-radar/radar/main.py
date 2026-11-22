@@ -344,7 +344,7 @@ def main(argv=None):
             bridge.start()
             print(f"[bridge] 本机只读 http://{bridge.host}:{bridge.port}")
         except RuntimeError as exc:
-            print(f"[bridge] 未启动（网站会显示未配置）：{exc}")
+            print(f"[bridge] 未启动（网站已不再读取这座桥）：{exc}")
         print(f"radar {VERSION} 启动 | db={state.path}")
         for probe in probes:
             print(f"  - {probe.name:8} 每 {probe.interval}s")

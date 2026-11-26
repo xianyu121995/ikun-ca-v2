@@ -4,6 +4,24 @@ import type {EditorDraft,ProjectMilestone} from './reference-types';
 
 // Owner decision 2026-10-19: fixed project types; '' / null = 未分类.
 export const PROJECT_TYPES=['NFT','发射台','新协议','撸毛','链游'] as const;
+export type ProjectType=(typeof PROJECT_TYPES)[number];
+/** Toolbar value shared by the homepage list and 猎手项目追踪. */
+export type ProjectTypeFilter='all'|ProjectType|'none';
+export const PROJECT_TYPE_FILTERS=['all',...PROJECT_TYPES,'none'] as const satisfies readonly ProjectTypeFilter[];
+/** Empty or missing category is 未分类. Same predicate as the homepage type chips. */
+export function matchesProjectType(category:string|null|undefined,filter:string):boolean {
+  if(filter==='all')return true;
+  if(filter==='none')return !category;
+  return category===filter;
+}
+export function projectTypeLabel(value:string):string {
+  return value==='all'?'全部类型':value==='none'?'未分类':value;
+}
+export function parseProjectTypeFilter(value:string|null|undefined):ProjectTypeFilter {
+  const category=value??'all';
+  if(category!=='all'&&category!=='none'&&!(PROJECT_TYPES as readonly string[]).includes(category))throw Error('VALIDATION');
+  return category as ProjectTypeFilter;
+}
 export const referenceStageLabels={todo:'待开始',researching:'研究中',watching:'持续跟踪',participating:'参与中',completed:'已完成',paused:'已暂停'} as const;
 export function dateNumber(value:string|null|undefined):number|null {
   if(!value||!/^\d{4}-\d{2}-\d{2}$/.test(value))return null;

@@ -29,6 +29,8 @@
 .timeSelect :global(.ik-label) { position:absolute; height:1px; width:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 .check { display:flex; align-items:center; gap:7px; white-space:nowrap; color:var(--ik-secondary); font-size:11px; cursor:pointer; }
 .check input { accent-color:var(--ik-accent); height:14px; width:14px; }
+.typeFilter { display:inline-flex; align-items:center; gap:6px; max-width:100%; color:var(--ik-secondary); font-size:11px; white-space:nowrap; }
+.typeFilter select { width:112px; max-width:100%; min-height:36px; padding:0 8px; border:1px solid var(--ik-control-border); border-radius:var(--ik-control-radius); background:var(--ik-bg); color:var(--ik-text); font:inherit; font-size:12px; }
 .feedSection { scroll-margin-top:20px; }
 .feedHeading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:13px 0 9px; }
 .workspace .feedHeading h2 { font-size:13px; }
@@ -115,6 +117,8 @@
   .stat strong, .manageStat > strong { font-size:23px; }
   .search { flex-basis:100%; max-width:none; }
   .filters { gap:6px !important; }
+  .typeFilter { flex:1 1 140px; }
+  .typeFilter select { flex:1; width:auto; min-width:0; }
   .tweet { grid-template-columns:minmax(0,1fr) 28px; gap:9px; padding:11px; }
   .tweetNote { grid-column:1; grid-row:1; flex-direction:row; align-items:center; justify-content:flex-start; min-height:0; border-right:0; border-bottom:1px solid var(--ik-border); padding:0 0 8px; gap:7px; }
   .tweetNote > strong { font-size:10px; }

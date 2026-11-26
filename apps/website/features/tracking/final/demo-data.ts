@@ -1,16 +1,16 @@
 import type { Account, Grade, Post } from "./model";
 /** Fictitious posts and metrics copied from the approved UI reference, not X data. */
 const accountRows = [
-  ["Hyperliquid", "HyperliquidX", "S", "重点关注主网上线", "H"],
-  ["EigenLayer", "eigenlayer", "A", "再质押生态进度", "Ξ"],
-  ["Uniswap Labs", "Uniswap", "A", "关注 v4 上线进度", "U"],
-  ["Blur", "blur_io", "B", "API 限额调整", "BL"],
-  ["Friend.tech", "friendtech", "B", "社区活跃度观察", "F"],
-  ["Coinbase", "coinbase", "B", "新产品发布", "C"],
-  ["Arbitrum", "arbitrum", "B", "L2 生态跟踪", "A"],
-  ["Optimism", "Optimism", "B", "生态发展动态", "O"],
-  ["Base", "base", "A", "开发者工具更新", "C"],
-  ["Aave", "aave", "S", "借贷产品版本升级", "A"],
+  ["Hyperliquid", "HyperliquidX", "S", "重点关注主网上线", "H", "新协议"],
+  ["EigenLayer", "eigenlayer", "A", "再质押生态进度", "Ξ", "撸毛"],
+  ["Uniswap Labs", "Uniswap", "A", "关注 v4 上线进度", "U", "新协议"],
+  ["Blur", "blur_io", "B", "API 限额调整", "BL", "NFT"],
+  ["Friend.tech", "friendtech", "B", "社区活跃度观察", "F", ""],
+  ["Coinbase", "coinbase", "B", "新产品发布", "C", "发射台"],
+  ["Arbitrum", "arbitrum", "B", "L2 生态跟踪", "A", "链游"],
+  ["Optimism", "Optimism", "B", "生态发展动态", "O", ""],
+  ["Base", "base", "A", "开发者工具更新", "C", "NFT"],
+  ["Aave", "aave", "S", "借贷产品版本升级", "A", "发射台"],
 ] as const;
 const postRows: [number, number, string, string, string, string, boolean, string, string, string][] = [
   [1, 12, "Introducing HyperEVM mainnet. A fully on-chain, high-performance execution environment built for the next generation of applications. (Demo post)", "342", "1.2K", "4.8K", true, "HyperEVM", "Mainnet Update", "teal"],
@@ -27,7 +27,7 @@ const postRows: [number, number, string, string, string, string, boolean, string
   [6, 3200, "More onchain experiences are coming to the ecosystem. (Demo post)", "101", "246", "1.5K", false, "", "", "teal"],
 ];
 export function createDemoData(now: number) {
-  const accounts: Account[] = accountRows.map(([name, handle, grade, note, avatar], index) => ({ ui_key: `demo-account-${index + 1}`, name, handle, grade: grade as Grade, note, avatar, status: "running" }));
+  const accounts: Account[] = accountRows.map(([name, handle, grade, note, avatar, category], index) => ({ ui_key: `demo-account-${index + 1}`, name, handle, grade: grade as Grade, note, avatar, category: category || null, status: "running" }));
   const posts: Post[] = postRows.map(([account, minutes, body, comments, reposts, likes, important, title, caption, theme], index) => ({
     ui_key: `demo-post-${index + 1}`, account_key: `demo-account-${account}`, published_at: new Date(now - minutes * 60000).toISOString(), body, comments, reposts, likes, important,
     media: title ? { kind: "demo", title, caption, theme } : null,

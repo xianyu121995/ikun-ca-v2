@@ -28,6 +28,23 @@ test("S/A/B and important filters combine", () => {
   for (const [grade, count] of [["S", 3], ["A", 3], ["B", 6]] as const) assert.equal(selectPosts(accounts, posts, { ...emptyFilters, grade }, now).length, count);
   assert.equal(selectPosts(accounts, posts, { ...emptyFilters, grade: "S", important: true }, now).length, 2);
 });
+test("project type filter uses the homepage taxonomy and combines with the other filters", () => {
+  const { accounts, posts } = seed();
+  assert.equal(emptyFilters.category, "all");
+  assert.equal(selectPosts(accounts, posts, emptyFilters, now).length, 12);
+  for (const [category, count] of [["NFT", 2], ["发射台", 3], ["新协议", 3], ["撸毛", 1], ["链游", 1], ["none", 2]] as const) {
+    assert.equal(selectPosts(accounts, posts, { ...emptyFilters, category }, now).length, count);
+  }
+  const blank = { ...accounts[0]!, ui_key: "bare", category: undefined };
+  const barePost = { ...posts[0]!, ui_key: "bare-post", account_key: "bare" };
+  assert.equal(selectPosts([blank], [barePost], { ...emptyFilters, category: "none" }, now).length, 1);
+  assert.equal(selectPosts([blank], [barePost], { ...emptyFilters, category: "NFT" }, now).length, 0);
+  assert.equal(selectPosts(accounts, posts, { ...emptyFilters, category: "新协议", grade: "S", important: true }, now).length, 1);
+  assert.equal(selectPosts(accounts, posts, { ...emptyFilters, category: "NFT", query: "API rate limits" }, now).length, 1);
+  assert.equal(selectPosts(accounts, posts, { ...emptyFilters, category: "链游", hours: "24" }, now).length, 0);
+  assert.equal(selectPosts(accounts, posts, { ...emptyFilters, category: "发射台", hours: "24", grade: "S" }, now).length, 1);
+  assert.equal(selectPosts(accounts, posts, { ...emptyFilters, category: "DeFi" as "none" }, now).length, 0);
+});
 test("time windows use published time, rejecting unknown or future timestamps", () => {
   const { accounts, posts } = seed();
   assert.equal(selectPosts(accounts, posts, { ...emptyFilters, hours: "24" }, now).length, 9);

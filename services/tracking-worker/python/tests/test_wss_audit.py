@@ -55,12 +55,10 @@ def test_rest_failure_or_stale_observation_never_blocks_authorized_wss(worker,st
     assert 'watch_observation_stale' not in reasons(caplog)
 
 
-async def test_emergency_rest_pause_makes_no_provider_requests(worker,vendor,monkeypatch):
-    from tracking.remote import RemoteError
+async def test_legacy_6551_pause_does_not_block_filtered_stream_rules(worker,vendor,monkeypatch):
     monkeypatch.setenv('IKUN_6551_REST_PAUSED','1')
-    with pytest.raises(RemoteError,match='quota_exhausted'):
-        await worker.remote.watches()
-    assert vendor.calls==[]
+    assert await worker.remote.watches()=={}
+    assert any(name=='rules' for name,_ in vendor.calls)
 
 
 async def test_handshake_logs_only_status_never_token_or_body(caplog):

@@ -35,6 +35,6 @@ async def test_new_account_restart_reconnect_and_pending_jobs_stay_passive(worke
     assert worker.ledger.jobs(row['subscription_id'])==existing
     with worker.ledger.db() as db:
         assert db.execute("SELECT value FROM meta WHERE key='tracking_gap'").fetchone() is None
-    assert all(name=='twitter_watch' for name,_ in vendor.calls)
+    assert all(name=='rules' for name,_ in vendor.calls)
     assert restarted.ingest(event(tweet(tweet_id='9012345')))
     assert store.activities()[0]['source']=='wss'

@@ -14,7 +14,7 @@ async def test_adopt_preserves_extra_flags_audits_once_and_only_joined_accounts(
     saved=store.get(row['project_id'])
     assert saved['claim']=='owned' and saved['status']=='running' and not saved['error']
     assert saved['baseline_ready'] and vendor.rows==before
-    assert all(name=='twitter_watch' for name,_ in vendor.calls)
+    assert all(name=='rules' for name,_ in vendor.calls)
     assert worker.ingest(event(tweet()))
     with store.connect() as db:
         audit=db.execute("SELECT detail FROM audit WHERE action='watch_adopted'").fetchall()
@@ -38,7 +38,7 @@ async def test_unlisted_existing_watch_still_conflicts(worker,store,vendor):
     before=copy.deepcopy(vendor.rows)
     await worker.reconcile()
     assert store.get(row['project_id'])['error']=='ownership_conflict'
-    assert vendor.rows==before and all(name=='twitter_watch' for name,_ in vendor.calls)
+    assert vendor.rows==before and all(name=='rules' for name,_ in vendor.calls)
 
 async def test_shared_has_priority_even_if_adoption_list_is_misconfigured(worker,store,vendor):
     row=add(store);w=vendor.watch('project1',group='ALPHA');w.update(id=777,newFlwBol=True)
@@ -48,7 +48,7 @@ async def test_shared_has_priority_even_if_adoption_list_is_misconfigured(worker
     assert saved['status']=='running' and saved['claim']=='none'
     store.mutate('remove',row['project_id'],{'expected_revision':saved['revision']},'admin','shared-safe-remove')
     await worker.reconcile()
-    assert vendor.rows['project1']==before and all(name=='twitter_watch' for name,_ in vendor.calls)
+    assert vendor.rows['project1']==before and all(name=='rules' for name,_ in vendor.calls)
 
 async def test_adoption_does_not_silently_enable_tweets(worker,store,vendor):
     row=add(store);w=vendor.watch('project1',group='ALPHA');w.update(id=919,newTweetBol=False,newFlwBol=True)
@@ -56,7 +56,7 @@ async def test_adoption_does_not_silently_enable_tweets(worker,store,vendor):
     worker.cfg=replace(worker.cfg,adoptable_handles=['project1'])
     await worker.reconcile()
     assert store.get(row['project_id'])['error']=='adopted_watch_not_enabled'
-    assert vendor.rows['project1']==before and all(name=='twitter_watch' for name,_ in vendor.calls)
+    assert vendor.rows['project1']==before and all(name=='rules' for name,_ in vendor.calls)
 
 async def test_new_policy_requeues_conflict_without_clearing_it(worker,store,vendor):
     row=add(store);w=vendor.watch('project1',group='ALPHA');w.update(id=919)

@@ -44,6 +44,7 @@ def admission(tmp_path, monkeypatch):
     config.write_text(json.dumps({"db_path": str(db), "remote_enabled": False, "dedicated_account": False}))
     config.chmod(0o600)
     monkeypatch.delenv("IKUN_TRACKING_6551_TOKEN", raising=False)
+    monkeypatch.delenv("IKUN_TRACKING_X_BEARER_TOKEN", raising=False)
     monkeypatch.delenv("DATA_ROOT", raising=False)
     monkeypatch.setenv("TRACKING_API_TOKEN", "preflight-fixture-direction-xxxxxxxxxxx")
     # Load actual release modules; do not mock their source paths or inspect implementation.

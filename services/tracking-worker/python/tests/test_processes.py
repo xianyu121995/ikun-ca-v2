@@ -1,6 +1,8 @@
 import asyncio
+import contextlib
 import json
 import os
+import queue
 import socket
 import sys
 import threading
@@ -10,7 +12,6 @@ from pathlib import Path
 
 import httpx
 from conftest import add, event, tweet
-from websockets.asyncio.server import serve
 
 from tracking.store import Store
 
@@ -36,16 +37,69 @@ async def until(fn, seconds=8):
 
 async def test_website_shutdown_restart_and_worker_crash_recovery(tmp_path, cfg, store, vendor):
     add(store)
-    peers = set()
+    peers = []
+    peer_lock = threading.Lock()
+    stop_stream = threading.Event()
 
     class Handler(BaseHTTPRequestHandler):
-        def do_POST(self):
-            body = self.rfile.read(int(self.headers["Content-Length"]))
-            response = vendor(httpx.Request("POST", "https://ai.6551.io" + self.path, content=body))
+        protocol_version = "HTTP/1.1"
+
+        def _send(self, response):
+            body = response.content
             self.send_response(response.status_code)
             self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(response.content)
+            self.wfile.write(body)
+
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+            path = self.path.split("?", 1)[0]
+            response = vendor(httpx.Request("POST", "https://api.x.com" + path, content=body))
+            self._send(response)
+
+        def do_GET(self):
+            path = self.path.split("?", 1)[0]
+            if path.rstrip("/") == "/2/tweets/search/stream/rules":
+                response = vendor(httpx.Request("GET", "https://api.x.com" + path))
+                self._send(response)
+                return
+            if path.rstrip("/") != "/2/tweets/search/stream":
+                self.send_error(404)
+                return
+            outbound = queue.Queue()
+            with peer_lock:
+                peers.append(outbound)
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Transfer-Encoding", "chunked")
+                self.end_headers()
+
+                def chunk(payload: bytes):
+                    self.wfile.write(f"{len(payload):X}\r\n".encode() + payload + b"\r\n")
+                    self.wfile.flush()
+
+                chunk(b"\r\n")
+                while not stop_stream.is_set():
+                    try:
+                        item = outbound.get(timeout=0.2)
+                    except queue.Empty:
+                        try:
+                            chunk(b"\r\n")
+                        except Exception:
+                            break
+                        continue
+                    try:
+                        chunk((item + "\n").encode())
+                    except Exception:
+                        break
+                with contextlib.suppress(Exception):
+                    chunk(b"")
+            finally:
+                with peer_lock:
+                    if outbound in peers:
+                        peers.remove(outbound)
 
         def log_message(self, *args):
             pass
@@ -54,13 +108,12 @@ async def test_website_shutdown_restart_and_worker_crash_recovery(tmp_path, cfg,
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
 
-    async def websocket(ws):
-        peers.add(ws)
-        try:
-            async for raw in ws:
-                await ws.send("pong" if raw == "ping" else json.dumps({"id": 1, "result": {"success": True}}))
-        finally:
-            peers.discard(ws)
+    def publish(packet):
+        encoded = json.dumps(packet)
+        with peer_lock:
+            targets = list(peers)
+        for target in targets:
+            target.put(encoded)
 
     engine_port, site_port = free_port(), free_port()
     engine_config, site_config = tmp_path / "engine.json", tmp_path / "site.json"
@@ -104,9 +157,8 @@ async def test_website_shutdown_restart_and_worker_crash_recovery(tmp_path, cfg,
 
     engine_url, site_url = f"http://127.0.0.1:{engine_port}", f"http://127.0.0.1:{site_port}"
     try:
-        async with serve(websocket, "127.0.0.1", 0) as wss, httpx.AsyncClient() as client:
-            wss_url = "ws://127.0.0.1:" + str(wss.sockets[0].getsockname()[1])
-            engine_args = ("engine", str(engine_config), f"http://127.0.0.1:{server.server_port}", wss_url)
+        async with httpx.AsyncClient() as client:
+            engine_args = ("engine", str(engine_config), f"http://127.0.0.1:{server.server_port}")
             engine = await spawn(*engine_args)
             site = await spawn("website", str(site_config), engine_url)
 
@@ -122,8 +174,7 @@ async def test_website_shutdown_restart_and_worker_crash_recovery(tmp_path, cfg,
             assert (await client.get(site_url + "/health/live")).status_code == 200
             await stop(site)
             t = tweet(tweet_id="777")
-            for peer in list(peers):
-                await peer.send(json.dumps(event(t)))
+            publish(event(t))
 
             async def received():
                 return len(store.activities()) == 1
@@ -143,15 +194,15 @@ async def test_website_shutdown_restart_and_worker_crash_recovery(tmp_path, cfg,
             await until(lambda: asyncio.sleep(0.01, result=not peers))
             engine = await spawn(*engine_args)
             await until(healthy)
-            for peer in list(peers):
-                await peer.send(json.dumps(event(t)))
-                await peer.send(json.dumps(event(tweet(tweet_id="778"))))
+            publish(event(t))
+            publish(event(tweet(tweet_id="778")))
             await until(lambda: asyncio.sleep(0.01, result=len(store.activities()) == 2))
             assert [r["tweet_id"] for r in Store(cfg.db_path).activities()] == ["777", "778"]
-            assert sum(endpoint == "twitter_watch_add" for endpoint, _ in vendor.calls) == 1
+            assert sum(endpoint == "rules_add" for endpoint, _ in vendor.calls) == 1
             await stop(engine)
             assert store.runtime()["heartbeat"] == 0
     finally:
+        stop_stream.set()
         for process in processes:
             await stop(process)
         server.shutdown()

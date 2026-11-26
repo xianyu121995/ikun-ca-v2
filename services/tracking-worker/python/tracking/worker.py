@@ -7,22 +7,22 @@ import logging
 import random
 import time
 import uuid
-from urllib.parse import urlencode
-
-from websockets.asyncio.client import connect
+from provider_6551 import tracking_backfill_enabled, wss_auth_delay
 
 from .config import Config
-from .events import normalize, parse_event
+from .events import parse_event
 from .remote import OTHER_FLAGS, Remote, RemoteError
 from .store import Store
-from provider_6551 import wss_auth_delay, tracking_backfill_enabled
+from .xstream import SILENCE_SECONDS, audit_message, parse_stream_post
 
 log = logging.getLogger("tracking.worker")
 
 
 class Worker:
-    def __init__(self, cfg: Config, store: Store, remote: Remote, ws_connect=connect):
-        self.cfg, self.store, self.remote, self.ws_connect = cfg, store, remote, ws_connect
+    def __init__(self, cfg: Config, store: Store, remote: Remote, stream_connect=None):
+        self.cfg, self.store, self.remote = cfg, store, remote
+        self.stream_connect = stream_connect
+        self.stream_silence = SILENCE_SECONDS
         self.stop = asyncio.Event()
         self.worker_id = str(uuid.uuid4())
         self._leased = False
@@ -164,48 +164,19 @@ class Worker:
             error=None,
             attempts=0,
             next_retry=0,
-            **({'baseline_ready':1,'coverage':'possible_gap'} if self.adoptable(row) and desired_running else {}),
+            **({"baseline_ready": 1, "coverage": "possible_gap"} if desired_running else {}),
         )
         if updated and desired_running and not self.adoptable(row):
             await self.backfill({**row, "remote_state": state, "claim": claim})
         return snapshot
 
     async def backfill(self, row):
-        if not tracking_backfill_enabled():return
-        if row['desired']!='running':return
-        if not row['baseline_ready'] and not row['last_backfill']:self.ledger.initial(row)
-        for job in self.ledger.jobs(row['subscription_id']):
-            if job['generation']!=row['generation']:
-                self.ledger.discard(job['key']);continue
-            try:
-                items=await self.remote.tweets(row['handle'],job=job)
-                self.ensure_owner()
-                tweets=[normalize(item,row['handle'],require_author=True,
-                          event_type='REST_USER_TWEETS_NO_RETWEETS') for item in items]
-                valid=[t for t in tweets if t and job['from_at']<=t['created_at']<=job['to_at']]
-                coverage='possible_gap' if len(items)>=100 or row['coverage']=='possible_gap' else 'bounded_latest_100'
-                for tweet in sorted(valid,key=lambda x:x['created_at']):
-                    self.store.insert_tweet(row,tweet,'rest_recovery')
-                self.store.observe(row,last_backfill=time.time(),coverage=coverage,baseline_ready=1)
-            except RemoteError as error:
-                # Blocked before transport stays queued; an attempted request is never replayed.
-                if not any(x['key']==job['key'] for x in self.ledger.jobs(row['subscription_id'])):
-                    self.store.observe(row,last_backfill=time.time(),
-                        coverage='possible_gap' if row['coverage']=='possible_gap' else 'recovery_failed')
-                if error.code in ('quota_exhausted','daily_budget_exhausted','backfill_daily_limit','provider_busy'):return
+        # Pay-per-use filtered stream has no recovery window. Do not poll user timelines.
+        return
 
     async def process_backfills(self):
-        if not tracking_backfill_enabled():
-            self._reconnected_at=None
-            return
-        rows=[r for r in self.store.projects() if r['desired']=='running' and
-              (r['claim']=='owned' or r['handle'] in (self.cfg.shared_watch_ids or {})) and
-              r.get('error') not in ('ownership_conflict','shared_watch_identity_changed')]
-        if self._reconnected_at:
-            self.ledger.close_gap(self._reconnected_at,rows);self._reconnected_at=None
-        for row in rows:
-            if self.stop.is_set():break
-            await self.backfill(row)
+        self._reconnected_at = None
+        return
 
     async def reconcile(self):
         from watch_lock import watch_lock
@@ -250,7 +221,10 @@ class Worker:
     def ingest(self, message, trace=None):
         self.ensure_owner()
         on_drop = trace.drop if trace else None
-        event = parse_event(message,on_drop=on_drop)
+        if isinstance(message, dict) and isinstance(message.get("data"), dict) and "method" not in message:
+            event = parse_stream_post(message, on_drop=on_drop)
+        else:
+            event = parse_event(message, on_drop=on_drop)
         if event is None:
             return False
         username, tweet = event
@@ -269,65 +243,61 @@ class Worker:
         if result and trace:trace.accepted()
         return result
 
-    async def session(self, ws, audit=None):
-        from wss_audit import WssAudit
-        audit = audit or WssAudit('tracking')
-        ack, pong = asyncio.Event(), asyncio.Event()
+    def _mark_connected(self, audit, *, opened=False):
+        audit.pong()
+        self.ensure_owner()
+        if opened:
+            self._reconnected_at = time.time()
+            self.ledger.wss_recovered("tracking")
+            self._watch_requested = True
+            self._watch_retry_at = 0
+        self.store.runtime(connection="connected", pong_at=time.time(), error=None)
 
-        async def receiver():
-            async for raw in ws:
-                if raw in ("pong", b"pong"):
-                    audit.pong()
-                    pong.set()
+    async def session(self, lines, audit=None):
+        from wss_audit import WssAudit
+
+        audit = audit or WssAudit("tracking")
+        silence = self.stream_silence
+        last = time.monotonic()
+
+        async def reader():
+            nonlocal last
+            opened = False
+            async for raw in lines:
+                last = time.monotonic()
+                text = raw.decode() if isinstance(raw, (bytes, bytearray)) else raw
+                if not isinstance(text, str):
+                    audit.emit("dropped", reason="invalid_envelope")
                     continue
-                if raw in ("ping", b"ping"):
-                    await ws.send("pong")
+                if text.strip() == "":
+                    self._mark_connected(audit, opened=not opened)
+                    opened = True
                     continue
                 try:
-                    message = json.loads(raw)
-                except (ValueError, TypeError):
-                    audit.emit('dropped',reason='invalid_json')
+                    message = json.loads(text)
+                except ValueError:
+                    audit.emit("dropped", reason="invalid_json")
                     continue
                 if not isinstance(message, dict):
-                    audit.emit('dropped',reason='invalid_envelope')
+                    audit.emit("dropped", reason="invalid_envelope")
                     continue
-                trace = audit.frame(message)
-                if message.get("id") == 1:
-                    if message.get("result", {}).get("success") is True:
-                        audit.emit('subscribed')
-                        self._reconnected_at=time.time()
-                        self._watch_requested=True;self._watch_retry_at=0
-                        self.ledger.wss_recovered('tracking')
-                        ack.set()
-                    else:
-                        trace.drop('subscription_rejected')
-                        raise RemoteError("subscription_rejected")
-                elif message.get("error"):
-                    trace.drop('provider_stream_error')
+                trace = audit.frame(audit_message(message))
+                if message.get("errors") or message.get("error"):
+                    trace.drop("provider_stream_error")
                     raise RemoteError("stream_error")
-                elif ack.is_set():
-                    self.ingest(message,trace)
-                else:trace.drop('before_subscription_ack')
+                self._mark_connected(audit, opened=not opened)
+                opened = True
+                self.ingest(message, trace)
             raise RemoteError("stream_closed")
 
-        async def heartbeat():
-            try:await asyncio.wait_for(ack.wait(), timeout=self.cfg.heartbeat_timeout)
-            except asyncio.TimeoutError:
-                audit.emit('dropped',reason='subscription_ack_timeout')
-                raise
+        async def watchdog():
             while True:
-                pong.clear()
-                await ws.send("ping")
-                try:await asyncio.wait_for(pong.wait(), timeout=self.cfg.heartbeat_timeout)
-                except asyncio.TimeoutError:
-                    audit.emit('dropped',reason='application_heartbeat_timeout')
-                    raise
-                self.ensure_owner()
-                self.store.runtime(connection="connected", pong_at=time.time(), error=None)
-                await asyncio.sleep(self.cfg.heartbeat_seconds)
+                await asyncio.sleep(max(0.01, min(silence, 1)))
+                if time.monotonic() - last > silence:
+                    audit.emit("dropped", reason="stream_silence_timeout")
+                    raise TimeoutError()
 
-        await ws.send(json.dumps({"jsonrpc": "2.0", "id": 1, "method": "twitter.subscribe"}))
-        tasks = [asyncio.create_task(receiver()), asyncio.create_task(heartbeat())]
+        tasks = [asyncio.create_task(reader()), asyncio.create_task(watchdog())]
         try:
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
             for task in done:
@@ -337,42 +307,46 @@ class Worker:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
 
+    @contextlib.asynccontextmanager
+    async def _line_manager(self):
+        if self.stream_connect is not None:
+            yield self.stream_connect()
+            return
+        async with self.remote.open_stream() as lines:
+            yield lines
+
     async def streams(self):
         failures = 0
-        auth_failures=0
+        auth_failures = 0
         while not self.stop.is_set():
             start = time.monotonic()
             try:
                 self.remote.ready()
                 from wss_audit import connection
+
                 self.store.runtime(connection="connecting", pong_at=None, error=None)
-                url = "wss://ai.6551.io/open/twitter_wss?" + urlencode({"token": self.cfg.secret("token")})
-                async with connection(self.ws_connect(
-                    url,
-                    open_timeout=15,
-                    close_timeout=5,
-                    ping_interval=None,
-                    max_size=1024 * 1024,
-                    max_queue=64,
-                ),'tracking') as (ws,audit):
-                    await self.session(ws,audit)
+                async with connection(self._line_manager(), "tracking") as (lines, audit):
+                    await self.session(lines, audit)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
                 if self.stop.is_set():
                     break
                 code = exc.code if isinstance(exc, RemoteError) else "stream_disconnected"
-                status=getattr(getattr(exc,'response',None),'status_code',None)
-                if status==401:
-                    auth_failures+=1;code='wss_auth_rejected'
-                    self.ledger.wss_rejected('tracking')
-                else:auth_failures=0
-                if tracking_backfill_enabled():self.ledger.mark_gap(self.store.runtime().get('pong_at') or time.time())
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if status in (401, 403) or (isinstance(exc, RemoteError) and exc.code == "remote_auth_failed"):
+                    auth_failures += 1
+                    code = "stream_auth_rejected"
+                    self.ledger.wss_rejected("tracking")
+                else:
+                    auth_failures = 0
+                if tracking_backfill_enabled():
+                    self.ledger.mark_gap(self.store.runtime().get("pong_at") or time.time())
                 self.store.runtime(connection="disconnected", pong_at=None, error=code)
-                # Logging only the classification avoids leaking a token-bearing handshake URL.
+                # Logging only the classification avoids leaking a bearer or request URL.
                 log.warning("stream disconnected: %s", code)
             failures = 0 if time.monotonic() - start > 60 else failures + 1
-            await self.pause((wss_auth_delay(auth_failures) if auth_failures else min(60,2**min(failures,6)))+random.random())
+            await self.pause((wss_auth_delay(auth_failures) if auth_failures else min(60, 2 ** min(failures, 6))) + random.random())
 
     async def pause(self, seconds):
         with contextlib.suppress(asyncio.TimeoutError):
@@ -390,7 +364,7 @@ class Worker:
             if self._subscription_signature is not None and signature!=self._subscription_signature:
                 self._watch_requested=True;self._watch_retry_at=0;self.ledger.request_watch_check(force=True)
             self._subscription_signature=signature
-            if self.ledger.watch_pending():self._watch_requested=True
+            if self.remote.rules_stale():self._watch_requested=True
             if self._watch_requested and time.time()>=self._watch_retry_at:
                 await self.reconcile()
             await self.process_backfills()

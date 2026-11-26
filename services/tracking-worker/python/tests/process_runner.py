@@ -10,7 +10,6 @@ import httpx
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
-from websockets.asyncio.client import connect
 
 from tracking.cli import serve as serve_tracking
 from tracking.config import Config
@@ -51,7 +50,7 @@ async def main():
     store = Store(cfg.db_path)
     remote = Remote(cfg)
     remote.client.base_url = httpx.URL(sys.argv[3])
-    worker = Worker(cfg, store, remote, ws_connect=lambda ignored, **kw: connect(sys.argv[4], **kw))
+    worker = Worker(cfg, store, remote)
     await serve_tracking(cfg, worker=worker, log_level="error")
 
 

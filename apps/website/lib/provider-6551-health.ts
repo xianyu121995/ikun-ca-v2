@@ -12,7 +12,7 @@ export function providerHealth(raw:unknown):{usage:ProviderUsage;errors:string[]
   next_probe_at:v.next_probe_at as number,quota_exhausted:v.quota_exhausted===true,realtime_paused:v.realtime_paused===true,by_program};
  const errors:string[]=[];
  if(usage.quota_exhausted)errors.push(usage.realtime_paused?'6551 额度不足，实时推文已暂停':'6551 额度不足，REST 已暂停');
- else if(usage.realtime_paused)errors.push('6551 实时连接鉴权被拒绝（HTTP 401）');
+ else if(usage.realtime_paused)errors.push('实时推文流鉴权被拒绝');
  if(v.daily_limit_reached===true)errors.push('6551 今日调用已达上限，REST 已暂停');
  return {usage,errors};
 }

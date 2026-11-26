@@ -19,7 +19,7 @@ async def test_shared_receive_and_remove_preserves_owner(worker, store, vendor):
     assert store.get(row['project_id'])['status'] == 'removed'
     assert not worker.ingest(event(tweet(tweet_id='99999')))
     assert vendor.rows['project1'] == before
-    assert all(name == 'twitter_watch' for name, _ in vendor.calls)
+    assert all(name == 'rules' for name, _ in vendor.calls)
 
 @pytest.mark.parametrize('mode,code', [('missing','shared_watch_missing'), ('wrong','shared_watch_identity_changed'), ('disabled','shared_watch_not_enabled'), ('paused','shared_watch_not_enabled')])
 async def test_shared_never_repairs_owner_watch(worker, store, vendor, mode, code):
@@ -34,4 +34,4 @@ async def test_shared_never_repairs_owner_watch(worker, store, vendor, mode, cod
     await worker.reconcile()
     assert store.get(row['project_id'])['error'] == code
     assert worker.ingest(event(tweet())) is (mode != 'wrong')
-    assert all(name == 'twitter_watch' for name, _ in vendor.calls)
+    assert all(name == 'rules' for name, _ in vendor.calls)

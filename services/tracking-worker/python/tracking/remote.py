@@ -2,28 +2,25 @@ from __future__ import annotations
 
 import asyncio
 import time
-import os
-from datetime import datetime, timedelta, timezone
-from provider_6551 import Ledger, configured, Blocked, quota_response, response_error, tracking_backfill_enabled
+from contextlib import asynccontextmanager
 
 import httpx
+from provider_6551 import Ledger, configured
 
 from .config import Config
 from .store import handle
-
-OTHER_FLAGS = (
-    "newFlwBol",
-    "newUnFlwBol",
-    "newTweetReplyBol",
-    "newTweetQuoteBol",
-    "newRetweetBol",
-    "updateNameBol",
-    "updateDescBol",
-    "updateAvatarBol",
-    "updateBannerBol",
-    "newCaBol",
-    "tweetToppingBol",
+from .xstream import (
+    OTHER_FLAGS,
+    RULES_PATH,
+    STREAM_PATH,
+    STREAM_QUERY,
+    TAG_PREFIX,
+    RuleError,
+    standard_value,
+    watch_from_rule,
 )
+
+__all__ = ["OTHER_FLAGS", "Remote", "RemoteError"]
 
 
 class RemoteError(Exception):
@@ -33,17 +30,53 @@ class RemoteError(Exception):
         self.code, self.retry_after = code, retry_after
 
 
+def _error_text(data: dict) -> str:
+    chunks = []
+    errors = data.get("errors")
+    if isinstance(errors, list):
+        for item in errors:
+            if not isinstance(item, dict):
+                continue
+            chunks.append(str(item.get("title", "")))
+            details = item.get("details")
+            if isinstance(details, list):
+                chunks.extend(str(detail) for detail in details)
+    chunks.append(str(data.get("message", data.get("title", ""))))
+    return " ".join(chunks).lower()
+
+
+def _quota_text(text: str) -> bool:
+    return any(word in text for word in ("quota", "rule limit", "rulescap", "capacity", "名额", "上限", "额度"))
+
+
+def _summary(data: dict) -> dict:
+    meta = data.get("meta")
+    summary = meta.get("summary") if isinstance(meta, dict) else None
+    return summary if isinstance(summary, dict) else {}
+
+
 class Remote:
+    """Filtered-stream rules for the accounts tracking already reconciles.
+
+    Add and delete use the rules endpoint and do not open or close the stream.
+    Historical timeline reads stay closed: pay-per-use filtered stream has no recovery backfill.
+    """
+
     def __init__(self, cfg: Config, transport=None, *, cache_watch=True):
         self.cfg = cfg
-        self.ledger = configured() or Ledger(cfg.db_path.parent.parent/'ops/6551-ledger.sqlite3')
+        self.ledger = configured() or Ledger(cfg.db_path.parent.parent / "ops/6551-ledger.sqlite3")
         self.cache_watch = cache_watch
+        self._snapshot = None
+        self._ids: dict[str, str] = {}
         self.client = httpx.AsyncClient(
-            base_url="https://ai.6551.io",
+            base_url="https://api.x.com",
             timeout=15,
             follow_redirects=False,
             transport=transport,
-            headers={"Authorization": f"Bearer {cfg.secret('token')}"},
+            headers={
+                "Authorization": f"Bearer {cfg.secret('token')}",
+                "User-Agent": "ikun-tracking",
+            },
         )
         self.lock = asyncio.Lock()
         self.last_request = 0.0
@@ -55,111 +88,151 @@ class Remote:
     async def close(self):
         await self.client.aclose()
 
-    async def request(self, endpoint: str, body: dict, *, purpose='read', job_key=None):
-        if endpoint not in ('twitter_watch','twitter_watch_add','twitter_watch_delete') and not tracking_backfill_enabled():
-            raise RemoteError('backfill_disabled')
+    def rules_stale(self) -> bool:
+        with self.ledger.db() as db:
+            requested = self.ledger.get(db, "watch_requested_at", 0) or 0
+            done = self.ledger.get(db, "x_rules_epoch", 0) or 0
+        return requested != done
+
+    def _ack_rules(self):
+        with self.ledger.db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            requested = self.ledger.get(db, "watch_requested_at", 0) or 0
+            self.ledger.put(db, "x_rules_epoch", requested)
+            db.commit()
+
+    async def request(self, endpoint: str, body: dict | None = None, *, purpose="read", job_key=None):
+        # Timeline and search routes are not a live stream. They never reach the network.
+        raise RemoteError("backfill_disabled")
+
+    def _raise_for_status(self, response: httpx.Response):
+        if response.status_code == 429:
+            try:
+                delay = min(3600, max(1, float(response.headers.get("Retry-After", 60))))
+            except ValueError:
+                delay = 60
+            raise RemoteError("rate_limited", delay)
+        if response.status_code in (401, 403):
+            error = RemoteError("remote_auth_failed", 300)
+            error.response = response
+            raise error
+        if response.status_code == 402:
+            error = RemoteError("provider_payment_required", 3600)
+            error.response = response
+            raise error
+        if response.status_code >= 400:
+            error = RemoteError("api_failure")
+            error.response = response
+            raise error
+
+    def _parse_json(self, response: httpx.Response) -> dict:
+        try:
+            data = response.json()
+        except ValueError:
+            raise RemoteError("request_uncertain") from None
+        if not isinstance(data, dict):
+            raise RemoteError("invalid_response")
+        return data
+
+    def _raise_for_rules_body(self, data: dict):
+        text = _error_text(data)
+        summary = _summary(data)
+        problem = bool(data.get("errors")) or data.get("success") is False or bool(summary.get("invalid") or summary.get("not_created"))
+        if not problem:
+            return
+        quota = _quota_text(text)
+        raise RemoteError("quota_exhausted" if quota else "api_failure", 60 if quota else 0)
+
+    async def _send(self, method: str, path: str, body: dict | None = None) -> dict:
         self.ready()
-        if os.environ.get('IKUN_6551_REST_PAUSED') == '1':
-            raise RemoteError('quota_exhausted', 3600)
-        if endpoint=='twitter_watch' and self.cache_watch:
-            cached=self.ledger.cached_watch()
-            if cached is not None:return cached.get('data')
         async with self.lock:
             await asyncio.sleep(max(0, self.cfg.request_interval - (time.monotonic() - self.last_request)))
             self.last_request = time.monotonic()
-            permit=None
             try:
-                permit=self.ledger.begin('tracking',endpoint,purpose=purpose,job_key=job_key)
-                if endpoint in ('twitter_watch_add','twitter_watch_delete'):
-                    with self.ledger.db() as db:db.execute("DELETE FROM meta WHERE key='watch_snapshot'")
-                response = await self.client.post("/open/" + endpoint, json=body)
-                quota=quota_response(response)
-                self.ledger.finish(permit,response.status_code,quota=quota,
-                                   error=response_error(response))
-                permit=None
-                if quota:raise RemoteError('quota_exhausted',3600)
-                if response.status_code == 429:
-                    try:
-                        delay = min(3600, max(1, float(response.headers.get("Retry-After", 60))))
-                    except ValueError:
-                        delay = 60
-                    raise RemoteError("rate_limited", delay)
-                if response.status_code in (401, 403):
-                    raise RemoteError("remote_auth_failed", 300)
-                if response.status_code >= 400:
-                    raise RemoteError("api_failure")
-                data = response.json()
-                if not isinstance(data, dict):
-                    raise RemoteError("invalid_response")
-                if data.get("success") is not True:
-                    message = str(data.get("message", data.get("msg", data.get("error", "")))).lower()
-                    code = (
-                        "quota_exhausted"
-                        if any(x in message for x in ("quota", "limit", "capacity", "名额", "上限", "额度"))
-                        else "api_failure"
-                    )
-                    raise RemoteError(code, 60 if code == "quota_exhausted" else 0)
-                if endpoint=='twitter_watch' and self.cache_watch:self.ledger.cache_watch(data)
-                if endpoint in ('twitter_watch_add','twitter_watch_delete'):
-                    with self.ledger.db() as db:db.execute("DELETE FROM meta WHERE key='watch_snapshot'")
-                return data.get("data")
-            except Blocked as exc:raise RemoteError(exc.code,exc.retry_after) from None
-            except (httpx.HTTPError, ValueError) as exc:
-                if permit:self.ledger.finish(permit,error=type(exc).__name__)
+                response = await self.client.request(method, path, json=body)
+            except httpx.HTTPError:
                 raise RemoteError("request_uncertain") from None
+        self._raise_for_status(response)
+        data = self._parse_json(response)
+        self._raise_for_rules_body(data)
+        return data
 
-    async def watches(self) -> dict[str, dict]:
-        data = await self.request("twitter_watch", {})
-        if isinstance(data, dict):
-            rows = data.get("list", data.get("items"))
-            if not isinstance(rows, list) or data.get("total", len(rows)) != len(rows):
-                raise RemoteError("incomplete_watch_snapshot")
-        else:
-            rows = data
-        if not isinstance(rows, list):
+    def _snapshot_from(self, rules) -> dict[str, dict]:
+        if not isinstance(rules, list):
             raise RemoteError("invalid_watch_snapshot")
         result = {}
-        for row in rows:
-            if not isinstance(row, dict):
+        for rule in rules:
+            if not isinstance(rule, dict):
                 raise RemoteError("invalid_watch_snapshot")
             try:
-                account = handle(row.get("twAccount", row.get("username", "")))
-            except (ValueError, AttributeError):
-                raise RemoteError("invalid_watch_snapshot") from None
+                watch = watch_from_rule(rule, self.cfg.watch_group)
+            except RuleError as exc:
+                raise RemoteError(exc.code) from None
+            if watch is None:
+                continue
+            account = watch["twAccount"]
             if account in result:
                 raise RemoteError("duplicate_watch_identity")
-            result[account] = row
+            result[account] = watch
         return result
 
+    async def watches(self) -> dict[str, dict]:
+        if self.cache_watch and self._snapshot is not None and not self.rules_stale():
+            return self._snapshot
+        data = await self._send("GET", RULES_PATH)
+        meta = data.get("meta") if isinstance(data.get("meta"), dict) else {}
+        if "data" in data and not isinstance(data["data"], list):
+            raise RemoteError("invalid_watch_snapshot")
+        if "data" not in data and "meta" not in data:
+            raise RemoteError("invalid_watch_snapshot")
+        rules = data.get("data", [])
+        if not isinstance(rules, list):
+            raise RemoteError("invalid_watch_snapshot")
+        if "result_count" in meta and meta["result_count"] != len(rules):
+            raise RemoteError("incomplete_watch_snapshot")
+        snapshot = self._snapshot_from(rules)
+        self._ids = {account: row["id"] for account, row in snapshot.items()}
+        self._snapshot = snapshot
+        self._ack_rules()
+        return snapshot
+
     async def add(self, username):
-        return await self.request(
-            "twitter_watch_add",
-            {
-                "username": username,
-                "groupName": self.cfg.watch_group,
-                "remark": "ikun-ca-v2:tracking",
-                "newTweetBol": True,
-                **{flag: flag == "newTweetQuoteBol" for flag in OTHER_FLAGS},
-            },
+        account = handle(username)
+        value = standard_value(account)
+        if len(value) > 1024:
+            raise RemoteError("api_failure")
+        self._snapshot = None
+        return await self._send(
+            "POST",
+            RULES_PATH,
+            {"add": [{"value": value, "tag": f"{TAG_PREFIX}{account}"}]},
         )
 
     async def delete(self, username):
-        return await self.request("twitter_watch_delete", {"username": username})
+        account = handle(username)
+        rule_id = self._ids.get(account)
+        if not rule_id:
+            self._snapshot = None
+            await self.watches()
+            rule_id = self._ids.get(account)
+        self._snapshot = None
+        if not rule_id:
+            return None
+        return await self._send("POST", RULES_PATH, {"delete": {"ids": [str(rule_id)]}})
 
     async def tweets(self, username, *, job=None):
-        endpoint='twitter_user_tweets'
-        body={"username":username,"maxResults":100,"product":"Latest","includeReplies":False,"includeRetweets":False}
-        if job and job['reason']=='reconnect':
-            endpoint='twitter_search'
-            start=datetime.fromtimestamp(job['from_at'],timezone.utc)
-            end=datetime.fromtimestamp(job['to_at'],timezone.utc)+timedelta(days=1)
-            body={'fromUser':username,'sinceDate':start.strftime('%Y-%m-%d'),
-                  'untilDate':end.strftime('%Y-%m-%d'),'excludeReplies':True,'excludeRetweets':True,
-                  'product':'Latest','maxResults':100}
-        data = await self.request(
-            endpoint,body,purpose='backfill',job_key=job['key'] if job else None,
-        )
-        rows = data.get("list", data.get("tweets")) if isinstance(data, dict) else data
-        if not isinstance(rows, list) or any(not isinstance(x, dict) for x in rows):
-            raise RemoteError("invalid_tweet_snapshot")
-        return rows
+        raise RemoteError("backfill_disabled")
+
+    @asynccontextmanager
+    async def open_stream(self):
+        """One long-lived GET. Rule changes do not use this connection."""
+        self.ready()
+        timeout = httpx.Timeout(15.0, read=None)
+        async with self.client.stream("GET", STREAM_PATH, params=STREAM_QUERY, timeout=timeout) as response:
+            if response.status_code != 200:
+                await response.aread()
+                self._raise_for_status(response)
+                raise RemoteError("stream_error")
+            if "backfill_minutes" in str(response.request.url):
+                raise RemoteError("api_failure")
+            yield response.aiter_lines()

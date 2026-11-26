@@ -12,7 +12,7 @@ test('quota plus rejected WSS shows the requested pause message without secrets'
 });
 test('connected WSS and paused REST remain distinct; malformed metadata is rejected',()=>{
  assert.deepEqual(providerHealth({...raw,realtime_paused:false})!.errors,['6551 额度不足，REST 已暂停']);
- assert.deepEqual(providerHealth({...raw,quota_exhausted:false})!.errors,['6551 实时连接鉴权被拒绝（HTTP 401）']);
+ assert.deepEqual(providerHealth({...raw,quota_exhausted:false})!.errors,['实时推文流鉴权被拒绝']);
  assert.equal(providerHealth({...raw,used:NaN}),null);
  assert.deepEqual(providerHealth({...raw,by_program:[{program:'SECRET',calls:1}]})!.usage.by_program,[]);
 });

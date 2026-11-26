@@ -234,12 +234,12 @@ async def test_unknown_write_then_read_failure_no_false_success(client, worker, 
     worker.remote.add = uncertain
     await worker.reconcile()
     assert query(store, body["command_id"], "check-001")["state"] == "unknown"
-    before = sum(e == "twitter_watch_add" for e, _ in vendor.calls)
+    before = sum(e == "rules_add" for e, _ in vendor.calls)
     vendor.list_fails = False
     store.observe(store.get(PID), next_retry=0)
     await worker.reconcile()
     assert query(store, body["command_id"], "check-001")["state"] == "succeeded"
-    assert sum(e == "twitter_watch_add" for e, _ in vendor.calls) == before
+    assert sum(e == "rules_add" for e, _ in vendor.calls) == before
 
 
 async def test_stale_stop_cannot_mutate_superseding_resume(client, worker, store, vendor):
@@ -264,7 +264,7 @@ async def test_stop_does_not_delete_externally_changed_event_flags(client, worke
     submit(client, envelope(operation="tracking.stop", subscription_id=sid, expected_revision=1, payload={}))
     await worker.reconcile()
     assert store.get(PID)["error"] == "remote_flags_conflict" and "project1" in vendor.rows
-    assert not any(endpoint == "twitter_watch_delete" for endpoint, _ in vendor.calls)
+    assert not any(endpoint == "rules_delete" for endpoint, _ in vendor.calls)
 
 
 def test_bound_cursor_empty_and_cross_filter(client, store):
@@ -340,7 +340,7 @@ async def test_600_capacity_does_not_evict_or_add(client, worker, store, vendor)
     await worker.reconcile()
     assert store.get(PID)["error"] == "quota_exhausted"
     assert len(vendor.rows) == 600
-    assert all(name == "twitter_watch" for name, _ in vendor.calls)
+    assert all(name == "rules" for name, _ in vendor.calls)
 
 
 async def test_stop_noop_ack_and_timeout_do_not_report_stopped(client, worker, store, vendor):
@@ -385,7 +385,7 @@ async def test_crash_after_remote_apply_reconciles_without_second_add(client, wo
     replacement = Worker(cfg, store, worker.remote)
     await replacement.reconcile()
     assert query(store, body["command_id"], "crash-checked")["state"] == "succeeded"
-    assert sum(name == "twitter_watch_add" for name, _ in vendor.calls) == 1
+    assert sum(name == "rules_add" for name, _ in vendor.calls) == 1
 
 
 def test_retention_and_new_path_backup_preserve_pending_inbox(client, store, tmp_path):

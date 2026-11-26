@@ -101,6 +101,7 @@ def preflight(release, job_cwd, config, venv_root=None):
         or cfg.dedicated_account
         or cfg.token_file
         or os.environ.get("IKUN_TRACKING_6551_TOKEN")
+        or os.environ.get("IKUN_TRACKING_X_BEARER_TOKEN")
     ):
         raise ValueError("external collection must be explicitly disabled")
     if cfg.service_token_file:

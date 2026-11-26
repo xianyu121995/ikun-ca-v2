@@ -56,7 +56,7 @@ def quoted_context(content):
             "url": f"https://x.com/{author}/status/{identifier}"}
 
 
-def normalize(content: dict, username: str, require_author=False, *, event_type="NEW_TWEET", on_drop=None) -> dict | None:
+def normalize(content: dict, username: str, require_author=False, *, event_type="NEW_TWEET", on_drop=None, evidence_version=None) -> dict | None:
     """Map documented 6551 author/boolean fields; never infer type from prose."""
     if not isinstance(content, dict):
         note(on_drop,'invalid_content_shape')
@@ -106,6 +106,8 @@ def normalize(content: dict, username: str, require_author=False, *, event_type=
         )
         transport = "rest" if event_type.startswith("REST_") else "wss"
         type_evidence = f"6551-{transport}-{'structured' if explicit else 'event'}-v2"
+    if evidence_version and kind != "unknown":
+        type_evidence = evidence_version
     tweet_id = str(content.get("id", content.get("id_str", "")))
     created = timestamp(content.get("createdAt", content.get("created_at")))
     text = content.get("text", content.get("full_text", ""))
@@ -136,7 +138,7 @@ def merge_type(previous, incoming, source):
     old_kind, old_evidence = previous["tweet_kind"], previous["type_evidence_version"]
     if kind == "unknown":
         return old_kind, old_evidence
-    trusted_live = source == "wss" and evidence == "6551-wss-structured-v2"
+    trusted_live = source == "wss" and evidence in ("6551-wss-structured-v2", "x-stream-structured-v1")
     if kind == old_kind:
         return kind, evidence if trusted_live else old_evidence
     if trusted_live:

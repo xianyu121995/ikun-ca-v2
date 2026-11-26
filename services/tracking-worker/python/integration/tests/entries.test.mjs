@@ -43,7 +43,7 @@ before(async()=>{
  const reserve=createServer();await new Promise(r=>reserve.listen(0,'127.0.0.1',r));const port=reserve.address().port;await new Promise(r=>reserve.close(r));endpoint='http://127.0.0.1:'+port;
  const cfg=join(dataRoot,'tracking.json');writeFileSync(cfg,JSON.stringify({db_path:join(dataRoot,'tracking/tracking.db'),remote_enabled:true,dedicated_account:true,port,reconcile_seconds:.1,backfill_seconds:.2,request_interval:0,heartbeat_seconds:.1,heartbeat_timeout:.5}));
  execFileSync(python,['-m','tracking.cli','init','--config',cfg],{cwd:moduleRoot});
- managed=spawnManaged(python,[join(moduleRoot,'integration/tests/fixture-tracking.py'),cfg,fixtureToken],{cwd:moduleRoot,env:{PATH:process.env.PATH,TRACKING_API_TOKEN:token,IKUN_TRACKING_6551_TOKEN:'fixture-provider-token-not-a-real-secret'},inheritOutput:true,graceMs:3000});
+ managed=spawnManaged(python,[join(moduleRoot,'integration/tests/fixture-tracking.py'),cfg,fixtureToken],{cwd:moduleRoot,env:{PATH:process.env.PATH,TRACKING_API_TOKEN:token,IKUN_TRACKING_X_BEARER_TOKEN:'fixture-provider-token-not-a-real-secret'},inheritOutput:true,graceMs:3000});
  await until(async()=>{const r=await fetch(endpoint+'/health/ready');return r.ok;});
  process.env.TRACKING_API_URL=endpoint;process.env.TRACKING_API_TOKEN=token;
  projects=await import(pathToFileURL(join(preview,'apps/website/lib/projects.ts')));projects.projectsAuth();

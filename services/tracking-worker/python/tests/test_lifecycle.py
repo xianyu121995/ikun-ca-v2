@@ -6,8 +6,6 @@ from dataclasses import replace
 import httpx
 import pytest
 from conftest import add, event, tweet
-from websockets.asyncio.client import connect
-from websockets.asyncio.server import serve
 
 from tracking.remote import Remote, RemoteError
 from tracking.store import Conflict, Store
@@ -79,7 +77,7 @@ async def test_timeout_after_applied_add_is_resolved_by_read(worker, store, vend
     vendor.uncertain_add = True
     await worker.reconcile()
     assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["status"] == "running"
-    assert sum(e == "twitter_watch_add" for e, _ in vendor.calls) == 1
+    assert sum(e == "rules_add" for e, _ in vendor.calls) == 1
 
 
 async def test_failed_delete_visible_retry_no_false_stop(worker, store, vendor):
@@ -138,7 +136,7 @@ async def test_shared_watch_never_overwritten_or_deleted(worker, store, vendor):
     )
     await worker.reconcile()
     assert json.dumps(vendor.rows, sort_keys=True) == original
-    assert all(e == "twitter_watch" for e, _ in vendor.calls)
+    assert all(e == "rules" for e, _ in vendor.calls)
 
 
 async def test_matching_group_without_local_claim_is_not_adopted(worker, store, vendor):
@@ -155,7 +153,7 @@ async def test_external_flag_change_is_blocked(worker, store, vendor):
     count = len(vendor.calls)
     await worker.reconcile()
     assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["error"] == "remote_flags_conflict"
-    assert all(e == "twitter_watch" for e, _ in vendor.calls[count:])
+    assert all(e == "rules" for e, _ in vendor.calls[count:])
 
 
 async def test_list_failure_blocks_all_mutations_and_recovers(worker, store, vendor):
@@ -163,7 +161,7 @@ async def test_list_failure_blocks_all_mutations_and_recovers(worker, store, ven
     vendor.list_fails = True
     await worker.reconcile()
     assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["remote_state"] == "unknown"
-    assert all(e == "twitter_watch" for e, _ in vendor.calls)
+    assert all(e == "rules" for e, _ in vendor.calls)
     vendor.list_fails = False
     store.observe(store.get("prj_550e8400-e29b-41d4-a716-446655440001"), next_retry=0)
     await worker.reconcile()
@@ -200,7 +198,7 @@ async def test_restart_recovers_reserved_remote_add_without_duplicate(worker, st
     replacement = Worker(cfg, Store(cfg.db_path), worker.remote)
     await replacement.reconcile()
     assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["claim"] == "owned"
-    assert all(e != "twitter_watch_add" for e, _ in vendor.calls)
+    assert all(e != "rules_add" for e, _ in vendor.calls)
 
 
 async def test_disabled_remote_makes_zero_requests(cfg, store, vendor):
@@ -246,24 +244,20 @@ def test_confirmation_duplicates_revision_and_idempotency(store):
         )
 
 
-async def test_backfill_dedup_filters_and_gap_reporting(worker, store, vendor):
+async def test_live_ingest_dedup_does_not_backfill_history(worker, store, vendor):
     add(store)
-    old = tweet(at=time.time() - 86400, tweet_id="1")
-    now = tweet(tweet_id="2")
-    vendor.tweets = [old, now, tweet(tweet_id="3", isReply=True), tweet("foreign", "4")]
     await worker.reconcile()
+    assert store.activities() == []
+    assert worker.ingest(event(tweet(tweet_id="2")))
+    assert not worker.ingest(event(tweet(tweet_id="2")))
     assert [x["tweet_id"] for x in store.activities()] == ["2"]
-    assert not worker.ingest(event(now))
-    vendor.tweets = [tweet(tweet_id=str(1000 + i)) for i in range(100)]
-    store.observe(store.get("prj_550e8400-e29b-41d4-a716-446655440001"), last_backfill=0)
-    calls=len([name for name,_ in vendor.calls if name in ('twitter_user_tweets','twitter_search')])
-    await worker.reconcile()
-    assert len([name for name,_ in vendor.calls if name in ('twitter_user_tweets','twitter_search')])==calls
-    row=store.get("prj_550e8400-e29b-41d4-a716-446655440001")
-    worker.ledger.mark_gap(row['generation_at'])
-    worker.ledger.close_gap(time.time(),[row])
+    row = store.get("prj_550e8400-e29b-41d4-a716-446655440001")
+    worker.ledger.mark_gap(row["generation_at"])
+    worker.ledger.close_gap(time.time(), [row])
     await worker.backfill(row)
-    assert store.get("prj_550e8400-e29b-41d4-a716-446655440001")["coverage"] == "possible_gap"
+    assert [x["tweet_id"] for x in store.activities()] == ["2"]
+    assert store.get(row["project_id"])["coverage"] == "possible_gap"
+    assert not any(name in ("twitter_user_tweets", "twitter_search") for name, _ in vendor.calls)
 
 
 @pytest.mark.parametrize("kind", ["NEW_FOLLOWER", "NEW_TWEET_REPLY", "NEW_RETWEET"])
@@ -307,64 +301,57 @@ async def test_ingestion_filters_restart_dedup_and_empty_body_completion(worker,
     assert not worker.ingest(event(tweet(tweet_id="997")))
 
 
-async def test_websocket_subscribe_pong_disconnect_and_reconnect(worker, store):
+async def test_filtered_stream_reconnects_and_ingests(worker, store):
     add(store)
     await worker.reconcile()
     connections = 0
 
-    async def server(ws):
+    async def connect():
         nonlocal connections
         connections += 1
         number = connections
-        async for raw in ws:
-            if raw == "ping":
-                await ws.send("pong")
-                await ws.send(json.dumps(event(tweet(tweet_id=str(900 + number)))))
-                if number == 1:
-                    await asyncio.sleep(0.05)
-                    await ws.close()
-            else:
-                assert json.loads(raw)["method"] == "twitter.subscribe"
-                await ws.send(json.dumps({"id": 1, "result": {"success": True}}))
+        yield ""
+        yield json.dumps(event(tweet(tweet_id=str(900 + number))))
+        if number == 1:
+            raise RemoteError("stream_closed")
+        while True:
+            await asyncio.sleep(3600)
+            yield ""
 
-    async with serve(server, "127.0.0.1", 0) as server:
-        url = "ws://127.0.0.1:" + str(server.sockets[0].getsockname()[1])
-        worker.ws_connect = lambda ignored, **kwargs: connect(url, **kwargs)
-        original_pause = worker.pause
-        worker.pause = lambda seconds: original_pause(0.03)
-        task = asyncio.create_task(worker.streams())
-        try:
-            for _ in range(100):
-                if len(store.activities()) >= 2 and store.runtime()["connection"] == "connected":
-                    break
-                await asyncio.sleep(0.03)
-            assert connections >= 2
-            assert len(store.activities()) == 2
-            assert store.runtime()["pong_at"]
-        finally:
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
+    worker.stream_connect = connect
+    worker.stream_silence = 30
+    original_pause = worker.pause
+    worker.pause = lambda seconds: original_pause(0.03)
+    task = asyncio.create_task(worker.streams())
+    try:
+        for _ in range(100):
+            if len(store.activities()) >= 2 and store.runtime()["connection"] == "connected":
+                break
+            await asyncio.sleep(0.03)
+        assert connections >= 2
+        assert len(store.activities()) == 2
+        assert store.runtime()["pong_at"]
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
-async def test_missing_pong_does_not_report_connected(worker, store):
-    async def server(ws):
-        async for raw in ws:
-            if raw != "ping":
-                await ws.send(json.dumps({"id": 1, "result": {"success": True}}))
+async def test_stream_silence_does_not_report_connected(worker, store):
+    async def connect():
+        await asyncio.sleep(5)
+        yield ""
 
-    async with serve(server, "127.0.0.1", 0) as server:
-        url = "ws://127.0.0.1:" + str(server.sockets[0].getsockname()[1])
-        async with connect(url) as ws:
-            with pytest.raises(asyncio.TimeoutError):
-                await worker.session(ws)
+    worker.stream_silence = 0.15
+    with pytest.raises(asyncio.TimeoutError):
+        await worker.session(connect())
     assert store.runtime()["connection"] != "connected"
 
 
 @pytest.mark.parametrize(
     "body,code",
     [
-        ({"success": True, "data": {"list": [], "total": 2}}, "incomplete_watch_snapshot"),
-        ({"success": True, "data": None}, "invalid_watch_snapshot"),
+        ({"data": [], "meta": {"result_count": 2}}, "incomplete_watch_snapshot"),
+        ({"data": None}, "invalid_watch_snapshot"),
         ({"success": False, "message": "token-secret"}, "api_failure"),
     ],
 )
@@ -399,7 +386,7 @@ async def test_explicit_owned_legacy_watch_adopts_without_remote_write(worker,st
     await worker.reconcile()
     row=store.get('prj_550e8400-e29b-41d4-a716-446655440001')
     assert row['claim']=='owned' and row['remote_state']=='active'
-    assert not any(endpoint in ('twitter_watch_add','twitter_watch_delete') for endpoint,body in vendor.calls)
+    assert not any(endpoint in ('rules_add','rules_delete') for endpoint,body in vendor.calls)
 
 
 async def test_healthy_ticks_do_not_poll_watch_even_after_two_hours(worker,store,vendor,monkeypatch):
@@ -427,8 +414,8 @@ async def test_new_shared_subscription_gets_one_initial_read_without_watch_write
     async def pause(seconds):worker.stop.set()
     monkeypatch.setattr(worker,'pause',pause)
     await worker.ticks()
-    assert [name for name,_ in vendor.calls].count('twitter_user_tweets')==1
-    assert not any(name in ('twitter_watch_add','twitter_watch_delete') for name,_ in vendor.calls)
+    assert [name for name,_ in vendor.calls].count('twitter_user_tweets')==0
+    assert not any(name in ('rules_add','rules_delete') for name,_ in vendor.calls)
     row=store.get('prj_550e8400-e29b-41d4-a716-446655440001')
     await worker.backfill(row)
-    assert [name for name,_ in vendor.calls].count('twitter_user_tweets')==1
+    assert [name for name,_ in vendor.calls].count('twitter_user_tweets')==0

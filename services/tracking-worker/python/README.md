@@ -14,6 +14,10 @@
 - 全局永久小tweet账本，跨代公开活动按sub+tweet折叠；补采、重放、补全文、类型补全不再产生新推文通知。15天UTC固定寿命，过期先隐藏，验证备份后分批清除所有正文/SSE/outbox副本；命令、幂等、必要回执状态保持。
 - 首次激活前持久ready=0的显式新路径恢复；合并独立非退回账本、清理、校验后才ready=1。旧SSE锚点422，旧快照失效。备份过时的控制状态不得覆盖新备注/命令。保留时钟用原子MAX，回拨不复活。
 
+## Filtered stream
+
+Live account watches use the X API v2 filtered stream, not 6551. Set `IKUN_TRACKING_X_BEARER_TOKEN` or a mode-0600 `token_file`. See `X-FILTERED-STREAM.md`. Do not commit the bearer.
+
 ## 运行
 
 Python3.11+、Node24及固定B0 runtime。第三方依赖用requirements.lock.txt；独立release必须包含源码及仓库schemas/tracking，不从Worktree、.b3/preview或旧服务cwd运行。Nodecompiled入口会用绝对entry.py、私有配置目录cwd与裁剪环境启动Python，强制外采关闭。安装/构建仍通过主仓库唯一heavy lock。

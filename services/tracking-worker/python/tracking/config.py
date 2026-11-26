@@ -37,7 +37,7 @@ class Config:
 
     def secret(self, kind: str) -> str:
         env = {
-            "token": "IKUN_TRACKING_6551_TOKEN",
+            "token": "IKUN_TRACKING_X_BEARER_TOKEN",
             "admin_token": "IKUN_TRACKING_ADMIN_TOKEN",
             "read_token": "IKUN_TRACKING_READ_TOKEN",
             "service_token": "TRACKING_API_TOKEN",

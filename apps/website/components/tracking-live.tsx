@@ -55,10 +55,11 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
     const [loading, setLoading] = useState(!snapshot), [error, setError] = useState(''), [cursor, setCursor] = useState<string | null>(snapshot?.cursor??null), [cursors, setCursors] = useState<(string | null)[]>(snapshot?.cursors??[null]), [page, setPage] = useState(snapshot?.page??0), [busy, setBusy] = useState(false);
     const [edit, setEdit] = useState<Subscription | null>(null), [editName, setEditName] = useState(''), [editNotes, setEditNotes] = useState(''), [command, setCommand] = useState('');
     const [add, setAdd] = useState({ name: '', x_handle: '', notes: '', rating: 'B', confirmed: false });
-    const [filters,setFilters]=useState<Filters>(snapshot?.filters??emptyFilters);
+    const [filters,setFilters]=useState<Filters>({...emptyFilters,...(snapshot?.filters??{}),category:snapshot?.filters?.category??'all'});
+    const gradeCounts=useRef(snapshot?.totals?.subscriptionCounts??null);
     const [windowFrom,setWindowFrom]=useState<string|null>(snapshot?.windowFrom??null);
     const [totals,setTotals]=useState<Totals|null>(snapshot?.totals??null);
-    const query=new URLSearchParams({profile:'published-v1',limit:'20',q:filters.query,ratings:filters.grade==='all'?'S,A,B':filters.grade});
+    const query=new URLSearchParams({profile:'published-v1',limit:'20',q:filters.query,ratings:filters.grade==='all'?'S,A,B':filters.grade,...(filters.category&&filters.category!=='all'?{category:filters.category}:{})});
     if(windowFrom)query.set('from_at',windowFrom);
     const viewKey = JSON.stringify([page, cursors[page], csrf,query.toString()]);
     function changeFilters(next:Filters){setFilters(next);setWindowFrom(next.hours==='all'?null:new Date(Date.now()-Number(next.hours)*3600000).toISOString());setPage(0);setCursors([null]);setLoading(true);}
@@ -92,13 +93,15 @@ export function TrackingLive({ csrf, canManage, username, voiceSession, fixture 
             const grades=new Map<string,Activity['rating']>(data.items.map((item:Activity)=>[item.subscription_id,item.rating]));
             const accountRows:Account[]=rows.map(row=>({ui_key:row.subscription_id,name:row.name,handle:row.x_handle,note:row.error_code ? row.notes+' · 失败原因：'+row.error_code : row.notes,grade:row.rating===undefined?grades.get(row.subscription_id)??null:row.rating,avatar:row.name.slice(0,1),status:row.error_code||row.operation_state==='failed'?'failed':row.desired_state==='running'&&row.observed_state==='running'&&row.connection==='connected'?'running':row.operation_state==='unknown'||row.observed_state==='unknown'?'unknown':row.desired_state!=='running'?(row.observed_state==='absent'?'stopped':'stopping'):row.operation_state==='succeeded'&&row.observed_state==='running'&&row.connection==='connected'?'running':'starting'}));
             const postRows:Post[]=data.items.map((item:Activity)=>({ui_key:item.activity_id,account_key:item.subscription_id,published_at:item.occurred_at,received_at:item.received_at,body:item.text,translation_zh:item.translation_zh??null,quoted_tweet:item.quoted_tweet??null,tweet_kind:item.tweet_kind,important:null,comments:'未知',reposts:'未知',likes:'未知',media:null,media_available:false,original_url:item.url}));setPosts(postRows);
-            setTotals({matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating});
+            if(filters.category==='all')gradeCounts.current=data.subscription_counts_by_rating;
+            const totalsValue={matchedTotal:data.matched_total,subscriptionCounts:gradeCounts.current??data.subscription_counts_by_rating};
+            setTotals(totalsValue);
             setCursor(data.next_cursor);
             setSubs(rows);
             setMonitorCount(countIntendedMonitors(rows));
             setAccounts(accountRows.filter(account=>visible.some(row=>row.subscription_id===account.ui_key)));
             setHistoryAccounts(accountRows);
-            readAt.current=started;saveClientData(scope,'tracking:view',{subs:rows,posts:postRows,accounts:accountRows.filter(account=>visible.some(row=>row.subscription_id===account.ui_key)),historyAccounts:accountRows,cursor:data.next_cursor,totals:{matchedTotal:data.matched_total,subscriptionCounts:data.subscription_counts_by_rating},filters,windowFrom,page,cursors,queryView:queryView.current});
+            readAt.current=started;saveClientData(scope,'tracking:view',{subs:rows,posts:postRows,accounts:accountRows.filter(account=>visible.some(row=>row.subscription_id===account.ui_key)),historyAccounts:accountRows,cursor:data.next_cursor,totals:totalsValue,filters,windowFrom,page,cursors,queryView:queryView.current});
             setError('');
         }
         catch (e) {

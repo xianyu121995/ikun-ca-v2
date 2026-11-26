@@ -1,9 +1,12 @@
 /** Page presentation only. ui_key is a local rendering key, never a canonical business ID. */
+import { matchesProjectType, type ProjectTypeFilter } from "../../homepage/reference-model";
 export type Grade = "S" | "A" | "B";
 export interface Account {
   ui_key: string; name: string; handle: string; note: string; grade: Grade | "C" | "D" | null;
   status: "running" | "starting" | "stopping" | "failed" | "unknown" | "stopped";
   avatar: string;
+  /** Homepage project type. Missing or blank is 未分类. */
+  category?: string | null;
 }
 export interface Media {
   kind: "demo" | "image" | "video";
@@ -18,8 +21,8 @@ export interface Post {
   media: Media | null;
 }
 export interface AccountInput { handle: string; name: string; note: string; grade: Grade }
-export interface Filters { query: string; grade: Grade | "all"; hours: "all" | "24" | "168"; important: boolean }
-export const emptyFilters: Filters = { query: "", grade: "all", hours: "all", important: false };
+export interface Filters { query: string; grade: Grade | "all"; hours: "all" | "24" | "168"; important: boolean; category: ProjectTypeFilter }
+export const emptyFilters: Filters = { query: "", grade: "all", hours: "all", important: false, category: "all" };
 export const PAGE_SIZE = 6;
 const beijingDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" });
 const beijingTime = new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
@@ -38,6 +41,7 @@ export function selectPosts(accounts: Account[], posts: Post[], filters: Filters
   return posts.filter(post => {
     const account = map.get(post.account_key); if (!account) return false;
     return (filters.grade === "all" || account.grade === filters.grade) &&
+      matchesProjectType(account.category, filters.category ?? "all") &&
       (filters.hours === "all" || Number.isFinite(timeOf(post)) && timeOf(post) >= now - Number(filters.hours) * 3600000 && timeOf(post) <= now) &&
       (!filters.important || post.important) &&
       `${account.note} ${account.name} ${account.handle} @${account.handle} ${post.body}`.toLowerCase().includes(query);

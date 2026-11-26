@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {referenceFixtures,DEMO_AS_OF} from '../reference-fixtures.ts';
-import {currentMilestone,dateNumber,dayDistance,matchesDiscoveryDate,milestoneLabel,milestoneNumber,upcomingProjects,validateDraft} from '../reference-model.ts';
+import {PROJECT_TYPE_FILTERS,PROJECT_TYPES,currentMilestone,dateNumber,dayDistance,matchesDiscoveryDate,matchesProjectType,milestoneLabel,milestoneNumber,projectTypeLabel,upcomingProjects,validateDraft} from '../reference-model.ts';
 import {pickFields,toPageViews} from '../view-model.ts';
 const fixtures=referenceFixtures();const views=toPageViews(fixtures.projects,'demo');
 test('calendar arithmetic rejects invalid dates and uses an explicit supplied reference date',()=>{
@@ -52,4 +52,14 @@ test('discovery calendar filter uses Beijing dates, combines with query input an
 test('same-day upcoming events use hour order before stable IDs',()=>{
   const milestones=fixtures.milestones.map((event,index)=>({...event,date:'2026-10-18',hour:['23','00','09'][index]||'22'}));
   assert.deepEqual(upcomingProjects(views.slice(0,3),milestones,DEMO_AS_OF,null).map(row=>row.project.record.name),['Nova Network','Orbit Network','Prism Labs']);
+});
+test('project type chips use one taxonomy and treat a missing category as 未分类',()=>{
+  assert.deepEqual(PROJECT_TYPE_FILTERS,['all',...PROJECT_TYPES,'none']);
+  assert.deepEqual(PROJECT_TYPE_FILTERS.map(projectTypeLabel),['全部类型','NFT','发射台','新协议','撸毛','链游','未分类']);
+  for(const category of [null,undefined,''])assert.equal(matchesProjectType(category,'none'),true);
+  assert.equal(matchesProjectType('NFT','NFT'),true);
+  assert.equal(matchesProjectType('NFT','none'),false);
+  assert.equal(matchesProjectType('','NFT'),false);
+  assert.equal(matchesProjectType('DeFi','none'),false);
+  assert.equal(matchesProjectType('链游','all'),true);
 });

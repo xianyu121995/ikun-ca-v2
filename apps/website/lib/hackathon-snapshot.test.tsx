@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HackathonBoard } from "../app/hackathons/board.tsx";
-import { chainLabel, EMPTY_COPY, groupEvents, matchesChain, parseSnapshot, phaseAt, type HackathonEvent, type HackathonSnapshot } from "./hackathon-snapshot.ts";
+import { chainLabel, EMPTY_COPY, groupEvents, LIST_PAGE_SIZE, LIST_PREVIEW, matchesChain, paintSnapshot, parseSnapshot, phaseAt, projectPage, type HackathonEvent, type HackathonProject, type HackathonSnapshot } from "./hackathon-snapshot.ts";
 
 const NOW = "2026-11-27T12:49:00Z";
 
@@ -162,4 +162,52 @@ test("chain filter keeps BSC and SOL apart, including recent changes", () => {
   assert.match(html, /BSC 黑客松/);
   assert.match(html, /SOL 黑客松/);
   assert.doesNotMatch(html, /链未标明|猜测/);
+});
+
+test("first paint keeps a short preview and later pages stay bounded", () => {
+  const projects: HackathonProject[] = Array.from({ length: 120 }, (_, index) => ({
+    name: `项目 ${index + 1}`,
+    role: "submitted" as const,
+    place: "",
+    track: "",
+    url: `https://example.com/p/${index + 1}`,
+    source_url: `https://example.com/p/${index + 1}`,
+    note: "",
+  }));
+  const full = snapshot([event({
+    id: "worldsfair",
+    title: "Crypto World's Fair",
+    ecosystem: "solana",
+    chain: "SOL",
+    official_status: "awaiting_results",
+    phase: "live",
+    submission: { state: "published", note: "公开名单。", form_url: null, projects },
+  })]);
+  const painted = paintSnapshot(full, new Date(NOW));
+  const shown = painted.events[0]!.submission;
+  assert.equal(shown.project_total, 120);
+  assert.equal(shown.projects.length, LIST_PREVIEW);
+  assert.equal(shown.projects[0]!.name, "项目 1");
+  assert.equal(shown.projects.at(-1)!.name, `项目 ${LIST_PREVIEW}`);
+  const html = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: painted }} now={NOW} />);
+  assert.match(html, /共 120 个/);
+  assert.match(html, /项目 1/);
+  assert.match(html, /查看更多/);
+  assert.equal(html.match(/class="hk-row"/g)?.length, LIST_PREVIEW);
+  assert.doesNotMatch(html, /项目 21/);
+  const page = projectPage(projects, 2, LIST_PAGE_SIZE);
+  assert.equal(page.projects.length, LIST_PAGE_SIZE);
+  assert.equal(page.projects[0]!.name, "项目 51");
+  const focused = paintSnapshot(full, new Date(NOW), { eventId: "worldsfair", list: "submission", page: 2 });
+  assert.equal(focused.events[0]!.submission.projects[0]!.name, "项目 51");
+  assert.equal(focused.events[0]!.submission.projects.length, LIST_PAGE_SIZE);
+  const archived = paintSnapshot(snapshot([event({
+    id: "old-list",
+    title: "已结束名单",
+    official_status: "completed",
+    phase: "ended",
+    submission: { state: "published", note: "公开名单。", form_url: null, projects },
+  })]), new Date(NOW));
+  assert.equal(archived.events[0]!.submission.project_total, 120);
+  assert.equal(archived.events[0]!.submission.projects.length, 0);
 });

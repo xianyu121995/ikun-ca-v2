@@ -9,7 +9,8 @@
 .hk-page .hk-milestones dd { margin: 0; overflow-wrap: anywhere; }
 .hk-page .hk-ecosystem { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
 .hk-page .hk-ecosystem > h2 { margin: 0; font-size: 20px; }
-.hk-page .hk-projects { max-height: 320px; overflow: auto; margin: 0; padding-left: 18px; }
+.hk-page .hk-projects, .hk-page .hk-changes { max-height: 320px; overflow: auto; margin: 0; padding-left: 18px; }
+.hk-page h3 .ik-badge { margin-left: 8px; }
 .hk-page .hk-projects li { margin: 6px 0; }
 .hk-page .hk-links { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 0; }
 @media (max-width: 720px) {

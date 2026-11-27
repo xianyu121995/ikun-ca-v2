@@ -23,7 +23,8 @@ export interface HackathonMilestone {
   end_utc: string | null;
 }
 
-export type Ecosystem = "bnb" | "solana";
+export type Ecosystem = "bnb" | "solana" | "both";
+export type PublicationStatus = "not_published" | "unverified" | "empty" | "partial" | "error" | "published" | "private_form" | "unknown";
 
 export interface HackathonEvent {
   id: string;
@@ -41,8 +42,13 @@ export interface HackathonEvent {
   end_utc: string | null;
   listed: boolean;
   missing_note: string;
-  submission: { state: "public" | "private_form" | "not_published" | "unknown"; note: string; form_url: string | null; projects: HackathonProject[] };
-  results: { state: "published" | "not_published"; note: string; projects: HackathonProject[] };
+  submission: { state: PublicationStatus | "public"; note: string; form_url: string | null; projects: HackathonProject[] };
+  results: { state: PublicationStatus | "published"; note: string; projects: HackathonProject[] };
+  publication?: {
+    submission: { status: string; status_label: string; first_seen?: string | null; published_at?: string | null; elapsed_basis?: string | null };
+    winner: { status: string; status_label: string; first_seen?: string | null; published_at?: string | null; elapsed_basis?: string | null };
+  };
+  sources?: { url: string; kind: string; status: string; status_label?: string; submission_status?: string | null; winner_status?: string | null; error?: string }[];
   milestones: HackathonMilestone[];
   links: { label: string; url: string }[];
 }
@@ -55,6 +61,7 @@ export interface HackathonSnapshot {
   standing: true;
   sources: { id: string; url: string; ok: boolean; checked_at: string; error: string; note: string }[];
   events: HackathonEvent[];
+  changes?: { id: number; kind: string; label: string; event: string; at?: string; at_beijing?: string; source?: string }[];
 }
 
 export type SnapshotLoad =
@@ -70,7 +77,7 @@ export function parseSnapshot(value: unknown): HackathonSnapshot | null {
   if (!Array.isArray(snapshot.events) || !Array.isArray(snapshot.sources)) return null;
   for (const event of snapshot.events) {
     if (!event || typeof event.title !== "string" || !event.title.trim()) return null;
-    if (event.ecosystem !== "bnb" && event.ecosystem !== "solana") return null;
+    if (event.ecosystem !== "bnb" && event.ecosystem !== "solana" && event.ecosystem !== "both") return null;
     if (event.classification !== "hackathon" && event.classification !== "related") return null;
     if (!PHASES.has(event.phase)) return null;
     if (!event.submission || !event.results || !Array.isArray(event.milestones) || !Array.isArray(event.links)) return null;

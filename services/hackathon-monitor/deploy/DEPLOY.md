@@ -11,7 +11,7 @@
    - `hackathon.sqlite3` 保持 `0600`，网站用户不能读。
    - `snapshot.json` 由进程写成 `0644`。目录需要 `0755`，这样网站用户只读得到快照。
 3. `/etc/ikun-hackathon.env`，权限 `0600`，内容见 `hackathon.env.example`。这里没有第三方密钥。
-4. 安装 `ikun-hackathon.service`。`Restart=always`，没有结束日期。然后：
+4. 安装 `ikun-hackathon.service`。`User=hackathon`（不要改成 DynamicUser，网站进程要能读快照）。`Restart=always`，没有结束日期。默认大约每 15 分钟核对一轮；已完整结束的赛事会放慢，读取失败的来源继续重试。已知但不在目录里的官方页面写在 `config.json` 的 `manual_sources`，不要只靠临时命令。然后：
 
 ```bash
 sudo systemctl daemon-reload

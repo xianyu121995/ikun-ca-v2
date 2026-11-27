@@ -1,5 +1,6 @@
 {
-  "poll_seconds": 1800,
+  "poll_seconds": 900,
+  "completed_refresh_seconds": 21600,
   "min_poll_seconds": 300,
   "request_gap_seconds": 0.8,
   "detail_refresh_seconds": 21600,
@@ -17,5 +18,19 @@
   "pins": [
     {"kind": "binance_article", "code": "95f5dbe0ea674a48a739b59e046648bf"},
     {"kind": "bnb_blog", "slug": "bnb-bangkok-build-demo-and-pitch"}
+  ],
+  "manual_sources": [
+    {
+      "url": "https://www.binance.com/zh-CN/support/announcement/detail/95f5dbe0ea674a48a739b59e046648bf",
+      "name": "Agent ID Hackathon",
+      "chain": "BSC",
+      "event_id": "binance:95f5dbe0ea674a48a739b59e046648bf"
+    },
+    {
+      "url": "https://www.bnbchain.org/en/blog/bnb-bangkok-build-demo-and-pitch",
+      "name": "BNB Bangkok: Build, Demo, and Pitch",
+      "chain": "BSC",
+      "event_id": "bnb-bangkok-2026"
+    }
   ]
 }

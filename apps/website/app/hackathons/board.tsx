@@ -16,9 +16,13 @@ export function HackathonBoard({ load, now }: { load: SnapshotLoad; now: string 
   return <div className="hk-board">
     <Header checkedAt={load.snapshot.generated_at_beijing} />
     <Alert tone="warning" title="这里看不到全部投稿">{EMPTY_COPY.notEverything}</Alert>
+    {load.snapshot.changes && load.snapshot.changes.length > 0 && <section className="hk-section" aria-labelledby="hk-changes">
+      <h2 id="hk-changes">最近变化</h2>
+      <ul className="hk-changes">{load.snapshot.changes.slice(-12).reverse().map(change => <li key={change.id}><strong>{change.label}</strong> {change.event}{change.at_beijing ? ` · ${change.at_beijing} 北京时间` : ""}</li>)}</ul>
+    </section>}
     {failed.length > 0 && <Alert tone="warning" title="有来源这次没有核对成功">{failed.map(source => <p key={source.id}>{source.id}：{source.error || "失败"}。上次成功的内容会保留。</p>)}</Alert>}
-    <Ecosystem id="bnb" title="BNB Chain / BSC" events={load.snapshot.events.filter(event => event.ecosystem === "bnb")} now={now} />
-    <Ecosystem id="solana" title="Solana" events={load.snapshot.events.filter(event => event.ecosystem === "solana")} now={now} />
+    <Ecosystem id="bnb" title="BNB Chain / BSC" events={load.snapshot.events.filter(event => event.ecosystem === "bnb" || event.ecosystem === "both")} now={now} />
+    <Ecosystem id="solana" title="Solana" events={load.snapshot.events.filter(event => event.ecosystem === "solana" || event.ecosystem === "both")} now={now} />
   </div>;
 }
 
@@ -59,10 +63,10 @@ function EventCard({ event }: { event: HackathonEvent }) {
     {event.summary && <p className="hk-summary">{event.summary}</p>}
     <h3>日程</h3>
     {event.milestones.length ? <dl className="hk-milestones">{event.milestones.map(item => <div key={item.key}><dt>{item.label}</dt><dd>{item.display} <a href={item.source_url}>来源</a></dd></div>)}</dl> : <EmptyState title="没有已核实的时刻" description="来源没有给出可以换算的开始、结束或其他节点。" />}
-    <h3>投稿项目</h3>
+    <h3>投稿项目{event.publication ? <Badge tone={event.publication.submission.status === "published" ? "success" : event.publication.submission.status === "error" ? "danger" : "warning"}>{event.publication.submission.status_label}</Badge> : null}</h3>
     <ProjectBlock state={event.submission.state} note={event.submission.note} projects={event.submission.projects} empty={event.submission.state === "private_form" ? EMPTY_COPY.privateForm : EMPTY_COPY.noSubmissions} />
     {event.submission.form_url && <p className="hk-note"><a href={event.submission.form_url}>官方提交或报名入口</a>。这不是公开名单。</p>}
-    <h3>入选 / 获奖</h3>
+    <h3>入选 / 获奖{event.publication ? <Badge tone={event.publication.winner.status === "published" ? "success" : "warning"}>{event.publication.winner.status_label}</Badge> : null}</h3>
     <ProjectBlock state={event.results.state} note={event.results.note} projects={event.results.projects} empty={EMPTY_COPY.noResults} />
     {event.links.length > 0 && <p className="hk-links">{event.links.map(link => <a key={link.url} href={link.url}>{link.label}</a>)}</p>}
   </Panel>;

@@ -1,4 +1,7 @@
-"""python -m hackathon.main --once | --loop | --doctor"""
+"""python -m hackathon.main --once | --loop | --doctor
+
+One process. The website reads only the snapshot file.
+"""
 
 from __future__ import annotations
 
@@ -8,12 +11,12 @@ import os
 import signal
 import sys
 import traceback
+from datetime import datetime, timedelta
 from pathlib import Path
 
-from .collect import run_cycle
-from .http_client import HttpClient
-from .snapshot import build_snapshot, write_snapshot
-from .store import Store
+from .binance_feed import discover_binance
+from .engine import BEIJING, Store, canonical, clock, run_pass, source_kind
+from .publish import build_site_snapshot, write_site_snapshot
 
 HERE = Path(__file__).resolve().parents[1]
 
@@ -23,7 +26,7 @@ def load_config(path: str) -> dict:
         cfg = json.load(handle)
     if os.environ.get("HACKATHON_POLL_SECONDS"):
         cfg["poll_seconds"] = int(os.environ["HACKATHON_POLL_SECONDS"])
-    cfg["poll_seconds"] = max(int(cfg.get("min_poll_seconds") or 300), int(cfg.get("poll_seconds") or 1800))
+    cfg["poll_seconds"] = max(int(cfg.get("min_poll_seconds") or 300), int(cfg.get("poll_seconds") or 900))
     return cfg
 
 
@@ -33,24 +36,62 @@ def paths(args, cfg):
     return db, snapshot
 
 
-def publish(store, snapshot_path):
-    write_snapshot(snapshot_path, build_snapshot(store))
+def install_manual(store: Store, cfg: dict):
+    for item in cfg.get("manual_sources") or []:
+        url = canonical(item["url"])
+        kind = item.get("kind") or source_kind(url)
+        if not kind:
+            print(f"跳过不支持的手动来源 {url}", file=sys.stderr)
+            continue
+        event_id = item.get("event_id") or url
+        store.add_source(event_id, url, kind, item.get("name") or url, chain=item.get("chain"), pinned=True)
 
 
-def doctor(cfg, client) -> int:
-    url = cfg["sources"]["hackathon_index"]
+def _meta(store: Store, key: str):
+    store.db.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    row = store.db.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else None
+
+
+def _set_meta(store: Store, key: str, value: str):
+    store.db.execute(
+        "INSERT INTO meta (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, value),
+    )
+    store.db.commit()
+
+
+def cycle(store: Store, cfg: dict, snapshot: str) -> int:
+    timeout = int(cfg.get("request_timeout") or 20)
+    completed_after = int(cfg.get("completed_refresh_seconds") or 6 * 3600)
+    last = _meta(store, "completed_sweep")
+    include_completed = True
+    if last:
+        try:
+            include_completed = datetime.now(BEIJING) - datetime.fromisoformat(last) >= timedelta(seconds=completed_after)
+        except ValueError:
+            include_completed = True
+    notices, failures = run_pass(store, "", timeout, skip_discovery=False, include_completed=include_completed)
+    if include_completed:
+        _set_meta(store, "completed_sweep", clock().isoformat(timespec="seconds"))
     try:
-        status, body = client.fetch(url)
-        ok = status == 200 and b"hackathonPrograms" in body
-        print(f"index {'ok' if ok else 'fail'} HTTP {status} {len(body)} bytes")
-        return 0 if ok else 1
+        notices.extend(discover_binance(
+            store,
+            (cfg.get("sources") or {}).get("catalogs") or [93, 49],
+            int(cfg.get("announcement_pages_per_cycle") or 3),
+            timeout,
+        ))
     except Exception as error:  # noqa: BLE001
-        print(f"index fail {type(error).__name__}")
-        return 1
+        failures.append({"source": "binance-catalog", "error": str(error)})
+    write_site_snapshot(snapshot, build_site_snapshot(store))
+    print(json.dumps({"changes": len(notices), "failures": len(failures)}, ensure_ascii=False))
+    for failure in failures:
+        print(f"读取失败  {failure['source']}  {failure['error']}", file=sys.stderr)
+    return 2 if failures else 0
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description="长期运行的 BNB Chain / BSC 官方黑客松监控")
+    parser = argparse.ArgumentParser(description="ikun.ca 长期黑客松监控")
     parser.add_argument("--config", default=str(HERE / "config.json"))
     parser.add_argument("--db")
     parser.add_argument("--snapshot")
@@ -60,17 +101,24 @@ def main(argv=None) -> int:
     mode.add_argument("--doctor", action="store_true")
     args = parser.parse_args(argv)
     cfg = load_config(args.config)
-    client = HttpClient(gap=float(cfg.get("request_gap_seconds") or 0.8))
-    if args.doctor:
-        return doctor(cfg, client)
     db, snapshot = paths(args, cfg)
+    parent = os.path.dirname(os.path.abspath(db))
+    os.makedirs(parent, exist_ok=True)
     store = Store(db)
+    try:
+        os.chmod(db, 0o600)
+    except OSError:
+        pass
+    install_manual(store, cfg)
+    if args.doctor:
+        print("engine ok")
+        return 0
     stop = False
 
     def request_stop(signum, _frame):
         nonlocal stop
         stop = True
-        print(f"signal {signum}, finishing this cycle")
+        print(f"signal {signum}")
 
     signal.signal(signal.SIGTERM, request_stop)
     signal.signal(signal.SIGINT, request_stop)
@@ -78,28 +126,18 @@ def main(argv=None) -> int:
         if args.loop:
             import time
             while not stop:
-                _cycle(cfg, client, store, snapshot)
+                try:
+                    cycle(store, cfg, snapshot)
+                except Exception:
+                    traceback.print_exc()
                 slept = 0
                 while slept < cfg["poll_seconds"] and not stop:
                     time.sleep(1)
                     slept += 1
             return 0
-        report = _cycle(cfg, client, store, snapshot)
-        useful = any(report.get(key) for key in ("index", "details", "blog", "announcements", "solana", "colosseum"))
-        print(json.dumps(report, ensure_ascii=False))
-        return 0 if useful else 1
+        return cycle(store, cfg, snapshot)
     finally:
         store.close()
-
-
-def _cycle(cfg, client, store, snapshot) -> dict:
-    try:
-        report = run_cycle(cfg, client, store)
-    except Exception:
-        traceback.print_exc()
-        report = {"index": 0, "details": 0, "blog": 0, "announcements": 0, "errors": ["cycle"]}
-    publish(store, snapshot)
-    return report
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ python3 -m hackathon.main --doctor
 python3 -m unittest discover -s tests
 ```
 
-在 `services/hackathon-monitor` 目录执行。`--loop` 默认每 30 分钟一轮，失败由 systemd 拉起，不设结束日期。
+在 `services/hackathon-monitor` 目录执行。`--loop` 默认大约每 15 分钟一轮。已经完整结束的赛事会放慢，读取失败或名单不完整的来源继续重试。进程由 systemd 拉起，不设结束日期。
 
 数据库只属于这个服务。网站读的是另一份 `snapshot.json`，不打开这个 sqlite 文件。
 

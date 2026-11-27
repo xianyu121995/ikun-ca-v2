@@ -53,7 +53,8 @@
 .hk-page .hk-empty-line { margin: 0; color: var(--ik-secondary); }
 .hk-page .hk-schedule { margin-top: 8px; }
 .hk-page .hk-schedule summary { cursor: pointer; color: var(--ik-secondary); }
-.hk-page .hk-links { margin-top: 10px; }
+.hk-page .hk-links, .hk-page .hk-pager { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.hk-page .hk-pager { align-items: center; }
 @media (max-width: 720px) {
   .hk-page .hk-milestones div, .hk-page .hk-row { grid-template-columns: 1fr; }
 }

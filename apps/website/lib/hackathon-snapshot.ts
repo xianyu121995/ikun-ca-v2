@@ -48,8 +48,8 @@ export interface HackathonEvent {
   end_utc: string | null;
   listed: boolean;
   missing_note: string;
-  submission: { state: PublicationStatus | "public"; note: string; form_url: string | null; projects: HackathonProject[] };
-  results: { state: PublicationStatus | "published"; note: string; projects: HackathonProject[] };
+  submission: { state: PublicationStatus | "public"; note: string; form_url: string | null; project_total?: number; projects: HackathonProject[] };
+  results: { state: PublicationStatus | "published"; note: string; project_total?: number; projects: HackathonProject[] };
   publication?: {
     submission: { status: string; status_label: string; first_seen?: string | null; published_at?: string | null; first_seen_display?: string; published_at_display?: string; elapsed_basis?: string | null };
     winner: { status: string; status_label: string; first_seen?: string | null; published_at?: string | null; first_seen_display?: string; published_at_display?: string; elapsed_basis?: string | null };
@@ -66,9 +66,21 @@ export interface HackathonEvent {
     note?: string;
     published_at_display?: string;
     first_seen_display?: string;
+    work_total?: number;
+    winner_total?: number;
     works: HackathonProject[];
     winners: HackathonProject[];
   }[];
+}
+
+export const LIST_PREVIEW = 20;
+export const LIST_PAGE_SIZE = 50;
+export type ProjectListKind = "submission" | "results" | "side-works" | "side-winners";
+export interface ListFocus {
+  eventId: string;
+  list: ProjectListKind;
+  page: number;
+  track?: string;
 }
 
 export interface HackathonSnapshot {
@@ -211,6 +223,69 @@ export function groupEvents(events: HackathonEvent[], now: Date): HackathonGroup
     archive: hackathons.filter(event => event.phase === "ended").sort(byEnd),
     relatedCurrent: related.filter(event => event.phase !== "ended").sort(byStart),
     relatedArchive: related.filter(event => event.phase === "ended").sort(byEnd),
+  };
+}
+
+export function orderedProjects(projects: HackathonProject[], ranked = false): HackathonProject[] {
+  if (!ranked) return projects;
+  return [...projects].sort((left, right) => rankValue(left.place) - rankValue(right.place) || left.name.localeCompare(right.name, "zh-Hans-CN"));
+}
+
+function rankValue(place: string): number {
+  const match = /(\d+)/.exec(place);
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+}
+
+export function projectPage(projects: HackathonProject[], page: number, size = LIST_PAGE_SIZE, ranked = false) {
+  const ordered = orderedProjects(projects, ranked);
+  const safePage = Number.isFinite(page) && page >= 1 ? Math.min(10_000, Math.floor(page)) : 1;
+  const start = (safePage - 1) * size;
+  return { total: ordered.length, page: safePage, size, projects: ordered.slice(start, start + size) };
+}
+
+export function parseListFocus(query: Record<string, string | string[] | undefined>): ListFocus | null {
+  const eventId = firstQuery(query.event);
+  const list = firstQuery(query.list);
+  const page = Number(firstQuery(query.page) || "1");
+  const track = firstQuery(query.track);
+  if (!eventId || (list !== "submission" && list !== "results" && list !== "side-works" && list !== "side-winners")) return null;
+  if (!Number.isFinite(page) || page < 1) return null;
+  return { eventId, list, page: Math.floor(page), track };
+}
+
+function firstQuery(value: string | string[] | undefined): string {
+  return (Array.isArray(value) ? value[0] : value || "").trim();
+}
+
+function takeProjects(projects: HackathonProject[], ranked: boolean, mode: "preview" | "page" | "none", page = 1) {
+  const ordered = orderedProjects(projects, ranked);
+  if (mode === "none") return { project_total: ordered.length, projects: [] as HackathonProject[] };
+  if (mode === "page") return { project_total: ordered.length, projects: projectPage(ordered, page, LIST_PAGE_SIZE).projects };
+  return { project_total: ordered.length, projects: ordered.slice(0, LIST_PREVIEW) };
+}
+
+export function paintSnapshot(snapshot: HackathonSnapshot, now: Date, focus: ListFocus | null = null): HackathonSnapshot {
+  return { ...snapshot, events: snapshot.events.map(event => paintEvent(event, now, focus)) };
+}
+
+function paintEvent(event: HackathonEvent, now: Date, focus: ListFocus | null): HackathonEvent {
+  const current = phaseAt(event, now) !== "ended";
+  const focused = focus?.eventId === event.id;
+  const submissionMode = focused && focus?.list === "submission" ? "page" : current ? "preview" : "none";
+  const resultsMode = focused && focus?.list === "results" ? "page" : current ? "preview" : "none";
+  const submission = takeProjects(event.submission.projects, false, submissionMode, focus?.page);
+  const results = takeProjects(event.results.projects, true, resultsMode, focus?.page);
+  return {
+    ...event,
+    submission: { ...event.submission, ...submission },
+    results: { ...event.results, ...results },
+    side_tracks: (event.side_tracks ?? []).map(track => {
+      const worksMode = focused && focus?.list === "side-works" && focus.track === track.url ? "page" : "none";
+      const winnersMode = focused && focus?.list === "side-winners" && focus.track === track.url ? "page" : "none";
+      const works = takeProjects(track.works, false, worksMode, focus?.page);
+      const winners = takeProjects(track.winners, true, winnersMode, focus?.page);
+      return { ...track, work_total: works.project_total, winner_total: winners.project_total, works: works.projects, winners: winners.projects };
+    }),
   };
 }
 

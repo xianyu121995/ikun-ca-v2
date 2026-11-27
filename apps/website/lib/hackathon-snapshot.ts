@@ -51,12 +51,24 @@ export interface HackathonEvent {
   submission: { state: PublicationStatus | "public"; note: string; form_url: string | null; projects: HackathonProject[] };
   results: { state: PublicationStatus | "published"; note: string; projects: HackathonProject[] };
   publication?: {
-    submission: { status: string; status_label: string; first_seen?: string | null; published_at?: string | null; elapsed_basis?: string | null };
-    winner: { status: string; status_label: string; first_seen?: string | null; published_at?: string | null; elapsed_basis?: string | null };
+    submission: { status: string; status_label: string; first_seen?: string | null; published_at?: string | null; first_seen_display?: string; published_at_display?: string; elapsed_basis?: string | null };
+    winner: { status: string; status_label: string; first_seen?: string | null; published_at?: string | null; first_seen_display?: string; published_at_display?: string; elapsed_basis?: string | null };
   };
   sources?: { url: string; kind: string; status: string; status_label?: string; submission_status?: string | null; winner_status?: string | null; error?: string }[];
   milestones: HackathonMilestone[];
   links: { label: string; url: string }[];
+  tracking_label?: string;
+  documents?: { role: string; label: string; url: string }[];
+  side_tracks?: {
+    name: string;
+    url: string;
+    label: string;
+    note?: string;
+    published_at_display?: string;
+    first_seen_display?: string;
+    works: HackathonProject[];
+    winners: HackathonProject[];
+  }[];
 }
 
 export interface HackathonSnapshot {

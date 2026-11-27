@@ -93,12 +93,14 @@ def cycle(store: Store, cfg: dict, snapshot: str) -> int:
     if include_completed:
         _set_meta(store, "completed_sweep", clock().isoformat(timespec="seconds"))
     try:
-        notices.extend(discover_binance(
+        found, catalog_failures = discover_binance(
             store,
             (cfg.get("sources") or {}).get("catalogs") or [93, 49],
             int(cfg.get("announcement_pages_per_cycle") or 3),
             timeout,
-        ))
+        )
+        notices.extend(found)
+        failures.extend(catalog_failures)
     except Exception as error:  # noqa: BLE001
         failures.append({"source": "binance-catalog", "error": str(error)})
     write_site_snapshot(snapshot, build_site_snapshot(store))

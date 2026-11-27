@@ -67,6 +67,25 @@ class CoverageTests(unittest.TestCase):
             "https://www.bnbchain.org/en/blog/meet-the-winners-of-bnb-hack-ai-trading-agent-edition"
         ))
 
+    def test_one_binance_catalog_failure_does_not_drop_the_other(self):
+        from hackathon.binance_feed import discover_binance
+        temporary = TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        store = Store(Path(temporary.name) / "binance.sqlite3")
+        self.addCleanup(store.close)
+
+        def get(url, timeout, headers=None):
+            if "catalogId=49" in url:
+                raise OSError("catalog 49 unreachable")
+            if "catalogId=93" in url:
+                return {"data": {"articles": [{"code": "abc123", "title": "Agent ID Hackathon starts"}]}}
+            raise OSError(url)
+
+        notices, failures = discover_binance(store, [93, 49], 1, 5, get=get)
+        self.assertEqual([item["source"] for item in failures], ["binance-catalog:49"])
+        self.assertEqual(notices, [])
+        self.assertIsNotNone(store.source("https://www.binance.com/zh-CN/support/announcement/detail/abc123"))
+
     def test_missing_chain_is_not_called_bsc(self):
         self.assertEqual(_ecosystem(None), "unknown")
         self.assertEqual(_ecosystem(""), "unknown")

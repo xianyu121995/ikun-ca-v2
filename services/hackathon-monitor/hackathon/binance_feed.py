@@ -65,28 +65,32 @@ def fetch_binance_announcement(url, timeout=20):
     }
 
 
-def discover_binance(store, catalogs, pages, timeout):
-    """Find new hackathon announcements. The first successful scan is a baseline."""
-    notices = []
+def discover_binance(store, catalogs, pages, timeout, get=_get):
+    """Find new hackathon announcements. One catalog failure does not stop the others."""
+    notices, failures = [], []
     for catalog in catalogs:
         rows = []
-        for page in range(1, pages + 1):
-            payload = _get(CATALOG.format(catalog=catalog, page=page), timeout, {"lang": "en"})
-            articles = ((payload.get("data") or {}).get("articles") or []) if isinstance(payload, dict) else []
-            if not articles:
-                break
-            for article in articles:
-                title = article.get("title") or ""
-                code = article.get("code")
-                if not code or not announcement_in_scope_title(title):
-                    continue
-                url = canonical(f"https://www.binance.com/zh-CN/support/announcement/detail/{code}")
-                rows.append({
-                    "name": title,
-                    "url": url,
-                    "kind": "binance-announcement",
-                    "chain": "BSC",
-                    "event_status": "active",
-                })
+        try:
+            for page in range(1, pages + 1):
+                payload = get(CATALOG.format(catalog=catalog, page=page), timeout, {"lang": "en"})
+                articles = ((payload.get("data") or {}).get("articles") or []) if isinstance(payload, dict) else []
+                if not articles:
+                    break
+                for article in articles:
+                    title = article.get("title") or ""
+                    code = article.get("code")
+                    if not code or not announcement_in_scope_title(title):
+                        continue
+                    url = canonical(f"https://www.binance.com/zh-CN/support/announcement/detail/{code}")
+                    rows.append({
+                        "name": title,
+                        "url": url,
+                        "kind": "binance-announcement",
+                        "chain": "BSC",
+                        "event_status": "active",
+                    })
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            failures.append({"source": f"binance-catalog:{catalog}", "error": str(error)})
+            continue
         notices.extend(add_discovery(store, rows, CATALOG.format(catalog=catalog, page=1), clock().isoformat(timespec="seconds")))
-    return notices
+    return notices, failures

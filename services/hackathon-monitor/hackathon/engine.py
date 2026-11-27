@@ -301,6 +301,33 @@ class Store:
                 WHERE discovery.checked_at<=excluded.checked_at
             """, (source, seen, None if error else seen, error))
 
+    def place_with_organizer(self, url, payload, chain):
+        """Hang a Superteam side track under the main event the source names."""
+        organizer = payload.get("organizer_event_url") if isinstance(payload, dict) else None
+        if not isinstance(organizer, str):
+            return None
+        try:
+            parent = canonical(organizer)
+        except ValueError:
+            return None
+        if source_kind(parent) != "colosseum":
+            return None
+        if not self.source(parent):
+            self.add_source(parent, parent, "colosseum", "Crypto World's Fair", chain=chain or "SOL")
+        with self.db:
+            self.db.execute("BEGIN IMMEDIATE")
+            row = self.source(url)
+            if row and row["event_id"] != parent:
+                previous = row["event_id"]
+                self.db.execute("UPDATE findings SET event_id=? WHERE source=?", (parent, url))
+                self.db.execute("UPDATE sources SET event_id=? WHERE url=?", (parent, url))
+                self.db.execute("""
+                    DELETE FROM events WHERE id=?
+                    AND NOT EXISTS (SELECT 1 FROM sources WHERE event_id=?)
+                    AND NOT EXISTS (SELECT 1 FROM findings WHERE event_id=?)
+                """, (previous, previous, previous))
+        return parent
+
     def regroup_new_source(self, url, event_id):
         with self.db:
             self.db.execute("BEGIN IMMEDIATE")
@@ -398,10 +425,15 @@ class Store:
                             WHERE event_id=? AND kind=? AND identity=?
                         """, (name, published, row.get("url"), chain, category, website, twitter, info,
                               event["id"], kind, identity))
-            if not had_submissions and new_submissions:
+            # A list already public on the first read is history, not today's opening.
+            prior = bool(source["last_success"])
+            if (prior and previous.get("submission_status") not in PUBLIC_STATUSES
+                    and current.get("submission_status") in PUBLIC_STATUSES
+                    and not had_submissions and new_submissions):
                 notices.append({"kind": "gallery_opened", **base,
                                 "count": count_public(current, new_submissions)})
-            if winners:
+            if (prior and previous.get("winner_status") not in PUBLIC_STATUSES
+                    and current.get("winner_status") in PUBLIC_STATUSES and winners):
                 notices.append({"kind": "winner", **base, "items": winners})
             self.db.execute("""
                 UPDATE sources SET status='ok',checked_at=?,last_success=?,error=NULL,data=?
@@ -413,8 +445,11 @@ class Store:
         with self.db:
             for event_id in event_ids:
                 source_rows = list(self.db.execute(
-                    "SELECT data,status FROM sources WHERE event_id=?", (event_id,)))
-                all_data = [json.loads(row["data"]) for row in source_rows]
+                    "SELECT url,data,status FROM sources WHERE event_id=?", (event_id,)))
+                # Side-track pages do not decide whether the main event has published results.
+                main_rows = [row for row in source_rows if "/earn/listing/" not in row["url"] and "/earn/hackathon/" not in row["url"]] or source_rows
+                all_data = [json.loads(row["data"]) for row in main_rows]
+                source_rows = main_rows
                 incomplete = any(row["status"] in {"error", "pending"} for row in source_rows) or any(
                     "error" in (item.get("submission_status"), item.get("winner_status")) for item in all_data
                 )
@@ -422,7 +457,11 @@ class Store:
                 results = {item.get("winner_status") for item in all_data}
                 dates = [iso(slot.get("time")) for item in all_data for slot in item.get("schedule", [])
                          if slot["kind"] == "submission_close"]
-                if "completed" in stages and "published" in results:
+                results_public = bool(results & PUBLIC_STATUSES)
+                page_ended = "completed" in stages
+                if page_ended and not results_public:
+                    stage = "submission_closed"
+                elif page_ended and results_public:
                     stage = "collection_incomplete" if incomplete else "completed"
                 elif "partial" in results or ("not_published" in results and "published" in results):
                     stage = "awaiting_results"
@@ -534,6 +573,8 @@ def source_kind(url):
         return "luma-event"
     if host in {"www.binance.com", "binance.com"} and "/support/announcement/detail/" in path:
         return "binance-announcement"
+    if host == "build.magicblock.app":
+        return "magicblock"
     return None
 
 
@@ -570,6 +611,9 @@ def adapt(row, timeout):
     if kind == "binance-announcement":
         from hackathon.binance_feed import fetch_binance_announcement
         return fetch_binance_announcement(url, timeout)
+    if kind == "magicblock":
+        from magicblock_source import fetch_magicblock
+        return fetch_magicblock(url, fetch, timeout)
     from bnb_sources import parse_bnb
     return parse_bnb(url, fetch(url, timeout))
 
@@ -670,12 +714,14 @@ def run_pass(store, event_match, timeout, skip_discovery, include_completed=Fals
             from solana_source import discover_solana
             from colosseum_source import discover_colosseum
             from external_sources import discover_external
+            from magicblock_source import MAGICBLOCK_HUB, discover_magicblock
 
             jobs = [("https://www.bnbchain.org/en/hackathons", executor.submit(index, DISCOVERY[0])),
                     (HACKQUEST_DIRECTORY, executor.submit(discover_hackquest, timeout)),
                     ("https://hackathons.solana.com/hackathons", executor.submit(discover_solana, timeout)),
                     ("https://colosseum.com/hackathon", executor.submit(discover_colosseum, timeout)),
                     ("https://superteam.fun/earn", executor.submit(discover_external, timeout)),
+                    (MAGICBLOCK_HUB, executor.submit(discover_magicblock, timeout)),
                     (DISCOVERY[2], executor.submit(index, DISCOVERY[2]))]
             for page in range(1, max(1, int(blog_pages or 1)) + 1):
                 blog_url = DISCOVERY[1] if page == 1 else f"{DISCOVERY[1]}?page={page}"
@@ -713,7 +759,13 @@ def run_pass(store, event_match, timeout, skip_discovery, include_completed=Fals
                 try:
                     payload = job.result()
                     seen = clock().isoformat(timespec="seconds")
-                    event_id, event_name = row["event_id"], row["name"]
+                    parent = store.place_with_organizer(url, payload, row["chain"])
+                    event_id = parent or row["event_id"]
+                    event_name = row["name"]
+                    if parent:
+                        named = store.db.execute("SELECT name FROM events WHERE id=?", (parent,)).fetchone()
+                        if named and named["name"]:
+                            event_name = named["name"]
                     references = payload.get("links", [])
                     if row["kind"] == "bnb-news" and event_id == url and payload.get("winners"):
                         links = {canonical(link) for link in references if source_kind(link) == "bnb-event"}

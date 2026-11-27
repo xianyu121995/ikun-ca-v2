@@ -1,6 +1,6 @@
 """Public Superteam Earn hackathon and side-track listings on Solana."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import re
 from urllib.parse import urlencode, urlsplit
@@ -98,27 +98,49 @@ def _listing_row(row):
             "event_status": _stage(row.get("deadline"), row.get("isWinnersAnnounced") is True)}
 
 
-def discover_external_live(timeout=15, fetch=_download):
-    """Read public hackathon listings. Announced winners stay included.
+def _deadline_floors():
+    """ISO deadlines the live API accepts. A date-only value has returned HTTP 500."""
+    now = datetime.now(timezone.utc)
+    floors = []
+    for days in (60, 180, 400):
+        moment = now - timedelta(days=days)
+        floors.append(moment.strftime("%Y-%m-%dT00:00:00.000Z"))
+    return floors
 
-    The live endpoint ignores skip/offset and caps a response at 50, and adding
-    deadline has returned HTTP 500. A failed request must not hide the catalog.
+
+def discover_external_live(timeout=15, fetch=_download):
+    """Keep the deadline query, and walk older floors when a page hits the 50 cap.
+
+    skip/offset are ignored. A 500 on one deadline must not hide the catalog.
     """
     found = {}
-    attempts = errors = 0
-    for path in ("/api/listings/live?", "/api/listings?"):
-        attempts += 1
+    saw_response = False
+    queries = [{"take": 50, "type": "hackathon", "deadline": floor} for floor in _deadline_floors()]
+    queries.append({"take": 50, "type": "hackathon"})
+    for params in queries:
         try:
-            listings = _api(path + urlencode({"take": 50, "type": "hackathon"}), fetch, timeout, list)
+            listings = _api("/api/listings/live?" + urlencode(params), fetch, timeout, list)
         except (OSError, ValueError):
-            errors += 1
             continue
+        saw_response = True
+        before = len(found)
         for row in listings:
             item = _listing_row(row)
             if item:
                 found[item["url"]] = item
-    if errors == attempts and not found:
-        raise ValueError("Superteam Earn 公开赛道列表没有返回")
+        if len(listings) < 50 and before != len(found) and "deadline" in params:
+            continue
+        if len(listings) < 50 and "deadline" not in params:
+            break
+    if not saw_response:
+        try:
+            listings = _api("/api/listings?" + urlencode({"take": 50, "type": "hackathon"}), fetch, timeout, list)
+        except (OSError, ValueError) as error:
+            raise ValueError("Superteam Earn 公开赛道列表没有返回") from error
+        for row in listings:
+            item = _listing_row(row)
+            if item:
+                found[item["url"]] = item
     return list(found.values())
 
 
@@ -162,6 +184,8 @@ def _campaign(slug, fetch, timeout):
         "summary": "Superteam Earn 赞助赛道。各赛道自己公布提交和获奖，不是主办方总榜。",
         "scope_note": "Superteam Earn 赞助赛道。各赛道自己公布提交和获奖，不是主办方总榜。",
     }
+    if slug == "crypto-worlds-fair":
+        result["organizer_event_url"] = "https://colosseum.com/worldsfair"
 
 
 def _public_link(value):

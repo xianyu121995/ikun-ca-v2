@@ -83,6 +83,7 @@ const SOURCE_LABEL: Record<string, string> = {
   solana: "Solana 官网",
   colosseum: "Colosseum",
   external: "Superteam",
+  magicblock: "MagicBlock",
 };
 
 function EventCard({ event }: { event: HackathonEvent }) {
@@ -91,13 +92,16 @@ function EventCard({ event }: { event: HackathonEvent }) {
   const listed = winners.length > 0 || submissions.length > 0;
   const side = chainSide(event);
   const label = chainLabel(event);
-  return <Panel className={listed ? "hk-card hk-card-listed" : "hk-card hk-card-empty"} title={<>{label && <span className={`hk-chain hk-chain-${side}`}>{label}</span>}{event.title}</>} description={event.classification_reason} actions={<Badge tone={PHASE_TONE[event.phase]}>{PHASE_LABEL[event.phase]}</Badge>}>
+  const badge = event.tracking_label || PHASE_LABEL[event.phase];
+  return <Panel className={listed ? "hk-card hk-card-listed" : "hk-card hk-card-empty"} title={<>{label && <span className={`hk-chain hk-chain-${side}`}>{label}</span>}{event.title}</>} description={event.classification_reason} actions={<Badge tone={event.tracking_label === "已截稿" ? "warning" : event.tracking_label === "已公布结果" ? "success" : PHASE_TONE[event.phase]}>{badge}</Badge>}>
     <div className="hk-meta">
       {event.location && <span>{event.location}</span>}
       {event.prize && <span>{event.prize}</span>}
       {event.official_status && <span>官方状态：{event.official_status}</span>}
       {!event.listed && <span>目录状态：已不在最新目录</span>}
     </div>
+    {event.documents && event.documents.length > 0 && <p className="hk-docs">{event.documents.map(item => <a key={item.url + item.role} href={item.url}>{item.label}</a>)}</p>}
+    <PublicationTimes publication={event.publication} />
     {(event.website || event.twitter) && <p className="hk-event-links">
       {event.website && <a href={event.website}>赛事官网</a>}
       {event.twitter && <a href={event.twitter}>赛事官推</a>}
@@ -105,7 +109,17 @@ function EventCard({ event }: { event: HackathonEvent }) {
     {event.missing_note && <p className="hk-note">{event.missing_note}</p>}
     {winners.length > 0 && <ProjectList title="排名" ranked badge={event.publication?.winner.status_label} tone={event.publication?.winner.status === "published" ? "success" : "warning"} note={event.results.note} projects={winners} />}
     {submissions.length > 0 && <ProjectList title="名单" badge={event.publication?.submission.status_label} tone={event.publication?.submission.status === "published" ? "success" : event.publication?.submission.status === "error" ? "danger" : "warning"} note={event.submission.note} projects={submissions} />}
-    {!listed && <p className="hk-empty-line">{event.submission.note || EMPTY_COPY.noSubmissions} {event.results.note || EMPTY_COPY.noResults}</p>}
+    {!listed && !event.side_tracks?.length && <p className="hk-empty-line">{event.submission.note || EMPTY_COPY.noSubmissions} {event.results.note || EMPTY_COPY.noResults}</p>}
+    {event.side_tracks && event.side_tracks.length > 0 && <section className="hk-side">
+      <h3>Superteam 赛道 <span className="hk-count">共 {event.side_tracks.length} 条，不是主办方总榜</span></h3>
+      {event.side_tracks.map(track => <article key={track.url} className="hk-side-track">
+        <h4><a href={track.url}>{track.name}</a> <span className="hk-count">{track.label}</span></h4>
+        <p className="hk-note">{track.note}{track.published_at_display ? ` 公布时间 ${track.published_at_display}` : ""}{track.first_seen_display ? ` 首次看到 ${track.first_seen_display}` : ""}</p>
+        {track.winners.length > 0 && <ProjectList title="赛道获奖" ranked note="Superteam 赛道公布的名次。" projects={track.winners} tone="success" />}
+        {track.works.length > 0 && <ProjectList title="赛道作品" note="Superteam 赛道公开的作品。" projects={track.works} tone="warning" />}
+        {!track.winners.length && !track.works.length && <p className="hk-empty-line">这条赛道还没有公开作品或获奖。</p>}
+      </article>)}
+    </section>}
     {event.submission.form_url && <p className="hk-note"><a href={event.submission.form_url}>官方提交或报名入口</a>。这不是公开名单。</p>}
     {event.summary && <p className="hk-summary">{event.summary}</p>}
     <details className="hk-schedule">
@@ -137,6 +151,19 @@ function ProjectList({ title, ranked = false, badge, tone, note, projects }: { t
       </div>
     </li>)}</ol>
   </section>;
+}
+
+function PublicationTimes({ publication }: { publication?: HackathonEvent["publication"] }) {
+  const rows = [
+    ["投稿公示开始", publication?.submission.published_at_display],
+    ["投稿公示结束", ""],
+    ["首次看到投稿名单", publication?.submission.first_seen_display],
+    ["获奖公示开始", publication?.winner.published_at_display],
+    ["获奖公示结束", ""],
+    ["首次看到获奖名单", publication?.winner.first_seen_display],
+  ].filter((row): row is [string, string] => Boolean(row[1]));
+  if (!rows.length) return null;
+  return <dl className="hk-window">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
 }
 
 function rankValue(place: string): number {

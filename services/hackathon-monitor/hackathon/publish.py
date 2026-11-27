@@ -17,10 +17,16 @@ _PHASE = {
     "scheduled": "upcoming",
     "active": "live",
     "awaiting_results": "live",
+    "submission_closed": "live",
     "completed": "ended",
     "collection_incomplete": "ended",
     "unknown": "unknown",
 }
+_DOCUMENTS = (
+    ("announcement", "原公告"),
+    ("gallery", "作品页"),
+    ("results", "结果公告"),
+)
 
 
 def _ecosystem(chain: str | None) -> str:
@@ -109,6 +115,14 @@ def _milestones(summary):
     return rows
 
 
+def _beijing(value) -> str:
+    if isinstance(value, datetime):
+        value = value.isoformat()
+    if not isinstance(value, str) or iso(value) is None:
+        return ""
+    return present_time(value) + " 北京时间（UTC+8）"
+
+
 def _publication(summary, status_name: str, kind: str):
     part = summary.get(kind) or {}
     return {
@@ -116,27 +130,95 @@ def _publication(summary, status_name: str, kind: str):
         "status_label": STATUS.get(status_name, status_name),
         "first_seen": part.get("first_seen"),
         "published_at": part.get("published_at"),
+        "first_seen_display": _beijing(part.get("first_seen")),
+        "published_at_display": _beijing(part.get("published_at")),
         "elapsed_basis": part.get("elapsed_basis"),
         "elapsed_hours": part.get("elapsed_hours"),
         "expected_in_hours": part.get("expected_in_hours"),
     }
 
 
+def _side_source(url: str) -> bool:
+    return "/earn/listing/" in str(url)
+
+
+def _document_role(source) -> str:
+    url = str(source.get("url") or "")
+    kind = source.get("kind") or ""
+    data = source.get("data") or {}
+    if _side_source(url) or "/earn/hackathon/" in url:
+        return ""
+    if kind == "binance-announcement":
+        return "announcement"
+    if kind == "bnb-news":
+        return "results" if "winner" in url or data.get("winner_status") == "published" else "announcement"
+    if kind in {"hackquest", "solana", "colosseum"} and data.get("submission_status") in {"published", "partial", "empty"}:
+        return "gallery"
+    if kind == "dorahacks" and data.get("submission_status") in {"published", "partial"}:
+        return "gallery"
+    return ""
+
+
+def _documents(sources):
+    rows = []
+    seen = set()
+    for source in sources:
+        role = _document_role(source)
+        url = source.get("url") or ""
+        if not role or not str(url).startswith("https://") or (role, url) in seen:
+            continue
+        seen.add((role, url))
+        rows.append({"role": role, "label": dict(_DOCUMENTS)[role], "url": url})
+    return rows
+
+
+def _side_tracks(sources, findings):
+    listings = [source for source in sources if _side_source(source.get("url"))]
+    if not listings or len(listings) == len(sources):
+        return []
+    tracks = []
+    for source in listings:
+        url = source.get("url") or ""
+        if not _side_source(url):
+            continue
+        own = [row for row in findings if row.get("source") == url]
+        data = source.get("data") or {}
+        tracks.append({
+            "name": data.get("name") or source.get("kind") or url,
+            "url": url,
+            "label": "Superteam 赛道",
+            "note": data.get("scope_note") or "Superteam Earn 赛道结果，不是主办方总榜。",
+            "published_at_display": _beijing(data.get("published_at")),
+            "first_seen_display": _beijing(next((row.get("first_seen") for row in own if row.get("first_seen")), "")),
+            "works": _projects(own, "submission"),
+            "winners": _projects(own, "winner"),
+        })
+    return tracks
+
+
 def build_site_snapshot(store, now: datetime | None = None) -> dict:
     current = now or datetime.now(BEIJING)
     events = []
     for event in store.events():
-        summary = publication_summary(event, current)
         sources = event["sources"]
-        submission_status = _status(sources, "submission_status")
-        winner_status = _status(sources, "winner_status")
-        submissions = _projects(event["findings"], "submission")
-        winners = _projects(event["findings"], "winner")
+        main_sources = [source for source in sources if not _side_source(source["url"]) and "/earn/hackathon/" not in source["url"]] or sources
+        main_findings = [row for row in event["findings"] if not _side_source(row.get("source"))]
+        summary = publication_summary({**event, "findings": main_findings, "sources": main_sources}, current)
+        submission_status = _status(main_sources, "submission_status")
+        winner_status = _status(main_sources, "winner_status")
+        submissions = _projects(main_findings, "submission")
+        winners = _projects(main_findings, "winner")
         if submissions and submission_status not in {"published", "partial"}:
             submission_status = "partial"
         if winners and winner_status not in {"published", "partial"}:
             winner_status = "partial"
         stage = event.get("stage") or "unknown"
+        if stage == "submission_closed":
+            tracking_label = "已截稿"
+        elif winner_status in {"published", "partial", "empty"} and stage in {"completed", "collection_incomplete"}:
+            tracking_label = "已公布结果"
+        else:
+            tracking_label = ""
         start = next((row["start_utc"] for row in _milestones(summary) if row["start_utc"]), None)
         website = next((public_website(source["data"].get("event_website")) for source in sources if public_website(source["data"].get("event_website"))), "")
         twitter = next((public_twitter(source["data"].get("event_twitter")) for source in sources if public_twitter(source["data"].get("event_twitter"))), "")
@@ -148,8 +230,11 @@ def build_site_snapshot(store, now: datetime | None = None) -> dict:
             "website": website or "",
             "twitter": twitter or "",
             "classification": "hackathon",
-            "summary": next((source["data"].get("summary") or source["data"].get("scope_note") for source in sources if source["data"].get("summary") or source["data"].get("scope_note")), ""),
-            "classification_reason": next((source["data"].get("scope_note") for source in sources if source["data"].get("scope_note")), "公开来源收录的黑客松。"),
+            "summary": next((source["data"].get("summary") for source in main_sources if source["data"].get("summary")), ""),
+            "classification_reason": next((source["data"].get("scope_note") for source in main_sources if source["data"].get("scope_note")), "公开来源收录的黑客松。"),
+            "tracking_label": tracking_label,
+            "documents": _documents(sources),
+            "side_tracks": _side_tracks(sources, event["findings"]),
             "location": "",
             "prize": _prize(sources),
             "official_status": stage,
@@ -170,7 +255,7 @@ def build_site_snapshot(store, now: datetime | None = None) -> dict:
                 "note": _note(winner_status, "获奖"),
                 "projects": winners,
             },
-            "milestones": _milestones(summary),
+            "milestones": _milestones({**summary, "schedule": [item for item in summary.get("schedule") or [] if not _side_source(item.get("source"))]}),
             "links": [{"label": source["kind"], "url": source["url"]} for source in sources if str(source["url"]).startswith("https://")],
             "publication": {
                 "submission": _publication(summary, submission_status, "submission"),

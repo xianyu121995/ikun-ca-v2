@@ -42,7 +42,14 @@
 .hk-page .hk-track { margin-left: 8px; color: var(--ik-secondary); font-size: 13px; }
 .hk-page .hk-info { margin: 4px 0 0; color: var(--ik-secondary); }
 .hk-page .hk-row-links, .hk-page .hk-event-links, .hk-page .hk-links { display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 6px 0 0; }
-.hk-page .hk-event-links { margin-bottom: 8px; }
+.hk-page .hk-event-links, .hk-page .hk-docs { margin-bottom: 8px; }
+.hk-page .hk-docs, .hk-page .hk-window { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 8px; }
+.hk-page .hk-window div { display: flex; gap: 8px; }
+.hk-page .hk-window dt { color: var(--ik-muted); }
+.hk-page .hk-window dd { margin: 0; }
+.hk-page .hk-side { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.hk-page .hk-side-track { padding: 8px 0; border-top: 1px solid var(--ik-border); }
+.hk-page .hk-side-track h4 { margin: 0; font-size: 15px; }
 .hk-page .hk-empty-line { margin: 0; color: var(--ik-secondary); }
 .hk-page .hk-schedule { margin-top: 8px; }
 .hk-page .hk-schedule summary { cursor: pointer; color: var(--ik-secondary); }

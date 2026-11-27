@@ -92,6 +92,11 @@ class WatchStateTests(unittest.TestCase):
                                                             "submissions": next_items}), [])
         self.assertEqual([row["chain"] for row in self.store.events()[0]["findings"]], ["Base", "SOL"])
         self.assertEqual([notice["kind"] for notice in self.store.updates()], ["gallery_opened"])
+        self.store.add_source(EVENT, GALLERY + "/history", "test", "Historical Gallery")
+        self.assertEqual(self.store.record(GALLERY + "/history", FIRST, {
+            "submission_status": "published", "event_status": "completed",
+            "submissions": [{"id": "old", "name": "Already Public"}],
+        }), [])
 
     def test_existing_results_after_restart_are_not_reissued(self):
         result = {"winner_status": "partial", "winners": [{"name": "Other-chain project",
@@ -166,7 +171,7 @@ class WatchStateTests(unittest.TestCase):
     def test_completed_event_keeps_polling_until_winners_are_published(self):
         self.store.record(GALLERY, FIRST, {"event_status": "ended", "winner_status": "not_published", "submission_status": "not_published"})
         self.store.refresh_stages({EVENT}, datetime.fromisoformat(FIRST))
-        self.assertEqual(self.store.events()[0]["stage"], "completed")
+        self.assertEqual(self.store.events()[0]["stage"], "submission_closed")
         self.assertFalse(publication_settled(self.store, EVENT))
         self.store.record(GALLERY, SECOND, {"event_status": "ended", "winner_status": "published", "submission_status": "not_published",
                                            "winners": [{"name": "Moi", "url": GALLERY + "/moi"}]})

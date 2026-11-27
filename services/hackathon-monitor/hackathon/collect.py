@@ -9,7 +9,10 @@ from datetime import datetime, timezone
 from .classify import announcement_in_scope, blog_role
 from .parse_announcement import merge_articles, parse_article
 from .parse_blog import listing_posts, parse_post, post_url
+from .parse_colosseum import directory_url, eternal_draft, hackathon_to_draft, projects_from_page, projects_page_url
 from .parse_program import active_program, detail_url, index_programs, program_to_draft, updated_marker, winners_embedded
+from .parse_solana import detail_url as solana_detail_url
+from .parse_solana import hub_to_draft, parse_detail_projects, parse_hub
 from .textutil import next_data
 
 _STOP = {
@@ -26,12 +29,14 @@ def run_cycle(cfg: dict, client, store, now: datetime | None = None) -> dict:
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         current = current.replace(tzinfo=timezone.utc)
-    report = {"index": 0, "details": 0, "blog": 0, "announcements": 0, "errors": []}
+    report = {"index": 0, "details": 0, "blog": 0, "announcements": 0, "solana": 0, "colosseum": 0, "errors": []}
     programs = _index(cfg, client, store, current, report)
     if programs is not None:
         _details(cfg, client, store, current, programs, report)
     _blog(cfg, client, store, current, report)
     _announcements(cfg, client, store, current, report)
+    _solana(cfg, client, store, current, report)
+    _colosseum(cfg, client, store, current, report)
     store.set_meta("last_cycle_at", current.strftime("%Y-%m-%dT%H:%M:%SZ"))
     return report
 
@@ -249,6 +254,136 @@ def best_match(title: str, rows):
     if len(pool) > 1 and pool[1][1] == pool[0][1] and pool[1][0] >= pool[0][0] - 0.05:
         return None
     return pool[0][2]
+
+
+def _solana(cfg, client, store, now, report):
+    url = (cfg.get("sources") or {}).get("solana_hub")
+    if not url:
+        return
+    try:
+        records = parse_hub(_fetch_text(client, url))
+        if not records:
+            raise CycleError("Solana 黑客松目录没有解析到活动")
+        present = set()
+        refresh = int(cfg.get("detail_refresh_seconds") or 21600)
+        for record in records:
+            draft = hub_to_draft(record)
+            draft.touch_submission = False
+            draft.touch_results = False
+            present.add(draft.id)
+            store.upsert(draft, now, replace_projects=False)
+            previous = store.get_meta(f"solana-detail:{record['slug']}") or ""
+            fetched_at = previous.split("|", 1)[1] if "|" in previous else ""
+            if previous and _age(fetched_at, now) < refresh:
+                continue
+            page_url = solana_detail_url(record["slug"])
+            try:
+                projects, note, results = parse_detail_projects(_fetch_text(client, page_url), record["slug"])
+            except Exception as error:  # noqa: BLE001
+                store.record_source(f"solana-detail:{record['slug']}", page_url, False, type(error).__name__, str(error)[:180], now)
+                report["errors"].append(f"solana:{record['slug']}")
+                continue
+            draft.projects = projects
+            draft.submission_state = "public" if any(item.role == "submitted" for item in projects) else "not_published"
+            draft.submission_note = note
+            draft.results_state = "published" if any(item.role == "winner" for item in projects) else "not_published"
+            draft.results_note = results
+            draft.touch_submission = True
+            draft.touch_results = True
+            store.upsert(draft, now, replace_all_projects=True)
+            stamp = now if now is not None else datetime.now(timezone.utc)
+            store.set_meta(f"solana-detail:{record['slug']}", f"ok|{stamp.strftime('%Y-%m-%dT%H:%M:%SZ')}")
+            store.record_source(f"solana-detail:{record['slug']}", page_url, True, "", note[:180], now)
+        store.mark_index(present, now, prefix="solana-hackathon:", missing_note="Solana 黑客松目录这次没有再列出它。上次核实的内容仍留在归档。")
+        store.record_source("solana-hub", url, True, "", f"{len(present)} 个活动", now)
+        report["solana"] = len(present)
+    except Exception as error:  # noqa: BLE001
+        store.record_source("solana-hub", url, False, type(error).__name__, str(error)[:180], now)
+        report["errors"].append("solana-hub")
+
+
+def _colosseum(cfg, client, store, now, report):
+    sources = cfg.get("sources") or {}
+    url = sources.get("colosseum_directories")
+    if not url:
+        return
+    try:
+        payload = json.loads(_fetch_text(client, url, {"Accept": "application/json"}))
+        hackathons = [item for item in (payload.get("hackathons") or []) if isinstance(item, dict) and item.get("id")]
+        present = set()
+        refresh = int(cfg.get("detail_refresh_seconds") or 21600)
+        for record in hackathons:
+            key = f"colosseum-projects:{record['id']}"
+            previous = store.get_meta(key) or ""
+            fetched_at = previous.split("|", 1)[1] if "|" in previous else ""
+            fresh = bool(previous) and _age(fetched_at, now) < refresh
+            if fresh:
+                present.add(f"colosseum:{record.get('slug') or record['id']}")
+                continue
+            try:
+                projects, total, solana_only, directory_total = _colosseum_projects(cfg, client, record)
+            except Exception as error:  # noqa: BLE001
+                store.record_source(f"colosseum:{record.get('slug')}", directory_url(record["id"]), False, type(error).__name__, str(error)[:180], now)
+                report["errors"].append(f"colosseum:{record.get('slug')}")
+                present.add(f"colosseum:{record.get('slug') or record['id']}")
+                continue
+            draft = hackathon_to_draft(record, total, solana_only)
+            draft.projects = projects
+            winners = [item for item in projects if item.role == "winner"]
+            draft.submission_state = "public" if projects else "not_published"
+            short = total is not None and len(projects) < total
+            clipped = " 这次没有把目录翻完，所以下面仍不是目录中的全部公开项目。" if short else ""
+            if solana_only:
+                draft.submission_note = (
+                    f"公开目录共 {directory_total} 个项目，其中链字段为 Solana 的 {total} 个。"
+                    f"本次列入 {len(projects)} 个。其他链不在这份名单里。没进公开目录的报名不会出现。{clipped}"
+                )
+            elif projects:
+                draft.submission_note = f"公开目录返回 {total} 个项目，本次列入 {len(projects)} 个。没进目录的报名不会出现，这不是每一份报名表。{clipped}"
+            draft.results_state = "published" if winners else "not_published"
+            if winners:
+                draft.results_note = "只有目录记录里带奖项字段的项目标成获奖。其余公开项目仍在投稿列表。"
+            store.upsert(draft, now, replace_all_projects=True)
+            stamp = now if now is not None else datetime.now(timezone.utc)
+            store.set_meta(key, f"{total}|{stamp.strftime('%Y-%m-%dT%H:%M:%SZ')}")
+            present.add(draft.id)
+            store.record_source(f"colosseum:{record.get('slug')}", directory_url(record["id"]), True, "", f"{len(projects)} 个公开项目", now)
+        store.upsert(eternal_draft(), now, replace_projects=False)
+        present.add("colosseum:eternal")
+        store.mark_index(present, now, prefix="colosseum:", missing_note="Colosseum 公开目录这次没有再列出它。上次核实的内容仍留在归档。")
+        store.record_source("colosseum-directories", url, True, "", f"{len(present)} 届", now)
+        report["colosseum"] = len(present)
+    except Exception as error:  # noqa: BLE001
+        store.record_source("colosseum-directories", url, False, type(error).__name__, str(error)[:180], now)
+        report["errors"].append("colosseum")
+
+
+def _colosseum_projects(cfg, client, record):
+    hackathon_id = record["id"]
+    probe = json.loads(_fetch_text(client, projects_page_url(hackathon_id, 0, None, limit=1), {"Accept": "application/json"}))
+    solana_only = bool(probe.get("hasChainData"))
+    directory_total = probe.get("totalCount") if isinstance(probe.get("totalCount"), int) else None
+    meta = (probe.get("hackathons") or [{}])[0] if isinstance(probe.get("hackathons"), list) else {}
+    if isinstance(meta, dict) and meta.get("startDate"):
+        record.update({key: meta.get(key) for key in ("startDate", "endDate", "projectSubmissionStartDate", "projectSubmissionEndDate", "description") if meta.get(key)})
+    chain = "solana" if solana_only else None
+    projects = []
+    total = directory_total
+    offset = 0
+    pages = 0
+    while pages < 80:
+        page = json.loads(_fetch_text(client, projects_page_url(hackathon_id, offset, chain, limit=50), {"Accept": "application/json"}))
+        batch, page_total = projects_from_page(page, solana_only)
+        if isinstance(page_total, int):
+            total = page_total
+        projects.extend(batch)
+        pages += 1
+        offset += len(batch) or 100
+        if not page.get("hasMore") or not batch:
+            break
+    if total is not None and len(projects) < total:
+        pass
+    return projects, total, solana_only, directory_total
 
 
 def _tokens(title: str) -> set[str]:

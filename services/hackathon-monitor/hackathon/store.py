@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS events (
     listed INTEGER NOT NULL DEFAULT 1,
     missing_note TEXT NOT NULL DEFAULT '',
     first_seen TEXT NOT NULL,
-    last_seen TEXT NOT NULL
+    last_seen TEXT NOT NULL,
+    ecosystem TEXT NOT NULL DEFAULT 'bnb'
 );
 CREATE TABLE IF NOT EXISTS milestones (
     event_id TEXT NOT NULL,
@@ -99,35 +100,42 @@ class Store:
             self.db.execute("PRAGMA journal_mode=WAL")
         except sqlite3.Error:
             pass
+        columns = {row[1] for row in self.db.execute("PRAGMA table_info(events)")}
+        if "ecosystem" not in columns:
+            self.db.execute("ALTER TABLE events ADD COLUMN ecosystem TEXT NOT NULL DEFAULT 'bnb'")
         self.db.commit()
         os.chmod(path, 0o600)
 
     def close(self):
         self.db.close()
 
-    def upsert(self, draft: EventDraft, now: datetime | None = None, replace_projects: bool = True, project_sources: set[str] | None = None):
+    def upsert(self, draft: EventDraft, now: datetime | None = None, replace_projects: bool = True, project_sources: set[str] | None = None, replace_all_projects: bool = False):
         stamp = _now(now)
         with self.db:
             row = self.db.execute(
-                "SELECT first_seen, prize, summary, results_state, results_note FROM events WHERE id=?",
+                "SELECT first_seen, prize, summary, results_state, results_note, submission_state, submission_note, submission_form_url FROM events WHERE id=?",
                 (draft.id,),
             ).fetchone()
             prize = draft.prize or (row["prize"] if row else "")
             summary = draft.summary or (row["summary"] if row else "")
             results_state = draft.results_state if draft.touch_results or row is None else row["results_state"]
             results_note = draft.results_note if draft.touch_results or row is None else row["results_note"]
+            submission_state = draft.submission_state if draft.touch_submission or row is None else row["submission_state"]
+            submission_note = draft.submission_note if draft.touch_submission or row is None else row["submission_note"]
+            submission_form = draft.submission_form_url if draft.touch_submission or row is None else row["submission_form_url"]
             self.db.execute(
                 """
                 INSERT INTO events (
                     id, title, classification, classification_reason, summary, location, prize,
                     official_status, start_utc, end_utc, submission_state, submission_note,
                     submission_form_url, results_state, results_note, listed, missing_note,
-                    first_seen, last_seen
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,'',?,?)
+                    first_seen, last_seen, ecosystem
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,'',?,?,?)
                 ON CONFLICT(id) DO UPDATE SET
                     title=excluded.title,
                     classification=excluded.classification,
                     classification_reason=excluded.classification_reason,
+                    ecosystem=excluded.ecosystem,
                     summary=excluded.summary,
                     location=CASE WHEN excluded.location!='' THEN excluded.location ELSE events.location END,
                     prize=excluded.prize,
@@ -146,8 +154,8 @@ class Store:
                 (
                     draft.id, draft.title, draft.classification, draft.classification_reason, summary,
                     draft.location, prize, draft.official_status, draft.start_utc, draft.end_utc,
-                    draft.submission_state, draft.submission_note, draft.submission_form_url,
-                    results_state, results_note, row["first_seen"] if row else stamp, stamp,
+                    submission_state, submission_note, submission_form,
+                    results_state, results_note, row["first_seen"] if row else stamp, stamp, draft.ecosystem,
                 ),
             )
             sources = draft.milestone_sources()
@@ -169,8 +177,10 @@ class Store:
                     """,
                     (draft.id, item.key, item.label, item.start_utc, item.end_utc, item.display, item.timezone_label, item.precision, item.source_url),
                 )
+            if replace_all_projects:
+                self.db.execute("DELETE FROM projects WHERE event_id=?", (draft.id,))
             spoken = set(project_sources or [])
-            if replace_projects and spoken:
+            if replace_projects and spoken and not replace_all_projects:
                 self.db.execute(
                     f"DELETE FROM projects WHERE event_id=? AND source_url IN ({','.join('?' for _ in spoken)})",
                     (draft.id, *spoken),
@@ -238,19 +248,16 @@ class Store:
                 self.db.execute(f"DELETE FROM {table} WHERE event_id=?", (event_id,))
             self.db.execute("DELETE FROM events WHERE id=?", (event_id,))
 
-    def mark_index(self, present_ids: set[str], now: datetime | None = None):
-        """Keep events that left the official index. Absence is not deletion."""
+    def mark_index(self, present_ids: set[str], now: datetime | None = None, prefix: str = "bnb-hackathon:", missing_note: str = "官方黑客松目录这次没有再列出它。上次核实的内容仍保留在归档里。"):
+        """Keep events that left an official index. Absence is not deletion."""
         stamp = _now(now)
         with self.db:
-            rows = self.db.execute("SELECT id FROM events WHERE id LIKE 'bnb-hackathon:%'").fetchall()
+            rows = self.db.execute("SELECT id FROM events WHERE id LIKE ?", (prefix + "%",)).fetchall()
             for row in rows:
                 if row["id"] in present_ids:
                     self.db.execute("UPDATE events SET listed=1, missing_note='', last_seen=? WHERE id=?", (stamp, row["id"]))
                 else:
-                    self.db.execute(
-                        "UPDATE events SET listed=0, missing_note=? WHERE id=?",
-                        ("官方黑客松目录这次没有再列出它。上次核实的内容仍保留在归档里。", row["id"]),
-                    )
+                    self.db.execute("UPDATE events SET listed=0, missing_note=? WHERE id=?", (missing_note, row["id"]))
 
     def record_source(self, source_id: str, url: str, ok: bool, error: str, note: str, now: datetime | None = None):
         with self.db:

@@ -12,30 +12,39 @@ export function HackathonBoard({ load, now }: { load: SnapshotLoad; now: string 
       <EmptyState title="监控还没有可展示的快照" description={EMPTY_COPY[load.reason]} />
     </div>;
   }
-  const groups = groupEvents(load.snapshot.events, new Date(now));
   const failed = load.snapshot.sources.filter(source => !source.ok);
   return <div className="hk-board">
     <Header checkedAt={load.snapshot.generated_at_beijing} />
+    <Alert tone="warning" title="这里看不到全部投稿">{EMPTY_COPY.notEverything}</Alert>
     {failed.length > 0 && <Alert tone="warning" title="有来源这次没有核对成功">{failed.map(source => <p key={source.id}>{source.id}：{source.error || "失败"}。上次成功的内容会保留。</p>)}</Alert>}
-    <section className="hk-section" aria-labelledby="hk-current">
-      <h2 id="hk-current">进行中与即将开始</h2>
-      {groups.current.length ? groups.current.map(event => <EventCard key={event.id} event={event} />) : <EmptyState title="没有进行中的黑客松" description={EMPTY_COPY.noCurrent} />}
-    </section>
-    <section className="hk-section" aria-labelledby="hk-archive">
-      <h2 id="hk-archive">已结束（归档）</h2>
-      <p className="hk-section-note">归档会一直保留。监控不会在某一次活动结束后停掉，也不会把结束当成删除。</p>
-      {groups.archive.length ? groups.archive.map(event => <EventCard key={event.id} event={event} />) : <EmptyState title="归档还是空的" description={EMPTY_COPY.noArchive} />}
-    </section>
-    {(groups.relatedCurrent.length > 0 || groups.relatedArchive.length > 0) && <section className="hk-section" aria-labelledby="hk-related">
-      <h2 id="hk-related">相关官方活动</h2>
-      <p className="hk-section-note">这些活动来自官方黑客松目录或公告，但页面自己没有称它们为黑客松。它们和黑客松分开列出。</p>
-      {[...groups.relatedCurrent, ...groups.relatedArchive].map(event => <EventCard key={event.id} event={event} />)}
-    </section>}
+    <Ecosystem id="bnb" title="BNB Chain / BSC" events={load.snapshot.events.filter(event => event.ecosystem === "bnb")} now={now} />
+    <Ecosystem id="solana" title="Solana" events={load.snapshot.events.filter(event => event.ecosystem === "solana")} now={now} />
   </div>;
 }
 
+function Ecosystem({ id, title, events, now }: { id: string; title: string; events: HackathonEvent[]; now: string }) {
+  const groups = groupEvents(events, new Date(now));
+  return <section className="hk-ecosystem" aria-labelledby={`hk-${id}`}>
+    <h2 id={`hk-${id}`}>{title}</h2>
+    <div className="hk-section" aria-labelledby={`hk-${id}-current`}>
+      <h3 id={`hk-${id}-current`}>进行中与即将开始</h3>
+      {groups.current.length ? groups.current.map(event => <EventCard key={event.id} event={event} />) : <EmptyState title="没有进行中的黑客松" description={EMPTY_COPY.noCurrent} />}
+    </div>
+    <div className="hk-section" aria-labelledby={`hk-${id}-archive`}>
+      <h3 id={`hk-${id}-archive`}>已结束（归档）</h3>
+      <p className="hk-section-note">归档会一直保留。监控不会在某一届结束后停掉，也不会把结束当成删除。</p>
+      {groups.archive.length ? groups.archive.map(event => <EventCard key={event.id} event={event} />) : <EmptyState title="归档还是空的" description={EMPTY_COPY.noArchive} />}
+    </div>
+    {(groups.relatedCurrent.length > 0 || groups.relatedArchive.length > 0) && <div className="hk-section" aria-labelledby={`hk-${id}-related`}>
+      <h3 id={`hk-${id}-related`}>相关官方活动</h3>
+      <p className="hk-section-note">这些活动来自官方目录，但页面自己没有称它们为黑客松。</p>
+      {[...groups.relatedCurrent, ...groups.relatedArchive].map(event => <EventCard key={event.id} event={event} />)}
+    </div>}
+  </section>;
+}
+
 function Header({ checkedAt }: { checkedAt?: string }) {
-  return <PageHeader eyebrow="BNB CHAIN / BSC" title="黑客松监控" description="长期核对 BNB Chain 与 BSC 的官方黑客松，以及官方目录里明确分开的同类活动。时间都写成北京时间（UTC+8）。只展示能打开来源链接的日程、公开投稿和官方公布的入选或获奖项目。" actions={checkedAt ? <Badge tone="info">最近核对 {checkedAt} 北京时间</Badge> : <Badge tone="warning">等待首次核对</Badge>} />;
+  return <PageHeader eyebrow="BNB CHAIN / SOLANA" title="黑客松监控" description="长期核对 BNB Chain / BSC 和 Solana 的官方黑客松。时间都写成北京时间（UTC+8）。投稿和获奖只在官方公开名单里出现；问卷和报名链接不是名单。" actions={checkedAt ? <Badge tone="info">最近核对 {checkedAt} 北京时间</Badge> : <Badge tone="warning">等待首次核对</Badge>} />;
 }
 
 function EventCard({ event }: { event: HackathonEvent }) {
@@ -62,7 +71,7 @@ function EventCard({ event }: { event: HackathonEvent }) {
 function ProjectBlock({ projects, note, empty }: { state: string; note: string; projects: HackathonProject[]; empty: string }) {
   if (!projects.length) return <EmptyState title="没有可展示的项目" description={note || empty} />;
   return <div>
-    <p className="hk-note">{note}</p>
+    <p className="hk-note">{note} 共 {projects.length} 个。</p>
     <ul className="hk-projects">{projects.map(project => <li key={`${project.role}-${project.name}`}>
       <strong>{project.name}</strong>
       {project.place && <span> · {project.place}</span>}

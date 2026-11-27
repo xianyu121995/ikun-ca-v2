@@ -41,6 +41,7 @@ class EventDraft:
     title: str
     classification: str
     classification_reason: str
+    ecosystem: str = "bnb"
     summary: str = ""
     location: str = ""
     prize: str = ""
@@ -56,6 +57,7 @@ class EventDraft:
     projects: list[Project] = field(default_factory=list)
     links: list[Link] = field(default_factory=list)
     touch_results: bool = True
+    touch_submission: bool = True
 
     def milestone_sources(self) -> set[str]:
         return {item.source_url for item in self.milestones if item.source_url}

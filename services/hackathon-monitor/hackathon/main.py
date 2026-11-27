@@ -85,7 +85,7 @@ def main(argv=None) -> int:
                     slept += 1
             return 0
         report = _cycle(cfg, client, store, snapshot)
-        useful = report["index"] or report["details"] or report["blog"] or report["announcements"]
+        useful = any(report.get(key) for key in ("index", "details", "blog", "announcements", "solana", "colosseum"))
         print(json.dumps(report, ensure_ascii=False))
         return 0 if useful else 1
     finally:

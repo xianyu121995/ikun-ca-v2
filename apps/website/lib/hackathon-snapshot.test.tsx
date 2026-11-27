@@ -11,6 +11,7 @@ function event(patch: Partial<HackathonEvent> = {}): HackathonEvent {
   return {
     id: "bnb-hackathon:sample",
     title: "示例黑客松",
+    ecosystem: "bnb",
     classification: "hackathon",
     classification_reason: "标题写明黑客松。",
     summary: "",
@@ -66,6 +67,9 @@ test("ended events stay in the archive and an ended window moves there even if t
 test("empty submission and winner states stay empty on the page", () => {
   const html = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: snapshot([event()]) }} now={NOW} />);
   assert.match(html, /黑客松监控/);
+  assert.match(html, /这里看不到全部投稿/);
+  assert.match(html, /BNB Chain \/ BSC/);
+  assert.match(html, /Solana/);
   assert.match(html, /长期核对/);
   assert.match(html, /北京时间（UTC\+8）/);
   assert.match(html, /没有可展示的项目/);

@@ -23,9 +23,12 @@ export interface HackathonMilestone {
   end_utc: string | null;
 }
 
+export type Ecosystem = "bnb" | "solana";
+
 export interface HackathonEvent {
   id: string;
   title: string;
+  ecosystem: Ecosystem;
   classification: Classification;
   classification_reason: string;
   summary: string;
@@ -67,6 +70,7 @@ export function parseSnapshot(value: unknown): HackathonSnapshot | null {
   if (!Array.isArray(snapshot.events) || !Array.isArray(snapshot.sources)) return null;
   for (const event of snapshot.events) {
     if (!event || typeof event.title !== "string" || !event.title.trim()) return null;
+    if (event.ecosystem !== "bnb" && event.ecosystem !== "solana") return null;
     if (event.classification !== "hackathon" && event.classification !== "related") return null;
     if (!PHASES.has(event.phase)) return null;
     if (!event.submission || !event.results || !Array.isArray(event.milestones) || !Array.isArray(event.links)) return null;
@@ -130,7 +134,8 @@ export const EMPTY_COPY = {
   invalid: "快照无法读取。页面不会用残缺内容冒充官方日程或名单。",
   noCurrent: "当前没有进行中或即将开始的官方黑客松。新的官方活动公布后会出现在这里。",
   noArchive: "归档是空的。已结束的活动会留在这里，不会在结束后被删掉。",
-  noSubmissions: "已核对的官方来源没有公布投稿项目。",
-  privateForm: "官方只提供了提交或报名入口，没有公开的项目列表。入口不是排行榜。",
-  noResults: "官方还没有公布入选或获奖项目。",
+  noSubmissions: "这里没有全部投稿。已核对的官方来源没有公布可核验的项目名单。",
+  privateForm: "这里没有全部投稿。官方只给了问卷、报名或需要登录的入口，那不是公开名单，也不是排行榜。",
+  noResults: "官方还没有公布入选或获奖项目。空的获奖区不是「无人获奖」。",
+  notEverything: "本页不会编造投稿。某个活动下面如果是空的，就是官方没有公开名单。有名单时会写明来源和数量，名单以外的项目仍然不会出现。",
 } as const;

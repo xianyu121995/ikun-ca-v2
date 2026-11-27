@@ -13,6 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from hackathon.classify import announcement_in_scope, blog_role, classify_index_program
 from hackathon.collect import best_match, run_cycle
 from hackathon.parse_announcement import merge_articles, parse_article
+from hackathon.parse_colosseum import hackathon_to_draft, projects_from_page
+from hackathon.parse_solana import hub_to_draft, parse_detail_projects, parse_hub
 from hackathon.parse_blog import parse_post
 from hackathon.parse_program import program_to_draft
 from hackathon.snapshot import build_snapshot, phase_of
@@ -300,6 +302,55 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(phase_of(None, None, None, NOW), ("unknown", "insufficient"))
         self.assertEqual(phase_of("Ended", "2026-12-01T00:00:00Z", "2026-12-02T00:00:00Z", NOW)[0], "ended")
         self.assertEqual(phase_of(None, "2026-12-01T00:00:00Z", "2026-12-02T00:00:00Z", NOW)[0], "upcoming")
+
+    def test_solana_and_colosseum_keep_private_projects_off_the_page(self):
+        page = (
+            '<script>self.__next_f.push([1,"{\\"title\\":\\"Perps and Prediction Markets\\",'
+            '\\"description\\":\\"one week\\",\\"slug\\":\\"perps-and-prediction-markets\\",'
+            '\\"status\\":\\"scheduled\\",\\"launch_date\\":\\"$D2026-12-01T13:30:00.000Z\\",'
+            '\\"submission_deadline\\":\\"$D2026-12-08T21:00:00.000Z\\",'
+            '\\"judging_deadline\\":\\"$D2026-12-15T21:00:00.000Z\\",'
+            '\\"main_track_prizes\\":[{\\"label\\":\\"1st Place\\",\\"amount_usdc\\":5000000}]}'
+            '{\\"title\\":\\"Agentic Payments\\",\\"slug\\":\\"agentic-payments-mtxd9fkr\\",'
+            '\\"status\\":\\"funding\\",\\"launch_date\\":null,\\"submission_deadline\\":null}"])</script>'
+        )
+        records = {item["slug"]: item for item in parse_hub(page)}
+        perps = hub_to_draft(records["perps-and-prediction-markets"])
+        self.assertEqual(perps.ecosystem, "solana")
+        self.assertEqual(perps.start_utc, "2026-12-01T13:30:00Z")
+        self.assertEqual(perps.end_utc, "2026-12-08T21:00:00Z")
+        self.assertIn("2026-12-01 21:30", perps.milestones[0].display)
+        self.assertIn("50,000 USDC", perps.prize)
+        self.assertEqual(perps.projects, [])
+        self.assertIsNone(records["agentic-payments-mtxd9fkr"]["launch"])
+        detail = (
+            "<p>1st: PublicWin</p><script>self.__next_f.push([1,\""
+            "{\\\"project_name\\\":\\\"Secret\\\",\\\"github_url\\\":null,\\\"demo_url\\\":null,\\\"status\\\":\\\"winner\\\",\\\"is_public\\\":false}"
+            "{\\\"project_name\\\":\\\"Shown\\\",\\\"github_url\\\":\\\"https://github.com/a/b\\\",\\\"demo_url\\\":null,\\\"status\\\":\\\"submitted\\\",\\\"is_public\\\":true}"
+            "{\\\"project_name\\\":\\\"PublicWin\\\",\\\"github_url\\\":null,\\\"demo_url\\\":\\\"https://example.com\\\",\\\"status\\\":\\\"winner\\\",\\\"is_public\\\":false}"
+            "\"])</script>"
+        )
+        projects, note, _results = parse_detail_projects(detail, "stocklana")
+        self.assertEqual(sorted(item.name for item in projects), ["PublicWin", "Shown"])
+        self.assertNotIn("Secret", note)
+        self.assertIn("不是全部投稿", note)
+        listed, total = projects_from_page({
+            "totalCount": 2,
+            "projects": [
+                {"id": 1, "name": "Demo", "slug": "demo", "prize": None, "website": "https://demo.example", "hackathonId": 7},
+                {"id": 2, "name": "Cup", "slug": "cup", "prize": "Grand", "repoLink": "https://github.com/cup/cup", "hackathonId": 7},
+            ],
+        }, True)
+        self.assertEqual(total, 2)
+        self.assertEqual([item.role for item in listed], ["submitted", "winner"])
+        fair = hackathon_to_draft({
+            "id": 7, "name": "Crypto World's Fair", "slug": "crypto-worlds-fair",
+            "startDate": "2026-09-14T15:00:00.000Z", "projectSubmissionEndDate": "2026-10-13T06:59:00.000Z",
+            "landingPageUrl": "https://colosseum.com/worldsfair",
+        }, 2511, True)
+        self.assertEqual(fair.ecosystem, "solana")
+        self.assertEqual(fair.end_utc, "2026-10-13T06:59:00Z")
+        self.assertIn("其他链", fair.submission_note)
 
     def test_winner_title_matches_the_catalog_event(self):
         rows = [{"id": "bnb-hackathon:tokenized-stocks", "title": "BNB Hackathon: Tokenized Stocks Edition"}]

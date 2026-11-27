@@ -45,6 +45,7 @@ def build_snapshot(store: Store, now: datetime | None = None) -> dict:
         events.append({
             "id": row["id"],
             "title": row["title"],
+            "ecosystem": row["ecosystem"] if "ecosystem" in row.keys() else "bnb",
             "classification": row["classification"],
             "classification_reason": row["classification_reason"],
             "summary": row["summary"],

@@ -47,6 +47,21 @@ def install_manual(store: Store, cfg: dict):
         store.add_source(event_id, url, kind, item.get("name") or url, chain=item.get("chain"), pinned=True)
 
 
+def install_configured(store: Store, cfg: dict):
+    """Install manual sources, then any pin the manual list does not already cover."""
+    install_manual(store, cfg)
+    covered = " ".join(str(item.get("url") or "") for item in cfg.get("manual_sources") or [])
+    for item in cfg.get("pins") or []:
+        if item.get("kind") == "binance_article" and item.get("code") and item["code"] not in covered:
+            url = canonical(f"https://www.binance.com/en/support/announcement/detail/{item['code']}")
+            store.add_source(item.get("event_id") or f"binance:{item['code']}", url, "binance-announcement",
+                             item.get("name") or "Binance announcement", chain=item.get("chain") or "BSC", pinned=True)
+        elif item.get("kind") == "bnb_blog" and item.get("slug") and item["slug"] not in covered:
+            url = canonical(f"https://www.bnbchain.org/en/blog/{item['slug']}")
+            store.add_source(item.get("event_id") or url, url, "bnb-news", item.get("name") or item["slug"],
+                             chain=item.get("chain") or "BSC", pinned=True)
+
+
 def _meta(store: Store, key: str):
     store.db.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
     row = store.db.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
@@ -71,7 +86,10 @@ def cycle(store: Store, cfg: dict, snapshot: str) -> int:
             include_completed = datetime.now(BEIJING) - datetime.fromisoformat(last) >= timedelta(seconds=completed_after)
         except ValueError:
             include_completed = True
-    notices, failures = run_pass(store, "", timeout, skip_discovery=False, include_completed=include_completed)
+    notices, failures = run_pass(
+        store, "", timeout, skip_discovery=False, include_completed=include_completed,
+        blog_pages=int(cfg.get("blog_pages_per_cycle") or 1),
+    )
     if include_completed:
         _set_meta(store, "completed_sweep", clock().isoformat(timespec="seconds"))
     try:
@@ -109,7 +127,7 @@ def main(argv=None) -> int:
         os.chmod(db, 0o600)
     except OSError:
         pass
-    install_manual(store, cfg)
+    install_configured(store, cfg)
     if args.doctor:
         print("engine ok")
         return 0

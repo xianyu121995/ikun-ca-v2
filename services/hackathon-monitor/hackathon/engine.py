@@ -61,11 +61,12 @@ BANGKOK_SOURCES = (
 )
 PUBLIC_STATUSES = {"published", "partial", "empty"}
 PUBLICATION_MILESTONES = {"gallery_expected", "results_expected"}
-FINAL_STAGES = {"complete", "completed", "finalized", "finished", "awarded", "results_published"}
+FINAL_STAGES = {"complete", "completed", "finalized", "finished", "awarded", "results_published", "ended", "archived"}
 PENDING_STAGES = {"judging", "voting", "pending_results", "awaiting_results", "submissions_closed"}
 ACTIVE_STAGES = {"live", "active", "open", "launched", "registration", "register",
                  "submission", "submissions_open", "in_progress"}
-FUTURE_STAGES = {"scheduled", "upcoming", "announced", "registration_open"}
+FUTURE_STAGES = {"scheduled", "upcoming", "announced", "registration_open", "funding"}
+ATTACHED_KINDS = {"hackquest", "dorahacks", "luma-event", "bnb-news", "external"}
 
 
 
@@ -123,6 +124,15 @@ def publication_schedule(payload):
     })
 
 
+def plain_text(value):
+    if isinstance(value, str):
+        text = " ".join(value.split())
+        return text or None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    return None
+
+
 def rank_identity(rank):
     value = normalized(rank)
     numeric = re.fullmatch(r"(?:place\s+)?(\d+)(?:st|nd|rd|th)?(?:\s+place)?", value)
@@ -140,7 +150,9 @@ def public_website(value):
     except ValueError:
         return None
     host = (parts.hostname or "").lower()
-    if parts.scheme not in {"http", "https"} or not host or parts.username or parts.password:
+    if parts.scheme not in {"http", "https"} or not host or "." not in host or any(char.isspace() for char in url):
+        return None
+    if parts.username or parts.password:
         return None
     blocked = {"x.com", "twitter.com", "www.x.com", "www.twitter.com", "github.com", "www.github.com",
                "youtube.com", "www.youtube.com", "youtu.be", "loom.com", "www.loom.com", "t.me",
@@ -355,7 +367,7 @@ class Store:
                     name = row["name"].strip()
                     if not name:
                         continue
-                    category, rank = row.get("category"), row.get("rank")
+                    category, rank = plain_text(row.get("category")), plain_text(row.get("rank"))
                     chain = chain_label(row.get("chain") or row.get("chains"))
                     website, twitter = public_website(row.get("website")), public_twitter(row.get("twitter"))
                     info = brief(row.get("info"))
@@ -408,13 +420,11 @@ class Store:
                 )
                 stages = {event_stage(item.get("event_status")) for item in all_data}
                 results = {item.get("winner_status") for item in all_data}
-                submissions = {item.get("submission_status") for item in all_data}
-                incomplete = incomplete or (
-                    "not_published" in submissions and not submissions.intersection(PUBLIC_STATUSES)
-                )
                 dates = [iso(slot.get("time")) for item in all_data for slot in item.get("schedule", [])
                          if slot["kind"] == "submission_close"]
-                if "partial" in results or ("not_published" in results and "published" in results):
+                if "completed" in stages and "published" in results:
+                    stage = "collection_incomplete" if incomplete else "completed"
+                elif "partial" in results or ("not_published" in results and "published" in results):
                     stage = "awaiting_results"
                 elif "completed" in stages or "published" in results:
                     stage = "collection_incomplete" if incomplete else "completed"
@@ -578,18 +588,52 @@ def discovery_event_id(row, url):
 
 
 def in_scope(row, seen, baseline):
+    """Enroll an official page, including ended events and results posts.
+
+    Cancelled and sponsor-seeking pages stay out. The first scan still does not
+    alert; newly_published decides that separately.
+    """
     raw = normalized(row.get("event_status") or row.get("stage"))
-    stage = event_stage(raw)
-    if stage == "completed" or raw in {"ended", "archived", "cancelled", "canceled", "seeking sponsors"}:
+    if raw in {"cancelled", "canceled", "seeking sponsors", "seeking_sponsors"}:
         return False
-    if stage != "unknown":
+    if row.get("kind") in {"bnb-event", "bnb-news", "solana", "colosseum", "hackquest", "external", "luma-event", "dorahacks", "binance-announcement"}:
+        return True
+    if event_stage(raw) != "unknown":
         return True
     if any(moment and moment >= seen for moment in map(iso, (row.get("start_at"), row.get("end_at")))):
         return True
-    if row["kind"] == "bnb-news" and baseline:
-        published = row.get("article_date")
-        return isinstance(published, str) and published[:10] >= baseline[:10] and not row.get("is_results")
     return False
+
+
+def newly_published(row, baseline):
+    """Alert only for something that showed up after the first successful scan."""
+    if not baseline:
+        return False
+    raw = normalized(row.get("event_status") or row.get("stage"))
+    article = row.get("article_date") if isinstance(row.get("article_date"), str) else ""
+    end = row.get("end_at") if isinstance(row.get("end_at"), str) else ""
+    marker = (article or end)[:10]
+    historical = event_stage(raw) == "completed" or raw in {"ended", "archived"} or row.get("is_results")
+    if historical:
+        return bool(marker) and marker >= str(baseline)[:10]
+    return True
+
+
+def publication_settled(store, event_id):
+    """True once every source has read an official winner list, including an explicit empty one."""
+    rows = list(store.db.execute("SELECT data, status FROM sources WHERE event_id=?", (event_id,)))
+    if not rows:
+        return False
+    for row in rows:
+        if row["status"] in {"error", "pending", None}:
+            return False
+        try:
+            data = json.loads(row["data"] or "{}")
+        except json.JSONDecodeError:
+            return False
+        if data.get("winner_status") not in PUBLIC_STATUSES:
+            return False
+    return True
 
 
 def add_discovery(store, rows, source, seen):
@@ -605,7 +649,7 @@ def add_discovery(store, rows, source, seen):
         notices.extend(store.add_source(event_id, url, kind, name,
                                         chain=item.get("chain") or ("BSC" if kind.startswith("bnb-") else None),
                                         stage=item.get("event_status") or item.get("stage"),
-                                        alert_at=seen if baseline else None))
+                                        alert_at=seen if newly_published(item, baseline) else None))
         if event_id == BANGKOK:
             for link, adapter in BANGKOK_SOURCES:
                 store.add_source(event_id, link, adapter, "BNB Bangkok 2026", chain="BSC")
@@ -613,7 +657,7 @@ def add_discovery(store, rows, source, seen):
     return notices
 
 
-def run_pass(store, event_match, timeout, skip_discovery, include_completed=False):
+def run_pass(store, event_match, timeout, skip_discovery, include_completed=False, blog_pages=1):
     from bnb_sources import discover_bnb
     from hackquest_source import DIRECTORY as HACKQUEST_DIRECTORY, discover_hackquest
 
@@ -632,8 +676,10 @@ def run_pass(store, event_match, timeout, skip_discovery, include_completed=Fals
                     ("https://hackathons.solana.com/hackathons", executor.submit(discover_solana, timeout)),
                     ("https://colosseum.com/hackathon", executor.submit(discover_colosseum, timeout)),
                     ("https://superteam.fun/earn", executor.submit(discover_external, timeout)),
-                    (DISCOVERY[2], executor.submit(index, DISCOVERY[2])),
-                    (DISCOVERY[1], executor.submit(index, DISCOVERY[1]))]
+                    (DISCOVERY[2], executor.submit(index, DISCOVERY[2]))]
+            for page in range(1, max(1, int(blog_pages or 1)) + 1):
+                blog_url = DISCOVERY[1] if page == 1 else f"{DISCOVERY[1]}?page={page}"
+                jobs.append((blog_url, executor.submit(index, blog_url)))
             for url, job in jobs:
                 try:
                     rows = job.result()
@@ -645,8 +691,19 @@ def run_pass(store, event_match, timeout, skip_discovery, include_completed=Fals
 
         processed = set()
         while True:
-            targets = [row for row in store.targets(event_match) if row["url"] not in processed and
-                       (include_completed or row["pinned"] or row["stage"] != "completed")]
+            settled = {}
+            targets = []
+            for row in store.targets(event_match):
+                if row["url"] in processed:
+                    continue
+                if include_completed or row["pinned"] or row["stage"] != "completed":
+                    targets.append(row)
+                    continue
+                event_id = row["event_id"]
+                if event_id not in settled:
+                    settled[event_id] = publication_settled(store, event_id)
+                if not settled[event_id]:
+                    targets.append(row)
             if not targets:
                 break
             jobs = [(row, executor.submit(adapt, row, timeout)) for row in targets]
@@ -672,7 +729,7 @@ def run_pass(store, event_match, timeout, skip_discovery, include_completed=Fals
                     touched.add(event_id)
                     for linked in references:
                         kind = source_kind(linked)
-                        if kind in {"hackquest", "dorahacks", "luma-event"}:
+                        if kind in ATTACHED_KINDS:
                             store.add_source(event_id, canonical(linked), kind, event_name, chain=row["chain"])
                     for key in ("submission_error", "winner_error", "schedule_error"):
                         if payload.get(key):

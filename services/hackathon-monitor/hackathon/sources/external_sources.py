@@ -1,6 +1,6 @@
 """Public Superteam Earn hackathon and side-track listings on Solana."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import json
 import re
 from urllib.parse import urlencode, urlsplit
@@ -86,20 +86,58 @@ def discover_external_catalog(timeout=15, fetch=_download):
              "url": _page("hackathon", slug), "kind": "external"} for slug in slugs]
 
 
+def _listing_row(row):
+    if not isinstance(row, dict) or row.get("type") not in {None, "hackathon"}:
+        return None
+    if row.get("type") and row.get("type") != "hackathon":
+        return None
+    slug, title = str(row.get("slug") or ""), row.get("title")
+    if not title or not re.fullmatch(SLUG, slug):
+        return None
+    return {"name": str(title), "chain": "SOL", "url": _page("listing", slug), "kind": "external",
+            "event_status": _stage(row.get("deadline"), row.get("isWinnersAnnounced") is True)}
+
+
 def discover_external_live(timeout=15, fetch=_download):
-    since = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
-    query = urlencode({"take": 50, "type": "hackathon", "deadline": since})
-    listings = _api("/api/listings/live?" + query, fetch, timeout, list)
-    return [{"name": str(row["title"]), "chain": "SOL",
-             "url": _page("listing", row["slug"]), "kind": "external",
-             "event_status": _stage(row.get("deadline"), False)}
-            for row in listings if isinstance(row, dict) and row.get("type") == "hackathon"
-            and row.get("isWinnersAnnounced") is False and row.get("title")
-            and re.fullmatch(SLUG, str(row.get("slug") or ""))]
+    """Read public hackathon listings. Announced winners stay included.
+
+    The live endpoint ignores skip/offset and caps a response at 50, and adding
+    deadline has returned HTTP 500. A failed request must not hide the catalog.
+    """
+    found = {}
+    attempts = errors = 0
+    for path in ("/api/listings/live?", "/api/listings?"):
+        attempts += 1
+        try:
+            listings = _api(path + urlencode({"take": 50, "type": "hackathon"}), fetch, timeout, list)
+        except (OSError, ValueError):
+            errors += 1
+            continue
+        for row in listings:
+            item = _listing_row(row)
+            if item:
+                found[item["url"]] = item
+    if errors == attempts and not found:
+        raise ValueError("Superteam Earn 公开赛道列表没有返回")
+    return list(found.values())
 
 
 def discover_external(timeout=15):
-    return discover_external_catalog(timeout) + discover_external_live(timeout)
+    catalog, live = [], []
+    catalog_error = None
+    try:
+        catalog = discover_external_catalog(timeout)
+    except (OSError, ValueError) as error:
+        catalog_error = error
+    try:
+        live = discover_external_live(timeout)
+    except (OSError, ValueError):
+        live = []
+    if catalog_error and not catalog and not live:
+        raise catalog_error
+    found = {row["url"]: row for row in catalog}
+    found.update({row["url"]: row for row in live})
+    return list(found.values())
 
 
 def _campaign(slug, fetch, timeout):
@@ -121,7 +159,8 @@ def _campaign(slug, fetch, timeout):
         "submission_status": "unverified", "submissions": [],
         "winner_status": "unverified", "winners": [],
         "schedule": schedule, "links": links,
-        "scope_note": "赛道各自发布提交及获奖名单，详见对应赛道；此页只列出赛道。",
+        "summary": "Superteam Earn 赞助赛道。各赛道自己公布提交和获奖，不是主办方总榜。",
+        "scope_note": "Superteam Earn 赞助赛道。各赛道自己公布提交和获奖，不是主办方总榜。",
     }
 
 
@@ -205,7 +244,7 @@ def fetch_external(url, fetch, timeout=15):
         "submission_status": initial, "submissions": [], "winner_status": initial, "winners": [],
         "schedule": schedule, "links": [],
         "event_website": listing_url,
-        "scope_note": "Superteam Earn 公布获奖后开放提交记录，数据给出公开提交链接及账号。",
+        "scope_note": "Superteam Earn 赛道公布的提交和获奖，不是主办方总榜。",
     }
     parent = detail.get("Hackathon") or {}
     parent_slug = str(parent.get("slug") or "")
@@ -213,6 +252,8 @@ def fetch_external(url, fetch, timeout=15):
         result["parent_event_url"] = _page("hackathon", parent_slug)
         if parent_slug == "crypto-worlds-fair":
             result["organizer_event_url"] = "https://colosseum.com/worldsfair"
+            result["summary"] = "Superteam Earn 在 Crypto World's Fair 下的赞助赛道结果，不是 Colosseum 总榜获奖。"
+            result["scope_note"] = result["summary"]
     if announced is True:
         _published_listing(result, detail, fetch, timeout)
     return result

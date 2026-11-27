@@ -144,6 +144,9 @@ test("chain filter keeps BSC and SOL apart, including recent changes", () => {
   assert.equal(chainLabel(bsc), "BSC");
   assert.equal(chainLabel(sol), "SOL");
   assert.equal(chainLabel({ ecosystem: "solana" }), "SOL");
+  assert.equal(matchesChain({ ecosystem: "unknown" }, "bsc"), false);
+  assert.equal(matchesChain({ ecosystem: "unknown" }, "sol"), false);
+  assert.equal(matchesChain({ ecosystem: "unknown" }, "all"), true);
   const html = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: snapshot([bsc, sol], [
     { id: 1, kind: "gallery_opened", label: "有新名单", event: "BSC 黑客松", chain: "BSC", ecosystem: "bnb" },
     { id: 2, kind: "gallery_opened", label: "有新名单", event: "SOL 黑客松", chain: "SOL", ecosystem: "solana" },

@@ -9,9 +9,11 @@
 .hk-page .hk-chain-both { color: var(--ik-text, inherit); background: var(--ik-raised); }
 .hk-page .hk-changes-none { display: none; margin: 0; color: var(--ik-secondary); }
 .hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-ecosystem[data-ecosystem="sol"],
+.hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-ecosystem[data-ecosystem="unknown"],
 .hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-change[data-ecosystem="sol"],
 .hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-change[data-ecosystem="unknown"] { display: none; }
 .hk-page .hk-board:has(#hk-chain-sol:checked) .hk-ecosystem[data-ecosystem="bsc"],
+.hk-page .hk-board:has(#hk-chain-sol:checked) .hk-ecosystem[data-ecosystem="unknown"],
 .hk-page .hk-board:has(#hk-chain-sol:checked) .hk-change[data-ecosystem="bsc"],
 .hk-page .hk-board:has(#hk-chain-sol:checked) .hk-change[data-ecosystem="unknown"] { display: none; }
 .hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-changes:not(:has([data-ecosystem="bsc"], [data-ecosystem="both"])) + .hk-changes-none,

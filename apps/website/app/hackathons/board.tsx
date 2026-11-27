@@ -30,6 +30,7 @@ export function HackathonBoard({ load, now }: { load: SnapshotLoad; now: string 
     {failed.length > 0 && <Alert tone="warning" title="有来源这次没有核对成功">{failed.map(source => <p key={source.id}>{source.id}：{source.error || "失败"}。上次成功的内容会保留。</p>)}</Alert>}
     <Ecosystem id="bsc" title="BSC" note="BNB Chain / BSC" events={load.snapshot.events.filter(event => chainSide(event) === "bsc" || chainSide(event) === "both")} now={now} />
     <Ecosystem id="sol" title="SOL" note="Solana" events={load.snapshot.events.filter(event => chainSide(event) === "sol" || chainSide(event) === "both")} now={now} />
+    <Ecosystem id="unknown" title="链未标明" note="来源没有写出链" events={load.snapshot.events.filter(event => chainSide(event) === "unknown")} now={now} />
   </div>;
 }
 
@@ -48,7 +49,8 @@ function ChainFilter() {
   </fieldset>;
 }
 
-function Ecosystem({ id, title, note, events, now }: { id: "bsc" | "sol"; title: string; note: string; events: HackathonEvent[]; now: string }) {
+function Ecosystem({ id, title, note, events, now }: { id: "bsc" | "sol" | "unknown"; title: string; note: string; events: HackathonEvent[]; now: string }) {
+  if (id === "unknown" && !events.length) return null;
   const groups = groupEvents(events, new Date(now));
   return <section className="hk-ecosystem" data-ecosystem={id} aria-labelledby={`hk-${id}`}>
     <h2 id={`hk-${id}`}><span className={`hk-chain hk-chain-${id}`}>{title}</span>{note}</h2>

@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from hackathon.engine import Store, public_twitter, public_website, publication_summary
+from hackathon.engine import Store, public_twitter, public_website, publication_settled, publication_summary
 
 EVENT = "https://example.com/hackathons/bsc-example"
 GALLERY = EVENT + "/gallery"
@@ -102,21 +102,25 @@ class WatchStateTests(unittest.TestCase):
         self.assertEqual(self.store.updates()[0]["items"][0]["chain"], "Base")
         self.assertEqual(self.store.events()[0]["findings"][0]["chain"], "Base")
 
-    def test_discovery_is_baselined_and_completed_history_is_skipped(self):
+    def test_discovery_is_baselined_and_completed_history_is_enrolled_without_alert(self):
         from hackathon.engine import add_discovery
         active = [{"name": "Current BSC Event", "kind": "hackquest",
                    "url": "https://www.hackquest.io/hackathons/current", "event_status": "active"}]
         old = [{"name": "Old SOL Event", "kind": "hackquest", "event_status": "completed",
                 "url": "https://www.hackquest.io/hackathons/old"}]
+        results = [{"name": "Meet the Winners of BNB Hack: Tokenized Stocks Edition", "kind": "bnb-news",
+                    "url": "https://www.bnbchain.org/en/blog/meet-the-winners-of-bnb-hack-tokenized-stocks-edition-with-binance-web3-wallet",
+                    "is_results": True, "article_date": "2026-10-29", "chain": "BSC"}]
         baseline = "https://www.hackquest.io/hackathons"
-        self.assertEqual(add_discovery(self.store, active + old, baseline, FIRST), [])
-        self.assertIsNone(self.store.source(old[0]["url"]))
+        self.assertEqual(add_discovery(self.store, active + old + results, baseline, FIRST), [])
+        self.assertIsNotNone(self.store.source(old[0]["url"]))
+        self.assertIsNotNone(self.store.source(results[0]["url"]))
         new = [{"name": "New SOL Event", "kind": "solana", "event_status": "scheduled",
                 "url": "https://hackathons.solana.com/hackathons/new", "chain": "SOL"}]
-        changes = add_discovery(self.store, active + old + new, baseline, SECOND)
+        changes = add_discovery(self.store, active + old + results + new, baseline, SECOND)
         self.assertEqual([x["kind"] for x in changes], ["new_event"])
         self.assertEqual(changes[0]["event"], "New SOL Event")
-        self.assertEqual(add_discovery(self.store, active + old + new, baseline, SECOND), [])
+        self.assertEqual(add_discovery(self.store, active + old + results + new, baseline, SECOND), [])
 
 
     def test_completed_with_submissions_error_remains_retryable(self):
@@ -158,6 +162,31 @@ class WatchStateTests(unittest.TestCase):
         self.assertIsNone(findings["Plain"]["website"])
         self.assertIsNone(findings["Plain"]["twitter"])
         self.assertEqual(event["sources"][0]["data"]["event_website"], "https://example.com/official")
+
+    def test_completed_event_keeps_polling_until_winners_are_published(self):
+        self.store.record(GALLERY, FIRST, {"event_status": "ended", "winner_status": "not_published", "submission_status": "not_published"})
+        self.store.refresh_stages({EVENT}, datetime.fromisoformat(FIRST))
+        self.assertEqual(self.store.events()[0]["stage"], "completed")
+        self.assertFalse(publication_settled(self.store, EVENT))
+        self.store.record(GALLERY, SECOND, {"event_status": "ended", "winner_status": "published", "submission_status": "not_published",
+                                           "winners": [{"name": "Moi", "url": GALLERY + "/moi"}]})
+        self.assertTrue(publication_settled(self.store, EVENT))
+        self.store.record(GALLERY, SECOND, {"winner_status": "published", "winners": [{"name": "Structured", "category": {"name": "Track"}, "rank": {"place": 1}}]})
+        stored = {row["name"]: row for row in self.store.events()[0]["findings"]}
+        self.assertIsNone(stored["Structured"]["category"])
+        self.assertIsNone(stored["Structured"]["rank"])
+
+    def test_ended_program_with_a_separate_winner_post_is_archived(self):
+        program = "https://www.bnbchain.org/en/hackathons/tokenized-stocks"
+        post = "https://www.bnbchain.org/en/blog/meet-the-winners"
+        self.store.add_source(program, program, "bnb-event", "Tokenized Stocks", chain="BSC")
+        self.store.add_source(program, post, "bnb-news", "Tokenized Stocks", chain="BSC")
+        self.store.record(program, FIRST, {"event_status": "Ended", "winner_status": "not_published", "submission_status": "not_published"})
+        self.store.record(post, FIRST, {"winner_status": "published", "submission_status": "not_published",
+                                        "winners": [{"name": "Moi", "rank": "1st Place", "url": post}]})
+        self.store.refresh_stages({program}, datetime.fromisoformat(FIRST))
+        event = next(row for row in self.store.events() if row["id"] == program)
+        self.assertEqual(event["stage"], "completed")
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ export interface HackathonMilestone {
   end_utc: string | null;
 }
 
-export type Ecosystem = "bnb" | "solana" | "both";
+export type Ecosystem = "bnb" | "solana" | "both" | "unknown";
 export type PublicationStatus = "not_published" | "unverified" | "empty" | "partial" | "error" | "published" | "private_form" | "unknown";
 
 export interface HackathonEvent {
@@ -142,7 +142,7 @@ export function parseSnapshot(value: unknown): HackathonSnapshot | null {
   if (!Array.isArray(snapshot.events) || !Array.isArray(snapshot.sources)) return null;
   for (const event of snapshot.events) {
     if (!event || typeof event.title !== "string" || !event.title.trim()) return null;
-    if (event.ecosystem !== "bnb" && event.ecosystem !== "solana" && event.ecosystem !== "both") return null;
+    if (event.ecosystem !== "bnb" && event.ecosystem !== "solana" && event.ecosystem !== "both" && event.ecosystem !== "unknown") return null;
     if (event.classification !== "hackathon" && event.classification !== "related") return null;
     if (!PHASES.has(event.phase)) return null;
     if (!event.submission || !event.results || !Array.isArray(event.milestones) || !Array.isArray(event.links)) return null;
@@ -171,7 +171,7 @@ export function readHackathonSnapshot(path: string | undefined): SnapshotLoad {
 
 export function phaseAt(event: Pick<HackathonEvent, "official_status" | "start_utc" | "end_utc" | "phase">, now: Date): Phase {
   const status = (event.official_status || "").trim().toLowerCase();
-  if (["ended", "已结束", "complete", "completed", "closed"].includes(status)) return "ended";
+  if (["ended", "已结束", "complete", "completed", "closed", "collection_incomplete"].includes(status)) return "ended";
   const start = event.start_utc ? Date.parse(event.start_utc) : NaN;
   const end = event.end_utc ? Date.parse(event.end_utc) : NaN;
   const time = now.getTime();

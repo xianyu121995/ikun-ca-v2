@@ -4,7 +4,7 @@
   "min_poll_seconds": 300,
   "request_gap_seconds": 0.8,
   "detail_refresh_seconds": 21600,
-  "blog_pages_per_cycle": 2,
+  "blog_pages_per_cycle": 5,
   "announcement_pages_per_cycle": 5,
   "sources": {
     "hackathon_index": "https://www.bnbchain.org/en/hackathons",
@@ -31,6 +31,40 @@
       "name": "BNB Bangkok: Build, Demo, and Pitch",
       "chain": "BSC",
       "event_id": "bnb-bangkok-2026"
+    },
+    {
+      "url": "https://luma.com/5topfryz",
+      "name": "BNB Bangkok: Build, Demo, and Pitch",
+      "chain": "BSC",
+      "event_id": "bnb-bangkok-2026"
+    },
+    {
+      "url": "https://luma.com/n5y1y7cu",
+      "name": "BNB Bangkok: Build, Demo, and Pitch",
+      "chain": "BSC",
+      "event_id": "bnb-bangkok-2026"
+    },
+    {
+      "url": "https://www.bnbchain.org/en/blog/meet-the-winners-of-bnb-hack-tokenized-stocks-edition-with-binance-web3-wallet",
+      "name": "BNB Hackathon: Tokenized Stocks Edition",
+      "chain": "BSC",
+      "event_id": "https://www.bnbchain.org/en/hackathons/tokenized-stocks"
+    },
+    {
+      "url": "https://www.bnbchain.org/en/blog/meet-the-winners-of-bnb-hack-ai-trading-agent-edition",
+      "name": "BNB Hackathon: AI Trading Agent Edition",
+      "chain": "BSC",
+      "event_id": "https://www.bnbchain.org/en/hackathons/bnbhack-twt-cmc"
+    },
+    {
+      "url": "https://hackathons.solana.com/hackathons/stocklana",
+      "name": "Stocklana",
+      "chain": "SOL"
+    },
+    {
+      "url": "https://superteam.fun/earn/hackathon/crypto-worlds-fair",
+      "name": "Superteam Earn · Crypto World's Fair 赞助赛道",
+      "chain": "SOL"
     }
   ]
 }

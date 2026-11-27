@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 ORIGIN = "https://hackathons.solana.com"
 DIRECTORY = ORIGIN + "/hackathons"
 FOLLOWED_STATES = {"scheduled", "active", "live", "launched", "open", "judging"}
+ENROLLED_STATES = FOLLOWED_STATES | {"completed", "funding"}
 BEFORE_OPEN = {"scheduled", "funding"}
 SLUG = re.compile(r"[a-zA-Z0-9-]+")
 EVENT_PATH = re.compile(r"/hackathons/([a-zA-Z0-9-]+)/?")
@@ -80,7 +81,7 @@ def parse_directory(html):
         slug, name = event.get("slug"), event.get("title")
         event_id = event.get("id")
         status = display_statuses.get(event_id, event.get("status"))
-        if status not in FOLLOWED_STATES and event.get("status") not in FOLLOWED_STATES:
+        if status not in ENROLLED_STATES and event.get("status") not in ENROLLED_STATES:
             continue
         if (event.get("hidden") or not isinstance(slug, str) or not SLUG.fullmatch(slug)
                 or not isinstance(name, str) or not name.strip() or not isinstance(event_id, str)):

@@ -87,19 +87,23 @@ def discover_colosseum(timeout=15):
     active = {}
     for row in _hackathon_list(_text, timeout):
         stage = PHASES.get(row.get("phase"))
-        if stage and stage != "completed":
+        if stage:
             active[_local_url(row["landingPageUrl"])] = (row["name"], stage)
     # A registration event may appear on the public site before its directory is enabled.
     current = _web_event(_text(DISCOVERY, timeout))
     stage = WEB_PHASES.get(current.get("phase"))
-    if current.get("eventType") == "hackathon" and stage and stage != "completed":
+    if current.get("eventType") == "hackathon" and stage:
         active.setdefault(_local_url(current.get("landingPageUrl")), (current.get("name"), stage))
     out = []
     for url, (name, stage) in active.items():
-        chains = _track_chains(_text(url, timeout))
-        if chains and name:
-            out.append({"name": name, "url": url, "kind": "colosseum",
-                        "chain": ", ".join(chains), "event_status": stage})
+        if not name:
+            continue
+        try:
+            chains = _track_chains(_text(url, timeout))
+        except (OSError, ValueError):
+            chains = []
+        out.append({"name": name, "url": url, "kind": "colosseum",
+                    "chain": ", ".join(chains) if chains else None, "event_status": stage})
     return out
 
 

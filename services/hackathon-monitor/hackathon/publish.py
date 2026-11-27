@@ -33,7 +33,7 @@ def _ecosystem(chain: str | None) -> str:
         return "bnb"
     if has_sol and has_bnb:
         return "both"
-    return "bnb"
+    return "unknown"
 
 
 def _status(sources, key: str) -> str:
@@ -148,8 +148,8 @@ def build_site_snapshot(store, now: datetime | None = None) -> dict:
             "website": website or "",
             "twitter": twitter or "",
             "classification": "hackathon",
-            "classification_reason": "公开来源收录的黑客松。",
-            "summary": next((source["data"].get("summary") for source in sources if source["data"].get("summary")), ""),
+            "summary": next((source["data"].get("summary") or source["data"].get("scope_note") for source in sources if source["data"].get("summary") or source["data"].get("scope_note")), ""),
+            "classification_reason": next((source["data"].get("scope_note") for source in sources if source["data"].get("scope_note")), "公开来源收录的黑客松。"),
             "location": "",
             "prize": _prize(sources),
             "official_status": stage,

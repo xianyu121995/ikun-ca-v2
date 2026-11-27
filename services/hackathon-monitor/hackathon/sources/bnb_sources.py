@@ -321,6 +321,8 @@ def parse_bnb(url, html):
         result["published_at"] = _date_time(article.get("published_at"))
         if _RESULT.search(article["title"]):
             result["winners"] = _winner_article(content)
+            result["winner_status"] = "published" if result["winners"] else "unverified"
+            result["submission_status"] = "not_published"
     else:
         event = _cms(page).get("activeHackathonProgram", {})
         if not event.get("title"):
@@ -355,6 +357,8 @@ def parse_bnb(url, html):
                         "rank": rank,
                         "url": _clean(winner.get("github") or winner.get("demo")),
                     })
+        result["winner_status"] = "published" if result["winners"] else "not_published"
+        result["submission_status"] = "not_published"
         for field in ("submit_project_url", "apply_as_hacker_url"):
             raw = event.get(field)
             if isinstance(raw, str) and raw.startswith("https://"):

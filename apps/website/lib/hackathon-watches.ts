@@ -103,7 +103,7 @@ function openDb(file = hackathonWatchDbPath()): DatabaseSync {
 export function listWatches(file = hackathonWatchDbPath()): HackathonWatch[] {
   const db = openDb(file);
   try {
-    return db.prepare("SELECT id, handle, project_name, event_title, event_id, created_at, removed_at FROM watches ORDER BY created_at DESC").all() as HackathonWatch[];
+    return db.prepare("SELECT id, handle, project_name, event_title, event_id, created_at, removed_at FROM watches ORDER BY created_at DESC").all() as unknown as HackathonWatch[];
   } finally {
     db.close();
   }
@@ -116,9 +116,9 @@ export function addWatch(input: { handle: string; project_name: string; event_ti
   if (!project) throw new Error("缺少项目名");
   const db = openDb(file);
   try {
-    const existing = db.prepare("SELECT id, removed_at FROM watches WHERE handle = ? COLLATE NOCASE AND removed_at IS NULL").get(handle) as { id: string } | undefined;
+    const existing = db.prepare("SELECT id, removed_at FROM watches WHERE handle = ? COLLATE NOCASE AND removed_at IS NULL").get(handle) as unknown as { id: string } | undefined;
     if (existing) {
-      return db.prepare("SELECT id, handle, project_name, event_title, event_id, created_at, removed_at FROM watches WHERE id = ?").get(existing.id) as HackathonWatch;
+      return db.prepare("SELECT id, handle, project_name, event_title, event_id, created_at, removed_at FROM watches WHERE id = ?").get(existing.id) as unknown as HackathonWatch;
     }
     const row: HackathonWatch = {
       id: `hw_${now.getTime().toString(36)}_${handle.toLowerCase()}`,
@@ -141,7 +141,7 @@ export function removeWatch(id: string, now = new Date(), file = hackathonWatchD
   const db = openDb(file);
   try {
     const result = db.prepare("UPDATE watches SET removed_at = ? WHERE id = ? AND removed_at IS NULL").run(now.toISOString(), id);
-    return result.changes > 0;
+    return Number(result.changes) > 0;
   } finally {
     db.close();
   }
@@ -156,7 +156,7 @@ export function listTweets(file = hackathonWatchDbPath()): HackathonTweet[] {
              watches.removed_at IS NOT NULL AS removed
       FROM tweets JOIN watches ON watches.id = tweets.watch_id
       ORDER BY tweets.occurred_at DESC
-    `).all() as HackathonTweet[];
+    `).all() as unknown as HackathonTweet[];
   } finally {
     db.close();
   }
@@ -175,7 +175,7 @@ export function storeTweets(watch: HackathonWatch, tweets: PublicTweet[], fetche
       if (!/^\d{5,25}$/.test(tweet.tweet_id) || !tweet.text.trim()) continue;
       if (tweet.url !== `https://x.com/${watch.handle}/status/${tweet.tweet_id}`) continue;
       const result = insert.run(watch.id, tweet.tweet_id, tweet.text.slice(0, 2000), tweet.url, new Date(when).toISOString(), fetchedAt.toISOString());
-      added += result.changes;
+      added += Number(result.changes);
     }
     return added;
   } finally {
@@ -260,7 +260,7 @@ export interface StoredAnalysis {
 export function listNotes(file = hackathonWatchDbPath()): Record<string, StoredNote> {
   const db = openDb(file);
   try {
-    const rows = db.prepare("SELECT project_key, text, updated_at FROM notes").all() as { project_key: string; text: string; updated_at: string }[];
+    const rows = db.prepare("SELECT project_key, text, updated_at FROM notes").all() as unknown as { project_key: string; text: string; updated_at: string }[];
     return Object.fromEntries(rows.map(row => [row.project_key, { text: row.text, updated_at: row.updated_at }]));
   } finally {
     db.close();
@@ -289,7 +289,7 @@ export function saveNote(input: { event_id: string; role: string; name: string; 
 export function listAnalyses(file = hackathonWatchDbPath()): Record<string, StoredAnalysis> {
   const db = openDb(file);
   try {
-    const rows = db.prepare("SELECT project_key, text, thin, generated_at FROM analyses").all() as { project_key: string; text: string; thin: number; generated_at: string }[];
+    const rows = db.prepare("SELECT project_key, text, thin, generated_at FROM analyses").all() as unknown as { project_key: string; text: string; thin: number; generated_at: string }[];
     return Object.fromEntries(rows.map(row => [row.project_key, { text: row.text, thin: row.thin === 1, generated_at: row.generated_at }]));
   } finally {
     db.close();
@@ -317,7 +317,7 @@ export function tweetsForHandle(handle: string, file = hackathonWatchDbPath()): 
   const db = openDb(file);
   try {
     return db.prepare(`SELECT tweets.occurred_at, tweets.text FROM tweets JOIN watches ON watches.id = tweets.watch_id
-      WHERE watches.handle = ? COLLATE NOCASE ORDER BY tweets.occurred_at DESC LIMIT 12`).all(handle) as { occurred_at: string; text: string }[];
+      WHERE watches.handle = ? COLLATE NOCASE ORDER BY tweets.occurred_at DESC LIMIT 12`).all(handle) as unknown as { occurred_at: string; text: string }[];
   } finally {
     db.close();
   }

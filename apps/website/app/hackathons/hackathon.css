@@ -1,0 +1,15 @@
+.hk-page .hk-board { display: flex; flex-direction: column; gap: 16px; padding: 8px 4px 32px; }
+.hk-page .hk-section { display: flex; flex-direction: column; gap: 12px; }
+.hk-page .hk-section h2 { margin: 8px 0 0; font-size: 18px; }
+.hk-page .hk-section-note, .hk-page .hk-note, .hk-page .hk-summary { color: var(--ik-secondary); margin: 0 0 8px; }
+.hk-page .hk-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; color: var(--ik-secondary); margin-bottom: 8px; }
+.hk-page .hk-milestones { margin: 0; }
+.hk-page .hk-milestones div { display: grid; grid-template-columns: minmax(96px, 180px) 1fr; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--ik-border); }
+.hk-page .hk-milestones dt { color: var(--ik-muted); }
+.hk-page .hk-milestones dd { margin: 0; overflow-wrap: anywhere; }
+.hk-page .hk-projects { margin: 0; padding-left: 18px; }
+.hk-page .hk-projects li { margin: 6px 0; }
+.hk-page .hk-links { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 0; }
+@media (max-width: 720px) {
+  .hk-page .hk-milestones div { grid-template-columns: 1fr; }
+}

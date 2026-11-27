@@ -1,0 +1,19 @@
+{
+  "poll_seconds": 1800,
+  "min_poll_seconds": 300,
+  "request_gap_seconds": 0.8,
+  "detail_refresh_seconds": 21600,
+  "blog_pages_per_cycle": 2,
+  "announcement_pages_per_cycle": 5,
+  "sources": {
+    "hackathon_index": "https://www.bnbchain.org/en/hackathons",
+    "blog": "https://www.bnbchain.org/en/blog?page={page}",
+    "binance_catalog": "https://www.binance.com/bapi/composite/v1/public/cms/article/catalog/list/query?catalogId={catalog}&pageNo={page}&pageSize=20",
+    "binance_article": "https://www.binance.com/bapi/composite/v1/public/cms/article/detail/query?articleCode={code}",
+    "catalogs": [93, 49]
+  },
+  "pins": [
+    {"kind": "binance_article", "code": "95f5dbe0ea674a48a739b59e046648bf"},
+    {"kind": "bnb_blog", "slug": "bnb-bangkok-build-demo-and-pitch"}
+  ]
+}

@@ -1,0 +1,37 @@
+# 模板。不要在未批准时安装，不要重启网站、猎手、追踪、项目、隧道或备份。
+# WorkingDirectory 必须是包含这份代码的发布目录，不能是别的服务目录。
+
+[Unit]
+Description=ikun.ca standing BNB Chain hackathon monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hackathon
+Group=hackathon
+WorkingDirectory=/opt/ikun/current/services/hackathon-monitor
+EnvironmentFile=/etc/ikun-hackathon.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=TZ=Asia/Shanghai
+ExecStart=/usr/bin/python3 -X utf8 -m hackathon.main --loop
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+StateDirectory=ikun-hackathon
+ReadWritePaths=/var/lib/ikun-hackathon
+
+[Install]
+WantedBy=multi-user.target

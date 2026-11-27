@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { beijingLabel, projectKey, type StoredAnalysis, type StoredNote } from "../../lib/hackathon-watches";
+import { beijingLabel, projectKey, type StoredAnalysis, type StoredNote } from "../../lib/hackathon-watch-model";
 import { WatchButton } from "./watch-button";
 
 const listeners = new Set<(id: string | null) => void>();

@@ -1,7 +1,7 @@
 import React from "react";
 import { Badge, EmptyState, Panel } from "@ikun/ui";
 import { chainLabel, chainSide, EMPTY_COPY, LIST_PAGE_SIZE, LIST_PREVIEW, recentPeriods, type HackathonEvent, type HackathonProject, type ListFocus, type Phase, type ProjectListKind, type SnapshotLoad } from "../../lib/hackathon-snapshot";
-import { officialHandle, projectKey, type StoredAnalysis, type StoredNote } from "../../lib/hackathon-watches";
+import { officialHandle, projectKey, type StoredAnalysis, type StoredNote } from "../../lib/hackathon-watch-model";
 import { ProjectTools } from "./project-tools";
 
 const PHASE_LABEL: Record<Phase, string> = { live: "进行中", upcoming: "即将开始", ended: "已结束", unknown: "时间未明" };

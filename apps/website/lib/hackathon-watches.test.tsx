@@ -126,6 +126,7 @@ test("the tweet page lists a watched account and can delete it without showing h
 test("hackathon watch code does not import hunter or tracking", () => {
   const root = path.resolve(import.meta.dirname, "..");
   const files = [
+    "lib/hackathon-watch-model.ts",
     "lib/hackathon-watches.ts",
     "app/api/hackathons/watches/route.ts",
     "app/api/hackathons/watches/[id]/route.ts",
@@ -140,5 +141,9 @@ test("hackathon watch code does not import hunter or tracking", () => {
   for (const file of files) {
     const source = readFileSync(path.join(root, file), "utf8");
     assert.doesNotMatch(source, /features\/tracking|features\/hunter|tracking-worker|hunter-worker|tracking\.sqlite|hunter\.sqlite/);
+  }
+  for (const file of ["app/hackathons/project-tools.tsx", "app/hackathons/watch-button.tsx", "app/hackathon-tweets/remove-watch.tsx"]) {
+    const source = readFileSync(path.join(root, file), "utf8");
+    assert.doesNotMatch(source, /hackathon-watches|node:fs|node:path|node:sqlite|node:child_process/);
   }
 });

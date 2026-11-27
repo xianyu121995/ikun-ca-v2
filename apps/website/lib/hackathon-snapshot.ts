@@ -11,6 +11,9 @@ export interface HackathonProject {
   url: string;
   source_url: string;
   note: string;
+  info?: string;
+  website?: string;
+  twitter?: string;
 }
 
 export interface HackathonMilestone {
@@ -30,6 +33,8 @@ export interface HackathonEvent {
   id: string;
   title: string;
   ecosystem: Ecosystem;
+  website?: string;
+  twitter?: string;
   classification: Classification;
   classification_reason: string;
   summary: string;
@@ -70,6 +75,29 @@ export type SnapshotLoad =
 
 const PHASES = new Set(["live", "upcoming", "ended", "unknown"]);
 
+function safePublicUrl(value: string | undefined): boolean {
+  if (!value) return true;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "");
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password && host !== "x.com" && host !== "twitter.com";
+  } catch {
+    return false;
+  }
+}
+
+function safeTwitter(value: string | undefined): boolean {
+  if (!value) return true;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "");
+    const handle = url.pathname.split("/").filter(Boolean)[0] ?? "";
+    return url.protocol === "https:" && !url.username && !url.password && (host === "x.com" || host === "twitter.com") && /^[A-Za-z0-9_]{1,15}$/.test(handle);
+  } catch {
+    return false;
+  }
+}
+
 export function parseSnapshot(value: unknown): HackathonSnapshot | null {
   if (!value || typeof value !== "object") return null;
   const snapshot = value as HackathonSnapshot;
@@ -83,7 +111,9 @@ export function parseSnapshot(value: unknown): HackathonSnapshot | null {
     if (!event.submission || !event.results || !Array.isArray(event.milestones) || !Array.isArray(event.links)) return null;
     for (const project of [...event.submission.projects, ...event.results.projects]) {
       if (!project?.name?.trim() || typeof project.source_url !== "string" || !project.source_url.startsWith("https://")) return null;
+      if (!safePublicUrl(project.website) || !safeTwitter(project.twitter)) return null;
     }
+    if (!safePublicUrl(event.website) || !safeTwitter(event.twitter)) return null;
     for (const milestone of event.milestones) {
       if (!milestone?.display || !milestone.source_url?.startsWith("https://")) return null;
     }

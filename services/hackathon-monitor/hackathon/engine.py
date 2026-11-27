@@ -129,6 +129,62 @@ def rank_identity(rank):
     return numeric[1] if numeric else value
 
 
+def public_website(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    url = value.strip()
+    if "://" not in url:
+        return None
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return None
+    host = (parts.hostname or "").lower()
+    if parts.scheme not in {"http", "https"} or not host or parts.username or parts.password:
+        return None
+    blocked = {"x.com", "twitter.com", "www.x.com", "www.twitter.com", "github.com", "www.github.com",
+               "youtube.com", "www.youtube.com", "youtu.be", "loom.com", "www.loom.com", "t.me",
+               "discord.com", "discord.gg", "bscscan.com", "testnet.bscscan.com"}
+    if host in blocked:
+        return None
+    return url.split("#", 1)[0]
+
+
+def public_twitter(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    if raw.startswith("@"):
+        raw = raw[1:]
+    if re.fullmatch(r"[A-Za-z0-9_]{1,15}", raw):
+        return f"https://x.com/{raw}"
+    if "://" not in raw:
+        return None
+    try:
+        parts = urlsplit(raw)
+    except ValueError:
+        return None
+    host = (parts.hostname or "").lower().removeprefix("www.")
+    if parts.scheme != "https" or host not in {"x.com", "twitter.com"} or parts.username:
+        return None
+    handle = parts.path.strip("/").split("/")[0]
+    if not re.fullmatch(r"[A-Za-z0-9_]{1,15}", handle) or handle.lower() in {"intent", "share", "home", "search"}:
+        return None
+    return f"https://x.com/{handle}"
+
+
+def brief(value):
+    if not isinstance(value, str):
+        return None
+    text = " ".join(re.sub(r"<[^>]+>", " ", value).split())
+    if not text or re.search(r"\b(?:password|passwd|secret|api[_ -]?key|private key|mnemonic|seed phrase)\b", text, re.I):
+        return None
+    if len(text) <= 160:
+        return text
+    short = text[:160]
+    return short.rsplit(" ", 1)[0] if " " in short else short
+
+
 def count_public(payload, default):
     return next((payload.get(field) for field in
                  ("public_gallery_count", "public_submission_count", "public_project_count")
@@ -168,7 +224,7 @@ class Store:
             for table, changes in (
                 ("events", {"chain": "TEXT", "stage": "TEXT NOT NULL DEFAULT 'unknown'",
                             "pinned": "INTEGER NOT NULL DEFAULT 0"}),
-                ("findings", {"chain": "TEXT"}),
+                ("findings", {"chain": "TEXT", "website": "TEXT", "twitter": "TEXT", "info": "TEXT"}),
             ):
                 existing = {row["name"] for row in self.db.execute(f"PRAGMA table_info({table})")}
                 for column, definition in changes.items():
@@ -301,6 +357,8 @@ class Store:
                         continue
                     category, rank = row.get("category"), row.get("rank")
                     chain = chain_label(row.get("chain") or row.get("chains"))
+                    website, twitter = public_website(row.get("website")), public_twitter(row.get("twitter"))
+                    info = brief(row.get("info"))
                     if kind == "winner":
                         identity = "|".join((normalized(name), normalized(category), rank_identity(rank)))
                     else:
@@ -310,10 +368,10 @@ class Store:
                         published = payload.get("published_at")
                     inserted = self.db.execute("""
                         INSERT OR IGNORE INTO findings
-                        (event_id,kind,identity,name,category,rank,url,source,first_seen,published_at,chain)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                        (event_id,kind,identity,name,category,rank,url,source,first_seen,published_at,chain,website,twitter,info)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """, (event["id"], kind, identity, name, category, rank, row.get("url"),
-                          url, seen, published, chain))
+                          url, seen, published, chain, website, twitter, info))
                     if inserted.rowcount:
                         if kind == "submission":
                             new_submissions += 1
@@ -323,9 +381,11 @@ class Store:
                     else:
                         self.db.execute("""
                             UPDATE findings SET name=?, published_at=COALESCE(published_at,?),
-                                url=COALESCE(?,url), chain=COALESCE(?,chain), category=COALESCE(?,category)
+                                url=COALESCE(?,url), chain=COALESCE(?,chain), category=COALESCE(?,category),
+                                website=?, twitter=?, info=?
                             WHERE event_id=? AND kind=? AND identity=?
-                        """, (name, published, row.get("url"), chain, category, event["id"], kind, identity))
+                        """, (name, published, row.get("url"), chain, category, website, twitter, info,
+                              event["id"], kind, identity))
             if not had_submissions and new_submissions:
                 notices.append({"kind": "gallery_opened", **base,
                                 "count": count_public(current, new_submissions)})

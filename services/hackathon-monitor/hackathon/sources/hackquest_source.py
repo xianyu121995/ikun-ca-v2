@@ -26,7 +26,7 @@ PROJECTS = """
 query HackathonProjects($filter: ProjectFilterInput!, $page: Int, $limit: Int) {
   projects(filter: $filter, page: $page, limit: $limit) {
     total
-    data { id alias name tracks }
+    data { id alias name tracks description }
   }
 }
 """
@@ -34,7 +34,7 @@ REWARDS = """
 query FindHackathonReward($hackathonId: String!) {
   findHackathonReward(hackathonId: $hackathonId) {
     announce id name rewardName
-    projects { id alias name tracks winner { rewardId place } }
+    projects { id alias name tracks description winner { rewardId place } }
   }
 }
 """
@@ -191,8 +191,50 @@ def project(row):
               for item in tracks or [] if isinstance(item, (str, dict))] if isinstance(tracks, list) else []
     labels = [label for label in labels if isinstance(label, str) and label.strip()
               and not re.fullmatch(r"[0-9a-fA-F-]{32,36}", label)]
-    return {"id": identity, "name": name.strip(), "category": ", ".join(labels) or None,
+    item = {"id": identity, "name": name.strip(), "category": ", ".join(labels) or None,
             "url": "https://www.hackquest.io/projects/" + quote(alias, safe="")}
+    info, website, twitter = _profile(row.get("description"))
+    if info:
+        item["info"] = info
+    if website:
+        item["website"] = website
+    if twitter:
+        item["twitter"] = twitter
+    return item
+
+
+def _profile(html):
+    """Use a short blurb, and a site or X account only when the description labels it as official."""
+    if not isinstance(html, str) or not html.strip():
+        return None, None, None
+    text = " ".join(re.sub(r"<[^>]+>", " ", html).split())
+    info = text or None
+    website = _labeled(html, r"Official\s+(?:Website|Site)|官网")
+    twitter = _x_url(_labeled(html, r"Official\s+(?:X|Twitter)|官推") or "")
+    return info, website, twitter
+
+
+def _labeled(html, labels):
+    found = []
+    pattern = rf'(?:{labels})\s*[:：]\s*(?:<a\b[^>]*href="(https?://[^"?#\s]+)"|(https?://\S+))'
+    for match in re.finditer(pattern, html, re.I):
+        raw = next(group for group in match.groups() if group)
+        cleaned = raw.rstrip(").,;")
+        host = (urlsplit(cleaned).hostname or "").lower()
+        if host and cleaned not in found:
+            found.append(cleaned)
+    return found[0] if len(found) == 1 else None
+
+
+def _x_url(value):
+    parts = urlsplit(value)
+    host = (parts.hostname or "").lower().removeprefix("www.")
+    if parts.scheme != "https" or host not in {"x.com", "twitter.com"}:
+        return None
+    handle = parts.path.strip("/").split("/")[0]
+    if re.fullmatch(r"[A-Za-z0-9_]{1,15}", handle) and handle.lower() not in {"intent", "share", "home", "search"}:
+        return f"https://x.com/{handle}"
+    return None
 
 
 def get_submissions(event_id, timeout):

@@ -197,17 +197,50 @@ def _export_projects(hackathon_id, total, timeout):
         ids.add(match[1])
         category = fields.get(columns.get("Category"), ("", ""))[0]
         chains = fields.get(columns.get("Chains"), ("", ""))[0]
-        projects.append({"id": match[1], "name": name, "url": url,
-                         "category": category or None, "chain": chains or None})
+        item = {"id": match[1], "name": name, "url": url,
+                "category": category or None, "chain": chains or None}
+        for header, key in (("Website", "website"), ("Twitter", "twitter"), ("X", "twitter")):
+            column = columns.get(header)
+            if column and fields.get(column, ("", ""))[0]:
+                item[key] = fields[column][0]
+        projects.append(item)
     if columns is None or len(projects) != total:
         raise ValueError("Colosseum 导出作品总数和公开目录不符")
     return projects
 
 
+def _api_profiles(hackathon_id, fetch, timeout):
+    """Read website, X, and description even when one directory page repeats a slug."""
+    profiles = {}
+    offset = 0
+    while True:
+        page = _project_page(hackathon_id, fetch, timeout, offset)
+        for row in page.get("projects") or []:
+            slug = row.get("slug") if isinstance(row, dict) else None
+            if not isinstance(slug, str) or not slug or slug in profiles or not isinstance(row.get("name"), str):
+                continue
+            profiles[slug] = _api_item(row)
+        if not page.get("hasMore"):
+            return profiles
+        offset += PAGE_SIZE
+        if offset > page.get("totalCount", 0) + PAGE_SIZE:
+            return profiles
+
+
 def _api_item(row):
-    return {"id": quote(row["slug"], safe=""), "name": row["name"],
+    item = {"id": quote(row["slug"], safe=""), "name": row["name"],
             "url": f"{HOME}/arena/projects/{quote(row['slug'], safe='')}",
             "category": row.get("category")}
+    site = row.get("website")
+    if isinstance(site, str) and site.startswith(("http://", "https://")):
+        item["website"] = site.strip()
+    handle = row.get("twitterHandle")
+    if isinstance(handle, str) and handle.strip():
+        item["twitter"] = handle.strip()
+    text = row.get("description")
+    if isinstance(text, str) and text.strip():
+        item["info"] = " ".join(re.sub(r"<[^>]+>", " ", text).split())
+    return item
 
 
 def _schedule(data):
@@ -250,6 +283,7 @@ def fetch_colosseum(url, fetch, timeout=15):
     hackathon_id = event["id"]
     phase = event.get("phase")
     result = {"name": event["name"], "platform_event_id": str(hackathon_id), "links": [],
+              "event_website": event.get("landingPageUrl"),
               "event_status": PHASES.get(phase), "schedule": [],
               "submission_status": "unverified", "winner_status": "unverified",
               "submissions": [], "winners": []}
@@ -266,6 +300,16 @@ def fetch_colosseum(url, fetch, timeout=15):
             except (OSError, ValueError, BadZipFile, ET.ParseError, KeyError, IndexError) as error:
                 items = [_api_item(row) for row in _api_projects(hackathon_id, page, fetch, timeout)]
                 result["chain_metadata_error"] = str(error)
+            if any(not item.get("twitter") or not item.get("info") or not item.get("website") for item in items):
+                try:
+                    extras = _api_profiles(hackathon_id, fetch, timeout)
+                except (OSError, ValueError, TypeError, KeyError):
+                    extras = {}
+                for item in items:
+                    extra = extras.get(item["id"]) or {}
+                    for key in ("website", "twitter", "info"):
+                        if not item.get(key) and extra.get(key):
+                            item[key] = extra[key]
             result["submissions"], result["submission_status"] = items, "published"
         elif metadata.get("isProjectDirectoryEnabled") is True:
             result["submission_status"] = "empty"

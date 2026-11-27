@@ -317,6 +317,7 @@ def parse_bnb(url, html):
         content = _Page(article["html"])
         result["name"] = article["title"]
         result["links"] = _result_links(content, url)
+        result["event_website"] = url.split("#", 1)[0]
         result["published_at"] = _date_time(article.get("published_at"))
         if _RESULT.search(article["title"]):
             result["winners"] = _winner_article(content)
@@ -326,6 +327,7 @@ def parse_bnb(url, html):
             raise ValueError("BNB hackathon detail data is missing")
         result["name"] = event["title"]
         result["links"] = _result_links(page, url)
+        result["event_website"] = url.split("#", 1)[0]
         result["event_status"] = event.get("status")
         for field, kind, label in (
             ("start", "starts", "Event starts"),

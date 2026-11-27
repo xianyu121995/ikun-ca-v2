@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
-from .engine import BEIJING, STATUS, iso, present_time, publication_summary
+from .engine import BEIJING, STATUS, iso, present_time, public_twitter, public_website, publication_summary
 
 _CHANGE = {
     "new_event": "新赛事",
@@ -62,6 +62,9 @@ def _projects(findings, kind: str):
             "url": row.get("url") or "",
             "source_url": row.get("url") if str(row.get("url") or "").startswith("https://") else source,
             "note": row.get("chain") or "",
+            "info": row.get("info") or "",
+            "website": public_website(row.get("website")) or "",
+            "twitter": public_twitter(row.get("twitter")) or "",
         })
     return rows
 
@@ -135,10 +138,14 @@ def build_site_snapshot(store, now: datetime | None = None) -> dict:
             winner_status = "partial"
         stage = event.get("stage") or "unknown"
         start = next((row["start_utc"] for row in _milestones(summary) if row["start_utc"]), None)
+        website = next((public_website(source["data"].get("event_website")) for source in sources if public_website(source["data"].get("event_website"))), "")
+        twitter = next((public_twitter(source["data"].get("event_twitter")) for source in sources if public_twitter(source["data"].get("event_twitter"))), "")
         events.append({
             "id": event["id"],
             "title": event["name"],
             "ecosystem": _ecosystem(event.get("chain")),
+            "website": website or "",
+            "twitter": twitter or "",
             "classification": "hackathon",
             "classification_reason": "公开来源收录的黑客松。",
             "summary": next((source["data"].get("summary") for source in sources if source["data"].get("summary")), ""),

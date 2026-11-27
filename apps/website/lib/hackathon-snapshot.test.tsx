@@ -72,10 +72,58 @@ test("empty submission and winner states stay empty on the page", () => {
   assert.match(html, /Solana/);
   assert.match(html, /长期核对/);
   assert.match(html, /北京时间（UTC\+8）/);
-  assert.match(html, /没有可展示的项目/);
   assert.match(html, /没有公布投稿/);
   assert.match(html, /没有公布获奖/);
-  assert.doesNotMatch(html, /虚构|示例队伍|冠军/);
+  assert.doesNotMatch(html, /没有可展示的项目/);
+  assert.doesNotMatch(html, /虚构|示例队伍|冠军|官网|官推/);
+  const listed = event({
+    id: "listed",
+    title: "有公开名单的黑客松",
+    website: "https://example.com/hackathon",
+    twitter: "https://x.com/examplehack",
+    submission: {
+      state: "published",
+      note: "公开名单。",
+      form_url: null,
+      projects: [{
+        name: "真实项目",
+        role: "submitted",
+        place: "",
+        track: "DeFi",
+        url: "https://example.com/project",
+        source_url: "https://example.com/source",
+        note: "SOL",
+        info: "一句公开简介。",
+        website: "https://example.com/project",
+        twitter: "https://x.com/realproject",
+      }],
+    },
+    results: {
+      state: "published",
+      note: "公开排名。",
+      projects: [{
+        name: "第一名项目",
+        role: "winner",
+        place: "第 1 名",
+        track: "",
+        url: "https://example.com/winner",
+        source_url: "https://example.com/winner",
+        note: "",
+        website: "https://winner.example",
+      }],
+    },
+  });
+  const rich = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: snapshot([listed]) }} now={NOW} />);
+  assert.match(rich, /赛事官网/);
+  assert.match(rich, /赛事官推/);
+  assert.match(rich, /排名/);
+  assert.match(rich, /第 1 名/);
+  assert.match(rich, /名单/);
+  assert.match(rich, /一句公开简介/);
+  assert.match(rich, /官网/);
+  assert.match(rich, /官推/);
+  assert.doesNotMatch(rich, /https:\/\/x\.com\/madeup|排名未公布/);
+  assert.equal(parseSnapshot(snapshot([event({ website: "javascript:alert(1)" })])), null);
   assert.match(html, /已结束（归档）/);
   const missing = renderToStaticMarkup(<HackathonBoard load={{ ok: false, reason: "missing" }} now={NOW} />);
   assert.match(missing, new RegExp(EMPTY_COPY.missing.slice(0, 12)));

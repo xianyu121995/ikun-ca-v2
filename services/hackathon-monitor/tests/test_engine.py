@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from hackathon.engine import Store, publication_summary
+from hackathon.engine import Store, public_twitter, public_website, publication_summary
 
 EVENT = "https://example.com/hackathons/bsc-example"
 GALLERY = EVENT + "/gallery"
@@ -136,6 +136,28 @@ class WatchStateTests(unittest.TestCase):
         self.store.record(GALLERY, FIRST, result)
         result["schedule"][0]["time"] = "2026-11-27T10:00:00+00:00"
         self.assertEqual(self.store.record(GALLERY, SECOND, result), [])
+
+    def test_project_site_and_twitter_pass_through_only_when_the_source_has_them(self):
+        self.assertIsNone(public_website("javascript:alert(1)"))
+        self.assertIsNone(public_twitter("@not a handle"))
+        self.assertEqual(public_twitter("zyn_network"), "https://x.com/zyn_network")
+        self.store.record(GALLERY, FIRST, {
+            "submission_status": "published",
+            "event_website": "https://example.com/official",
+            "submissions": [
+                {"id": "rich", "name": "Zyn", "url": GALLERY + "/zyn", "website": "https://zyn-network.com",
+                 "twitter": "zyn_network", "info": "Public blurb."},
+                {"id": "plain", "name": "Plain", "url": GALLERY + "/plain"},
+            ],
+        })
+        event = self.store.events()[0]
+        findings = {row["name"]: row for row in event["findings"]}
+        self.assertEqual(findings["Zyn"]["website"], "https://zyn-network.com")
+        self.assertEqual(findings["Zyn"]["twitter"], "https://x.com/zyn_network")
+        self.assertEqual(findings["Zyn"]["info"], "Public blurb.")
+        self.assertIsNone(findings["Plain"]["website"])
+        self.assertIsNone(findings["Plain"]["twitter"])
+        self.assertEqual(event["sources"][0]["data"]["event_website"], "https://example.com/official")
 
 
 if __name__ == "__main__":

@@ -147,10 +147,15 @@ def _entry(row, published_at, listing_url):
         str(user[field]) for field in ("firstName", "lastName") if user.get(field))
     if not visible_name:
         visible_name = "未公开提交账号"
-    return {
+    link = _public_link(row.get("link"))
+    item = {
         "id": str(row["id"]), "name": visible_name + "（项目名未公开）",
-        "url": _public_link(row.get("link")) or listing_url, "published_at": published_at,
+        "url": link or listing_url, "published_at": published_at,
     }
+    host = (urlsplit(link).hostname or "").lower() if link else ""
+    if link and host and "superteam" not in host and not host.endswith(("x.com", "twitter.com")):
+        item["website"] = link
+    return item
 
 
 def _published_listing(result, detail, fetch, timeout):
@@ -192,12 +197,14 @@ def fetch_external(url, fetch, timeout=15):
         raise ValueError("该页面不是已公开的 Superteam Earn 黑客松赛道")
     announced = detail.get("isWinnersAnnounced")
     initial = "not_published" if announced is False else "unverified"
+    listing_url = _page("listing", slug)
     schedule = (_schedule("submission_close", "Submission Deadline", detail.get("deadline"))
                 + _schedule("results_expected", "Winner Announcement By", detail.get("commitmentDate")))
     result = {
         "name": detail["title"], "chain": "SOL", "event_status": _stage(detail.get("deadline"), announced),
         "submission_status": initial, "submissions": [], "winner_status": initial, "winners": [],
         "schedule": schedule, "links": [],
+        "event_website": listing_url,
         "scope_note": "Superteam Earn 公布获奖后开放提交记录，数据给出公开提交链接及账号。",
     }
     parent = detail.get("Hackathon") or {}

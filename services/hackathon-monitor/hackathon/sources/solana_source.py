@@ -112,6 +112,17 @@ def project_item(row, event, bounty_names):
         "id": identity, "name": name.strip(), "chain": "SOL",
         "url": f"{DIRECTORY}/{event['slug']}/projects/{quote(identity, safe='')}",
     }
+    site = row.get("website") or row.get("website_url")
+    if isinstance(site, str) and site.startswith("https://"):
+        host = (urlsplit(site).hostname or "").lower()
+        if host and not host.endswith(("github.com", "youtube.com", "youtu.be", "loom.com", "drive.google.com", "x.com", "twitter.com")):
+            item["website"] = site
+    handle = row.get("twitter") or row.get("twitter_url") or row.get("x")
+    if isinstance(handle, str) and handle.strip():
+        item["twitter"] = handle.strip()
+    blurb = row.get("short_description") or row.get("desc")
+    if isinstance(blurb, str) and blurb.strip():
+        item["info"] = " ".join(blurb.split())[:160]
     categories = list(dict.fromkeys(
         bounty_names[bounty] for bounty in row.get("bounty_ids") or [] if bounty in bounty_names
     ))
@@ -211,6 +222,7 @@ def fetch_solana(url, fetch, timeout=15):
         "platform_project_count": count if type(count) is int else None,
         "submission_status": "unverified", "winner_status": "unverified",
         "submissions": [], "winners": [],
+        "event_website": official_url,
     }
     try:
         projects, publication = read_project_rows(props, event, bounty_names, status, showcase, fetch, timeout)

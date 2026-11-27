@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HackathonBoard } from "../app/hackathons/board.tsx";
-import { chainLabel, EMPTY_COPY, groupEvents, LIST_PAGE_SIZE, LIST_PREVIEW, matchesChain, paintSnapshot, parseSnapshot, phaseAt, projectPage, type HackathonEvent, type HackathonProject, type HackathonSnapshot } from "./hackathon-snapshot.ts";
+import { chainLabel, EMPTY_COPY, groupEvents, LIST_PAGE_SIZE, LIST_PREVIEW, matchesChain, paintSnapshot, parseSnapshot, phaseAt, projectPage, recentPeriods, type HackathonEvent, type HackathonProject, type HackathonSnapshot } from "./hackathon-snapshot.ts";
 
 const NOW = "2026-11-27T12:49:00Z";
 
@@ -68,13 +68,13 @@ test("ended events stay in the archive and an ended window moves there even if t
 test("empty submission and winner states stay empty on the page", () => {
   const html = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: snapshot([event()]) }} now={NOW} />);
   assert.match(html, /黑客松监控/);
-  assert.match(html, /这里看不到全部投稿/);
-  assert.match(html, /BNB Chain \/ BSC/);
-  assert.match(html, /Solana/);
-  assert.match(html, /长期核对/);
+  assert.match(html, /第四期/);
+  assert.match(html, /11\.1–12\.1/);
+  assert.match(html, /<details class="hk-period" open="">/);
   assert.match(html, /北京时间（UTC\+8）/);
   assert.match(html, /没有公布投稿/);
   assert.match(html, /没有公布获奖/);
+  assert.doesNotMatch(html, /这里看不到全部投稿|最近变化|长期核对|已结束（归档）/);
   assert.doesNotMatch(html, /没有可展示的项目/);
   assert.doesNotMatch(html, /虚构|示例队伍|冠军|官网|官推|>监控</);
   const listed = event({
@@ -128,7 +128,7 @@ test("empty submission and winner states stay empty on the page", () => {
   assert.equal((rich.match(/>监控</g) ?? []).length, 1);
   assert.doesNotMatch(rich, /https:\/\/x\.com\/madeup|排名未公布/);
   assert.equal(parseSnapshot(snapshot([event({ website: "javascript:alert(1)" })])), null);
-  assert.match(html, /已结束（归档）/);
+  assert.match(html, /第四期/);
   const missing = renderToStaticMarkup(<HackathonBoard load={{ ok: false, reason: "missing" }} now={NOW} />);
   assert.match(missing, new RegExp(EMPTY_COPY.missing.slice(0, 12)));
   assert.doesNotMatch(missing, /Agent ID|Bangkok/);
@@ -165,6 +165,32 @@ test("chain filter keeps BSC and SOL apart, including recent changes", () => {
   assert.match(html, /BSC 黑客松/);
   assert.match(html, /SOL 黑客松/);
   assert.doesNotMatch(html, /链未标明|猜测/);
+});
+
+test("only the latest periods stay, as drawers, and undated events are left out", () => {
+  const current = event({ id: "q4", title: "本季黑客松", start_utc: "2026-11-01T00:00:00Z", end_utc: "2026-12-01T00:00:00Z" });
+  const summer = event({ id: "q3", title: "夏季黑客松", start_utc: "2026-07-02T00:00:00Z", end_utc: "2026-08-20T00:00:00Z" });
+  const spring = event({ id: "q2", title: "春季黑客松", start_utc: "2026-04-03T00:00:00Z", end_utc: "2026-05-18T00:00:00Z" });
+  const winter = event({ id: "q1", title: "太久远的黑客松", start_utc: "2026-02-01T00:00:00Z", end_utc: "2026-03-20T00:00:00Z" });
+  const ancient = event({ id: "old", title: "2024 年旧榜", start_utc: "2024-01-01T00:00:00Z", end_utc: "2024-03-01T00:00:00Z" });
+  const undated = event({ id: "none", title: "没有官方时间", start_utc: null, end_utc: null });
+  const periods = recentPeriods([current, summer, spring, winter, ancient, undated], new Date(NOW));
+  assert.deepEqual(periods.map(period => period.label), ["第四期", "第三期", "第二期"]);
+  assert.equal(periods[0]?.range, "11.1–12.1");
+  assert.equal(periods[2]?.range, "4.3–5.18");
+  assert.equal(periods.some(period => period.events.some(item => item.title === "太久远的黑客松" || item.title === "2024 年旧榜" || item.title === "没有官方时间")), false);
+  const early = recentPeriods([
+    event({ id: "just", title: "刚开始", start_utc: "2026-10-02T00:00:00Z", end_utc: "2026-10-20T00:00:00Z" }),
+    summer, spring, winter,
+  ], new Date("2026-10-05T00:00:00Z"));
+  assert.equal(early.length, 4);
+  assert.equal(early.at(-1)?.range, "2.1–3.20");
+  const html = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: snapshot([current, summer, ancient, undated]) }} now={NOW} />);
+  assert.match(html, /<details class="hk-period" open="">/);
+  assert.match(html, /<details class="hk-period">/);
+  assert.match(html, /本季黑客松/);
+  assert.match(html, /夏季黑客松/);
+  assert.doesNotMatch(html, /2024 年旧榜|没有官方时间/);
 });
 
 test("first paint keeps a short preview and later pages stay bounded", () => {

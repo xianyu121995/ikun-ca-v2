@@ -224,6 +224,78 @@ export interface HackathonGroups {
   relatedArchive: HackathonEvent[];
 }
 
+export interface HackathonPeriod {
+  id: string;
+  label: string;
+  range: string;
+  events: HackathonEvent[];
+}
+
+const BEIJING_OFFSET = 8 * 3600_000;
+const PERIOD_LABEL = ["", "第一期", "第二期", "第三期", "第四期"];
+
+function beijingParts(ms: number) {
+  const shifted = new Date(ms + BEIJING_OFFSET);
+  return { year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() + 1, day: shifted.getUTCDate() };
+}
+
+function instant(value: string | null | undefined) {
+  if (!value) return null;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : null;
+}
+
+function compactDay(ms: number, withYear: boolean) {
+  const parts = beijingParts(ms);
+  return withYear ? `${parts.year}.${parts.month}.${parts.day}` : `${parts.month}.${parts.day}`;
+}
+
+function compactRange(times: number[], year: number) {
+  const min = Math.min(...times);
+  const max = Math.max(...times);
+  const start = beijingParts(min);
+  const end = beijingParts(max);
+  if (start.year !== end.year) return `${compactDay(min, true)}–${compactDay(max, true)}`;
+  const withYear = start.year !== year;
+  if (start.month === end.month && start.day === end.day) return compactDay(min, withYear);
+  return `${compactDay(min, withYear)}–${compactDay(max, false)}`;
+}
+
+/** Recent official windows only. A missing start and end stays out; nothing is assigned a guessed period. */
+export function recentPeriods(events: HackathonEvent[], now: Date): HackathonPeriod[] {
+  const buckets = new Map<string, { year: number; quarter: number; events: HackathonEvent[]; times: number[] }>();
+  for (const event of events) {
+    const start = instant(event.start_utc);
+    const end = instant(event.end_utc);
+    const anchor = start ?? end;
+    if (anchor === null) continue;
+    const parts = beijingParts(anchor);
+    const quarter = Math.ceil(parts.month / 3);
+    const key = `${parts.year}-${quarter}`;
+    const bucket = buckets.get(key) ?? { year: parts.year, quarter, events: [], times: [] };
+    bucket.events.push({ ...event, phase: phaseAt(event, now) });
+    bucket.times.push(anchor);
+    if (end !== null) bucket.times.push(end);
+    if (start !== null && end !== null) bucket.times.push(start);
+    buckets.set(key, bucket);
+  }
+  const ordered = [...buckets.values()].sort((left, right) => right.year - left.year || right.quarter - left.quarter);
+  const nowParts = beijingParts(now.getTime());
+  const nowQuarter = Math.ceil(nowParts.month / 3);
+  const quarterStart = Date.UTC(nowParts.year, (nowQuarter - 1) * 3, 1) - BEIJING_OFFSET;
+  const limit = now.getTime() - quarterStart < 21 * 86400_000 ? 4 : 3;
+  const nowIndex = nowParts.year * 4 + nowQuarter;
+  return ordered.filter(bucket => {
+    const index = bucket.year * 4 + bucket.quarter;
+    return index >= nowIndex - (limit - 1) && index <= nowIndex + 1;
+  }).map(bucket => ({
+    id: `${bucket.year}-${bucket.quarter}`,
+    label: bucket.year === nowParts.year ? PERIOD_LABEL[bucket.quarter] : `${bucket.year} ${PERIOD_LABEL[bucket.quarter]}`,
+    range: compactRange(bucket.times, nowParts.year),
+    events: bucket.events.sort((left, right) => (right.start_utc || right.end_utc || "").localeCompare(left.start_utc || left.end_utc || "")),
+  }));
+}
+
 export function groupEvents(events: HackathonEvent[], now: Date): HackathonGroups {
   const stamped = events.map(event => ({ ...event, phase: phaseAt(event, now) }));
   const hackathons = stamped.filter(event => event.classification === "hackathon");

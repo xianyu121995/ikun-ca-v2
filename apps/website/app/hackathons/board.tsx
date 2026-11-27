@@ -1,6 +1,6 @@
 import React from "react";
-import { Alert, Badge, EmptyState, PageHeader, Panel } from "@ikun/ui";
-import { chainLabel, chainSide, EMPTY_COPY, groupEvents, LIST_PAGE_SIZE, LIST_PREVIEW, type HackathonEvent, type HackathonProject, type HackathonSnapshot, type ListFocus, type Phase, type ProjectListKind, type SnapshotLoad } from "../../lib/hackathon-snapshot";
+import { Badge, EmptyState, Panel } from "@ikun/ui";
+import { chainLabel, chainSide, EMPTY_COPY, LIST_PAGE_SIZE, LIST_PREVIEW, recentPeriods, type HackathonEvent, type HackathonProject, type ListFocus, type Phase, type ProjectListKind, type SnapshotLoad } from "../../lib/hackathon-snapshot";
 import { officialHandle, projectKey, type StoredAnalysis, type StoredNote } from "../../lib/hackathon-watches";
 import { ProjectTools } from "./project-tools";
 import { WatchButton } from "./watch-button";
@@ -11,36 +11,25 @@ const PHASE_TONE: Record<Phase, "success" | "info" | "neutral" | "warning"> = { 
 export function HackathonBoard({ load, now, focus = null, csrf = "", notes = {}, analyses = {}, editingKey = "", openKey = "" }: { load: SnapshotLoad; now: string; focus?: ListFocus | null; csrf?: string; notes?: Record<string, StoredNote>; analyses?: Record<string, StoredAnalysis>; editingKey?: string; openKey?: string }) {
   if (!load.ok) {
     return <div className="hk-board">
-      <Header />
+      <h1 className="hk-title">黑客松监控</h1>
       <EmptyState title="监控还没有可展示的快照" description={EMPTY_COPY[load.reason]} />
     </div>;
   }
-  const failed = load.snapshot.sources.filter(source => !source.ok);
-  const changes = (load.snapshot.changes ?? []).slice(-12).reverse();
+  const periods = recentPeriods(load.snapshot.events, new Date(now));
   return <div className="hk-board">
-    <Header checkedAt={load.snapshot.generated_at_beijing} />
+    <h1 className="hk-title">黑客松监控</h1>
     <ChainFilter />
-    <Alert tone="warning" title="这里看不到全部投稿">{EMPTY_COPY.notEverything}</Alert>
-    {changes.length > 0 && <section className="hk-section" aria-labelledby="hk-changes">
-      <h2 id="hk-changes">最近变化</h2>
-      <ul className="hk-changes">{changes.map(change => {
-        const side = chainSide(changeSideInput(change, load.snapshot));
-        const label = chainLabel(changeSideInput(change, load.snapshot));
-        return <li key={change.id} className="hk-change" data-ecosystem={side}><strong>{change.label}</strong>{label && <span className={`hk-chain hk-chain-${side}`}>{label}</span>} {change.event}{change.at_beijing ? ` · ${change.at_beijing} 北京时间` : ""}</li>;
-      })}</ul>
-      <p className="hk-changes-none">这条链没有最近变化。</p>
-    </section>}
-    {failed.length > 0 && <Alert tone="warning" title="有来源这次没有核对成功">{failed.map(source => <p key={source.id}>{source.id}：{source.error || "失败"}。上次成功的内容会保留。</p>)}</Alert>}
-    <Ecosystem id="bsc" title="BSC" note="BNB Chain / BSC" events={load.snapshot.events.filter(event => chainSide(event) === "bsc" || chainSide(event) === "both")} now={now} focus={focus} csrf={csrf} notes={notes} analyses={analyses} editingKey={editingKey} openKey={openKey} />
-    <Ecosystem id="sol" title="SOL" note="Solana" events={load.snapshot.events.filter(event => chainSide(event) === "sol" || chainSide(event) === "both")} now={now} focus={focus} csrf={csrf} notes={notes} analyses={analyses} editingKey={editingKey} openKey={openKey} />
-    <Ecosystem id="unknown" title="链未标明" note="来源没有写出链" events={load.snapshot.events.filter(event => chainSide(event) === "unknown")} now={now} focus={focus} csrf={csrf} notes={notes} analyses={analyses} editingKey={editingKey} openKey={openKey} />
+    {periods.length ? periods.map((period, index) => <details key={period.id} className="hk-period" open={index === 0}>
+      <summary>
+        <span className="hk-period-label">{period.label}</span>
+        <span className="hk-period-range">{period.range}</span>
+        <span className="hk-count">{period.events.length} 场</span>
+      </summary>
+      <div className="hk-period-body">{period.events.map(event => <div key={event.id} className="hk-period-event" data-ecosystem={chainSide(event)}>
+        <EventCard event={event} focus={focus} csrf={csrf} notes={notes} analyses={analyses} editingKey={editingKey} openKey={openKey} />
+      </div>)}</div>
+    </details>) : <EmptyState title="最近几期没有可展示的黑客松" description="没有官方开始或结束时间的活动不会被放进某一期。" />}
   </div>;
-}
-
-function changeSideInput(change: NonNullable<HackathonSnapshot["changes"]>[number], snapshot: HackathonSnapshot) {
-  if (change.chain || change.ecosystem) return change;
-  const matches = snapshot.events.filter(event => event.title === change.event);
-  return matches.length === 1 ? matches[0] : {};
 }
 
 function ChainFilter() {
@@ -50,32 +39,6 @@ function ChainFilter() {
     <label htmlFor="hk-chain-bsc"><input id="hk-chain-bsc" type="radio" name="hk-chain" /> BSC</label>
     <label htmlFor="hk-chain-sol"><input id="hk-chain-sol" type="radio" name="hk-chain" /> SOL</label>
   </fieldset>;
-}
-
-function Ecosystem({ id, title, note, events, now, focus, csrf, notes, analyses, editingKey, openKey }: { id: "bsc" | "sol" | "unknown"; title: string; note: string; events: HackathonEvent[]; now: string; focus: ListFocus | null; csrf: string; notes: Record<string, StoredNote>; analyses: Record<string, StoredAnalysis>; editingKey: string; openKey: string }) {
-  if (id === "unknown" && !events.length) return null;
-  const groups = groupEvents(events, new Date(now));
-  return <section className="hk-ecosystem" data-ecosystem={id} aria-labelledby={`hk-${id}`}>
-    <h2 id={`hk-${id}`}><span className={`hk-chain hk-chain-${id}`}>{title}</span>{note}</h2>
-    <div className="hk-section" aria-labelledby={`hk-${id}-current`}>
-      <h3 id={`hk-${id}-current`}>进行中与即将开始</h3>
-      {groups.current.length ? groups.current.map(event => <EventCard key={event.id} event={event} focus={focus} csrf={csrf} notes={notes} analyses={analyses} editingKey={editingKey} openKey={openKey} />) : <EmptyState title="没有进行中的黑客松" description={EMPTY_COPY.noCurrent} />}
-    </div>
-    <div className="hk-section" aria-labelledby={`hk-${id}-archive`}>
-      <h3 id={`hk-${id}-archive`}>已结束（归档）</h3>
-      <p className="hk-section-note">归档会一直保留。监控不会在某一届结束后停掉，也不会把结束当成删除。</p>
-      {groups.archive.length ? groups.archive.map(event => <EventCard key={event.id} event={event} focus={focus} csrf={csrf} notes={notes} analyses={analyses} editingKey={editingKey} openKey={openKey} />) : <EmptyState title="归档还是空的" description={EMPTY_COPY.noArchive} />}
-    </div>
-    {(groups.relatedCurrent.length > 0 || groups.relatedArchive.length > 0) && <div className="hk-section" aria-labelledby={`hk-${id}-related`}>
-      <h3 id={`hk-${id}-related`}>相关官方活动</h3>
-      <p className="hk-section-note">这些活动来自官方目录，但页面自己没有称它们为黑客松。</p>
-      {[...groups.relatedCurrent, ...groups.relatedArchive].map(event => <EventCard key={event.id} event={event} focus={focus} csrf={csrf} notes={notes} analyses={analyses} editingKey={editingKey} openKey={openKey} />)}
-    </div>}
-  </section>;
-}
-
-function Header({ checkedAt }: { checkedAt?: string }) {
-  return <PageHeader eyebrow="BNB CHAIN / SOLANA" title="黑客松监控" description="长期核对 BNB Chain / BSC 和 Solana 的官方黑客松。时间都写成北京时间（UTC+8）。投稿和获奖只在官方公开名单里出现；问卷和报名链接不是名单。" actions={checkedAt ? <Badge tone="info">最近核对 {checkedAt} 北京时间</Badge> : <Badge tone="warning">等待首次核对</Badge>} />;
 }
 
 const SOURCE_LABEL: Record<string, string> = {

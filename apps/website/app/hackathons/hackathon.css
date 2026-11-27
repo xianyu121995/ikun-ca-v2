@@ -1,7 +1,19 @@
-.hk-page .hk-board { display: flex; flex-direction: column; gap: 16px; padding: 8px 4px 32px; }
-.hk-page .hk-filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0; padding: 0; border: 0; }
+.hk-page .hk-board { display: flex; flex-direction: column; gap: 12px; padding: 8px 4px 32px; }
+.hk-page .hk-title { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -.4px; line-height: 1.2; }
+.hk-page .hk-filter { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; padding: 0; border: 0; font-size: 12px; }
 .hk-page .hk-filter legend { margin-right: 4px; color: var(--ik-secondary); }
-.hk-page .hk-filter label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--ik-border); border-radius: 999px; cursor: pointer; }
+.hk-page .hk-filter label { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--ik-border); border-radius: 999px; cursor: pointer; }
+.hk-page .hk-period { border: 1px solid var(--ik-border); border-radius: 10px; background: var(--ik-panel); }
+.hk-page .hk-period summary { display: flex; align-items: baseline; gap: 12px; padding: 12px 14px; cursor: pointer; font-size: 16px; font-weight: 650; }
+.hk-page .hk-period summary::-webkit-details-marker { color: var(--ik-secondary); }
+.hk-page .hk-period-range { color: var(--ik-secondary); font-weight: 500; font-variant-numeric: tabular-nums; }
+.hk-page .hk-period-body { display: flex; flex-direction: column; gap: 12px; padding: 0 12px 12px; }
+.hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-period:not(:has([data-ecosystem="bsc"], [data-ecosystem="both"])),
+.hk-page .hk-board:has(#hk-chain-sol:checked) .hk-period:not(:has([data-ecosystem="sol"], [data-ecosystem="both"])) { display: none; }
+.hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-period-event[data-ecosystem="sol"],
+.hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-period-event[data-ecosystem="unknown"],
+.hk-page .hk-board:has(#hk-chain-sol:checked) .hk-period-event[data-ecosystem="bsc"],
+.hk-page .hk-board:has(#hk-chain-sol:checked) .hk-period-event[data-ecosystem="unknown"] { display: none; }
 .hk-page .hk-filter label:has(input:checked) { border-color: var(--ik-info); background: var(--ik-raised); font-weight: 700; }
 .hk-page .hk-chain { display: inline-flex; align-items: center; margin-right: 8px; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; vertical-align: middle; }
 .hk-page .hk-chain-bsc { color: var(--ik-warning); background: var(--ik-warning-bg); }

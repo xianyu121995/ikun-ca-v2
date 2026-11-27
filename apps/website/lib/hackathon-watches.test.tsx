@@ -6,8 +6,9 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HackathonTweetBoard } from "../app/hackathon-tweets/board.tsx";
-import { generateHackathonAnalysis, reviewAnalysis } from "./hackathon-analysis.ts";
-import { addWatch, hackathonWatchDbPath, listAnalyses, listNotes, listTweets, listWatches, officialHandle, parseSyndication, projectKey, removeWatch, saveAnalysis, saveNote, storeTweets, teardownHackathonWatches, type HackathonTweet } from "./hackathon-watches.ts";
+import { generateHackathonAnalysis, reviewAnalysis, reviewTweetEvent } from "./hackathon-analysis.ts";
+import { orderByTimelineTime } from "./hackathon-watch-model.ts";
+import { addWatch, hackathonWatchDbPath, listAnalyses, listHackathonTimeline, listNotes, listTweets, listWatches, officialHandle, parseSyndication, projectKey, removeWatch, saveAnalysis, saveNote, saveTweetEvent, storeTweets, teardownHackathonWatches, type HackathonTweet } from "./hackathon-watches.ts";
 
 function tempDb() {
   const dir = mkdtempSync(path.join(tmpdir(), "hk-watch-"));
@@ -107,6 +108,35 @@ test("analysis uses only the supplied evidence and refuses invented ranks", asyn
   assert.equal(invented.ok, false);
 });
 
+test("a dated hackathon tweet sits on the timeline by its Beijing time and leaves with the watch", () => {
+  const rows = orderByTimelineTime([
+    { source: "hunter", date: "2026-11-28", hour: "11" },
+    { source: "hackathon", date: "2026-11-28", hour: "10" },
+    { source: "hunter", date: "2026-11-28", hour: "09" },
+  ]);
+  assert.deepEqual(rows.map(row => row.source), ["hunter", "hackathon", "hunter"]);
+  const reviewed = reviewTweetEvent(JSON.stringify({
+    concrete: true, title: "开放交易", date: "2026-11-28", hour: "20", status: "confirmed", analysis: "推文写了明天 20:00 开放交易。",
+  }), { text: "明天 20:00 开放交易", occurred_at: "2026-11-27T12:00:00Z", handle: "realproject", project_name: "真实项目" });
+  assert.equal(reviewed?.thin, false);
+  assert.equal(reviewed && !reviewed.thin ? reviewed.starts_at : "", "2026-11-28T12:00:00Z");
+  assert.equal(reviewTweetEvent(JSON.stringify({
+    concrete: true, title: "冠军", date: "2026-11-28", hour: "20", status: "confirmed", analysis: "它是第 1 名。",
+  }), { text: "明天 20:00 开放交易", occurred_at: "2026-11-27T12:00:00Z", handle: "realproject", project_name: "真实项目" }), null);
+  const { file, hunter } = tempDb();
+  const watch = addWatch({ handle: "realproject", project_name: "真实项目", event_title: "有公开名单的黑客松", event_id: "listed" }, new Date("2026-11-27T00:00:00Z"), file);
+  storeTweets(watch, [{ tweet_id: "1000000000000000002", text: "明天 20:00 开放交易", url: "https://x.com/realproject/status/1000000000000000002", occurred_at: "2026-11-27T12:00:00Z" }], new Date("2026-11-27T13:00:00Z"), file);
+  saveTweetEvent({ watch_id: watch.id, tweet_id: "1000000000000000002", title: "开放交易", analysis: "推文写了明天 20:00 开放交易。", date: "2026-11-28", hour: "20", status: "confirmed", starts_at: "2026-11-28T12:00:00Z", thin: false }, new Date("2026-11-27T13:00:00Z"), file);
+  const listed = listHackathonTimeline(file);
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0]?.title, "开放交易");
+  assert.ok(listed[0]?.entry_id.startsWith("hkt_"));
+  assert.ok(listed[0]?.project_id.startsWith("hkp_"));
+  assert.equal(removeWatch(watch.id, new Date("2026-11-27T14:00:00Z"), file), true);
+  assert.equal(listHackathonTimeline(file).length, 0);
+  assert.equal(readFileSync(hunter, "utf8"), "hunter-untouched");
+});
+
 test("the tweet page lists a watched account and can delete it without showing hunter tracking", () => {
   const html = renderToStaticMarkup(<HackathonTweetBoard watches={[{
     id: "hw_test_realproject", handle: "realproject", project_name: "真实项目", event_title: "有公开名单的黑客松", event_id: "listed", created_at: "2026-11-27T00:00:00Z", removed_at: null,
@@ -137,12 +167,15 @@ test("hackathon watch code does not import hunter or tracking", () => {
     "app/api/hackathons/notes/route.ts",
     "app/api/hackathons/analyses/route.ts",
     "lib/hackathon-analysis.ts",
+    "lib/hackathon-tweet-pass.ts",
+    "app/api/hackathons/timeline/route.ts",
+    "app/api/hackathons/timeline/[id]/route.ts",
   ];
   for (const file of files) {
     const source = readFileSync(path.join(root, file), "utf8");
     assert.doesNotMatch(source, /features\/tracking|features\/hunter|tracking-worker|hunter-worker|tracking\.sqlite|hunter\.sqlite/);
   }
-  for (const file of ["app/hackathons/project-tools.tsx", "app/hackathons/watch-button.tsx", "app/hackathon-tweets/remove-watch.tsx"]) {
+  for (const file of ["app/hackathons/project-tools.tsx", "app/hackathons/watch-button.tsx", "app/hackathon-tweets/remove-watch.tsx", "components/projects-home.tsx"]) {
     const source = readFileSync(path.join(root, file), "utf8");
     assert.doesNotMatch(source, /hackathon-watches|node:fs|node:path|node:sqlite|node:child_process/);
   }

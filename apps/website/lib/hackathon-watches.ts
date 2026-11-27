@@ -1,7 +1,8 @@
+import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { projectKey, type HackathonTweet, type HackathonWatch, type PublicTweet, type StoredAnalysis, type StoredNote } from "./hackathon-watch-model";
+import { projectKey, type HackathonTweet, type HackathonTweetAnalysis, type HackathonWatch, type PublicTweet, type StoredAnalysis, type StoredNote } from "./hackathon-watch-model";
 
 export type { HackathonTweet, HackathonWatch, PublicTweet, StoredAnalysis, StoredNote } from "./hackathon-watch-model";
 export { beijingLabel, officialHandle, projectKey } from "./hackathon-watch-model";
@@ -45,6 +46,20 @@ function openDb(file = hackathonWatchDbPath()): DatabaseSync {
       name TEXT NOT NULL,
       text TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS tweet_events (
+      watch_id TEXT NOT NULL,
+      tweet_id TEXT NOT NULL,
+      entry_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      analysis TEXT NOT NULL,
+      date TEXT,
+      hour TEXT,
+      status TEXT,
+      starts_at TEXT,
+      thin INTEGER NOT NULL,
+      generated_at TEXT NOT NULL,
+      PRIMARY KEY (watch_id, tweet_id)
     );
     CREATE TABLE IF NOT EXISTS analyses (
       project_key TEXT PRIMARY KEY,
@@ -99,6 +114,9 @@ export function removeWatch(id: string, now = new Date(), file = hackathonWatchD
   if (!/^hw_[A-Za-z0-9_]+$/.test(id)) return false;
   const db = openDb(file);
   try {
+    const known = db.prepare("SELECT id FROM watches WHERE id = ?").get(id) as unknown as { id: string } | undefined;
+    if (!known) return false;
+    db.prepare("DELETE FROM tweet_events WHERE watch_id = ?").run(id);
     const result = db.prepare("UPDATE watches SET removed_at = ? WHERE id = ? AND removed_at IS NULL").run(now.toISOString(), id);
     return Number(result.changes) > 0;
   } finally {
@@ -262,6 +280,126 @@ export function tweetsForHandle(handle: string, file = hackathonWatchDbPath()): 
   try {
     return db.prepare(`SELECT tweets.occurred_at, tweets.text FROM tweets JOIN watches ON watches.id = tweets.watch_id
       WHERE watches.handle = ? COLLATE NOCASE ORDER BY tweets.occurred_at DESC LIMIT 12`).all(handle) as unknown as { occurred_at: string; text: string }[];
+  } finally {
+    db.close();
+  }
+}
+
+export interface StoredTweetEvent {
+  watch_id: string;
+  tweet_id: string;
+  handle: string;
+  project_name: string;
+  text: string;
+  url: string;
+  occurred_at: string;
+  event_title: string;
+}
+
+export function tweetsPendingAnalysis(limit = 1, file = hackathonWatchDbPath()): StoredTweetEvent[] {
+  const db = openDb(file);
+  try {
+    return db.prepare(`
+      SELECT tweets.watch_id, tweets.tweet_id, watches.handle, watches.project_name, tweets.text, tweets.url, tweets.occurred_at, watches.event_title
+      FROM tweets JOIN watches ON watches.id = tweets.watch_id
+      WHERE watches.removed_at IS NULL
+        AND NOT EXISTS (SELECT 1 FROM tweet_events WHERE tweet_events.watch_id = tweets.watch_id AND tweet_events.tweet_id = tweets.tweet_id)
+      ORDER BY tweets.occurred_at DESC LIMIT ?
+    `).all(limit) as unknown as StoredTweetEvent[];
+  } finally {
+    db.close();
+  }
+}
+
+export function saveTweetEvent(input: { watch_id: string; tweet_id: string; title: string; analysis: string; date: string | null; hour: string | null; status: "confirmed" | "estimated" | null; starts_at: string | null; thin: boolean }, now = new Date(), file = hackathonWatchDbPath()) {
+  const db = openDb(file);
+  try {
+    const entryId = `hkt_${createHash("sha256").update(`${input.watch_id}:${input.tweet_id}`).digest("hex").slice(0, 32)}`;
+    db.prepare(`INSERT INTO tweet_events (watch_id, tweet_id, entry_id, title, analysis, date, hour, status, starts_at, thin, generated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(watch_id, tweet_id) DO UPDATE SET title = excluded.title, analysis = excluded.analysis, date = excluded.date, hour = excluded.hour, status = excluded.status, starts_at = excluded.starts_at, thin = excluded.thin, generated_at = excluded.generated_at
+    `).run(input.watch_id, input.tweet_id, entryId, input.title.slice(0, 40), input.analysis.slice(0, 600), input.date, input.hour, input.status, input.starts_at, input.thin ? 1 : 0, now.toISOString());
+  } finally {
+    db.close();
+  }
+}
+
+export function listTweetAnalyses(file = hackathonWatchDbPath()): Record<string, HackathonTweetAnalysis> {
+  const db = openDb(file);
+  try {
+    const rows = db.prepare("SELECT watch_id, tweet_id, title, analysis, date, hour, starts_at, thin FROM tweet_events").all() as unknown as { watch_id: string; tweet_id: string; title: string; analysis: string; date: string | null; hour: string | null; starts_at: string | null; thin: number }[];
+    return Object.fromEntries(rows.map(row => [`${row.watch_id}:${row.tweet_id}`, { analysis: row.analysis, thin: row.thin === 1, title: row.title, date: row.date, hour: row.hour, starts_at: row.starts_at }]));
+  } finally {
+    db.close();
+  }
+}
+
+export interface HackathonTimelineItem {
+  entry_id: string;
+  project_id: string;
+  project_name: string;
+  rating: null;
+  event_type: "other";
+  title: string;
+  date: string;
+  hour: string | null;
+  status: "confirmed" | "estimated";
+  source_url: string;
+  source_tweet_id: string;
+  confidence: number;
+  starts_at: string;
+}
+
+export function listHackathonTimeline(file = hackathonWatchDbPath()): HackathonTimelineItem[] {
+  const db = openDb(file);
+  try {
+    const rows = db.prepare(`
+      SELECT tweet_events.entry_id, tweet_events.watch_id, watches.project_name, tweet_events.title, tweet_events.date, tweet_events.hour,
+             tweet_events.status, tweet_events.starts_at, tweets.url, tweets.tweet_id
+      FROM tweet_events
+      JOIN watches ON watches.id = tweet_events.watch_id
+      JOIN tweets ON tweets.watch_id = tweet_events.watch_id AND tweets.tweet_id = tweet_events.tweet_id
+      WHERE watches.removed_at IS NULL AND tweet_events.thin = 0 AND tweet_events.date IS NOT NULL AND tweet_events.starts_at IS NOT NULL
+      ORDER BY tweet_events.starts_at ASC, tweet_events.entry_id ASC
+    `).all() as unknown as { entry_id: string; watch_id: string; project_name: string; title: string; date: string; hour: string | null; status: "confirmed" | "estimated"; starts_at: string; url: string; tweet_id: string }[];
+    return rows.map(row => ({
+      entry_id: row.entry_id,
+      project_id: `hkp_${row.watch_id}`,
+      project_name: row.project_name,
+      rating: null,
+      event_type: "other",
+      title: row.title,
+      date: row.date,
+      hour: row.hour,
+      status: row.status,
+      source_url: row.url,
+      source_tweet_id: row.tweet_id,
+      confidence: row.status === "confirmed" ? 0.8 : 0.5,
+      starts_at: row.starts_at,
+    }));
+  } finally {
+    db.close();
+  }
+}
+
+export function updateHackathonTimelineEntry(entryId: string, patch: { date: string; hour: string | null; title: string; status: "confirmed" | "estimated" }, file = hackathonWatchDbPath()): boolean {
+  if (!/^hkt_[0-9a-f]{32}$/.test(entryId) || !/^\d{4}-\d{2}-\d{2}$/.test(patch.date) || !patch.title.trim()) return false;
+  if (patch.hour !== null && !/^(?:[01]\d|2[0-3])$/.test(patch.hour)) return false;
+  const starts = new Date(Date.parse(`${patch.date}T${patch.hour ?? "12"}:00:00+08:00`));
+  if (!Number.isFinite(starts.getTime())) return false;
+  const db = openDb(file);
+  try {
+    return Number(db.prepare("UPDATE tweet_events SET date = ?, hour = ?, title = ?, status = ?, starts_at = ?, thin = 0 WHERE entry_id = ?").run(patch.date, patch.hour, patch.title.trim().slice(0, 40), patch.status, starts.toISOString().replace(/\.\d{3}Z$/, "Z"), entryId).changes) > 0;
+  } finally {
+    db.close();
+  }
+}
+
+export function deleteHackathonTimelineEntry(entryId: string, file = hackathonWatchDbPath()): boolean {
+  if (!/^hkt_[0-9a-f]{32}$/.test(entryId)) return false;
+  const db = openDb(file);
+  try {
+    return Number(db.prepare("DELETE FROM tweet_events WHERE entry_id = ?").run(entryId).changes) > 0;
   } finally {
     db.close();
   }

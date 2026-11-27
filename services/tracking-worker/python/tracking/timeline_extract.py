@@ -5,8 +5,13 @@ Cross-service contract (phase2-v1.0.0):
 - Keys: tracking.timeline.analyze.v1:<tweet_id> (one analysis per tweet),
   tracking.timeline.entry.v1:<entry_id>, tracking.timeline.slot.v1:<project_id>:<type>.
 - The website BFF reads GET /internal/v1/timeline-events and renders those rows on the
-  existing homepage timeline. PATCH/DELETE edit or tombstone an entry. A tombstone for
+  existing homepage timeline, and also uses them for the table's AI milestone when a
+  project has no manual date. PATCH/DELETE edit or tombstone an entry. A tombstone for
   (project, type) is never recreated by a later pass.
+- The public list is capped at 100. The homepage window (now−1h through now+3d, the
+  same instants EventTimeline keeps) is chosen before older rows, so a long history
+  cannot drop events that still fall on the axis. Leftover slots go to later dates,
+  then the most recent past. Under the cap, every active public row is returned.
 - Human milestones in projects.db are not written or overwritten.
 - Flag: ai.json "timeline_extract": true. Absent or any other value leaves the pass off.
   AI failures are not recorded, so they retry; a finished analysis is recorded once.
@@ -34,6 +39,10 @@ HIGH_CONFIDENCE = 0.8
 NEAR_S = 6 * 3600
 MAX_OFFSET_S = 366 * 86400
 SHANGHAI = timezone(timedelta(hours=8))
+PUBLIC_LIMIT = 100
+# EventTimeline keeps t >= now-1h and t <= now+3d. starts_at is that instant in UTC.
+HOMEPAGE_LOOKBACK_S = 3600
+HOMEPAGE_HORIZON_S = 3 * 86400
 NS = uuid.UUID("6f0e2a1c-9b44-5d17-8c3a-1e7b9a0d4f21")
 ENTRY_ID = re.compile(r"^tle_[0-9a-f]{32}$")
 PROJECT_ID = re.compile(r"^prj_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -556,7 +565,15 @@ def _public(entry: dict) -> dict | None:
     }
 
 
-def list_public(db) -> list[dict]:
+def list_public(db, now=None) -> list[dict]:
+    """Active public rows, starts_at ascending, at most PUBLIC_LIMIT.
+
+    Callers are the internal list route and the website BFF. The homepage axis only
+    draws now−1h..now+3d, but the same payload fills the project table's AI date, so
+    rows outside that window stay when they fit. The cap never keeps the oldest 100
+    overall: in-window rows are reserved first, then nearer future dates, then the
+    most recent past.
+    """
     rows = db.execute("SELECT result FROM receipts WHERE key LIKE ?", (ENTRY + "%",)).fetchall()
     items = []
     for row in rows:
@@ -567,7 +584,27 @@ def list_public(db) -> list[dict]:
         if public:
             items.append(public)
     items.sort(key=lambda item: (item["starts_at"], item["entry_id"]))
-    return items[:100]
+    if len(items) <= PUBLIC_LIMIT:
+        return items
+    moment = time.time() if now is None else float(now)
+    window_start = moment - HOMEPAGE_LOOKBACK_S
+    window_end = moment + HOMEPAGE_HORIZON_S
+
+    def stamp(item: dict) -> float:
+        return _starts(item["starts_at"]).timestamp()
+
+    in_window = [item for item in items if window_start <= stamp(item) <= window_end]
+    if len(in_window) >= PUBLIC_LIMIT:
+        return in_window[:PUBLIC_LIMIT]
+    after = [item for item in items if stamp(item) > window_end]
+    before = [item for item in items if stamp(item) < window_start]
+    room = PUBLIC_LIMIT - len(in_window)
+    chosen_after = after[:room]
+    room -= len(chosen_after)
+    chosen_before = before[-room:] if room else []
+    chosen = [*chosen_before, *in_window, *chosen_after]
+    chosen.sort(key=lambda item: (item["starts_at"], item["entry_id"]))
+    return chosen
 
 
 def _require_entry(entry_id: str) -> str:

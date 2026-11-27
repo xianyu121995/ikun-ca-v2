@@ -2,7 +2,7 @@
 import json
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -10,7 +10,11 @@ from tracking import gemini
 from tracking.api import create_app
 from tracking.events import normalize
 from tracking.timeline_extract import (
+    ENTRY,
     PROMPT,
+    PUBLIC_LIMIT,
+    SHANGHAI,
+    _put,
     delete_entry,
     edit_entry,
     explain,
@@ -404,3 +408,115 @@ def test_run_pass_sends_local_time_and_records_drop_reason(store, monkeypatch, t
     assert items[0]["starts_at"] == MIDNIGHT_NEXT
     assert dropped["applied"] == "none" and dropped["event"] is None
     assert dropped["reason"] == "announces_false" and dropped["model"]["announces"] is False
+
+
+def _project_id(n: int) -> str:
+    return f"prj_{n:08x}-0000-4000-8000-{n:012x}"
+
+
+def _entry_id(n: int) -> str:
+    return f"tle_{n:032x}"
+
+
+def _starts_at(date: str, hour: str | None) -> str:
+    clock = int(hour) if hour else 12
+    year, month, day = (int(part) for part in date.split("-"))
+    instant = datetime(year, month, day, clock, tzinfo=SHANGHAI).astimezone(timezone.utc)
+    return instant.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _save_entry(
+    db, n, *, date, hour, title, status="confirmed", event_type="mint", state="active", starts_at=None
+):
+    entry = {
+        "entry_id": _entry_id(n),
+        "project_id": _project_id(n),
+        "project_name": title[:20],
+        "event_type": event_type,
+        "title": title,
+        "starts_at": starts_at or _starts_at(date, hour),
+        "date": date,
+        "hour": hour,
+        "status": status,
+        "confidence": 0.91,
+        "source_tweet_id": str(8_000_000_000 + n),
+        "source_url": f"https://x.com/p{n:04d}/status/{8_000_000_000 + n}",
+        "state": state,
+        "user_locked": False,
+    }
+    _put(db, ENTRY + entry["entry_id"], entry, 1.0)
+    return entry
+
+
+def test_homepage_window_survives_more_than_100_older_entries(cfg, store, monkeypatch):
+    """126 older-or-later rows must not hide the homepage's next 3 days.
+
+    Production listed the oldest 100 (through 2026-11-22) and the axis for
+    2026-11-27 15:01 Asia/Shanghai had dates but no dots. Hour null is noon.
+    """
+    from tracking import timeline_extract
+
+    now = datetime(2026, 11, 27, 15, 1, tzinfo=SHANGHAI)
+    monkeypatch.setattr(timeline_extract.time, "time", lambda: now.timestamp())
+    origin = datetime(2026, 7, 1, tzinfo=SHANGHAI)
+    with store.connect() as db:
+        for n in range(1, 124):
+            day = (origin + timedelta(days=n - 1)).date().isoformat()
+            _save_entry(db, n, date=day, hour="12", title=f"旧事件{n}")
+        _save_entry(db, 124, date="2026-11-28", hour=None, title="比特币RGB发射与兑换平台", status="estimated")
+        _save_entry(db, 125, date="2026-11-29", hour="22", title="Genesis Captains mint", status="confirmed")
+        _save_entry(db, 126, date="2026-11-30", hour="16", title="$RGB Mint deadline", status="confirmed")
+        _save_entry(db, 127, date="2026-12-15", hour="12", title="更远的主网", event_type="mainnet")
+        _save_entry(db, 128, date="2026-11-28", hour="18", title="已删除不应出现", state="deleted")
+        listed = list_public(db)
+
+    assert len(listed) == PUBLIC_LIMIT
+    by_id = {item["entry_id"]: item for item in listed}
+    assert _entry_id(1) not in by_id and _entry_id(27) not in by_id
+    assert _entry_id(28) in by_id and _entry_id(123) in by_id
+    assert listed == sorted(listed, key=lambda item: (item["starts_at"], item["entry_id"]))
+    noon = by_id[_entry_id(124)]
+    assert noon["date"] == "2026-11-28" and noon["hour"] is None and noon["status"] == "estimated"
+    assert noon["starts_at"] == "2026-11-28T04:00:00Z" and noon["title"] == "比特币RGB发射与兑换平台"
+    captains = by_id[_entry_id(125)]
+    assert captains["date"] == "2026-11-29" and captains["hour"] == "22" and captains["status"] == "confirmed"
+    assert captains["starts_at"] == "2026-11-29T14:00:00Z"
+    assert by_id[_entry_id(126)]["date"] == "2026-11-30" and by_id[_entry_id(126)]["hour"] == "16"
+    assert _entry_id(127) in by_id and _entry_id(128) not in by_id
+
+    headers = {"Authorization": "Bearer " + TOKEN}
+    with TestClient(create_app(cfg, store)) as client:
+        response = client.get("/internal/v1/timeline-events", headers=headers)
+    assert response.status_code == 200
+    body = response.json()["data"]["items"]
+    assert [item["entry_id"] for item in body] == [item["entry_id"] for item in listed]
+
+
+def test_public_list_keeps_past_rows_while_under_the_cap(store):
+    now = datetime(2026, 11, 27, 15, 1, tzinfo=SHANGHAI).timestamp()
+    with store.connect() as db:
+        _save_entry(db, 1, date="2026-10-28", hour="09", title="已经过去")
+        _save_entry(db, 2, date="2026-11-28", hour=None, title="仍在窗口", status="estimated")
+        listed = list_public(db, now=now)
+    assert [item["entry_id"] for item in listed] == [_entry_id(1), _entry_id(2)]
+
+
+def test_public_list_keeps_the_soonest_rows_when_the_window_itself_exceeds_the_cap(store):
+    now = datetime(2026, 11, 27, 15, 1, tzinfo=SHANGHAI)
+    start = now - timedelta(hours=1)
+    with store.connect() as db:
+        for n in range(1, PUBLIC_LIMIT + 2):
+            instant = start + timedelta(minutes=n - 1)
+            _save_entry(
+                db,
+                n,
+                date=instant.date().isoformat(),
+                hour=f"{instant.hour:02d}",
+                title=f"窗口内{n}",
+                starts_at=instant.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            )
+        listed = list_public(db, now=now.timestamp())
+    assert len(listed) == PUBLIC_LIMIT
+    assert listed[0]["entry_id"] == _entry_id(1)
+    assert _entry_id(PUBLIC_LIMIT + 1) not in {item["entry_id"] for item in listed}
+    assert listed[-1]["entry_id"] == _entry_id(PUBLIC_LIMIT)

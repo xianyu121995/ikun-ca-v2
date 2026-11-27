@@ -182,6 +182,18 @@ export function parseSnapshot(value: unknown): HackathonSnapshot | null {
   return snapshot;
 }
 
+export function locateProject(snapshot: HackathonSnapshot, eventId: string, role: string, name: string) {
+  const event = snapshot.events.find(item => item.id === eventId);
+  if (!event) return null;
+  const projects = [
+    ...event.submission.projects,
+    ...event.results.projects,
+    ...(event.side_tracks ?? []).flatMap(track => [...track.works, ...track.winners]),
+  ];
+  const project = projects.find(item => item.role === role && item.name === name);
+  return project ? { event, project } : null;
+}
+
 export function readHackathonSnapshot(path: string | undefined): SnapshotLoad {
   if (!path) return { ok: false, reason: "unconfigured" };
   try {

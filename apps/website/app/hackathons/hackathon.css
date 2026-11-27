@@ -36,7 +36,14 @@
 .hk-page .hk-projects { max-height: 420px; overflow: auto; margin: 0; padding: 0; list-style: none; border: 1px solid var(--ik-border); border-radius: 10px; }
 .hk-page .hk-row { display: grid; grid-template-columns: 88px 1fr; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--ik-border); }
 .hk-page .hk-row:last-child { border-bottom: 0; }
-.hk-page .hk-rank { color: var(--ik-muted); font-variant-numeric: tabular-nums; }
+.hk-page .hk-rank { color: var(--ik-text); font-variant-numeric: tabular-nums; }
+.hk-page .hk-rank small { display: block; color: var(--ik-muted); font-size: 11px; letter-spacing: .04em; }
+.hk-page .hk-tools { margin-top: 8px; }
+.hk-page .hk-user-note { margin: 0 0 6px; }
+.hk-page .hk-user-note > span, .hk-page .hk-analysis summary { color: var(--ik-warning); }
+.hk-page .hk-note-edit textarea { display: block; width: 100%; min-height: 64px; margin-top: 4px; }
+.hk-page .hk-analysis { margin-top: 6px; }
+.hk-page .hk-analysis p { margin-top: 6px; }
 .hk-page .hk-rank:empty { display: none; }
 .hk-page .hk-row:has(.hk-rank:empty) { grid-template-columns: 1fr; }
 .hk-page .hk-track { margin-left: 8px; color: var(--ik-secondary); font-size: 13px; }

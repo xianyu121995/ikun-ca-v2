@@ -118,6 +118,7 @@ test("empty submission and winner states stay empty on the page", () => {
   assert.match(rich, /赛事官网/);
   assert.match(rich, /赛事官推/);
   assert.match(rich, /排名/);
+  assert.match(rich, /<small>排名<\/small><strong>第 1 名<\/strong>/);
   assert.match(rich, /第 1 名/);
   assert.match(rich, /名单/);
   assert.match(rich, /一句公开简介/);

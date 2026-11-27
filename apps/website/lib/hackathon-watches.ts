@@ -79,6 +79,23 @@ function openDb(file = hackathonWatchDbPath()): DatabaseSync {
       fetched_at TEXT NOT NULL,
       PRIMARY KEY (watch_id, tweet_id)
     );
+    CREATE TABLE IF NOT EXISTS notes (
+      project_key TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      name TEXT NOT NULL,
+      text TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS analyses (
+      project_key TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      name TEXT NOT NULL,
+      text TEXT NOT NULL,
+      thin INTEGER NOT NULL,
+      generated_at TEXT NOT NULL
+    );
   `);
   return db;
 }
@@ -214,6 +231,96 @@ export async function refreshActiveWatches(file = hackathonWatchDbPath()): Promi
       // A failed read leaves the last stored tweets. Nothing is invented.
     }
   }));
+}
+
+const ROLES = new Set(["submitted", "winner", "selected", "shortlisted"]);
+
+export function projectKey(eventId: string, role: string, name: string) {
+  return `${eventId}\u001f${role}\u001f${name}`;
+}
+
+function projectIdentity(eventId: string, role: string, name: string) {
+  const event = eventId.trim().slice(0, 300);
+  const project = name.trim().slice(0, 200);
+  if (!event || !project || !ROLES.has(role)) return null;
+  return { event_id: event, role, name: project, project_key: projectKey(event, role, project) };
+}
+
+export interface StoredNote {
+  text: string;
+  updated_at: string;
+}
+
+export interface StoredAnalysis {
+  text: string;
+  thin: boolean;
+  generated_at: string;
+}
+
+export function listNotes(file = hackathonWatchDbPath()): Record<string, StoredNote> {
+  const db = openDb(file);
+  try {
+    const rows = db.prepare("SELECT project_key, text, updated_at FROM notes").all() as { project_key: string; text: string; updated_at: string }[];
+    return Object.fromEntries(rows.map(row => [row.project_key, { text: row.text, updated_at: row.updated_at }]));
+  } finally {
+    db.close();
+  }
+}
+
+export function saveNote(input: { event_id: string; role: string; name: string; text: string }, now = new Date(), file = hackathonWatchDbPath()): StoredNote | null {
+  const identity = projectIdentity(input.event_id, input.role, input.name);
+  if (!identity) throw new Error("项目标识无效");
+  const text = input.text.trim().slice(0, 2000);
+  const db = openDb(file);
+  try {
+    if (!text) {
+      db.prepare("DELETE FROM notes WHERE project_key = ?").run(identity.project_key);
+      return null;
+    }
+    const updated_at = now.toISOString();
+    db.prepare(`INSERT INTO notes (project_key, event_id, role, name, text, updated_at) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(project_key) DO UPDATE SET text = excluded.text, updated_at = excluded.updated_at`).run(identity.project_key, identity.event_id, identity.role, identity.name, text, updated_at);
+    return { text, updated_at };
+  } finally {
+    db.close();
+  }
+}
+
+export function listAnalyses(file = hackathonWatchDbPath()): Record<string, StoredAnalysis> {
+  const db = openDb(file);
+  try {
+    const rows = db.prepare("SELECT project_key, text, thin, generated_at FROM analyses").all() as { project_key: string; text: string; thin: number; generated_at: string }[];
+    return Object.fromEntries(rows.map(row => [row.project_key, { text: row.text, thin: row.thin === 1, generated_at: row.generated_at }]));
+  } finally {
+    db.close();
+  }
+}
+
+export function saveAnalysis(input: { event_id: string; role: string; name: string; text: string; thin: boolean }, now = new Date(), file = hackathonWatchDbPath()): StoredAnalysis {
+  const identity = projectIdentity(input.event_id, input.role, input.name);
+  if (!identity) throw new Error("项目标识无效");
+  const text = input.text.trim().slice(0, 4000);
+  if (!text) throw new Error("分析是空的");
+  const generated_at = now.toISOString();
+  const db = openDb(file);
+  try {
+    db.prepare(`INSERT INTO analyses (project_key, event_id, role, name, text, thin, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(project_key) DO UPDATE SET text = excluded.text, thin = excluded.thin, generated_at = excluded.generated_at`).run(identity.project_key, identity.event_id, identity.role, identity.name, text, input.thin ? 1 : 0, generated_at);
+    return { text, thin: input.thin, generated_at };
+  } finally {
+    db.close();
+  }
+}
+
+export function tweetsForHandle(handle: string, file = hackathonWatchDbPath()): { occurred_at: string; text: string }[] {
+  if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) return [];
+  const db = openDb(file);
+  try {
+    return db.prepare(`SELECT tweets.occurred_at, tweets.text FROM tweets JOIN watches ON watches.id = tweets.watch_id
+      WHERE watches.handle = ? COLLATE NOCASE ORDER BY tweets.occurred_at DESC LIMIT 12`).all(handle) as { occurred_at: string; text: string }[];
+  } finally {
+    db.close();
+  }
 }
 
 export function teardownHackathonWatches(file = hackathonWatchDbPath()) {

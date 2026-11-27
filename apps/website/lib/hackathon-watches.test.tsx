@@ -6,7 +6,8 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HackathonTweetBoard } from "../app/hackathon-tweets/board.tsx";
-import { addWatch, hackathonWatchDbPath, listTweets, listWatches, officialHandle, parseSyndication, removeWatch, storeTweets, teardownHackathonWatches, type HackathonTweet } from "./hackathon-watches.ts";
+import { generateHackathonAnalysis, reviewAnalysis } from "./hackathon-analysis.ts";
+import { addWatch, hackathonWatchDbPath, listAnalyses, listNotes, listTweets, listWatches, officialHandle, parseSyndication, projectKey, removeWatch, saveAnalysis, saveNote, storeTweets, teardownHackathonWatches, type HackathonTweet } from "./hackathon-watches.ts";
 
 function tempDb() {
   const dir = mkdtempSync(path.join(tmpdir(), "hk-watch-"));
@@ -67,6 +68,45 @@ test("syndication text is stored only when the account and timestamp are present
   assert.deepEqual(parseSyndication("not json", "realproject"), []);
 });
 
+test("notes and analyses stay in the hackathon file and teardown leaves hunter data", () => {
+  const { file, hunter } = tempDb();
+  const key = projectKey("listed", "winner", "第一名项目");
+  const saved = saveNote({ event_id: "listed", role: "winner", name: "第一名项目", text: "我的备注" }, new Date("2026-11-27T08:00:00Z"), file);
+  assert.equal(saved?.text, "我的备注");
+  assert.equal(listNotes(file)[key]?.text, "我的备注");
+  assert.equal(saveNote({ event_id: "listed", role: "winner", name: "第一名项目", text: "  " }, new Date("2026-11-27T09:00:00Z"), file), null);
+  assert.equal(listNotes(file)[key], undefined);
+  saveAnalysis({ event_id: "listed", role: "winner", name: "第一名项目", text: "公开资料很少。", thin: true }, new Date("2026-11-27T10:00:00Z"), file);
+  assert.equal(listAnalyses(file)[key]?.thin, true);
+  teardownHackathonWatches(file);
+  assert.equal(existsSync(file), false);
+  assert.equal(readFileSync(hunter, "utf8"), "hunter-untouched");
+});
+
+test("analysis uses only the supplied evidence and refuses invented ranks", async () => {
+  const evidence = { event_title: "有公开名单的黑客松", official_status: "live", name: "真实项目", role: "submitted", place: "", track: "", info: "一句公开简介。", website: "", handle: "", tweets: [] };
+  assert.equal(reviewAnalysis(JSON.stringify({ analysis: "公开资料很少。项目名叫真实项目。", thin: true }), evidence)?.text.startsWith("公开资料很少"), true);
+  assert.equal(reviewAnalysis(JSON.stringify({ analysis: "它是第 1 名。", thin: false }), evidence), null);
+  assert.equal(reviewAnalysis(JSON.stringify({ analysis: "官网是 https://invented.example。", thin: false }), evidence), null);
+  const missing = await generateHackathonAnalysis(evidence, { IKUN_AI_CONFIG: "/tmp/ikun-no-such-ai.json" } as NodeJS.ProcessEnv);
+  assert.equal(missing.ok, false);
+  if (!missing.ok) assert.match(missing.message, /不会编造分析/);
+  const dir = mkdtempSync(path.join(tmpdir(), "hk-ai-"));
+  const config = path.join(dir, "ai.json");
+  writeFileSync(config, JSON.stringify({ provider: "deepseek", enabled: true, api_key: `sk-${"a".repeat(24)}` }));
+  const generated = await generateHackathonAnalysis(evidence, { IKUN_AI_CONFIG: config } as NodeJS.ProcessEnv, async () => ({
+    status: 200,
+    json: async () => ({ choices: [{ message: { content: JSON.stringify({ analysis: "公开资料很少。简介只写了一句公开简介。", thin: true }) } }] }),
+  }));
+  assert.equal(generated.ok, true);
+  if (generated.ok) assert.equal(generated.thin, true);
+  const invented = await generateHackathonAnalysis(evidence, { IKUN_AI_CONFIG: config } as NodeJS.ProcessEnv, async () => ({
+    status: 200,
+    json: async () => ({ choices: [{ message: { content: JSON.stringify({ analysis: "公开资料显示它是冠军。", thin: false }) } }] }),
+  }));
+  assert.equal(invented.ok, false);
+});
+
 test("the tweet page lists a watched account and can delete it without showing hunter tracking", () => {
   const html = renderToStaticMarkup(<HackathonTweetBoard watches={[{
     id: "hw_test_realproject", handle: "realproject", project_name: "真实项目", event_title: "有公开名单的黑客松", event_id: "listed", created_at: "2026-11-27T00:00:00Z", removed_at: null,
@@ -92,6 +132,10 @@ test("hackathon watch code does not import hunter or tracking", () => {
     "app/hackathon-tweets/page.tsx",
     "app/hackathon-tweets/board.tsx",
     "app/hackathons/watch-button.tsx",
+    "app/hackathons/project-tools.tsx",
+    "app/api/hackathons/notes/route.ts",
+    "app/api/hackathons/analyses/route.ts",
+    "lib/hackathon-analysis.ts",
   ];
   for (const file of files) {
     const source = readFileSync(path.join(root, file), "utf8");

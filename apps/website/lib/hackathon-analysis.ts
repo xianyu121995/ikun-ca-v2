@@ -103,13 +103,14 @@ async function codexText(binary: string, prompt: string) {
   const work = await mkdtemp(join(tmpdir(), "ikun-hackathon-ai-"));
   try {
     const out = join(work, "out.txt");
+    const env: NodeJS.ProcessEnv = { NODE_ENV: "production", HOME: homedir(), PATH: "/usr/local/bin:/usr/bin:/bin", LANG: "zh_CN.UTF-8" };
     await new Promise<void>((resolve, reject) => {
       const child = execFile(binary, ["exec", "--skip-git-repo-check", "--sandbox", "read-only", "-o", out, prompt], {
         cwd: work,
         timeout: 90_000,
         maxBuffer: 1 << 20,
-        env: { HOME: homedir(), PATH: "/usr/local/bin:/usr/bin:/bin", LANG: "zh_CN.UTF-8" },
-      }, error => error ? reject(error) : resolve());
+        env,
+      }, (error: Error | null) => error ? reject(error) : resolve());
       child.stdin?.end();
     });
     return { ok: true as const, content: await readFile(out, "utf8") };

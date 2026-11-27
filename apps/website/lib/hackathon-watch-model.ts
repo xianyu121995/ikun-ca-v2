@@ -60,6 +60,24 @@ export function projectKey(eventId: string, role: string, name: string) {
   return `${eventId}\u001f${role}\u001f${name}`;
 }
 
+export interface HackathonTweetAnalysis {
+  analysis: string;
+  thin: boolean;
+  title: string;
+  date: string | null;
+  hour: string | null;
+  starts_at: string | null;
+}
+
+/** Beijing wall time, same instant the homepage timeline uses for a chip. */
+export function timelineMillis(date: string, hour: string | null): number {
+  return Date.parse(`${date}T${hour ?? "12"}:00:00+08:00`);
+}
+
+export function orderByTimelineTime<T extends { date: string; hour: string | null }>(rows: readonly T[]): T[] {
+  return [...rows].sort((left, right) => timelineMillis(left.date, left.hour) - timelineMillis(right.date, right.hour) || left.date.localeCompare(right.date));
+}
+
 export function beijingLabel(iso: string): string {
   const time = Date.parse(iso);
   if (!Number.isFinite(time)) return "";

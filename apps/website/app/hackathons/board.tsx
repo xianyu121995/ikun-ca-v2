@@ -1,6 +1,6 @@
 import React from "react";
 import { Alert, Badge, EmptyState, PageHeader, Panel } from "@ikun/ui";
-import { EMPTY_COPY, groupEvents, type HackathonEvent, type HackathonProject, type Phase, type SnapshotLoad } from "../../lib/hackathon-snapshot";
+import { chainLabel, chainSide, EMPTY_COPY, groupEvents, type HackathonEvent, type HackathonProject, type HackathonSnapshot, type Phase, type SnapshotLoad } from "../../lib/hackathon-snapshot";
 
 const PHASE_LABEL: Record<Phase, string> = { live: "进行中", upcoming: "即将开始", ended: "已结束", unknown: "时间未明" };
 const PHASE_TONE: Record<Phase, "success" | "info" | "neutral" | "warning"> = { live: "success", upcoming: "info", ended: "neutral", unknown: "warning" };
@@ -13,23 +13,45 @@ export function HackathonBoard({ load, now }: { load: SnapshotLoad; now: string 
     </div>;
   }
   const failed = load.snapshot.sources.filter(source => !source.ok);
+  const changes = (load.snapshot.changes ?? []).slice(-12).reverse();
   return <div className="hk-board">
     <Header checkedAt={load.snapshot.generated_at_beijing} />
+    <ChainFilter />
     <Alert tone="warning" title="这里看不到全部投稿">{EMPTY_COPY.notEverything}</Alert>
-    {load.snapshot.changes && load.snapshot.changes.length > 0 && <section className="hk-section" aria-labelledby="hk-changes">
+    {changes.length > 0 && <section className="hk-section" aria-labelledby="hk-changes">
       <h2 id="hk-changes">最近变化</h2>
-      <ul className="hk-changes">{load.snapshot.changes.slice(-12).reverse().map(change => <li key={change.id}><strong>{change.label}</strong> {change.event}{change.at_beijing ? ` · ${change.at_beijing} 北京时间` : ""}</li>)}</ul>
+      <ul className="hk-changes">{changes.map(change => {
+        const side = chainSide(changeSideInput(change, load.snapshot));
+        const label = chainLabel(changeSideInput(change, load.snapshot));
+        return <li key={change.id} className="hk-change" data-ecosystem={side}><strong>{change.label}</strong>{label && <span className={`hk-chain hk-chain-${side}`}>{label}</span>} {change.event}{change.at_beijing ? ` · ${change.at_beijing} 北京时间` : ""}</li>;
+      })}</ul>
+      <p className="hk-changes-none">这条链没有最近变化。</p>
     </section>}
     {failed.length > 0 && <Alert tone="warning" title="有来源这次没有核对成功">{failed.map(source => <p key={source.id}>{source.id}：{source.error || "失败"}。上次成功的内容会保留。</p>)}</Alert>}
-    <Ecosystem id="bnb" title="BNB Chain / BSC" events={load.snapshot.events.filter(event => event.ecosystem === "bnb" || event.ecosystem === "both")} now={now} />
-    <Ecosystem id="solana" title="Solana" events={load.snapshot.events.filter(event => event.ecosystem === "solana" || event.ecosystem === "both")} now={now} />
+    <Ecosystem id="bsc" title="BSC" note="BNB Chain / BSC" events={load.snapshot.events.filter(event => chainSide(event) === "bsc" || chainSide(event) === "both")} now={now} />
+    <Ecosystem id="sol" title="SOL" note="Solana" events={load.snapshot.events.filter(event => chainSide(event) === "sol" || chainSide(event) === "both")} now={now} />
   </div>;
 }
 
-function Ecosystem({ id, title, events, now }: { id: string; title: string; events: HackathonEvent[]; now: string }) {
+function changeSideInput(change: NonNullable<HackathonSnapshot["changes"]>[number], snapshot: HackathonSnapshot) {
+  if (change.chain || change.ecosystem) return change;
+  const matches = snapshot.events.filter(event => event.title === change.event);
+  return matches.length === 1 ? matches[0] : {};
+}
+
+function ChainFilter() {
+  return <fieldset className="hk-filter">
+    <legend>按链筛选</legend>
+    <label htmlFor="hk-chain-all"><input id="hk-chain-all" type="radio" name="hk-chain" defaultChecked /> 全部</label>
+    <label htmlFor="hk-chain-bsc"><input id="hk-chain-bsc" type="radio" name="hk-chain" /> BSC</label>
+    <label htmlFor="hk-chain-sol"><input id="hk-chain-sol" type="radio" name="hk-chain" /> SOL</label>
+  </fieldset>;
+}
+
+function Ecosystem({ id, title, note, events, now }: { id: "bsc" | "sol"; title: string; note: string; events: HackathonEvent[]; now: string }) {
   const groups = groupEvents(events, new Date(now));
-  return <section className="hk-ecosystem" aria-labelledby={`hk-${id}`}>
-    <h2 id={`hk-${id}`}>{title}</h2>
+  return <section className="hk-ecosystem" data-ecosystem={id} aria-labelledby={`hk-${id}`}>
+    <h2 id={`hk-${id}`}><span className={`hk-chain hk-chain-${id}`}>{title}</span>{note}</h2>
     <div className="hk-section" aria-labelledby={`hk-${id}-current`}>
       <h3 id={`hk-${id}-current`}>进行中与即将开始</h3>
       {groups.current.length ? groups.current.map(event => <EventCard key={event.id} event={event} />) : <EmptyState title="没有进行中的黑客松" description={EMPTY_COPY.noCurrent} />}
@@ -65,7 +87,9 @@ function EventCard({ event }: { event: HackathonEvent }) {
   const winners = event.results.projects;
   const submissions = event.submission.projects;
   const listed = winners.length > 0 || submissions.length > 0;
-  return <Panel className={listed ? "hk-card hk-card-listed" : "hk-card hk-card-empty"} title={event.title} description={event.classification_reason} actions={<Badge tone={PHASE_TONE[event.phase]}>{PHASE_LABEL[event.phase]}</Badge>}>
+  const side = chainSide(event);
+  const label = chainLabel(event);
+  return <Panel className={listed ? "hk-card hk-card-listed" : "hk-card hk-card-empty"} title={<>{label && <span className={`hk-chain hk-chain-${side}`}>{label}</span>}{event.title}</>} description={event.classification_reason} actions={<Badge tone={PHASE_TONE[event.phase]}>{PHASE_LABEL[event.phase]}</Badge>}>
     <div className="hk-meta">
       {event.location && <span>{event.location}</span>}
       {event.prize && <span>{event.prize}</span>}

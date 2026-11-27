@@ -33,6 +33,7 @@ export interface HackathonEvent {
   id: string;
   title: string;
   ecosystem: Ecosystem;
+  chain?: string;
   website?: string;
   twitter?: string;
   classification: Classification;
@@ -66,7 +67,43 @@ export interface HackathonSnapshot {
   standing: true;
   sources: { id: string; url: string; ok: boolean; checked_at: string; error: string; note: string }[];
   events: HackathonEvent[];
-  changes?: { id: number; kind: string; label: string; event: string; at?: string; at_beijing?: string; source?: string }[];
+  changes?: { id: number; kind: string; label: string; event: string; at?: string; at_beijing?: string; source?: string; chain?: string; ecosystem?: Ecosystem | "" }[];
+}
+
+export type ChainFilter = "all" | "bsc" | "sol";
+export type ChainSide = "bsc" | "sol" | "both" | "unknown";
+
+export function chainSide(input: { chain?: string; ecosystem?: Ecosystem | "" }): ChainSide {
+  const raw = (input.chain || "").toUpperCase();
+  if (raw) {
+    const bsc = raw.includes("BSC") || raw.includes("BNB");
+    const sol = raw.includes("SOL");
+    if (bsc && sol) return "both";
+    if (bsc) return "bsc";
+    if (sol) return "sol";
+    return "unknown";
+  }
+  if (input.ecosystem === "bnb") return "bsc";
+  if (input.ecosystem === "solana") return "sol";
+  if (input.ecosystem === "both") return "both";
+  return "unknown";
+}
+
+export function chainLabel(input: { chain?: string; ecosystem?: Ecosystem | "" }): string {
+  const raw = (input.chain || "").trim();
+  if (raw) return raw;
+  const side = chainSide(input);
+  if (side === "bsc") return "BSC";
+  if (side === "sol") return "SOL";
+  if (side === "both") return "BSC · SOL";
+  return "";
+}
+
+export function matchesChain(input: { chain?: string; ecosystem?: Ecosystem | "" }, filter: ChainFilter): boolean {
+  if (filter === "all") return true;
+  const side = chainSide(input);
+  if (side === "both") return true;
+  return side === filter;
 }
 
 export type SnapshotLoad =

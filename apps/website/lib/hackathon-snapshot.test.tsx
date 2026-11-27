@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HackathonBoard } from "../app/hackathons/board.tsx";
-import { EMPTY_COPY, groupEvents, parseSnapshot, phaseAt, type HackathonEvent, type HackathonSnapshot } from "./hackathon-snapshot.ts";
+import { chainLabel, EMPTY_COPY, groupEvents, matchesChain, parseSnapshot, phaseAt, type HackathonEvent, type HackathonSnapshot } from "./hackathon-snapshot.ts";
 
 const NOW = "2026-11-27T12:49:00Z";
 
@@ -32,7 +32,7 @@ function event(patch: Partial<HackathonEvent> = {}): HackathonEvent {
   };
 }
 
-function snapshot(events: HackathonEvent[]): HackathonSnapshot {
+function snapshot(events: HackathonEvent[], changes: HackathonSnapshot["changes"] = []): HackathonSnapshot {
   return {
     schema: "hackathon-snapshot-v1",
     generated_at: NOW,
@@ -41,6 +41,7 @@ function snapshot(events: HackathonEvent[]): HackathonSnapshot {
     standing: true,
     sources: [{ id: "bnb-hackathon-index", url: "https://www.bnbchain.org/en/hackathons", ok: true, checked_at: NOW, error: "", note: "" }],
     events,
+    changes,
   };
 }
 
@@ -128,4 +129,34 @@ test("empty submission and winner states stay empty on the page", () => {
   const missing = renderToStaticMarkup(<HackathonBoard load={{ ok: false, reason: "missing" }} now={NOW} />);
   assert.match(missing, new RegExp(EMPTY_COPY.missing.slice(0, 12)));
   assert.doesNotMatch(missing, /Agent ID|Bangkok/);
+});
+
+test("chain filter keeps BSC and SOL apart, including recent changes", () => {
+  const bsc = event({ id: "bsc-event", title: "BSC 黑客松", ecosystem: "bnb", chain: "BSC" });
+  const sol = event({ id: "sol-event", title: "SOL 黑客松", ecosystem: "solana", chain: "SOL" });
+  assert.equal(matchesChain(bsc, "all"), true);
+  assert.equal(matchesChain(bsc, "bsc"), true);
+  assert.equal(matchesChain(bsc, "sol"), false);
+  assert.equal(matchesChain(sol, "sol"), true);
+  assert.equal(matchesChain(sol, "bsc"), false);
+  assert.equal(matchesChain({ chain: "BSC, SOL", ecosystem: "both" }, "bsc"), true);
+  assert.equal(matchesChain({ chain: "BSC, SOL", ecosystem: "both" }, "sol"), true);
+  assert.equal(chainLabel(bsc), "BSC");
+  assert.equal(chainLabel(sol), "SOL");
+  assert.equal(chainLabel({ ecosystem: "solana" }), "SOL");
+  const html = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: snapshot([bsc, sol], [
+    { id: 1, kind: "gallery_opened", label: "有新名单", event: "BSC 黑客松", chain: "BSC", ecosystem: "bnb" },
+    { id: 2, kind: "gallery_opened", label: "有新名单", event: "SOL 黑客松", chain: "SOL", ecosystem: "solana" },
+  ]) }} now={NOW} />);
+  assert.match(html, /按链筛选/);
+  assert.match(html, /id="hk-chain-all"/);
+  assert.match(html, /id="hk-chain-bsc"/);
+  assert.match(html, /id="hk-chain-sol"/);
+  assert.match(html, /data-ecosystem="bsc"/);
+  assert.match(html, /data-ecosystem="sol"/);
+  assert.match(html, /hk-chain-bsc/);
+  assert.match(html, /hk-chain-sol/);
+  assert.match(html, /BSC 黑客松/);
+  assert.match(html, /SOL 黑客松/);
+  assert.doesNotMatch(html, /链未标明|猜测/);
 });

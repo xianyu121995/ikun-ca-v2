@@ -1,4 +1,21 @@
 .hk-page .hk-board { display: flex; flex-direction: column; gap: 16px; padding: 8px 4px 32px; }
+.hk-page .hk-filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0; padding: 0; border: 0; }
+.hk-page .hk-filter legend { margin-right: 4px; color: var(--ik-secondary); }
+.hk-page .hk-filter label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--ik-border); border-radius: 999px; cursor: pointer; }
+.hk-page .hk-filter label:has(input:checked) { border-color: var(--ik-info); background: var(--ik-raised); font-weight: 700; }
+.hk-page .hk-chain { display: inline-flex; align-items: center; margin-right: 8px; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; vertical-align: middle; }
+.hk-page .hk-chain-bsc { color: var(--ik-warning); background: var(--ik-warning-bg); }
+.hk-page .hk-chain-sol { color: var(--ik-info); background: var(--ik-info-bg); }
+.hk-page .hk-chain-both { color: var(--ik-text, inherit); background: var(--ik-raised); }
+.hk-page .hk-changes-none { display: none; margin: 0; color: var(--ik-secondary); }
+.hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-ecosystem[data-ecosystem="sol"],
+.hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-change[data-ecosystem="sol"],
+.hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-change[data-ecosystem="unknown"] { display: none; }
+.hk-page .hk-board:has(#hk-chain-sol:checked) .hk-ecosystem[data-ecosystem="bsc"],
+.hk-page .hk-board:has(#hk-chain-sol:checked) .hk-change[data-ecosystem="bsc"],
+.hk-page .hk-board:has(#hk-chain-sol:checked) .hk-change[data-ecosystem="unknown"] { display: none; }
+.hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-changes:not(:has([data-ecosystem="bsc"], [data-ecosystem="both"])) + .hk-changes-none,
+.hk-page .hk-board:has(#hk-chain-sol:checked) .hk-changes:not(:has([data-ecosystem="sol"], [data-ecosystem="both"])) + .hk-changes-none { display: block; }
 .hk-page .hk-section { display: flex; flex-direction: column; gap: 12px; }
 .hk-page .hk-section h2 { margin: 8px 0 0; font-size: 18px; }
 .hk-page .hk-section-note, .hk-page .hk-note, .hk-page .hk-summary { color: var(--ik-secondary); margin: 0 0 8px; }

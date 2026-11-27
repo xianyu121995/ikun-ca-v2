@@ -144,6 +144,7 @@ def build_site_snapshot(store, now: datetime | None = None) -> dict:
             "id": event["id"],
             "title": event["name"],
             "ecosystem": _ecosystem(event.get("chain")),
+            "chain": event.get("chain") or "",
             "website": website or "",
             "twitter": twitter or "",
             "classification": "hackathon",
@@ -187,6 +188,7 @@ def build_site_snapshot(store, now: datetime | None = None) -> dict:
         })
     changes = []
     for row in store.updates(after_id=0)[-30:]:
+        raw_chain = row.get("chain") or ""
         changes.append({
             "id": row["id"],
             "kind": row["kind"],
@@ -195,6 +197,8 @@ def build_site_snapshot(store, now: datetime | None = None) -> dict:
             "at": row.get("at"),
             "at_beijing": present_time(row.get("at")) if row.get("at") else "",
             "source": row.get("source") or "",
+            "chain": raw_chain,
+            "ecosystem": _ecosystem(raw_chain) if raw_chain else "",
         })
     return {
         "schema": "hackathon-snapshot-v1",

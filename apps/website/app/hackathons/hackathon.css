@@ -41,7 +41,13 @@
 .hk-page .hk-row:has(.hk-rank:empty) { grid-template-columns: 1fr; }
 .hk-page .hk-track { margin-left: 8px; color: var(--ik-secondary); font-size: 13px; }
 .hk-page .hk-info { margin: 4px 0 0; color: var(--ik-secondary); }
-.hk-page .hk-row-links, .hk-page .hk-event-links, .hk-page .hk-links { display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 6px 0 0; }
+.hk-page .hk-row-links, .hk-page .hk-event-links, .hk-page .hk-links { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin: 6px 0 0; }
+.hk-page .hk-watch { border: 1px solid var(--ik-info); background: transparent; color: var(--ik-info); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
+.hk-page .hk-watch:disabled { opacity: .6; cursor: default; }
+.hk-page .hk-watch-stop { border-color: var(--ik-danger, #c45c5c); color: var(--ik-danger, #c45c5c); }
+.hk-page .hk-watched { color: var(--ik-secondary); font-size: 12px; }
+.hk-page .hk-watch-list, .hk-page .hk-tweets { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.hk-page .hk-watch-list li, .hk-page .hk-tweets li { border-top: 1px solid var(--ik-border); padding-top: 12px; }
 .hk-page .hk-event-links, .hk-page .hk-docs { margin-bottom: 8px; }
 .hk-page .hk-docs, .hk-page .hk-window { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 8px; }
 .hk-page .hk-window div { display: flex; gap: 8px; }

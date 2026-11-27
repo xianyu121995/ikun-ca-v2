@@ -250,7 +250,7 @@ export function parseListFocus(query: Record<string, string | string[] | undefin
   const track = firstQuery(query.track);
   if (!eventId || (list !== "submission" && list !== "results" && list !== "side-works" && list !== "side-winners")) return null;
   if (!Number.isFinite(page) || page < 1) return null;
-  return { eventId, list, page: Math.floor(page), track };
+  return { eventId, list, page: Math.floor(page), ...(track ? { track } : {}) };
 }
 
 function firstQuery(value: string | string[] | undefined): string {

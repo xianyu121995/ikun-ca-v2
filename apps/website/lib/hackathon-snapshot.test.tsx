@@ -76,7 +76,7 @@ test("empty submission and winner states stay empty on the page", () => {
   assert.match(html, /没有公布投稿/);
   assert.match(html, /没有公布获奖/);
   assert.doesNotMatch(html, /没有可展示的项目/);
-  assert.doesNotMatch(html, /虚构|示例队伍|冠军|官网|官推/);
+  assert.doesNotMatch(html, /虚构|示例队伍|冠军|官网|官推|>监控</);
   const listed = event({
     id: "listed",
     title: "有公开名单的黑客松",
@@ -122,7 +122,9 @@ test("empty submission and winner states stay empty on the page", () => {
   assert.match(rich, /名单/);
   assert.match(rich, /一句公开简介/);
   assert.match(rich, /官网/);
-  assert.match(rich, /官推/);
+  assert.match(rich, /@realproject 官推/);
+  assert.match(rich, />监控</);
+  assert.equal((rich.match(/>监控</g) ?? []).length, 1);
   assert.doesNotMatch(rich, /https:\/\/x\.com\/madeup|排名未公布/);
   assert.equal(parseSnapshot(snapshot([event({ website: "javascript:alert(1)" })])), null);
   assert.match(html, /已结束（归档）/);
@@ -201,6 +203,13 @@ test("first paint keeps a short preview and later pages stay bounded", () => {
   const focused = paintSnapshot(full, new Date(NOW), { eventId: "worldsfair", list: "submission", page: 2 });
   assert.equal(focused.events[0]!.submission.projects[0]!.name, "项目 51");
   assert.equal(focused.events[0]!.submission.projects.length, LIST_PAGE_SIZE);
+  const paged = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: focused }} now={NOW} focus={{ eventId: "worldsfair", list: "submission", page: 2 }} />);
+  assert.match(paged, /项目 51/);
+  assert.match(paged, /第 2 页，每页 50 个/);
+  assert.match(paged, /上一页/);
+  assert.match(paged, /下一页/);
+  assert.equal(paged.match(/class="hk-row"/g)?.length, LIST_PAGE_SIZE);
+  assert.doesNotMatch(paged, /项目 1</);
   const archived = paintSnapshot(snapshot([event({
     id: "old-list",
     title: "已结束名单",

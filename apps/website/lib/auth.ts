@@ -16,6 +16,11 @@ export async function requireAuthPage(path: string) {
   return {user_id:actor.id,username:actor.username,role:actor.role,must_change_password:actor.must_change_password,csrf_token:actor.csrf_token};
 }
 
+/** API routes under the hackathon watch section use the same session gate as the page. */
+export function authorizeApiRequest(request: Request) {
+  return auth().gate(request);
+}
+
 /** Call inside the action function immediately before executing a business write. */
 export async function requireSuperadminAction(csrfToken: string) {
   const http=auth();

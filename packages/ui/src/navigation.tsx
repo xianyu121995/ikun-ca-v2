@@ -10,6 +10,7 @@ export const BUSINESS_NAVIGATION: ReadonlyArray<{ href: string; label: string; i
   { href: "/hunter", label: "猎手监控", icon: "radar" },
   { href: "/tracking", label: "猎手项目监控", icon: "layers" },
   { href: "/hackathons", label: "黑客松", icon: "calendar" },
+  { href: "/hackathon-tweets", label: "黑客松推文监控", icon: "eye" },
 ];
 export function isNavigationActive(pathname: string, href: string): boolean {
   const path = pathname.split(/[?#]/)[0]?.replace(/\/+$/, "") || "/";

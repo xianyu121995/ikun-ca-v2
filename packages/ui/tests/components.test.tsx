@@ -7,8 +7,8 @@ import * as publicUi from "../src/index.js";
 import { Alert, AppShell, BUSINESS_NAVIGATION, Button, DataTable, Dialog, Input, LoginPanel, ScoreBadge, SearchInput, isNavigationActive } from "../src/index.js";
 
 test("business navigation keeps the workspace entries and highlights only the current route", () => {
-  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.label), ["主页", "猎手监控", "猎手项目监控", "黑客松"]);
-  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.href), ["/", "/hunter", "/tracking", "/hackathons"]);
+  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.label), ["主页", "猎手监控", "猎手项目监控", "黑客松", "黑客松推文监控"]);
+  assert.deepEqual(BUSINESS_NAVIGATION.map(n => n.href), ["/", "/hunter", "/tracking", "/hackathons", "/hackathon-tweets"]);
   assert.equal(BUSINESS_NAVIGATION.some(item => item.href === "/radar" || item.label.includes("flap")), false);
   assert.equal(isNavigationActive("/hunter/signals?sort=time", "/hunter"), true);
   assert.equal(isNavigationActive("/hunter-extra", "/hunter"), false);

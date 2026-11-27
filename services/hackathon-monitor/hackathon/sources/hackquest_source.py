@@ -26,7 +26,7 @@ PROJECTS = """
 query HackathonProjects($filter: ProjectFilterInput!, $page: Int, $limit: Int) {
   projects(filter: $filter, page: $page, limit: $limit) {
     total
-    data { id alias name tracks description }
+    data { id alias name tracks description projectLinks }
   }
 }
 """
@@ -34,7 +34,7 @@ REWARDS = """
 query FindHackathonReward($hackathonId: String!) {
   findHackathonReward(hackathonId: $hackathonId) {
     announce id name rewardName
-    projects { id alias name tracks description winner { rewardId place } }
+    projects { id alias name tracks description projectLinks winner { rewardId place } }
   }
 }
 """
@@ -194,6 +194,9 @@ def project(row):
     item = {"id": identity, "name": name.strip(), "category": ", ".join(labels) or None,
             "url": "https://www.hackquest.io/projects/" + quote(alias, safe="")}
     info, website, twitter = _profile(row.get("description"))
+    site, handle = _structured_links(row.get("projectLinks"))
+    website = website or site
+    twitter = twitter or handle
     if info:
         item["info"] = info
     if website:
@@ -209,9 +212,30 @@ def _profile(html):
         return None, None, None
     text = " ".join(re.sub(r"<[^>]+>", " ", html).split())
     info = text or None
-    website = _labeled(html, r"Official\s+(?:Website|Site)|官网")
+    website = _site_url(_labeled(html, r"Official\s+(?:Website|Site)|官网") or "")
     twitter = _x_url(_labeled(html, r"Official\s+(?:X|Twitter)|官推") or "")
     return info, website, twitter
+
+
+def _structured_links(value):
+    """Official projectLinks JSON. Blank or non-official values stay empty."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return None, None
+    if not isinstance(value, dict):
+        return None, None
+    website = twitter = None
+    for key in ("mvpLink", "website", "officialWebsite", "siteLink", "webLink"):
+        website = _site_url(value.get(key) or "")
+        if website:
+            break
+    for key in ("xLink", "twitterLink", "twitterUrl", "xUrl"):
+        twitter = _x_url(value.get(key) or "")
+        if twitter:
+            break
+    return website, twitter
 
 
 def _labeled(html, labels):
@@ -226,13 +250,30 @@ def _labeled(html, labels):
     return found[0] if len(found) == 1 else None
 
 
-def _x_url(value):
-    parts = urlsplit(value)
+_RESERVED_HANDLES = {"intent", "share", "home", "search", "explore", "i", "hashtag", "compose"}
+_SITE_HOSTS = {"x.com", "twitter.com", "github.com", "youtube.com", "youtu.be", "loom.com", "t.me", "discord.com", "discord.gg"}
+
+
+def _site_url(value):
+    if not isinstance(value, str) or not value.strip() or any(char.isspace() for char in value):
+        return None
+    cleaned = value.strip().rstrip(").,;")
+    parts = urlsplit(cleaned)
     host = (parts.hostname or "").lower().removeprefix("www.")
-    if parts.scheme != "https" or host not in {"x.com", "twitter.com"}:
+    if parts.scheme not in {"http", "https"} or "." not in host or parts.username or host in _SITE_HOSTS:
+        return None
+    return cleaned.split("#", 1)[0]
+
+
+def _x_url(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    parts = urlsplit(value.strip())
+    host = (parts.hostname or "").lower().removeprefix("www.")
+    if parts.scheme != "https" or host not in {"x.com", "twitter.com"} or parts.username:
         return None
     handle = parts.path.strip("/").split("/")[0]
-    if re.fullmatch(r"[A-Za-z0-9_]{1,15}", handle) and handle.lower() not in {"intent", "share", "home", "search"}:
+    if re.fullmatch(r"[A-Za-z0-9_]{1,15}", handle) and handle.lower() not in _RESERVED_HANDLES:
         return f"https://x.com/{handle}"
     return None
 

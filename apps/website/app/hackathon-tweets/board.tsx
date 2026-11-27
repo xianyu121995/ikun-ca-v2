@@ -1,6 +1,6 @@
 import React from "react";
 import { Badge, EmptyState, PageHeader, Panel } from "@ikun/ui";
-import { beijingLabel, type HackathonTweet, type HackathonWatch } from "../../lib/hackathon-watches";
+import { beijingLabel, type HackathonTweet, type HackathonWatch } from "../../lib/hackathon-watch-model";
 import { RemoveWatch } from "./remove-watch";
 
 export function HackathonTweetBoard({ watches, tweets, csrf = "", confirmId = "" }: { watches: HackathonWatch[]; tweets: HackathonTweet[]; csrf?: string; confirmId?: string }) {

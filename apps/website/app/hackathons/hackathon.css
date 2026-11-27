@@ -8,6 +8,19 @@
 .hk-page .hk-period summary::-webkit-details-marker { color: var(--ik-secondary); }
 .hk-page .hk-period-range { color: var(--ik-secondary); font-weight: 500; font-variant-numeric: tabular-nums; }
 .hk-page .hk-period-body { display: flex; flex-direction: column; gap: 12px; padding: 0 12px 12px; }
+.hk-page .hk-project-name { border: 0; background: transparent; color: var(--ik-text); font: inherit; font-weight: 700; padding: 0; cursor: pointer; text-align: left; }
+.hk-page .hk-project-name:hover { color: var(--ik-info); }
+.hk-page .hk-drawer { position: fixed; top: 0; right: 0; z-index: 40; width: min(420px, 100vw); height: 100vh; display: flex; flex-direction: column; background: #0c141c; border-left: 1px solid var(--ik-border); box-shadow: -16px 0 36px #03060acc; }
+.hk-page .hk-drawer-back { margin: 16px 20px 0; padding: 0; border: 0; background: transparent; color: var(--ik-secondary); cursor: pointer; text-align: left; }
+.hk-page .hk-drawer-scroll { overflow: auto; padding: 16px 20px 28px; }
+.hk-page .hk-drawer-identity { display: flex; gap: 12px; align-items: center; }
+.hk-page .hk-drawer-avatar { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 8px; background: #12352c; color: var(--ik-accent, #8ce4c2); font-weight: 700; }
+.hk-page .hk-drawer-identity h2 { margin: 0; font-size: 18px; }
+.hk-page .hk-drawer-identity p { margin: 4px 0 0; color: var(--ik-secondary); }
+.hk-page .hk-drawer-kicker { display: inline-block; margin: 18px 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--ik-accent, #8ce4c2); color: var(--ik-accent, #8ce4c2); font-size: 12px; font-weight: 700; }
+.hk-page .hk-field { display: block; margin: 0 0 14px; color: var(--ik-secondary); font-size: 12px; font-weight: 700; }
+.hk-page .hk-field input, .hk-page .hk-field textarea { display: block; width: 100%; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--ik-border); border-radius: 6px; background: #0b1218; color: var(--ik-text); font: inherit; font-weight: 400; }
+.hk-page .hk-field input[readonly], .hk-page .hk-field textarea[readonly] { color: var(--ik-secondary); }
 .hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-period:not(:has([data-ecosystem="bsc"], [data-ecosystem="both"])),
 .hk-page .hk-board:has(#hk-chain-sol:checked) .hk-period:not(:has([data-ecosystem="sol"], [data-ecosystem="both"])) { display: none; }
 .hk-page .hk-board:has(#hk-chain-bsc:checked) .hk-period-event[data-ecosystem="sol"],

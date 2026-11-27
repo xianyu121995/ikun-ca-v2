@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HackathonBoard } from "../app/hackathons/board.tsx";
+import { projectKey } from "./hackathon-watches.ts";
 import { chainLabel, EMPTY_COPY, groupEvents, LIST_PAGE_SIZE, LIST_PREVIEW, matchesChain, paintSnapshot, parseSnapshot, phaseAt, projectPage, recentPeriods, type HackathonEvent, type HackathonProject, type HackathonSnapshot } from "./hackathon-snapshot.ts";
 
 const NOW = "2026-11-27T12:49:00Z";
@@ -114,7 +115,7 @@ test("empty submission and winner states stay empty on the page", () => {
       }],
     },
   });
-  const rich = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: snapshot([listed]) }} now={NOW} />);
+  const rich = renderToStaticMarkup(<HackathonBoard load={{ ok: true, snapshot: snapshot([listed]) }} now={NOW} openKey={projectKey("listed", "submitted", "真实项目")} />);
   assert.match(rich, /赛事官网/);
   assert.match(rich, /赛事官推/);
   assert.match(rich, /排名/);
@@ -123,9 +124,11 @@ test("empty submission and winner states stay empty on the page", () => {
   assert.match(rich, /名单/);
   assert.match(rich, /一句公开简介/);
   assert.match(rich, /官网/);
+  assert.match(rich, /收起资料/);
   assert.match(rich, /@realproject 官推/);
   assert.match(rich, />监控</);
   assert.equal((rich.match(/>监控</g) ?? []).length, 1);
+  assert.doesNotMatch(rich, /加入追踪|项目评分/);
   assert.doesNotMatch(rich, /https:\/\/x\.com\/madeup|排名未公布/);
   assert.equal(parseSnapshot(snapshot([event({ website: "javascript:alert(1)" })])), null);
   assert.match(html, /第四期/);

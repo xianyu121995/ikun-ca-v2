@@ -3,7 +3,6 @@ import { Badge, EmptyState, Panel } from "@ikun/ui";
 import { chainLabel, chainSide, EMPTY_COPY, LIST_PAGE_SIZE, LIST_PREVIEW, recentPeriods, type HackathonEvent, type HackathonProject, type ListFocus, type Phase, type ProjectListKind, type SnapshotLoad } from "../../lib/hackathon-snapshot";
 import { officialHandle, projectKey, type StoredAnalysis, type StoredNote } from "../../lib/hackathon-watches";
 import { ProjectTools } from "./project-tools";
-import { WatchButton } from "./watch-button";
 
 const PHASE_LABEL: Record<Phase, string> = { live: "进行中", upcoming: "即将开始", ended: "已结束", unknown: "时间未明" };
 const PHASE_TONE: Record<Phase, "success" | "info" | "neutral" | "warning"> = { live: "success", upcoming: "info", ended: "neutral", unknown: "warning" };
@@ -110,17 +109,10 @@ function ProjectList({ title, ranked = false, badge, tone, note, projects, total
       return <li key={`${project.role}-${project.name}-${project.place}`} className="hk-row">
       <span className="hk-rank">{project.place ? <><small>排名</small><strong>{project.place}</strong></> : ""}</span>
       <div>
-        <strong>{project.name}</strong>
+        <ProjectTools eventId={eventId} eventTitle={eventTitle} role={project.role} name={project.name} csrf={csrf} place={project.place} info={project.info || ""} website={project.website || ""} handle={handle || ""} twitter={project.twitter || ""} sourceUrl={project.source_url && project.source_url !== project.website ? project.source_url : ""} note={notes[key]} analysis={analyses[key]} initialOpen={openKey === key || editingKey === key} />
         {project.track && project.track !== project.place && <span className="hk-track">{project.track}</span>}
         {project.note && <span className="hk-track">{project.note}</span>}
         {project.info && <p className="hk-info">{project.info}</p>}
-        <p className="hk-row-links">
-          {project.website && <a href={project.website}>官网</a>}
-          {handle && <a href={project.twitter}>@{handle} 官推</a>}
-          {handle && <WatchButton handle={handle} project={project.name} eventTitle={eventTitle} eventId={eventId} csrf={csrf} />}
-          {project.source_url && project.source_url !== project.website && <a href={project.source_url}>来源</a>}
-        </p>
-        <ProjectTools eventId={eventId} role={project.role} name={project.name} csrf={csrf} note={notes[key]} analysis={analyses[key]} initialEditing={editingKey === key} initialOpen={openKey === key || Boolean(analyses[key])} />
       </div>
     </li>;
     })}</ol>}
